@@ -1,6 +1,6 @@
 # net_alpha — Product Requirements Document
 
-**Version:** 0.2  
+**Version:** 0.1.1
 **Date:** 2026-04-12  
 **Status:** Draft  
 
