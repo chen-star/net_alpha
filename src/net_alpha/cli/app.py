@@ -4,6 +4,7 @@ import typer
 from rich.console import Console
 from sqlmodel import Session
 
+from net_alpha.cli.import_cmd import import_command
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.migrations import run_migrations
@@ -14,6 +15,8 @@ app = typer.Typer(
     no_args_is_help=False,
 )
 console = Console()
+
+app.command(name="import")(import_command)
 
 
 def _bootstrap() -> tuple[Settings, Session]:
