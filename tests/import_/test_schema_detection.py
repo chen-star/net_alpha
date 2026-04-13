@@ -1,12 +1,12 @@
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from net_alpha.import_.schema_detection import (
     SchemaMapping,
-    detect_schema,
     _build_prompt,
+    detect_schema,
 )
 
 
@@ -36,7 +36,10 @@ def test_detect_schema_success():
 
     headers = ["Date", "Symbol", "Action", "Quantity", "Amount", "Cost Basis"]
     sample_rows = [
-        {"Date": "2024-10-15", "Symbol": "TSLA", "Action": "Buy", "Quantity": "1.00", "Amount": "1.00", "Cost Basis": "1.00"},
+        {
+            "Date": "2024-10-15", "Symbol": "TSLA", "Action": "Buy",
+            "Quantity": "1.00", "Amount": "1.00", "Cost Basis": "1.00",
+        },
     ]
 
     result = detect_schema(mock_client, headers, sample_rows, "claude-haiku-4-5")
@@ -55,9 +58,14 @@ def test_detect_schema_retry_on_failure():
     ]
 
     headers = ["Date", "Symbol", "Action", "Quantity", "Amount"]
-    sample_rows = [{"Date": "2024-10-15", "Symbol": "TSLA", "Action": "Buy", "Quantity": "1.00", "Amount": "1.00"}]
+    sample_rows = [
+        {"Date": "2024-10-15", "Symbol": "TSLA", "Action": "Buy",
+         "Quantity": "1.00", "Amount": "1.00"},
+    ]
 
-    result = detect_schema(mock_client, headers, sample_rows, "claude-haiku-4-5", max_retries=3)
+    result = detect_schema(
+        mock_client, headers, sample_rows, "claude-haiku-4-5", max_retries=3
+    )
     assert result is not None
     assert mock_client.messages.create.call_count == 3
 
@@ -70,7 +78,9 @@ def test_detect_schema_hard_fail_after_retries():
     sample_rows = [{"Date": "2024-10-15", "Symbol": "TSLA"}]
 
     with pytest.raises(RuntimeError, match="Schema detection failed"):
-        detect_schema(mock_client, headers, sample_rows, "claude-haiku-4-5", max_retries=3)
+        detect_schema(
+            mock_client, headers, sample_rows, "claude-haiku-4-5", max_retries=3
+        )
 
     assert mock_client.messages.create.call_count == 3
 

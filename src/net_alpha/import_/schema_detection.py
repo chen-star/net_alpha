@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -14,11 +13,11 @@ class SchemaMapping(BaseModel):
     ticker: str
     action: str
     quantity: str
-    proceeds: Optional[str] = None
-    cost_basis: Optional[str] = None
+    proceeds: str | None = None
+    cost_basis: str | None = None
     buy_values: list[str]
     sell_values: list[str]
-    option_format: Optional[str] = None
+    option_format: str | None = None
 
 
 def detect_schema(
@@ -82,9 +81,12 @@ Return a JSON object with these fields:
 - "quantity": column name containing quantity/shares
 - "proceeds": column name containing sale proceeds or total amount (null if not present)
 - "cost_basis": column name containing cost basis (null if not present)
-- "buy_values": list of values in the action column that mean "buy" (e.g., ["Buy", "Reinvest"])
-- "sell_values": list of values in the action column that mean "sell" (e.g., ["Sell"])
-- "option_format": if options are present, the format type: "occ_standard", "schwab_human", or "robinhood_human" (null if no options or unknown)
+- "buy_values": list of values in the action column that mean "buy"
+  (e.g., ["Buy", "Reinvest"])
+- "sell_values": list of values in the action column that mean "sell"
+  (e.g., ["Sell"])
+- "option_format": if options are present, the format type: "occ_standard",
+  "schwab_human", or "robinhood_human" (null if no options or unknown)
 
 Return ONLY the JSON object, no other text."""
 

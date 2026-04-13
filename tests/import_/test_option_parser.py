@@ -1,7 +1,6 @@
 from datetime import date
 
 from net_alpha.import_.option_parser import parse_option_symbol
-from net_alpha.models.domain import OptionDetails
 
 
 def test_occ_standard_format():

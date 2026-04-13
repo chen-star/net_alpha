@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from datetime import date
-from typing import Optional
 
 from net_alpha.models.domain import OptionDetails
 
@@ -32,7 +31,7 @@ _ROBINHOOD_PATTERN = re.compile(
 )
 
 
-def _parse_occ(symbol: str) -> Optional[OptionDetails]:
+def _parse_occ(symbol: str) -> OptionDetails | None:
     m = _OCC_PATTERN.match(symbol)
     if not m:
         return None
@@ -43,7 +42,7 @@ def _parse_occ(symbol: str) -> Optional[OptionDetails]:
     )
 
 
-def _parse_schwab(symbol: str) -> Optional[OptionDetails]:
+def _parse_schwab(symbol: str) -> OptionDetails | None:
     m = _SCHWAB_PATTERN.match(symbol)
     if not m:
         return None
@@ -54,7 +53,7 @@ def _parse_schwab(symbol: str) -> Optional[OptionDetails]:
     )
 
 
-def _parse_robinhood(symbol: str) -> Optional[OptionDetails]:
+def _parse_robinhood(symbol: str) -> OptionDetails | None:
     m = _ROBINHOOD_PATTERN.match(symbol)
     if not m:
         return None
@@ -75,7 +74,7 @@ _PARSERS = {
 
 def parse_option_symbol(
     symbol: str, option_format: str
-) -> Optional[OptionDetails]:
+) -> OptionDetails | None:
     """Parse an option symbol string into OptionDetails.
 
     Uses the specified format's regex. Unknown formats try all parsers.
@@ -103,7 +102,8 @@ def parse_option_symbol(
 def extract_underlying(symbol: str, option_format: str) -> str:
     """Extract the underlying ticker from a symbol string.
 
-    For options, extracts the underlying ticker (e.g., "TSLA" from "TSLA241220C00250000").
+    For options, extracts the underlying ticker
+    (e.g., "TSLA" from "TSLA241220C00250000").
     For plain equities, returns the symbol as-is.
     """
     symbol = symbol.strip()

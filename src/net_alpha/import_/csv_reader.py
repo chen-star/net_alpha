@@ -89,8 +89,12 @@ def _row_to_trade(
     if quantity is None or quantity == 0:
         return None
 
-    proceeds = _parse_float(row.get(mapping.proceeds, "")) if mapping.proceeds else None
-    cost_basis = _parse_float(row.get(mapping.cost_basis, "")) if mapping.cost_basis else None
+    proceeds = (
+        _parse_float(row.get(mapping.proceeds, "")) if mapping.proceeds else None
+    )
+    cost_basis = (
+        _parse_float(row.get(mapping.cost_basis, "")) if mapping.cost_basis else None
+    )
     basis_unknown = mapping.cost_basis is None or (
         mapping.cost_basis and not row.get(mapping.cost_basis, "").strip()
     )

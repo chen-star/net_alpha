@@ -5,7 +5,8 @@ import re
 # Matches standalone numbers with 4+ digits (account numbers)
 _ACCOUNT_PATTERN = re.compile(r"^\d{4,}$|[-_]\d{4,}$|\d{4,}[-_]$|^\w*-\d{4,}$")
 
-# Matches numeric values: optional $, optional negative, digits with commas, optional decimal
+# Matches numeric values: optional $, optional negative, digits with commas,
+# optional decimal
 _NUMERIC_PATTERN = re.compile(r"^[($-]*[\d,]+\.?\d*[)]*$")
 
 # Matches date patterns (YYYY-MM-DD, MM/DD/YYYY, etc.)
