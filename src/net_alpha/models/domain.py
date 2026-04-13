@@ -51,3 +51,49 @@ class Trade(BaseModel):
         if self.is_loss() and self.proceeds is not None and self.cost_basis is not None:
             return self.cost_basis - self.proceeds
         return 0.0
+
+
+class Lot(BaseModel):
+    """A buy lot with adjustable cost basis for wash sale tracking."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    trade_id: str
+    account: str
+    date: date
+    ticker: str
+    quantity: float
+    cost_basis: float
+    adjusted_basis: float
+    option_details: Optional[OptionDetails] = None
+
+    @classmethod
+    def from_trade(cls, trade: Trade) -> Lot:
+        return cls(
+            trade_id=trade.id,
+            account=trade.account,
+            date=trade.date,
+            ticker=trade.ticker,
+            quantity=trade.quantity,
+            cost_basis=trade.cost_basis or 0.0,
+            adjusted_basis=trade.cost_basis or 0.0,
+            option_details=trade.option_details,
+        )
+
+
+class WashSaleViolation(BaseModel):
+    """A detected wash sale linking a loss sale to its triggering replacement."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    loss_trade_id: str
+    replacement_trade_id: str
+    confidence: str  # "Confirmed", "Probable", or "Unclear"
+    disallowed_loss: float
+    matched_quantity: float
+
+
+class DetectionResult(BaseModel):
+    """Output of the wash sale detection engine."""
+
+    violations: list[WashSaleViolation]
+    lots: list[Lot]
+    basis_unknown_count: int
