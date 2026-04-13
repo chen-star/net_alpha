@@ -1,0 +1,14 @@
+sp500:
+  - SPY
+  - VOO
+  - IVV
+  - SPLG
+nasdaq100:
+  - QQQ
+  - QQQM
+russell2000:
+  - IWM
+  - VTWO
+gold:
+  - GLD
+  - IAU
