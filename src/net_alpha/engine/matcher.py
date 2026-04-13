@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
 
 from net_alpha.models.domain import Trade
 
@@ -19,7 +18,7 @@ def get_match_confidence(
     loss_sale: Trade,
     candidate: Trade,
     etf_pairs: dict[str, list[str]],
-) -> Optional[str]:
+) -> str | None:
     """Determine if candidate could trigger a wash sale for loss_sale.
 
     Returns a confidence label ("Confirmed", "Probable", "Unclear") or None.
@@ -59,7 +58,8 @@ def get_match_confidence(
             if (
                 loss_sale.option_details.strike == candidate.option_details.strike
                 and loss_sale.option_details.expiry == candidate.option_details.expiry
-                and loss_sale.option_details.call_put == candidate.option_details.call_put
+                and loss_sale.option_details.call_put
+                == candidate.option_details.call_put
             ):
                 return "Confirmed"
             return "Probable"

@@ -1,6 +1,12 @@
 from datetime import date
 
-from net_alpha.models.domain import DetectionResult, Lot, OptionDetails, Trade, WashSaleViolation
+from net_alpha.models.domain import (
+    DetectionResult,
+    Lot,
+    OptionDetails,
+    Trade,
+    WashSaleViolation,
+)
 
 
 def test_trade_equity_loss():
@@ -80,8 +86,8 @@ def test_trade_with_option_details():
 
 
 def test_trade_id_auto_generated():
-    t1 = Trade(account="A", date=date(2024, 1, 1), ticker="X", action="Buy", quantity=1.0)
-    t2 = Trade(account="A", date=date(2024, 1, 1), ticker="X", action="Buy", quantity=1.0)
+    t1 = Trade(account="A", date=date(2024, 1, 1), ticker="X", action="Buy", quantity=1.0)  # noqa: E501
+    t2 = Trade(account="A", date=date(2024, 1, 1), ticker="X", action="Buy", quantity=1.0)  # noqa: E501
     assert t1.id != t2.id
     assert len(t1.id) == 36  # UUID format
 

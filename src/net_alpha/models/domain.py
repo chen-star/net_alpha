@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -24,12 +23,12 @@ class Trade(BaseModel):
     ticker: str
     action: str  # "Buy" or "Sell"
     quantity: float
-    proceeds: Optional[float] = None
-    cost_basis: Optional[float] = None
+    proceeds: float | None = None
+    cost_basis: float | None = None
     basis_unknown: bool = False
-    option_details: Optional[OptionDetails] = None
-    raw_row_hash: Optional[str] = None
-    schema_cache_id: Optional[str] = None
+    option_details: OptionDetails | None = None
+    raw_row_hash: str | None = None
+    schema_cache_id: str | None = None
 
     def is_buy(self) -> bool:
         return self.action.lower() == "buy"
@@ -64,7 +63,7 @@ class Lot(BaseModel):
     quantity: float
     cost_basis: float
     adjusted_basis: float
-    option_details: Optional[OptionDetails] = None
+    option_details: OptionDetails | None = None
 
     @classmethod
     def from_trade(cls, trade: Trade) -> Lot:

@@ -87,12 +87,16 @@ def test_option_same_option_confirmed():
     sell = Trade(
         account="A", date=date(2024, 1, 1), ticker="TSLA", action="Sell",
         quantity=1.0, proceeds=200.0, cost_basis=500.0,
-        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
     )
     buy = Trade(
         account="B", date=date(2024, 1, 10), ticker="TSLA", action="Buy",
         quantity=1.0, cost_basis=450.0,
-        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
     )
     assert get_match_confidence(sell, buy, {}) == "Confirmed"
 
@@ -102,12 +106,16 @@ def test_option_different_strike_probable():
     sell = Trade(
         account="A", date=date(2024, 1, 1), ticker="TSLA", action="Sell",
         quantity=1.0, proceeds=200.0, cost_basis=500.0,
-        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
     )
     buy = Trade(
         account="B", date=date(2024, 1, 10), ticker="TSLA", action="Buy",
         quantity=1.0, cost_basis=600.0,
-        option_details=OptionDetails(strike=300.0, expiry=date(2024, 12, 20), call_put="C"),
+        option_details=OptionDetails(
+            strike=300.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
     )
     assert get_match_confidence(sell, buy, {}) == "Probable"
 
@@ -117,12 +125,16 @@ def test_option_different_expiry_probable():
     sell = Trade(
         account="A", date=date(2024, 1, 1), ticker="TSLA", action="Sell",
         quantity=1.0, proceeds=200.0, cost_basis=500.0,
-        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
     )
     buy = Trade(
         account="B", date=date(2024, 1, 10), ticker="TSLA", action="Buy",
         quantity=1.0, cost_basis=600.0,
-        option_details=OptionDetails(strike=250.0, expiry=date(2025, 3, 21), call_put="C"),
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2025, 3, 21), call_put="C"
+        ),
     )
     assert get_match_confidence(sell, buy, {}) == "Probable"
 
@@ -136,7 +148,9 @@ def test_stock_loss_buy_call_probable():
     buy = Trade(
         account="B", date=date(2024, 1, 10), ticker="TSLA", action="Buy",
         quantity=1.0, cost_basis=500.0,
-        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
     )
     assert get_match_confidence(sell, buy, {}) == "Probable"
 
@@ -150,7 +164,9 @@ def test_stock_loss_buy_put_no_match():
     buy = Trade(
         account="B", date=date(2024, 1, 10), ticker="TSLA", action="Buy",
         quantity=1.0, cost_basis=300.0,
-        option_details=OptionDetails(strike=200.0, expiry=date(2024, 12, 20), call_put="P"),
+        option_details=OptionDetails(
+            strike=200.0, expiry=date(2024, 12, 20), call_put="P"
+        ),
     )
     assert get_match_confidence(sell, buy, {}) is None
 
@@ -164,7 +180,9 @@ def test_stock_loss_sold_put_unclear():
     sold_put = Trade(
         account="A", date=date(2024, 1, 10), ticker="TSLA", action="Sell",
         quantity=1.0, proceeds=300.0,
-        option_details=OptionDetails(strike=200.0, expiry=date(2024, 12, 20), call_put="P"),
+        option_details=OptionDetails(
+            strike=200.0, expiry=date(2024, 12, 20), call_put="P"
+        ),
     )
     assert get_match_confidence(sell, sold_put, {}) == "Unclear"
 
@@ -174,7 +192,9 @@ def test_option_loss_buy_stock_probable():
     sell = Trade(
         account="A", date=date(2024, 1, 1), ticker="TSLA", action="Sell",
         quantity=1.0, proceeds=100.0, cost_basis=500.0,
-        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
     )
     buy = Trade(
         account="B", date=date(2024, 1, 10), ticker="TSLA", action="Buy",
