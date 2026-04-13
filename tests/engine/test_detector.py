@@ -200,3 +200,148 @@ def test_same_day_buy_and_sell():
     result = detect_wash_sales([sell, buy], {})
     assert len(result.violations) == 1
     assert result.violations[0].confidence == "Confirmed"
+
+
+def test_cross_account_wash_sale():
+    """Loss on Schwab, rebuy on Robinhood → detected."""
+    sell = LossSaleFactory(
+        account="Schwab",
+        date=date(2024, 10, 15),
+        ticker="NVDA",
+        quantity=20.0,
+        proceeds=2000.0,
+        cost_basis=3000.0,
+    )
+    buy = TradeFactory(
+        account="Robinhood",
+        date=date(2024, 10, 20),
+        ticker="NVDA",
+        action="Buy",
+        quantity=20.0,
+        cost_basis=2200.0,
+    )
+    result = detect_wash_sales([sell, buy], {})
+
+    assert len(result.violations) == 1
+    v = result.violations[0]
+    assert v.confidence == "Confirmed"
+    assert v.disallowed_loss == 1000.0
+
+
+def test_cross_year_wash_sale():
+    """Dec 20 loss sale, Jan 5 buy → wash sale detected."""
+    sell = LossSaleFactory(
+        date=date(2024, 12, 20),
+        ticker="AAPL",
+        quantity=50.0,
+        proceeds=5000.0,
+        cost_basis=7500.0,
+    )
+    buy = TradeFactory(
+        date=date(2025, 1, 5),
+        ticker="AAPL",
+        action="Buy",
+        quantity=50.0,
+        cost_basis=5500.0,
+    )
+    result = detect_wash_sales([sell, buy], {})
+
+    assert len(result.violations) == 1
+    assert result.violations[0].disallowed_loss == 2500.0
+
+
+def test_basis_unknown_excluded_as_loss_sale():
+    """Trades with basis_unknown cannot be loss sale candidates."""
+    sell = TradeFactory(
+        action="Sell",
+        date=date(2024, 10, 15),
+        ticker="TSLA",
+        quantity=10.0,
+        proceeds=2000.0,
+        basis_unknown=True,
+    )
+    buy = TradeFactory(
+        date=date(2024, 10, 20),
+        ticker="TSLA",
+        action="Buy",
+        quantity=10.0,
+        cost_basis=2500.0,
+    )
+    result = detect_wash_sales([sell, buy], {})
+    assert len(result.violations) == 0
+
+
+def test_basis_unknown_can_be_replacement_buy():
+    """basis_unknown buy CAN trigger a wash sale on a known-basis loss sale."""
+    sell = LossSaleFactory(
+        date=date(2024, 10, 15),
+        ticker="TSLA",
+        quantity=10.0,
+        proceeds=2000.0,
+        cost_basis=3000.0,
+    )
+    buy = TradeFactory(
+        date=date(2024, 10, 20),
+        ticker="TSLA",
+        action="Buy",
+        quantity=10.0,
+        basis_unknown=True,
+        cost_basis=None,
+    )
+    result = detect_wash_sales([sell, buy], {})
+
+    assert len(result.violations) == 1
+    assert result.violations[0].disallowed_loss == 1000.0
+    assert result.basis_unknown_count == 1
+
+
+def test_basis_unknown_count():
+    """Detection result counts basis_unknown trades."""
+    trades = [
+        TradeFactory(basis_unknown=True),
+        TradeFactory(basis_unknown=True),
+        TradeFactory(basis_unknown=False),
+    ]
+    result = detect_wash_sales(trades, {})
+    assert result.basis_unknown_count == 2
+
+
+def test_multiple_loss_sales_share_same_buy_lot():
+    """Two loss sales match the same buy — lot quantity split between them."""
+    sell1 = LossSaleFactory(
+        date=date(2024, 10, 10),
+        ticker="TSLA",
+        quantity=5.0,
+        proceeds=1000.0,
+        cost_basis=1500.0,
+    )
+    sell2 = LossSaleFactory(
+        date=date(2024, 10, 15),
+        ticker="TSLA",
+        quantity=5.0,
+        proceeds=1000.0,
+        cost_basis=1500.0,
+    )
+    buy = TradeFactory(
+        date=date(2024, 10, 20),
+        ticker="TSLA",
+        action="Buy",
+        quantity=8.0,
+        cost_basis=2000.0,
+    )
+    result = detect_wash_sales([sell1, sell2, buy], {})
+
+    assert len(result.violations) == 2
+    # sell1 consumes 5 of buy's 8 shares
+    assert result.violations[0].matched_quantity == 5.0
+    assert result.violations[0].disallowed_loss == 500.0
+    # sell2 consumes remaining 3 of buy's 8 shares
+    assert result.violations[1].matched_quantity == 3.0
+    assert result.violations[1].disallowed_loss == 300.0
+
+
+def test_no_trades_empty_result():
+    result = detect_wash_sales([], {})
+    assert result.violations == []
+    assert result.lots == []
+    assert result.basis_unknown_count == 0
