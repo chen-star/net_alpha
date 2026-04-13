@@ -4,7 +4,8 @@ from pathlib import Path
 
 from sqlmodel import Session, select
 
-from net_alpha.db.connection import get_engine, init_db
+from net_alpha.db.connection import CURRENT_SCHEMA_VERSION, get_engine, init_db
+from net_alpha.db.migrations import run_migrations
 from net_alpha.db.tables import MetaRow, TradeRow
 
 
@@ -53,3 +54,43 @@ def test_init_db_idempotent():
         engine = get_engine(db_path)
         init_db(engine)
         init_db(engine)  # Should not raise
+
+
+def test_run_migrations_noop_when_current():
+    """No migrations needed when DB is already at current version."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "test.db"
+        engine = get_engine(db_path)
+        init_db(engine)
+        run_migrations(engine)  # Should not raise
+
+        with Session(engine) as session:
+            meta = session.exec(
+                select(MetaRow).where(MetaRow.key == "schema_version")
+            ).first()
+            assert int(meta.value) == CURRENT_SCHEMA_VERSION
+
+
+def test_run_migrations_updates_version():
+    """Migrations bring schema_version to current."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "test.db"
+        engine = get_engine(db_path)
+        init_db(engine)
+
+        # Simulate old version
+        with Session(engine) as session:
+            meta = session.exec(
+                select(MetaRow).where(MetaRow.key == "schema_version")
+            ).first()
+            meta.value = "0"
+            session.add(meta)
+            session.commit()
+
+        run_migrations(engine)
+
+        with Session(engine) as session:
+            meta = session.exec(
+                select(MetaRow).where(MetaRow.key == "schema_version")
+            ).first()
+            assert int(meta.value) == CURRENT_SCHEMA_VERSION
