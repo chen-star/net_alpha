@@ -1,0 +1,5 @@
+Activity Date,Instrument,Trans Code,Quantity,Price,Amount
+10/15/2024,TSLA,Buy,10,240.00,2400.00
+10/20/2024,TSLA,Sell,10,200.00,2000.00
+10/25/2024,TSLA $250 Call 12/20/2024,Buy,1,500.00,500.00
+11/01/2024,AAPL,Buy,5,150.00,750.00
