@@ -1,8 +1,8 @@
 # net_alpha — Product Requirements Document
 
-**Version:** 0.1.1
+**Version:** 0.2.0
 **Date:** 2026-04-12  
-**Status:** Draft  
+**Status:** Approved  
 
 ---
 
@@ -84,12 +84,14 @@ Track how disallowed losses roll into the cost basis of replacement shares/contr
 Clean, fast command-line interface as the primary UX.
 
 ```
+net-alpha
 net-alpha import schwab trades_2024.csv
 net-alpha import robinhood trades_2024.csv
 net-alpha check
 net-alpha check --ticker TSLA
 net-alpha check --type options
-net-alpha simulate sell TSLA 10 --account schwab
+net-alpha simulate sell TSLA 10
+net-alpha rebuys
 net-alpha report --year 2024
 ```
 
@@ -112,16 +114,16 @@ This is the technically and legally complex part of v1. We cover it with a tiere
 ### Options
 | Scenario | Treatment | Confidence Label |
 |---|---|---|
-| Sold option at loss, bought same option (same strike/expiry) within 30d | Definite wash sale | `CONFIRMED` |
-| Sold option at loss, bought option on same underlying (different strike/expiry) | Probable wash sale | `LIKELY` |
-| Sold stock at loss, bought call option on same stock within 30d | Probable wash sale (IRS Rev. Rul. 2008-5) | `LIKELY` |
-| Sold stock at loss, sold put option on same stock within 30d | Gray area | `REVIEW` |
+| Sold option at loss, bought same option (same strike/expiry) within 30d | Definite wash sale | `Confirmed` |
+| Sold option at loss, bought option on same underlying (different strike/expiry) | Probable wash sale | `Probable` |
+| Sold stock at loss, bought call option on same stock within 30d | Probable wash sale (IRS Rev. Rul. 2008-5) | `Probable` |
+| Sold stock at loss, sold put option on same stock within 30d | Gray area | `Unclear` |
 
 ### ETFs
 | Scenario | Treatment | Confidence Label |
 |---|---|---|
-| Sold ETF at loss, bought same ETF ticker | Definite wash sale | `CONFIRMED` |
-| Sold ETF at loss, bought ETF with same underlying index (known pairs) | Potential wash sale, IRS guidance unclear | `POTENTIAL` |
+| Sold ETF at loss, bought same ETF ticker | Definite wash sale | `Confirmed` |
+| Sold ETF at loss, bought ETF with same underlying index (known pairs) | Potential wash sale, IRS guidance unclear | `Unclear` |
 | Sold ETF at loss, bought constituent stock | Not a wash sale | — |
 
 **Known substantially-identical ETF pairs (maintained list):**
@@ -131,7 +133,7 @@ This is the technically and legally complex part of v1. We cover it with a tiere
 - GLD / IAU (Gold)
 - (Extensible via config file)
 
-All `LIKELY`, `POTENTIAL`, and `REVIEW` results include prominent disclaimer recommending CPA consultation.
+All `Probable` and `Unclear` results include prominent disclaimer recommending CPA consultation.
 
 ---
 
@@ -202,14 +204,14 @@ A wash sale occurs when you sell a security at a loss AND buy the same or substa
 1. For each sell trade where `proceeds < cost_basis` (a loss):
    - Identify candidate buy trades using instrument-specific matching (see §7)
    - Filter to buys within window `[sale_date - 30 days, sale_date + 30 days]` across ALL accounts
-   - Assign confidence label (`CONFIRMED` / `LIKELY` / `POTENTIAL` / `REVIEW`)
+   - Assign confidence label (`Confirmed` / `Probable` / `Unclear`)
 2. Calculate disallowed loss: `min(abs(loss), buy_quantity / sell_quantity * abs(loss))`
 3. Add disallowed loss to adjusted cost basis of the triggering buy lot
 4. Mark the sell trade as a wash sale with full metadata
 
 **Edge cases handled:**
 - Partial wash sales (bought fewer shares/contracts than sold)
-- Multiple triggering buys within the window (FIFO allocation)
+- Multiple triggering buys within the window (FIFO allocation — earliest buy absorbs disallowed loss first; this ordering is not IRS-mandated and tax preparers may use a different method)
 - Same-day buy and sell (always a wash sale)
 - Option expiration (expired worthless = loss, can trigger wash sale on new position)
 
@@ -231,10 +233,10 @@ A wash sale occurs when you sell a security at a loss AND buy the same or substa
 ## 12. Open Questions
 
 - [x] ~~Should schema confirmation be required?~~ **Decision: Yes, always required before first import of a new format.**
-- [ ] Should we support multi-year imports in a single database, or one DB per year?
-- [ ] What's the right format for `net-alpha report` output — plain text, CSV, or both?
-- [ ] Should `simulate` warn about look-back window (past 30 days of buys) in addition to look-forward?
-- [ ] ETF similarity pairs: maintain as hardcoded list in repo, or allow user-defined config file?
+- [x] ~~Should we support multi-year imports in a single database, or one DB per year?~~ **Decision: Single DB, all years.**
+- [x] ~~What's the right format for `net-alpha report` output — plain text, CSV, or both?~~ **Decision: Text by default; `--csv` flag optional.**
+- [x] ~~Should `simulate` warn about look-back window (past 30 days of buys) in addition to look-forward?~~ **Decision: Yes.**
+- [x] ~~ETF similarity pairs: maintain as hardcoded list in repo, or allow user-defined config file?~~ **Decision: Hardcoded defaults + optional user `~/.net_alpha/etf_pairs.yaml` override.**
 
 ---
 
