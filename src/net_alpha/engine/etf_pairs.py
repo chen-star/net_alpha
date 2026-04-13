@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -9,12 +8,12 @@ _BUNDLED_PATH = Path(__file__).resolve().parent.parent.parent.parent / "etf_pair
 
 
 def load_etf_pairs(
-    user_pairs_path: Optional[Path] = None,
+    user_pairs_path: Path | None = None,
 ) -> dict[str, list[str]]:
     """Load ETF substantially-identical pairs from bundled YAML + optional user overrides.
 
     User pairs extend defaults — they never replace them.
-    """
+    """  # noqa: E501
     # Load bundled pairs
     with open(_BUNDLED_PATH) as f:
         pairs: dict[str, list[str]] = yaml.safe_load(f) or {}

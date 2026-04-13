@@ -1,8 +1,8 @@
 from datetime import date
 
-from tests.conftest import LossSaleFactory, TradeFactory
-
 from net_alpha.engine.detector import detect_wash_sales
+from net_alpha.models.domain import OptionDetails
+from tests.conftest import LossSaleFactory, TradeFactory
 
 
 def test_simple_equity_wash_sale():
@@ -176,7 +176,7 @@ def test_adjusted_basis_updated():
     result = detect_wash_sales([sell, buy], {})
 
     # Find the lot for the buy
-    lot = next(l for l in result.lots if l.trade_id == buy.id)
+    lot = next(lot_ for lot_ in result.lots if lot_.trade_id == buy.id)
     assert lot.cost_basis == 2500.0
     assert lot.adjusted_basis == 2500.0 + 1200.0  # 3700.0
 
@@ -345,3 +345,160 @@ def test_no_trades_empty_result():
     assert result.violations == []
     assert result.lots == []
     assert result.basis_unknown_count == 0
+
+
+ETF_PAIRS = {
+    "sp500": ["SPY", "VOO", "IVV", "SPLG"],
+    "nasdaq100": ["QQQ", "QQQM"],
+}
+
+
+def test_option_wash_sale_same_option():
+    """Sold option at loss, rebought identical option → Confirmed."""
+    sell = LossSaleFactory(
+        date=date(2024, 10, 15),
+        ticker="TSLA",
+        quantity=1.0,
+        proceeds=200.0,
+        cost_basis=500.0,
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
+    )
+    buy = TradeFactory(
+        date=date(2024, 10, 20),
+        ticker="TSLA",
+        action="Buy",
+        quantity=1.0,
+        cost_basis=450.0,
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
+    )
+    result = detect_wash_sales([sell, buy], {})
+
+    assert len(result.violations) == 1
+    assert result.violations[0].confidence == "Confirmed"
+    assert result.violations[0].disallowed_loss == 300.0
+
+
+def test_option_wash_sale_different_strike():
+    """Sold option at loss, bought different strike → Probable."""
+    sell = LossSaleFactory(
+        date=date(2024, 10, 15),
+        ticker="TSLA",
+        quantity=1.0,
+        proceeds=200.0,
+        cost_basis=500.0,
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
+    )
+    buy = TradeFactory(
+        date=date(2024, 10, 20),
+        ticker="TSLA",
+        action="Buy",
+        quantity=1.0,
+        cost_basis=600.0,
+        option_details=OptionDetails(
+            strike=300.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
+    )
+    result = detect_wash_sales([sell, buy], {})
+
+    assert len(result.violations) == 1
+    assert result.violations[0].confidence == "Probable"
+
+
+def test_stock_loss_call_purchase():
+    """Sold stock at loss, bought call → Probable."""
+    sell = LossSaleFactory(
+        date=date(2024, 10, 15),
+        ticker="TSLA",
+        quantity=10.0,
+        proceeds=2000.0,
+        cost_basis=3000.0,
+    )
+    buy = TradeFactory(
+        date=date(2024, 10, 20),
+        ticker="TSLA",
+        action="Buy",
+        quantity=1.0,
+        cost_basis=500.0,
+        option_details=OptionDetails(
+            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
+        ),
+    )
+    result = detect_wash_sales([sell, buy], {})
+
+    assert len(result.violations) == 1
+    assert result.violations[0].confidence == "Probable"
+
+
+def test_stock_loss_sold_put_unclear():
+    """Sold stock at loss, sold put → Unclear."""
+    sell = LossSaleFactory(
+        date=date(2024, 10, 15),
+        ticker="TSLA",
+        quantity=10.0,
+        proceeds=2000.0,
+        cost_basis=3000.0,
+    )
+    sold_put = TradeFactory(
+        date=date(2024, 10, 20),
+        ticker="TSLA",
+        action="Sell",
+        quantity=1.0,
+        proceeds=300.0,
+        cost_basis=None,
+        option_details=OptionDetails(
+            strike=200.0, expiry=date(2024, 12, 20), call_put="P"
+        ),
+    )
+    result = detect_wash_sales([sell, sold_put], {})
+
+    assert len(result.violations) == 1
+    assert result.violations[0].confidence == "Unclear"
+
+
+def test_etf_substantially_identical_wash_sale():
+    """Sold SPY at loss, bought VOO → Unclear."""
+    sell = LossSaleFactory(
+        date=date(2024, 10, 15),
+        ticker="SPY",
+        quantity=10.0,
+        proceeds=4000.0,
+        cost_basis=5000.0,
+    )
+    buy = TradeFactory(
+        date=date(2024, 10, 20),
+        ticker="VOO",
+        action="Buy",
+        quantity=10.0,
+        cost_basis=4200.0,
+    )
+    result = detect_wash_sales([sell, buy], ETF_PAIRS)
+
+    assert len(result.violations) == 1
+    assert result.violations[0].confidence == "Unclear"
+    assert result.violations[0].disallowed_loss == 1000.0
+
+
+def test_etf_no_match_different_group():
+    """SPY loss, QQQ buy → no wash sale (different index groups)."""
+    sell = LossSaleFactory(
+        date=date(2024, 10, 15),
+        ticker="SPY",
+        quantity=10.0,
+        proceeds=4000.0,
+        cost_basis=5000.0,
+    )
+    buy = TradeFactory(
+        date=date(2024, 10, 20),
+        ticker="QQQ",
+        action="Buy",
+        quantity=10.0,
+        cost_basis=3000.0,
+    )
+    result = detect_wash_sales([sell, buy], ETF_PAIRS)
+    assert len(result.violations) == 0

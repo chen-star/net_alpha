@@ -93,7 +93,10 @@ def _find_candidates(
     all_trades: list[Trade],
     etf_pairs: dict[str, list[str]],
 ) -> list[tuple[Trade, str]]:
-    """Find and sort candidate triggers for a loss sale. Returns (trade, confidence) pairs in FIFO order."""
+    """Find and sort candidate triggers for a loss sale.
+
+    Returns (trade, confidence) pairs in FIFO order.
+    """
     candidates: list[tuple[Trade, str]] = []
     for t in all_trades:
         if t.id == loss_sale.id:
