@@ -7,8 +7,14 @@ import pytest
 from sqlmodel import Session
 
 from net_alpha.db.connection import get_engine, init_db
-from net_alpha.db.repository import TradeRepository
-from net_alpha.models.domain import OptionDetails, Trade
+from net_alpha.db.repository import (
+    LotRepository,
+    SchemaCacheRepository,
+    TradeRepository,
+    ViolationRepository,
+)
+from net_alpha.db.tables import SchemaCacheRow
+from net_alpha.models.domain import Lot, OptionDetails, Trade, WashSaleViolation
 
 
 @pytest.fixture
@@ -152,3 +158,76 @@ def test_list_accounts(db_session):
 
     accounts = repo.list_accounts()
     assert set(accounts) == {"Schwab", "Robinhood"}
+
+
+def test_lot_save_and_list(db_session):
+    repo = LotRepository(db_session)
+    lot = Lot(
+        trade_id="t1",
+        account="Schwab",
+        date=date(2024, 10, 15),
+        ticker="TSLA",
+        quantity=10.0,
+        cost_basis=2400.0,
+        adjusted_basis=3600.0,
+    )
+    repo.save(lot)
+    db_session.commit()
+
+    lots = repo.list_all()
+    assert len(lots) == 1
+    assert lots[0].adjusted_basis == 3600.0
+
+
+def test_violation_save_and_list(db_session):
+    repo = ViolationRepository(db_session)
+    v = WashSaleViolation(
+        loss_trade_id="t1",
+        replacement_trade_id="t2",
+        confidence="Confirmed",
+        disallowed_loss=1200.0,
+        matched_quantity=10.0,
+    )
+    repo.save(v)
+    db_session.commit()
+
+    violations = repo.list_all()
+    assert len(violations) == 1
+    assert violations[0].confidence == "Confirmed"
+
+
+def test_violation_delete_all(db_session):
+    repo = ViolationRepository(db_session)
+    repo.save(WashSaleViolation(
+        loss_trade_id="t1", replacement_trade_id="t2",
+        confidence="Confirmed", disallowed_loss=100.0, matched_quantity=1.0,
+    ))
+    repo.save(WashSaleViolation(
+        loss_trade_id="t3", replacement_trade_id="t4",
+        confidence="Probable", disallowed_loss=200.0, matched_quantity=2.0,
+    ))
+    db_session.commit()
+    assert len(repo.list_all()) == 2
+
+    repo.delete_all()
+    db_session.commit()
+    assert len(repo.list_all()) == 0
+
+
+def test_schema_cache_save_and_find(db_session):
+    repo = SchemaCacheRepository(db_session)
+    row = SchemaCacheRow(
+        id="sc1",
+        broker_name="schwab",
+        header_hash="sha256abc",
+        column_mapping='{"date": "Date"}',
+        option_format="schwab_human",
+    )
+    repo.save(row)
+    db_session.commit()
+
+    found = repo.find_by_broker_and_hash("schwab", "sha256abc")
+    assert found is not None
+    assert found.option_format == "schwab_human"
+
+    assert repo.find_by_broker_and_hash("schwab", "other_hash") is None
