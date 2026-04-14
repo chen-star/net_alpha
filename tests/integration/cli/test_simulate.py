@@ -4,7 +4,6 @@ from __future__ import annotations
 from datetime import date, timedelta
 from uuid import uuid4
 
-import pytest
 from sqlmodel import Session
 
 from net_alpha.cli.app import app
@@ -15,7 +14,9 @@ DISCLAIMER = "Consult a tax professional"
 TODAY = date.today()
 
 
-def _seed_buy(engine, ticker: str, days_ago: int, quantity: float = 10.0, cost_basis: float = 2500.0, account: str = "Schwab"):
+def _seed_buy(
+    engine, ticker: str, days_ago: int, quantity: float = 10.0, cost_basis: float = 2500.0, account: str = "Schwab"
+):
     with Session(engine) as s:
         TradeRepository(s).save(Trade(
             id=str(uuid4()), account=account,
