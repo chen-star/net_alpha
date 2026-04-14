@@ -2,6 +2,19 @@
 
 
 
+## v0.1.2 (2026-04-14)
+
+### Chore
+
+* chore: update GitNexus index stats ([`7345672`](https://github.com/chen-star/net_alpha/commit/734567247c059715716421b3a910d8c291fd2b6e))
+
+### Fix
+
+* fix: set line-length to 120 and fix remaining lint errors ([`90b47e6`](https://github.com/chen-star/net_alpha/commit/90b47e6e48d4567812ba1b68354f00af69bf5a13))
+
+* fix: use --extra dev to install optional dev dependencies in CI ([`8d1f1cb`](https://github.com/chen-star/net_alpha/commit/8d1f1cbf95f4ecbbf6f0cf7b5a8ed9c1b1e71782))
+
+
 ## v0.1.1 (2026-04-14)
 
 

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wash-alpha"
-version = "0.1.1"
+version = "0.1.2"
 description = "Cross-account wash sale detection for equities, options, and ETFs"
 requires-python = ">=3.11"
 dependencies = [
