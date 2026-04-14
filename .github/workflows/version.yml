@@ -54,3 +54,8 @@ jobs:
         run: semantic-release version --${{ github.event.inputs.bump }} --no-vcs-release
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Push version commit and tag
+        run: git push --follow-tags origin master
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
