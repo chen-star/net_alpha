@@ -16,22 +16,14 @@ console = Console()
 def run_wizard(settings: Settings) -> None:
     """Interactive first-run wizard. Runs when `net-alpha` is called with no trades."""
     console.print()
-    console.print(
-        "  [bold]Welcome to net-alpha[/bold] — cross-account wash sale detection."
-    )
-    console.print(
-        "  The only open-source tool that tracks wash sales across all your accounts."
-    )
+    console.print("  [bold]Welcome to net-alpha[/bold] — cross-account wash sale detection.")
+    console.print("  The only open-source tool that tracks wash sales across all your accounts.")
     console.print()
 
     # Check for API key
     if not settings.anthropic_api_key:
-        console.print(
-            "  To detect CSV formats, net-alpha uses a one-time AI call per broker."
-        )
-        console.print(
-            "  You'll need an Anthropic API key (https://console.anthropic.com/keys)."
-        )
+        console.print("  To detect CSV formats, net-alpha uses a one-time AI call per broker.")
+        console.print("  You'll need an Anthropic API key (https://console.anthropic.com/keys).")
         console.print()
         api_key = questionary.text(
             "Enter your Anthropic API key:",
@@ -43,18 +35,13 @@ def run_wizard(settings: Settings) -> None:
             settings.anthropic_api_key = api_key
             console.print("  [green]API key saved to ~/.net_alpha/config.toml[/green]")
         else:
-            console.print(
-                "  [yellow]No API key provided."
-                " You can set ANTHROPIC_API_KEY later.[/yellow]"
-            )
+            console.print("  [yellow]No API key provided. You can set ANTHROPIC_API_KEY later.[/yellow]")
             return
 
     # Import loop
     while True:
         console.print()
-        broker = questionary.text(
-            "Which broker is your next account? (e.g., schwab, robinhood):"
-        ).ask()
+        broker = questionary.text("Which broker is your next account? (e.g., schwab, robinhood):").ask()
 
         if not broker:
             break
@@ -78,9 +65,7 @@ def run_wizard(settings: Settings) -> None:
             console.print(f"  [red]Import failed: {e}[/red]")
             continue
 
-        another = questionary.confirm(
-            "Do you have another account to import?", default=False
-        ).ask()
+        another = questionary.confirm("Do you have another account to import?", default=False).ask()
 
         if not another:
             break

@@ -29,9 +29,7 @@ class LossSaleFactory(TradeFactory):
 
 
 class OptionTradeFactory(TradeFactory):
-    option_details = factory.LazyFunction(
-        lambda: OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C")
-    )
+    option_details = factory.LazyFunction(lambda: OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"))
 
 
 class LotFactory(factory.Factory):

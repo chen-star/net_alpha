@@ -361,9 +361,7 @@ def test_option_wash_sale_same_option():
         quantity=1.0,
         proceeds=200.0,
         cost_basis=500.0,
-        option_details=OptionDetails(
-            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
-        ),
+        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
     )
     buy = TradeFactory(
         date=date(2024, 10, 20),
@@ -371,9 +369,7 @@ def test_option_wash_sale_same_option():
         action="Buy",
         quantity=1.0,
         cost_basis=450.0,
-        option_details=OptionDetails(
-            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
-        ),
+        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
     )
     result = detect_wash_sales([sell, buy], {})
 
@@ -390,9 +386,7 @@ def test_option_wash_sale_different_strike():
         quantity=1.0,
         proceeds=200.0,
         cost_basis=500.0,
-        option_details=OptionDetails(
-            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
-        ),
+        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
     )
     buy = TradeFactory(
         date=date(2024, 10, 20),
@@ -400,9 +394,7 @@ def test_option_wash_sale_different_strike():
         action="Buy",
         quantity=1.0,
         cost_basis=600.0,
-        option_details=OptionDetails(
-            strike=300.0, expiry=date(2024, 12, 20), call_put="C"
-        ),
+        option_details=OptionDetails(strike=300.0, expiry=date(2024, 12, 20), call_put="C"),
     )
     result = detect_wash_sales([sell, buy], {})
 
@@ -425,9 +417,7 @@ def test_stock_loss_call_purchase():
         action="Buy",
         quantity=1.0,
         cost_basis=500.0,
-        option_details=OptionDetails(
-            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
-        ),
+        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
     )
     result = detect_wash_sales([sell, buy], {})
 
@@ -451,9 +441,7 @@ def test_stock_loss_sold_put_unclear():
         quantity=1.0,
         proceeds=300.0,
         cost_basis=None,
-        option_details=OptionDetails(
-            strike=200.0, expiry=date(2024, 12, 20), call_put="P"
-        ),
+        option_details=OptionDetails(strike=200.0, expiry=date(2024, 12, 20), call_put="P"),
     )
     result = detect_wash_sales([sell, sold_put], {})
 

@@ -1,4 +1,5 @@
 """CLI integration tests: net-alpha check command."""
+
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -17,18 +18,29 @@ THIS_YEAR = date.today().year
 def _seed_wash_sale_trades(engine, ticker: str = "TSLA", year: int = THIS_YEAR, account: str = "Schwab"):
     """Seed a loss sale + replacement buy that the engine will classify as Confirmed."""
     with Session(engine) as s:
-        TradeRepository(s).save_batch([
-            Trade(
-                id=str(uuid4()), account=account,
-                date=date(year, 1, 10), ticker=ticker,
-                action="Sell", quantity=10.0, proceeds=2000.0, cost_basis=3000.0,
-            ),
-            Trade(
-                id=str(uuid4()), account=account,
-                date=date(year, 1, 15), ticker=ticker,
-                action="Buy", quantity=10.0, cost_basis=2200.0,
-            ),
-        ])
+        TradeRepository(s).save_batch(
+            [
+                Trade(
+                    id=str(uuid4()),
+                    account=account,
+                    date=date(year, 1, 10),
+                    ticker=ticker,
+                    action="Sell",
+                    quantity=10.0,
+                    proceeds=2000.0,
+                    cost_basis=3000.0,
+                ),
+                Trade(
+                    id=str(uuid4()),
+                    account=account,
+                    date=date(year, 1, 15),
+                    ticker=ticker,
+                    action="Buy",
+                    quantity=10.0,
+                    cost_basis=2200.0,
+                ),
+            ]
+        )
         s.commit()
 
 
@@ -88,11 +100,17 @@ def test_check_staleness_warning(cli_setup):
 
     # Seed a buy from 35 days ago (stale data)
     with Session(engine) as s:
-        TradeRepository(s).save(Trade(
-            id=str(uuid4()), account="Schwab",
-            date=date.today() - timedelta(days=35),
-            ticker="TSLA", action="Buy", quantity=10.0, cost_basis=2200.0,
-        ))
+        TradeRepository(s).save(
+            Trade(
+                id=str(uuid4()),
+                account="Schwab",
+                date=date.today() - timedelta(days=35),
+                ticker="TSLA",
+                action="Buy",
+                quantity=10.0,
+                cost_basis=2200.0,
+            )
+        )
         s.commit()
 
     result = runner.invoke(app, ["check"])

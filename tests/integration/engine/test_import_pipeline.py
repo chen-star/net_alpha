@@ -1,4 +1,5 @@
 """Integration tests: CSV import pipeline with real temp DB."""
+
 from __future__ import annotations
 
 import json
@@ -33,6 +34,7 @@ def _ctx(session, csv_path: Path, broker: str, mock_client) -> ImportContext:
 # Schwab pipeline
 # ---------------------------------------------------------------------------
 
+
 def test_schwab_full_pipeline(temp_db, schwab_csv, mock_anthropic_client):
     """CSV import: 4 Trade rows written; option trade parsed correctly."""
     engine, session, _ = temp_db
@@ -56,6 +58,7 @@ def test_schwab_full_pipeline(temp_db, schwab_csv, mock_anthropic_client):
 # Robinhood pipeline
 # ---------------------------------------------------------------------------
 
+
 def test_robinhood_full_pipeline(temp_db, robinhood_csv, mock_anthropic_client):
     """CSV import: 4 trades written; robinhood_human option format cached."""
     engine, session, _ = temp_db
@@ -75,6 +78,7 @@ def test_robinhood_full_pipeline(temp_db, robinhood_csv, mock_anthropic_client):
 # ---------------------------------------------------------------------------
 # Schema cache
 # ---------------------------------------------------------------------------
+
 
 def test_schema_cache_written_after_first_import(temp_db, schwab_csv, mock_anthropic_client):
     """Schema cache row written after first import."""
@@ -104,6 +108,7 @@ def test_schema_cache_hit_skips_llm(temp_db, schwab_csv, mock_anthropic_client):
 # ---------------------------------------------------------------------------
 # Deduplication
 # ---------------------------------------------------------------------------
+
 
 def test_dedup_hash_match(temp_db, schwab_csv, mock_anthropic_client):
     """Importing same CSV twice: second run reports 0 new, 4 skipped."""

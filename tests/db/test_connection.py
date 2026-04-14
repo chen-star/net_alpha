@@ -40,9 +40,7 @@ def test_init_db_sets_schema_version():
         init_db(engine)
 
         with Session(engine) as session:
-            meta = session.exec(
-                select(MetaRow).where(MetaRow.key == "schema_version")
-            ).first()
+            meta = session.exec(select(MetaRow).where(MetaRow.key == "schema_version")).first()
             assert meta is not None
             assert int(meta.value) >= 1
 
@@ -65,9 +63,7 @@ def test_run_migrations_noop_when_current():
         run_migrations(engine)  # Should not raise
 
         with Session(engine) as session:
-            meta = session.exec(
-                select(MetaRow).where(MetaRow.key == "schema_version")
-            ).first()
+            meta = session.exec(select(MetaRow).where(MetaRow.key == "schema_version")).first()
             assert int(meta.value) == CURRENT_SCHEMA_VERSION
 
 
@@ -80,9 +76,7 @@ def test_run_migrations_updates_version():
 
         # Simulate old version
         with Session(engine) as session:
-            meta = session.exec(
-                select(MetaRow).where(MetaRow.key == "schema_version")
-            ).first()
+            meta = session.exec(select(MetaRow).where(MetaRow.key == "schema_version")).first()
             meta.value = "0"
             session.add(meta)
             session.commit()
@@ -90,7 +84,5 @@ def test_run_migrations_updates_version():
         run_migrations(engine)
 
         with Session(engine) as session:
-            meta = session.exec(
-                select(MetaRow).where(MetaRow.key == "schema_version")
-            ).first()
+            meta = session.exec(select(MetaRow).where(MetaRow.key == "schema_version")).first()
             assert int(meta.value) == CURRENT_SCHEMA_VERSION

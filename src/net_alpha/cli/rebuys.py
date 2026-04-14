@@ -44,19 +44,17 @@ def rebuys_command() -> None:
             continue  # Fully matched — no open quantity
 
         days_remaining = (window_end - today).days
-        qty_display = (
-            f"{remaining:.0f}/{t.quantity:.0f}"
-            if matched > 0
-            else f"{t.quantity:.0f}"
+        qty_display = f"{remaining:.0f}/{t.quantity:.0f}" if matched > 0 else f"{t.quantity:.0f}"
+        rebuy_entries.append(
+            {
+                "ticker": t.ticker,
+                "qty_display": qty_display,
+                "sold_date": t.date,
+                "account": t.account,
+                "safe_date": window_end,
+                "days_remaining": days_remaining,
+            }
         )
-        rebuy_entries.append({
-            "ticker": t.ticker,
-            "qty_display": qty_display,
-            "sold_date": t.date,
-            "account": t.account,
-            "safe_date": window_end,
-            "days_remaining": days_remaining,
-        })
 
     if not rebuy_entries:
         console.print("\n  No positions currently in wash sale window. All clear.")

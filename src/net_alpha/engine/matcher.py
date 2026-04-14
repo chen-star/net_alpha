@@ -58,8 +58,7 @@ def get_match_confidence(
             if (
                 loss_sale.option_details.strike == candidate.option_details.strike
                 and loss_sale.option_details.expiry == candidate.option_details.expiry
-                and loss_sale.option_details.call_put
-                == candidate.option_details.call_put
+                and loss_sale.option_details.call_put == candidate.option_details.call_put
             ):
                 return "Confirmed"
             return "Probable"
@@ -71,9 +70,7 @@ def get_match_confidence(
     return None
 
 
-def _are_substantially_identical(
-    ticker_a: str, ticker_b: str, etf_pairs: dict[str, list[str]]
-) -> bool:
+def _are_substantially_identical(ticker_a: str, ticker_b: str, etf_pairs: dict[str, list[str]]) -> bool:
     """Check if two different tickers belong to the same ETF group."""
     if ticker_a == ticker_b:
         return False

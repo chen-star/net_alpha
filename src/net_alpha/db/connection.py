@@ -21,11 +21,7 @@ def init_db(engine) -> None:
     SQLModel.metadata.create_all(engine)
 
     with Session(engine) as session:
-        existing = session.exec(
-            select(MetaRow).where(MetaRow.key == "schema_version")
-        ).first()
+        existing = session.exec(select(MetaRow).where(MetaRow.key == "schema_version")).first()
         if existing is None:
-            session.add(
-                MetaRow(key="schema_version", value=str(CURRENT_SCHEMA_VERSION))
-            )
+            session.add(MetaRow(key="schema_version", value=str(CURRENT_SCHEMA_VERSION)))
             session.commit()

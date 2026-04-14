@@ -17,9 +17,7 @@ simulate_app = typer.Typer(help="Pre-trade simulation")
 def sell_command(
     ticker: str = typer.Argument(help="Ticker to simulate selling"),
     qty: float = typer.Argument(help="Number of shares/contracts"),
-    price: float | None = typer.Option(
-        None, help="Sale price per share (for dollar impact)"
-    ),
+    price: float | None = typer.Option(None, help="Sale price per share (for dollar impact)"),
 ) -> None:
     """Simulate selling a position and check for wash sale risk."""
     from net_alpha.cli.app import _bootstrap
@@ -39,10 +37,7 @@ def sell_command(
 
     console.print()
     if price:
-        console.print(
-            f"  [bold]SIMULATION: Sell {int(qty)} {ticker} @ "
-            f"{format_currency(price)}[/bold]"
-        )
+        console.print(f"  [bold]SIMULATION: Sell {int(qty)} {ticker} @ {format_currency(price)}[/bold]")
     else:
         console.print(f"  [bold]SIMULATION: Sell {int(qty)} {ticker}[/bold]")
     console.print("  " + "\u2500" * 50)
@@ -61,14 +56,9 @@ def sell_command(
         if price:
             # Estimate disallowed loss (rough — uses first buy's basis)
             total_proceeds = price * qty
-            avg_basis = (
-                sum(t.cost_basis or 0 for t in lookback_triggers)
-                / len(lookback_triggers)
-            )
+            avg_basis = sum(t.cost_basis or 0 for t in lookback_triggers) / len(lookback_triggers)
             total_qty = sum(t.quantity for t in lookback_triggers)
-            estimated_loss = max(
-                0, avg_basis * qty / total_qty - total_proceeds
-            )
+            estimated_loss = max(0, avg_basis * qty / total_qty - total_proceeds)
             console.print(
                 f"  [red]\u26a0 Wash sale would be triggered — "
                 f"{format_currency(estimated_loss)} of this loss would be "
@@ -92,10 +82,7 @@ def sell_command(
         console.print(f"  Safe to sell cleanly: {safe} ({days_until_safe} days away)")
 
         if price and estimated_loss > 0:
-            console.print(
-                f"  Estimated recoverable loss (if waited): "
-                f"{format_currency(estimated_loss)}"
-            )
+            console.print(f"  Estimated recoverable loss (if waited): {format_currency(estimated_loss)}")
     else:
         # No look-back violation
         safe_rebuy_date = today + timedelta(days=30)

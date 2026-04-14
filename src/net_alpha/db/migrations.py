@@ -14,9 +14,7 @@ def run_migrations(engine) -> None:
     in newly added columns and specifies the fallback explicitly.
     """
     with Session(engine) as session:
-        meta = session.exec(
-            select(MetaRow).where(MetaRow.key == "schema_version")
-        ).first()
+        meta = session.exec(select(MetaRow).where(MetaRow.key == "schema_version")).first()
         if meta is None:
             return
 

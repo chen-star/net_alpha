@@ -1,4 +1,5 @@
 """CLI integration tests: net-alpha simulate sell command."""
+
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -18,11 +19,17 @@ def _seed_buy(
     engine, ticker: str, days_ago: int, quantity: float = 10.0, cost_basis: float = 2500.0, account: str = "Schwab"
 ):
     with Session(engine) as s:
-        TradeRepository(s).save(Trade(
-            id=str(uuid4()), account=account,
-            date=TODAY - timedelta(days=days_ago),
-            ticker=ticker, action="Buy", quantity=quantity, cost_basis=cost_basis,
-        ))
+        TradeRepository(s).save(
+            Trade(
+                id=str(uuid4()),
+                account=account,
+                date=TODAY - timedelta(days=days_ago),
+                ticker=ticker,
+                action="Buy",
+                quantity=quantity,
+                cost_basis=cost_basis,
+            )
+        )
         s.commit()
 
 

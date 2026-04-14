@@ -1,4 +1,5 @@
 """CLI integration tests: net-alpha report command."""
+
 from __future__ import annotations
 
 import csv
@@ -17,19 +18,29 @@ DISCLAIMER = "Consult a tax professional"
 def _seed_wash_sale(engine, ticker: str, year: int, loss: float = 1000.0):
     """Seed a loss sale + replacement buy. Engine will detect as Confirmed."""
     with Session(engine) as s:
-        TradeRepository(s).save_batch([
-            Trade(
-                id=str(uuid4()), account="Schwab",
-                date=date(year, 6, 1), ticker=ticker,
-                action="Sell", quantity=10.0,
-                proceeds=2000.0, cost_basis=2000.0 + loss,
-            ),
-            Trade(
-                id=str(uuid4()), account="Schwab",
-                date=date(year, 6, 10), ticker=ticker,
-                action="Buy", quantity=10.0, cost_basis=2200.0,
-            ),
-        ])
+        TradeRepository(s).save_batch(
+            [
+                Trade(
+                    id=str(uuid4()),
+                    account="Schwab",
+                    date=date(year, 6, 1),
+                    ticker=ticker,
+                    action="Sell",
+                    quantity=10.0,
+                    proceeds=2000.0,
+                    cost_basis=2000.0 + loss,
+                ),
+                Trade(
+                    id=str(uuid4()),
+                    account="Schwab",
+                    date=date(year, 6, 10),
+                    ticker=ticker,
+                    action="Buy",
+                    quantity=10.0,
+                    cost_basis=2200.0,
+                ),
+            ]
+        )
         s.commit()
 
 

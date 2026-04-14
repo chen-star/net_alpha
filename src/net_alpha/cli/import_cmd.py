@@ -14,9 +14,7 @@ console = Console()
 
 def import_command(
     broker: str = typer.Argument(help="Broker name (e.g., schwab, robinhood)"),
-    file: Path = typer.Argument(
-        help="Path to CSV file", exists=True, readable=True, resolve_path=True
-    ),
+    file: Path = typer.Argument(help="Path to CSV file", exists=True, readable=True, resolve_path=True),
 ) -> None:
     """Import trades from a broker CSV file."""
     from anthropic import Anthropic
@@ -66,9 +64,7 @@ def import_command(
         f"({result.equities} equities, {result.options} options)"
     )
     if result.duplicates_skipped > 0:
-        console.print(
-            f"  {result.duplicates_skipped} duplicate trades skipped."
-        )
+        console.print(f"  {result.duplicates_skipped} duplicate trades skipped.")
 
     print_disclaimer(console)
 
@@ -86,8 +82,8 @@ def _confirm_schema(mapping: SchemaMapping, headers: list[str]) -> bool:
 
     table.add_row("date", f'"{mapping.date}"', "")
     table.add_row("ticker", f'"{mapping.ticker}"', "")
-    buy_vals = ', '.join(mapping.buy_values)
-    sell_vals = ', '.join(mapping.sell_values)
+    buy_vals = ", ".join(mapping.buy_values)
+    sell_vals = ", ".join(mapping.sell_values)
     table.add_row(
         "action",
         f'"{mapping.action}"',

@@ -19,9 +19,7 @@ console = Console()
 
 def report_command(
     year: int | None = typer.Option(None, help="Tax year (default: current)"),
-    csv: bool = typer.Option(
-        False, "--csv", help="Also export CSV to current directory"
-    ),
+    csv: bool = typer.Option(False, "--csv", help="Also export CSV to current directory"),
 ) -> None:
     """Generate a wash sale report for a tax year."""
 
@@ -39,9 +37,7 @@ def report_command(
         session.close()
         return
 
-    user_pairs = (
-        settings.user_etf_pairs_path if settings.user_etf_pairs_path.exists() else None
-    )
+    user_pairs = settings.user_etf_pairs_path if settings.user_etf_pairs_path.exists() else None
     etf_pairs = load_etf_pairs(user_pairs_path=user_pairs)
 
     # Run fresh detection
@@ -51,17 +47,11 @@ def report_command(
     report_year = year or date.today().year
 
     # Filter violations by year (loss sale year)
-    violations = [
-        v
-        for v in result.violations
-        if trade_map[v.loss_trade_id].date.year == report_year
-    ]
+    violations = [v for v in result.violations if trade_map[v.loss_trade_id].date.year == report_year]
 
     # Summary stats
     total_trades = len(all_trades)
-    loss_trades = sum(
-        1 for t in all_trades if t.is_loss() and t.date.year == report_year
-    )
+    loss_trades = sum(1 for t in all_trades if t.is_loss() and t.date.year == report_year)
     confirmed = sum(1 for v in violations if v.confidence == "Confirmed")
     probable = sum(1 for v in violations if v.confidence == "Probable")
     unclear = sum(1 for v in violations if v.confidence == "Unclear")
@@ -77,10 +67,7 @@ def report_command(
         f"({confirmed} Confirmed, {probable} Probable, {unclear} Unclear)"
     )
     console.print(f"  Total disallowed loss:     {format_currency(total_disallowed)}")
-    console.print(
-        f"  Adjusted cost basis delta: +{format_currency(total_disallowed)} "
-        "(rolled into replacement lots)"
-    )
+    console.print(f"  Adjusted cost basis delta: +{format_currency(total_disallowed)} (rolled into replacement lots)")
     console.print()
 
     # Detail table
@@ -119,8 +106,7 @@ def report_command(
 
     console.print()
     console.print(
-        "  [dim]* Replacement lot allocation uses FIFO ordering. "
-        "Your tax preparer may use a different method.[/dim]"
+        "  [dim]* Replacement lot allocation uses FIFO ordering. Your tax preparer may use a different method.[/dim]"
     )
 
     # CSV export

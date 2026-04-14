@@ -74,6 +74,7 @@ def test_unparseable_returns_none():
 
 def test_extract_underlying_ticker():
     from net_alpha.import_.option_parser import extract_underlying
+
     assert extract_underlying("TSLA241220C00250000", "occ_standard") == "TSLA"
     assert extract_underlying("TSLA 12/20/2024 250.00 C", "schwab_human") == "TSLA"
     assert extract_underlying("TSLA $250 Call 12/20/2024", "robinhood_human") == "TSLA"

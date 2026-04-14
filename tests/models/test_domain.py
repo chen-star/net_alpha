@@ -118,9 +118,7 @@ def test_lot_from_option_trade():
         action="Buy",
         quantity=1.0,
         cost_basis=500.0,
-        option_details=OptionDetails(
-            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
-        ),
+        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
     )
     lot = Lot.from_trade(trade)
     assert lot.option_details is not None

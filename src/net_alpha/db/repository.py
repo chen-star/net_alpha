@@ -43,15 +43,11 @@ class TradeRepository:
         return [_row_to_trade(r) for r in rows]
 
     def list_by_account(self, account: str) -> list[Trade]:
-        rows = self._session.exec(
-            select(TradeRow).where(TradeRow.account == account)
-        ).all()
+        rows = self._session.exec(select(TradeRow).where(TradeRow.account == account)).all()
         return [_row_to_trade(r) for r in rows]
 
     def find_by_hash(self, raw_row_hash: str) -> Trade | None:
-        row = self._session.exec(
-            select(TradeRow).where(TradeRow.raw_row_hash == raw_row_hash)
-        ).first()
+        row = self._session.exec(select(TradeRow).where(TradeRow.raw_row_hash == raw_row_hash)).first()
         if row is None:
             return None
         return _row_to_trade(row)
@@ -82,22 +78,16 @@ class TradeRepository:
         return _row_to_trade(row)
 
     def list_accounts(self) -> list[str]:
-        rows = self._session.exec(
-            select(distinct(TradeRow.account))
-        ).all()
+        rows = self._session.exec(select(distinct(TradeRow.account))).all()
         return list(rows)
 
     def count_by_account(self, account: str) -> int:
-        rows = self._session.exec(
-            select(TradeRow).where(TradeRow.account == account)
-        ).all()
+        rows = self._session.exec(select(TradeRow).where(TradeRow.account == account)).all()
         return len(rows)
 
     def latest_trade_date_by_account(self, account: str) -> str | None:
         row = self._session.exec(
-            select(TradeRow.date)
-            .where(TradeRow.account == account)
-            .order_by(TradeRow.date.desc())
+            select(TradeRow.date).where(TradeRow.account == account).order_by(TradeRow.date.desc())
         ).first()
         return row
 
@@ -153,9 +143,7 @@ class SchemaCacheRepository:
     def save(self, row: SchemaCacheRow) -> None:
         self._session.add(row)
 
-    def find_by_broker_and_hash(
-        self, broker_name: str, header_hash: str
-    ) -> SchemaCacheRow | None:
+    def find_by_broker_and_hash(self, broker_name: str, header_hash: str) -> SchemaCacheRow | None:
         return self._session.exec(
             select(SchemaCacheRow).where(
                 SchemaCacheRow.broker_name == broker_name,
@@ -164,9 +152,7 @@ class SchemaCacheRepository:
         ).first()
 
     def list_by_broker(self, broker_name: str) -> list[SchemaCacheRow]:
-        rows = self._session.exec(
-            select(SchemaCacheRow).where(SchemaCacheRow.broker_name == broker_name)
-        ).all()
+        rows = self._session.exec(select(SchemaCacheRow).where(SchemaCacheRow.broker_name == broker_name)).all()
         return list(rows)
 
 

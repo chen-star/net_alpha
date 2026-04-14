@@ -52,20 +52,13 @@ def detect_schema(
             if attempt < max_retries - 1:
                 time.sleep(2**attempt)  # Exponential backoff: 1s, 2s, 4s
 
-    raise RuntimeError(
-        f"Schema detection failed after {max_retries} attempts. "
-        f"Last error: {last_error}"
-    )
+    raise RuntimeError(f"Schema detection failed after {max_retries} attempts. Last error: {last_error}")
 
 
-def _build_prompt(
-    headers: list[str], sample_rows: list[dict[str, str]]
-) -> str:
+def _build_prompt(headers: list[str], sample_rows: list[dict[str, str]]) -> str:
     """Build the LLM prompt for schema detection."""
     header_str = ", ".join(headers)
-    rows_str = "\n".join(
-        ", ".join(f"{k}: {v}" for k, v in row.items()) for row in sample_rows
-    )
+    rows_str = "\n".join(", ".join(f"{k}: {v}" for k, v in row.items()) for row in sample_rows)
 
     return f"""Analyze this broker CSV format and return a JSON mapping.
 

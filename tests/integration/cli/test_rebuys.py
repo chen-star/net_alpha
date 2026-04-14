@@ -1,4 +1,5 @@
 """CLI integration tests: net-alpha rebuys command."""
+
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -19,11 +20,18 @@ def _seed_loss(engine, ticker: str, sell_days_ago: int, quantity: float = 10.0) 
     trade_id = str(uuid4())
     sell_date = TODAY - timedelta(days=sell_days_ago)
     with Session(engine) as s:
-        TradeRepository(s).save(Trade(
-            id=trade_id, account="Schwab", date=sell_date,
-            ticker=ticker, action="Sell", quantity=quantity,
-            proceeds=quantity * 200.0, cost_basis=quantity * 300.0,
-        ))
+        TradeRepository(s).save(
+            Trade(
+                id=trade_id,
+                account="Schwab",
+                date=sell_date,
+                ticker=ticker,
+                action="Sell",
+                quantity=quantity,
+                proceeds=quantity * 200.0,
+                cost_basis=quantity * 300.0,
+            )
+        )
         s.commit()
     return trade_id
 
@@ -33,18 +41,27 @@ def _seed_violation(engine, loss_trade_id: str, matched_qty: float):
     with Session(engine) as s:
         replace_id = str(uuid4())
         replace_date = TODAY - timedelta(days=5)
-        TradeRepository(s).save(Trade(
-            id=replace_id, account="Schwab", date=replace_date,
-            ticker="X", action="Buy", quantity=matched_qty, cost_basis=matched_qty * 220.0,
-        ))
-        ViolationRepository(s).save(WashSaleViolation(
-            id=str(uuid4()),
-            loss_trade_id=loss_trade_id,
-            replacement_trade_id=replace_id,
-            confidence="Confirmed",
-            disallowed_loss=matched_qty * 100.0,
-            matched_quantity=matched_qty,
-        ))
+        TradeRepository(s).save(
+            Trade(
+                id=replace_id,
+                account="Schwab",
+                date=replace_date,
+                ticker="X",
+                action="Buy",
+                quantity=matched_qty,
+                cost_basis=matched_qty * 220.0,
+            )
+        )
+        ViolationRepository(s).save(
+            WashSaleViolation(
+                id=str(uuid4()),
+                loss_trade_id=loss_trade_id,
+                replacement_trade_id=replace_id,
+                confidence="Confirmed",
+                disallowed_loss=matched_qty * 100.0,
+                matched_quantity=matched_qty,
+            )
+        )
         s.commit()
 
 

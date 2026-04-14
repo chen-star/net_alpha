@@ -1,4 +1,5 @@
 """CLI integration tests: net-alpha import command."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock

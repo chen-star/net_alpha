@@ -53,11 +53,7 @@ def detect_wash_sales(
                     continue
                 allocable = min(remaining_qty, available)
                 lot_remaining[candidate.id] -= allocable
-            elif (
-                candidate.is_sell()
-                and candidate.is_option()
-                and candidate.option_details.call_put == "P"
-            ):
+            elif candidate.is_sell() and candidate.is_option() and candidate.option_details.call_put == "P":
                 # Sold put — no lot, use candidate quantity directly
                 allocable = min(remaining_qty, candidate.quantity)
             else:

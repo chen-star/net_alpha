@@ -38,9 +38,7 @@ def check_command(
 
     all_trades = trade_repo.list_all()
     if not all_trades:
-        console.print(
-            "  No trades imported yet. Run [bold]net-alpha import[/bold] first."
-        )
+        console.print("  No trades imported yet. Run [bold]net-alpha import[/bold] first.")
         session.close()
         return
 
@@ -68,20 +66,14 @@ def check_command(
 
     # Filter by ticker
     if ticker:
-        violations = [
-            v for v in violations if trade_map[v.loss_trade_id].ticker == ticker.upper()
-        ]
+        violations = [v for v in violations if trade_map[v.loss_trade_id].ticker == ticker.upper()]
 
     # Filter by type
     if type:
         if type.lower() == "options":
-            violations = [
-                v for v in violations if trade_map[v.loss_trade_id].is_option()
-            ]
+            violations = [v for v in violations if trade_map[v.loss_trade_id].is_option()]
         elif type.lower() == "equities":
-            violations = [
-                v for v in violations if not trade_map[v.loss_trade_id].is_option()
-            ]
+            violations = [v for v in violations if not trade_map[v.loss_trade_id].is_option()]
 
     # Staleness warning
     _print_staleness_warnings(trade_repo, console)
@@ -96,10 +88,7 @@ def check_command(
     # Rebuy hint
     rebuy_count = _count_rebuys(all_trades, result.violations, trade_map)
     if rebuy_count > 0:
-        console.print(
-            f"\n  {rebuy_count} positions safe to rebuy — "
-            "run [bold]net-alpha rebuys[/bold] for details"
-        )
+        console.print(f"\n  {rebuy_count} positions safe to rebuy — run [bold]net-alpha rebuys[/bold] for details")
 
     # Basis unknown warning
     if result.basis_unknown_count > 0:
@@ -120,14 +109,9 @@ def check_command(
     session.close()
 
 
-def _filter_violations_by_year(
-    violations: list, trade_map: dict, year: int
-) -> list:
+def _filter_violations_by_year(violations: list, trade_map: dict, year: int) -> list:
     """Filter violations to those whose loss sale occurred in the given year."""
-    return [
-        v for v in violations
-        if trade_map[v.loss_trade_id].date.year == year
-    ]
+    return [v for v in violations if trade_map[v.loss_trade_id].date.year == year]
 
 
 def _build_summary(violations: list) -> dict:
@@ -206,6 +190,7 @@ def _print_staleness_warnings(trade_repo, console: Console) -> None:
         latest = trade_repo.latest_trade_date_by_account(account)
         if latest:
             from datetime import date as date_type
+
             latest_date = date_type.fromisoformat(latest)
             days_ago = (today - latest_date).days
             if days_ago > 30:

@@ -72,9 +72,7 @@ _PARSERS = {
 }
 
 
-def parse_option_symbol(
-    symbol: str, option_format: str
-) -> OptionDetails | None:
+def parse_option_symbol(symbol: str, option_format: str) -> OptionDetails | None:
     """Parse an option symbol string into OptionDetails.
 
     Uses the specified format's regex. Unknown formats try all parsers.

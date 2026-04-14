@@ -36,9 +36,7 @@ def compute_header_hash(headers: list[str]) -> str:
     return hashlib.sha256(joined.encode()).hexdigest()
 
 
-def get_headers_and_samples(
-    csv_path: Path, sample_count: int = 3
-) -> tuple[list[str], list[dict[str, str]]]:
+def get_headers_and_samples(csv_path: Path, sample_count: int = 3) -> tuple[list[str], list[dict[str, str]]]:
     """Read CSV headers and up to sample_count sample rows."""
     with open(csv_path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
@@ -89,15 +87,9 @@ def _row_to_trade(
     if quantity is None or quantity == 0:
         return None
 
-    proceeds = (
-        _parse_float(row.get(mapping.proceeds, "")) if mapping.proceeds else None
-    )
-    cost_basis = (
-        _parse_float(row.get(mapping.cost_basis, "")) if mapping.cost_basis else None
-    )
-    basis_unknown = mapping.cost_basis is None or (
-        mapping.cost_basis and not row.get(mapping.cost_basis, "").strip()
-    )
+    proceeds = _parse_float(row.get(mapping.proceeds, "")) if mapping.proceeds else None
+    cost_basis = _parse_float(row.get(mapping.cost_basis, "")) if mapping.cost_basis else None
+    basis_unknown = mapping.cost_basis is None or (mapping.cost_basis and not row.get(mapping.cost_basis, "").strip())
 
     return Trade(
         account=account,

@@ -60,9 +60,7 @@ def test_save_and_load_option_trade(db_session):
         action="Buy",
         quantity=1.0,
         cost_basis=500.0,
-        option_details=OptionDetails(
-            strike=250.0, expiry=date(2024, 12, 20), call_put="C"
-        ),
+        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="C"),
     )
     repo.save(trade)
     db_session.commit()
@@ -77,16 +75,17 @@ def test_save_and_load_option_trade(db_session):
 
 def test_list_trades_by_account(db_session):
     repo = TradeRepository(db_session)
-    repo.save(Trade(
-        account="Schwab", date=date(2024, 1, 1), ticker="A", action="Buy", quantity=1.0
-    ))
-    repo.save(Trade(
-        account="Robinhood", date=date(2024, 1, 1), ticker="B",
-        action="Buy", quantity=1.0,
-    ))
-    repo.save(Trade(
-        account="Schwab", date=date(2024, 1, 2), ticker="C", action="Buy", quantity=1.0
-    ))
+    repo.save(Trade(account="Schwab", date=date(2024, 1, 1), ticker="A", action="Buy", quantity=1.0))
+    repo.save(
+        Trade(
+            account="Robinhood",
+            date=date(2024, 1, 1),
+            ticker="B",
+            action="Buy",
+            quantity=1.0,
+        )
+    )
+    repo.save(Trade(account="Schwab", date=date(2024, 1, 2), ticker="C", action="Buy", quantity=1.0))
     db_session.commit()
 
     schwab = repo.list_by_account("Schwab")
@@ -95,13 +94,16 @@ def test_list_trades_by_account(db_session):
 
 def test_list_all_trades(db_session):
     repo = TradeRepository(db_session)
-    repo.save(Trade(
-        account="Schwab", date=date(2024, 1, 1), ticker="A", action="Buy", quantity=1.0
-    ))
-    repo.save(Trade(
-        account="Robinhood", date=date(2024, 1, 1), ticker="B",
-        action="Buy", quantity=1.0,
-    ))
+    repo.save(Trade(account="Schwab", date=date(2024, 1, 1), ticker="A", action="Buy", quantity=1.0))
+    repo.save(
+        Trade(
+            account="Robinhood",
+            date=date(2024, 1, 1),
+            ticker="B",
+            action="Buy",
+            quantity=1.0,
+        )
+    )
     db_session.commit()
 
     all_trades = repo.list_all()
@@ -111,8 +113,12 @@ def test_list_all_trades(db_session):
 def test_find_by_hash(db_session):
     repo = TradeRepository(db_session)
     trade = Trade(
-        account="Schwab", date=date(2024, 1, 1), ticker="A",
-        action="Buy", quantity=1.0, raw_row_hash="hash123",
+        account="Schwab",
+        date=date(2024, 1, 1),
+        ticker="A",
+        action="Buy",
+        quantity=1.0,
+        raw_row_hash="hash123",
     )
     repo.save(trade)
     db_session.commit()
@@ -127,8 +133,12 @@ def test_find_by_hash(db_session):
 def test_find_by_semantic_key(db_session):
     repo = TradeRepository(db_session)
     trade = Trade(
-        account="Schwab", date=date(2024, 1, 1), ticker="TSLA",
-        action="Buy", quantity=10.0, proceeds=None,
+        account="Schwab",
+        date=date(2024, 1, 1),
+        ticker="TSLA",
+        action="Buy",
+        quantity=10.0,
+        proceeds=None,
     )
     repo.save(trade)
     db_session.commit()
@@ -136,24 +146,23 @@ def test_find_by_semantic_key(db_session):
     found = repo.find_by_semantic_key("Schwab", "2024-01-01", "TSLA", "Buy", 10.0, None)
     assert found is not None
 
-    not_found = repo.find_by_semantic_key(
-        "Schwab", "2024-01-01", "TSLA", "Buy", 99.0, None
-    )
+    not_found = repo.find_by_semantic_key("Schwab", "2024-01-01", "TSLA", "Buy", 99.0, None)
     assert not_found is None
 
 
 def test_list_accounts(db_session):
     repo = TradeRepository(db_session)
-    repo.save(Trade(
-        account="Schwab", date=date(2024, 1, 1), ticker="A", action="Buy", quantity=1.0
-    ))
-    repo.save(Trade(
-        account="Robinhood", date=date(2024, 1, 1), ticker="B",
-        action="Buy", quantity=1.0,
-    ))
-    repo.save(Trade(
-        account="Schwab", date=date(2024, 1, 2), ticker="C", action="Buy", quantity=1.0
-    ))
+    repo.save(Trade(account="Schwab", date=date(2024, 1, 1), ticker="A", action="Buy", quantity=1.0))
+    repo.save(
+        Trade(
+            account="Robinhood",
+            date=date(2024, 1, 1),
+            ticker="B",
+            action="Buy",
+            quantity=1.0,
+        )
+    )
+    repo.save(Trade(account="Schwab", date=date(2024, 1, 2), ticker="C", action="Buy", quantity=1.0))
     db_session.commit()
 
     accounts = repo.list_accounts()
@@ -198,14 +207,24 @@ def test_violation_save_and_list(db_session):
 
 def test_violation_delete_all(db_session):
     repo = ViolationRepository(db_session)
-    repo.save(WashSaleViolation(
-        loss_trade_id="t1", replacement_trade_id="t2",
-        confidence="Confirmed", disallowed_loss=100.0, matched_quantity=1.0,
-    ))
-    repo.save(WashSaleViolation(
-        loss_trade_id="t3", replacement_trade_id="t4",
-        confidence="Probable", disallowed_loss=200.0, matched_quantity=2.0,
-    ))
+    repo.save(
+        WashSaleViolation(
+            loss_trade_id="t1",
+            replacement_trade_id="t2",
+            confidence="Confirmed",
+            disallowed_loss=100.0,
+            matched_quantity=1.0,
+        )
+    )
+    repo.save(
+        WashSaleViolation(
+            loss_trade_id="t3",
+            replacement_trade_id="t4",
+            confidence="Probable",
+            disallowed_loss=200.0,
+            matched_quantity=2.0,
+        )
+    )
     db_session.commit()
     assert len(repo.list_all()) == 2
 
