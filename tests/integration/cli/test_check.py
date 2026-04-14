@@ -4,7 +4,6 @@ from __future__ import annotations
 from datetime import date, timedelta
 from uuid import uuid4
 
-import pytest
 from sqlmodel import Session
 
 from net_alpha.cli.app import app

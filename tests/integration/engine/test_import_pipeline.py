@@ -4,13 +4,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-from sqlmodel import Session
-
 from net_alpha.db.repository import SchemaCacheRepository, TradeRepository
 from net_alpha.import_.csv_reader import compute_header_hash, get_headers_and_samples
 from net_alpha.import_.importer import ImportContext, run_import
-
 from tests.integration.conftest import (
     ROBINHOOD_MAPPING,
     SCHWAB_MAPPING,

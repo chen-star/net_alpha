@@ -5,7 +5,6 @@ import pytest
 from sqlmodel import Session
 from typer.testing import CliRunner
 
-from net_alpha.cli.app import app
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
 

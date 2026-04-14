@@ -3,13 +3,15 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
 from sqlmodel import Session
 
 from net_alpha.cli.app import app
 from net_alpha.db.repository import TradeRepository
-
-from tests.integration.conftest import ROBINHOOD_MAPPING, SCHWAB_MAPPING, make_llm_response
+from tests.integration.conftest import (
+    ROBINHOOD_MAPPING,
+    SCHWAB_MAPPING,
+    make_llm_response,
+)
 
 DISCLAIMER = "Consult a tax professional"
 

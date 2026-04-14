@@ -5,7 +5,6 @@ import csv
 from datetime import date
 from uuid import uuid4
 
-import pytest
 from sqlmodel import Session
 
 from net_alpha.cli.app import app

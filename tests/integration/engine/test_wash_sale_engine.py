@@ -5,12 +5,10 @@ from datetime import date
 from uuid import uuid4
 
 import pytest
-from sqlmodel import Session
 
 from net_alpha.db.repository import TradeRepository
 from net_alpha.engine.detector import detect_wash_sales
 from net_alpha.models.domain import OptionDetails, Trade
-
 
 # ---------------------------------------------------------------------------
 # Helpers

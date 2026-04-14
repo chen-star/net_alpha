@@ -1,6 +1,6 @@
-from datetime import date, timedelta
+from datetime import date
 
-from net_alpha.cli.simulate import _find_lookback_triggers, _compute_safe_date
+from net_alpha.cli.simulate import _compute_safe_date, _find_lookback_triggers
 from net_alpha.models.domain import Trade
 
 
