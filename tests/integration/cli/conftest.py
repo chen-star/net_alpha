@@ -31,5 +31,5 @@ def cli_setup(tmp_path, monkeypatch):
 
     monkeypatch.setattr("net_alpha.cli.app._bootstrap", fake_bootstrap)
 
-    runner = CliRunner(mix_stderr=False)
+    runner = CliRunner()
     return runner, engine, settings
