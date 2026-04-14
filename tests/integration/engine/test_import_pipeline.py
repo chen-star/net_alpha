@@ -20,7 +20,6 @@ from tests.integration.conftest import (
 
 def _ctx(session, csv_path: Path, broker: str, mock_client) -> ImportContext:
     """Build a minimal ImportContext for engine-level import tests."""
-    from net_alpha.db.repository import SchemaCacheRepository, TradeRepository
     return ImportContext(
         csv_path=csv_path,
         broker_name=broker,
