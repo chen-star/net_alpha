@@ -222,9 +222,3 @@ uv run pytest -k "test_wash_sale"
 > **This tool is informational only. It does not constitute tax or legal advice. Consult a qualified tax professional before making filing decisions.**
 
 Wash sale rules — especially for options and ETFs — involve unsettled areas of tax law. `Probable` and `Unclear` results should always be reviewed with a CPA.
-
----
-
-## License
-
-MIT
