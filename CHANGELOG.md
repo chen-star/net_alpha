@@ -2,6 +2,22 @@
 
 
 
+## v0.1.3 (2026-04-14)
+
+### Fix
+
+* fix: remove unused imports and fix import ordering in test files
+
+Fixes CI lint failures (F401 unused imports, I001 unsorted imports) and
+reformats all files to match ruff format standards.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`19ff393`](https://github.com/chen-star/net_alpha/commit/19ff39347d8cbd6569d9a6a0aff1d7fe2faed182))
+
+### Unknown
+
+* Update gitnexus index. ([`b6658f0`](https://github.com/chen-star/net_alpha/commit/b6658f0152eec361b86aeb1dd48a30a70febea10))
+
+
 ## v0.1.2 (2026-04-14)
 
 ### Chore
