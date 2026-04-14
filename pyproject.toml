@@ -42,3 +42,10 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+branch = "master"
+build_command = ""
+tag_format = "v{version}"
+commit_message = "chore: release v{version} [skip ci]"
