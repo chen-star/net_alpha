@@ -152,44 +152,93 @@ def test_detection_result():
 
 class TestTaxPosition:
     def test_net_st_gains(self):
-        tp = TaxPosition(st_gains=12400.0, st_losses=3200.0, lt_gains=0.0, lt_losses=0.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=12400.0, st_losses=3200.0,
+            lt_gains=0.0, lt_losses=0.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.net_st == 9200.0
 
     def test_net_st_losses(self):
-        tp = TaxPosition(st_gains=1000.0, st_losses=5000.0, lt_gains=0.0, lt_losses=0.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=1000.0, st_losses=5000.0,
+            lt_gains=0.0, lt_losses=0.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.net_st == -4000.0
 
     def test_net_lt(self):
-        tp = TaxPosition(st_gains=0.0, st_losses=0.0, lt_gains=8100.0, lt_losses=500.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=0.0, st_losses=0.0,
+            lt_gains=8100.0, lt_losses=500.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.net_lt == 7600.0
 
     def test_net_capital_gain(self):
-        tp = TaxPosition(st_gains=12400.0, st_losses=3200.0, lt_gains=8100.0, lt_losses=500.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=12400.0, st_losses=3200.0,
+            lt_gains=8100.0, lt_losses=500.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.net_capital_gain == 16800.0
 
     def test_loss_needed_to_zero_st_positive(self):
-        tp = TaxPosition(st_gains=9200.0, st_losses=0.0, lt_gains=0.0, lt_losses=0.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=9200.0, st_losses=0.0,
+            lt_gains=0.0, lt_losses=0.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.loss_needed_to_zero_st == 9200.0
 
     def test_loss_needed_to_zero_st_already_negative(self):
-        tp = TaxPosition(st_gains=1000.0, st_losses=5000.0, lt_gains=0.0, lt_losses=0.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=1000.0, st_losses=5000.0,
+            lt_gains=0.0, lt_losses=0.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.loss_needed_to_zero_st == 0.0
 
     def test_carryforward_no_loss(self):
-        tp = TaxPosition(st_gains=5000.0, st_losses=0.0, lt_gains=0.0, lt_losses=0.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=5000.0, st_losses=0.0,
+            lt_gains=0.0, lt_losses=0.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.carryforward == 0.0
 
     def test_carryforward_loss_under_3000(self):
-        tp = TaxPosition(st_gains=0.0, st_losses=2999.0, lt_gains=0.0, lt_losses=0.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=0.0, st_losses=2999.0,
+            lt_gains=0.0, lt_losses=0.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.carryforward == 0.0
 
     def test_carryforward_loss_exactly_3000(self):
-        tp = TaxPosition(st_gains=0.0, st_losses=3000.0, lt_gains=0.0, lt_losses=0.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=0.0, st_losses=3000.0,
+            lt_gains=0.0, lt_losses=0.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.carryforward == 0.0
 
     def test_carryforward_loss_above_3000(self):
-        tp = TaxPosition(st_gains=0.0, st_losses=4800.0, lt_gains=0.0, lt_losses=0.0, year=2026, basis_unknown_count=0)
+        tp = TaxPosition(
+            st_gains=0.0, st_losses=4800.0,
+            lt_gains=0.0, lt_losses=0.0,
+            year=2026, basis_unknown_count=0,
+        )
         assert tp.carryforward == 1800.0
+
+    def test_carryforward_lt_gains_offset_st_losses(self):
+        # net_st = -2000, net_lt = +1500 → net_capital_gain = -500 → carryforward = 0
+        tp = TaxPosition(
+            st_gains=0.0, st_losses=2000.0,
+            lt_gains=1500.0, lt_losses=0.0,
+            year=2026, basis_unknown_count=0,
+        )
+        assert tp.carryforward == 0.0
 
 
 class TestOpenLot:
@@ -260,3 +309,39 @@ class TestLotRecommendation:
             fallback_reason=None,
         )
         assert rec.has_wash_risk is False
+
+
+class TestRealizedPair:
+    def test_creation(self):
+        pair = RealizedPair(
+            sell_trade_id="sell-1",
+            buy_lot_date=date(2025, 1, 15),
+            buy_lot_account="Schwab",
+            quantity=10.0,
+            proceeds=1800.0,
+            basis=1500.0,
+            basis_unknown=False,
+            is_long_term=False,
+        )
+        assert pair.quantity == 10.0
+        assert pair.is_long_term is False
+
+    def test_basis_unknown(self):
+        pair = RealizedPair(
+            sell_trade_id="sell-2",
+            buy_lot_date=date(2025, 1, 15),
+            buy_lot_account="Schwab",
+            quantity=5.0,
+            proceeds=0.0,
+            basis=0.0,
+            basis_unknown=True,
+            is_long_term=False,
+        )
+        assert pair.basis_unknown is True
+
+
+class TestAllocationResult:
+    def test_empty(self):
+        result = AllocationResult(realized_pairs=[], open_lots=[])
+        assert result.realized_pairs == []
+        assert result.open_lots == []
