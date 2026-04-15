@@ -96,3 +96,90 @@ class DetectionResult(BaseModel):
     violations: list[WashSaleViolation]
     lots: list[Lot]
     basis_unknown_count: int
+
+
+class RealizedPair(BaseModel):
+    """A sell matched to a specific buy lot with quantity consumed."""
+
+    sell_trade_id: str
+    buy_lot_date: date
+    buy_lot_account: str
+    quantity: float
+    proceeds: float
+    basis: float
+    basis_unknown: bool
+    is_long_term: bool  # holding period > 365 days
+
+
+class OpenLot(BaseModel):
+    """An open (unconsumed) buy lot with holding period info."""
+
+    ticker: str
+    account: str
+    quantity: float
+    adjusted_basis_per_share: float
+    purchase_date: date
+    days_held: int
+    days_to_long_term: int  # 0 if already long-term
+    basis_unknown: bool
+    is_option: bool
+
+
+class AllocationResult(BaseModel):
+    """Output of _allocate_lots — shared by tax position and open lots."""
+
+    realized_pairs: list[RealizedPair]
+    open_lots: list[OpenLot]
+
+
+class TaxPosition(BaseModel):
+    """YTD realized tax position with ST/LT classification."""
+
+    st_gains: float
+    st_losses: float
+    lt_gains: float
+    lt_losses: float
+    year: int
+    basis_unknown_count: int
+
+    @property
+    def net_st(self) -> float:
+        return self.st_gains - self.st_losses
+
+    @property
+    def net_lt(self) -> float:
+        return self.lt_gains - self.lt_losses
+
+    @property
+    def net_capital_gain(self) -> float:
+        return self.net_st + self.net_lt
+
+    @property
+    def loss_needed_to_zero_st(self) -> float:
+        return max(0.0, self.net_st)
+
+    @property
+    def carryforward(self) -> float:
+        return max(0.0, -self.net_capital_gain - 3000.0)
+
+
+class LotSelection(BaseModel):
+    """Result of applying a lot selection method (FIFO/HIFO/LIFO) to a sell."""
+
+    method: str  # "FIFO", "HIFO", "LIFO"
+    lots_used: list[OpenLot]
+    st_gain_loss: float
+    lt_gain_loss: float
+    total_gain_loss: float
+    wash_sale_risk: bool
+
+
+class LotRecommendation(BaseModel):
+    """Structured recommendation from the lot selection decision tree."""
+
+    preferred_method: str  # "FIFO", "HIFO", "LIFO"
+    reason: str  # "st_loss_offset", "lt_lower_rate", "least_gain"
+    has_wash_risk: bool
+    safe_sell_date: date | None
+    fallback_method: str | None
+    fallback_reason: str | None
