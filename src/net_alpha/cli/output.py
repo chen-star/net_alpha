@@ -25,3 +25,18 @@ def confidence_style(confidence: str) -> str:
         "Probable": "bold yellow",
         "Unclear": "bold blue",
     }.get(confidence, "")
+
+
+def format_currency_colored(amount: float) -> str:
+    """Return Rich markup string with green/red color based on sign."""
+    formatted = format_currency(amount)
+    if amount > 0:
+        return f"[green]{formatted}[/green]"
+    elif amount < 0:
+        return f"[red]{formatted}[/red]"
+    return formatted
+
+
+def print_hint(console: Console, text: str) -> None:
+    """Print a single contextual nudge line before the disclaimer."""
+    console.print(f"\n  [dim]\u2192 {text}[/dim]")
