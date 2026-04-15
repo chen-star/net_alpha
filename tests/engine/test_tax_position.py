@@ -7,8 +7,8 @@ from net_alpha.engine.tax_position import (
     recommend_lot_method,
     select_lots,
 )
-from net_alpha.models.domain import LotRecommendation, LotSelection, OptionDetails, TaxPosition
-from tests.conftest import LossSaleFactory, OpenLotFactory, TradeFactory
+from net_alpha.models.domain import LotSelection, OptionDetails, TaxPosition
+from tests.conftest import OpenLotFactory, TradeFactory
 
 
 class TestAllocateLots:
@@ -101,16 +101,29 @@ class TestAllocateLots:
     def test_fifo_order_multiple_buys(self):
         """Two buys, one sell — FIFO consumes earliest first."""
         buy1 = TradeFactory(
-            account="Schwab", date=date(2025, 1, 10), ticker="AAPL",
-            action="Buy", quantity=30.0, cost_basis=4500.0,
+            account="Schwab",
+            date=date(2025, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=30.0,
+            cost_basis=4500.0,
         )
         buy2 = TradeFactory(
-            account="Schwab", date=date(2025, 3, 1), ticker="AAPL",
-            action="Buy", quantity=40.0, cost_basis=6400.0,
+            account="Schwab",
+            date=date(2025, 3, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=40.0,
+            cost_basis=6400.0,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2025, 6, 15), ticker="AAPL",
-            action="Sell", quantity=50.0, proceeds=8500.0, cost_basis=7700.0,
+            account="Schwab",
+            date=date(2025, 6, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=50.0,
+            proceeds=8500.0,
+            cost_basis=7700.0,
         )
         result = _allocate_lots([buy1, buy2, sell], as_of=date(2025, 12, 1))
 
@@ -132,20 +145,31 @@ class TestAllocateLots:
     def test_per_account_isolation(self):
         """Sell on Schwab does NOT consume Robinhood lots."""
         schwab_buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 10), ticker="AAPL",
-            action="Buy", quantity=30.0, cost_basis=4500.0,
+            account="Schwab",
+            date=date(2025, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=30.0,
+            cost_basis=4500.0,
         )
         robin_buy = TradeFactory(
-            account="Robinhood", date=date(2025, 2, 1), ticker="AAPL",
-            action="Buy", quantity=50.0, cost_basis=7500.0,
+            account="Robinhood",
+            date=date(2025, 2, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=50.0,
+            cost_basis=7500.0,
         )
         schwab_sell = TradeFactory(
-            account="Schwab", date=date(2025, 6, 15), ticker="AAPL",
-            action="Sell", quantity=30.0, proceeds=5100.0, cost_basis=4500.0,
+            account="Schwab",
+            date=date(2025, 6, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=30.0,
+            proceeds=5100.0,
+            cost_basis=4500.0,
         )
-        result = _allocate_lots(
-            [schwab_buy, robin_buy, schwab_sell], as_of=date(2025, 12, 1)
-        )
+        result = _allocate_lots([schwab_buy, robin_buy, schwab_sell], as_of=date(2025, 12, 1))
 
         assert len(result.realized_pairs) == 1
         rp = result.realized_pairs[0]
@@ -160,17 +184,30 @@ class TestAllocateLots:
         """Two buys on same date — ordered by id for determinism."""
         buy_a = TradeFactory(
             id="aaa",
-            account="Schwab", date=date(2025, 1, 15), ticker="AAPL",
-            action="Buy", quantity=30.0, cost_basis=4500.0,
+            account="Schwab",
+            date=date(2025, 1, 15),
+            ticker="AAPL",
+            action="Buy",
+            quantity=30.0,
+            cost_basis=4500.0,
         )
         buy_b = TradeFactory(
             id="bbb",
-            account="Schwab", date=date(2025, 1, 15), ticker="AAPL",
-            action="Buy", quantity=40.0, cost_basis=6000.0,
+            account="Schwab",
+            date=date(2025, 1, 15),
+            ticker="AAPL",
+            action="Buy",
+            quantity=40.0,
+            cost_basis=6000.0,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2025, 6, 15), ticker="AAPL",
-            action="Sell", quantity=40.0, proceeds=6800.0, cost_basis=6100.0,
+            account="Schwab",
+            date=date(2025, 6, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=40.0,
+            proceeds=6800.0,
+            cost_basis=6100.0,
         )
         result = _allocate_lots([buy_a, buy_b, sell], as_of=date(2025, 12, 1))
 
@@ -185,8 +222,13 @@ class TestAllocateLots:
     def test_basis_unknown_buy_lot(self):
         """basis_unknown buy → open lot has basis_unknown=True."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 10), ticker="AAPL",
-            action="Buy", quantity=10.0, cost_basis=None, basis_unknown=True,
+            account="Schwab",
+            date=date(2025, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=10.0,
+            cost_basis=None,
+            basis_unknown=True,
         )
         result = _allocate_lots([buy], as_of=date(2025, 12, 1))
 
@@ -197,12 +239,22 @@ class TestAllocateLots:
     def test_basis_unknown_realized_pair(self):
         """Sell consuming basis_unknown buy → realized pair marked."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 10), ticker="AAPL",
-            action="Buy", quantity=10.0, cost_basis=None, basis_unknown=True,
+            account="Schwab",
+            date=date(2025, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=10.0,
+            cost_basis=None,
+            basis_unknown=True,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2025, 6, 15), ticker="AAPL",
-            action="Sell", quantity=10.0, proceeds=1800.0, cost_basis=None,
+            account="Schwab",
+            date=date(2025, 6, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=10.0,
+            proceeds=1800.0,
+            cost_basis=None,
         )
         result = _allocate_lots([buy, sell], as_of=date(2025, 12, 1))
 
@@ -213,8 +265,12 @@ class TestAllocateLots:
     def test_option_trades_excluded_from_open_lots(self):
         """Option buys do not appear as open lots."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 10), ticker="AAPL",
-            action="Buy", quantity=1.0, cost_basis=500.0,
+            account="Schwab",
+            date=date(2025, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=1.0,
+            cost_basis=500.0,
             option_details=OptionDetails(strike=150.0, expiry=date(2025, 6, 20), call_put="C"),
         )
         result = _allocate_lots([buy], as_of=date(2025, 12, 1))
@@ -224,12 +280,21 @@ class TestAllocateLots:
     def test_holding_period_exactly_365_days(self):
         """Held exactly 365 days → short-term (> 365 for long-term)."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 1), ticker="AAPL",
-            action="Buy", quantity=10.0, cost_basis=1500.0,
+            account="Schwab",
+            date=date(2025, 1, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=10.0,
+            cost_basis=1500.0,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2026, 1, 1), ticker="AAPL",
-            action="Sell", quantity=10.0, proceeds=1800.0, cost_basis=1500.0,
+            account="Schwab",
+            date=date(2026, 1, 1),
+            ticker="AAPL",
+            action="Sell",
+            quantity=10.0,
+            proceeds=1800.0,
+            cost_basis=1500.0,
         )
         result = _allocate_lots([buy, sell], as_of=date(2026, 6, 1))
 
@@ -239,12 +304,21 @@ class TestAllocateLots:
     def test_holding_period_366_days(self):
         """Held 366 days → long-term."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 1), ticker="AAPL",
-            action="Buy", quantity=10.0, cost_basis=1500.0,
+            account="Schwab",
+            date=date(2025, 1, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=10.0,
+            cost_basis=1500.0,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2026, 1, 2), ticker="AAPL",
-            action="Sell", quantity=10.0, proceeds=1800.0, cost_basis=1500.0,
+            account="Schwab",
+            date=date(2026, 1, 2),
+            ticker="AAPL",
+            action="Sell",
+            quantity=10.0,
+            proceeds=1800.0,
+            cost_basis=1500.0,
         )
         result = _allocate_lots([buy, sell], as_of=date(2026, 6, 1))
 
@@ -254,8 +328,12 @@ class TestAllocateLots:
     def test_days_to_long_term_computation(self):
         """Open lot correctly computes days_to_long_term."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 6, 1), ticker="AAPL",
-            action="Buy", quantity=50.0, cost_basis=7250.0,
+            account="Schwab",
+            date=date(2025, 6, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=50.0,
+            cost_basis=7250.0,
         )
         # as_of = 2026-04-14 → 317 days held → 366-317 = 49 days to LT
         result = _allocate_lots([buy], as_of=date(2026, 4, 14))
@@ -267,8 +345,12 @@ class TestAllocateLots:
     def test_already_long_term_open_lot(self):
         """Open lot held > 365 days → days_to_long_term = 0."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 1), ticker="AAPL",
-            action="Buy", quantity=20.0, cost_basis=3000.0,
+            account="Schwab",
+            date=date(2025, 1, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=20.0,
+            cost_basis=3000.0,
         )
         result = _allocate_lots([buy], as_of=date(2026, 4, 14))  # 468 days
 
@@ -286,12 +368,21 @@ class TestComputeTaxPosition:
     def test_simple_st_gain(self):
         """Single short-term gain classified correctly."""
         buy = TradeFactory(
-            account="Schwab", date=date(2026, 1, 10), ticker="AAPL",
-            action="Buy", quantity=50.0, cost_basis=7250.0,
+            account="Schwab",
+            date=date(2026, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=50.0,
+            cost_basis=7250.0,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2026, 3, 15), ticker="AAPL",
-            action="Sell", quantity=50.0, proceeds=9000.0, cost_basis=7250.0,
+            account="Schwab",
+            date=date(2026, 3, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=50.0,
+            proceeds=9000.0,
+            cost_basis=7250.0,
         )
         tp = compute_tax_position([buy, sell], year=2026)
 
@@ -304,12 +395,21 @@ class TestComputeTaxPosition:
     def test_lt_gain(self):
         """Long-term gain (> 365 days)."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 10), ticker="AAPL",
-            action="Buy", quantity=50.0, cost_basis=5000.0,
+            account="Schwab",
+            date=date(2025, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=50.0,
+            cost_basis=5000.0,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2026, 3, 15), ticker="AAPL",
-            action="Sell", quantity=50.0, proceeds=8000.0, cost_basis=5000.0,
+            account="Schwab",
+            date=date(2026, 3, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=50.0,
+            proceeds=8000.0,
+            cost_basis=5000.0,
         )
         tp = compute_tax_position([buy, sell], year=2026)
 
@@ -319,12 +419,21 @@ class TestComputeTaxPosition:
     def test_st_loss(self):
         """Short-term loss."""
         buy = TradeFactory(
-            account="Schwab", date=date(2026, 1, 10), ticker="AAPL",
-            action="Buy", quantity=50.0, cost_basis=9000.0,
+            account="Schwab",
+            date=date(2026, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=50.0,
+            cost_basis=9000.0,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2026, 3, 15), ticker="AAPL",
-            action="Sell", quantity=50.0, proceeds=7500.0, cost_basis=9000.0,
+            account="Schwab",
+            date=date(2026, 3, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=50.0,
+            proceeds=7500.0,
+            cost_basis=9000.0,
         )
         tp = compute_tax_position([buy, sell], year=2026)
 
@@ -334,16 +443,30 @@ class TestComputeTaxPosition:
     def test_filters_by_year(self):
         """Only sells in the given year contribute to the position."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 10), ticker="AAPL",
-            action="Buy", quantity=50.0, cost_basis=7250.0,
+            account="Schwab",
+            date=date(2025, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=50.0,
+            cost_basis=7250.0,
         )
         sell_2025 = TradeFactory(
-            account="Schwab", date=date(2025, 6, 15), ticker="AAPL",
-            action="Sell", quantity=25.0, proceeds=4500.0, cost_basis=3625.0,
+            account="Schwab",
+            date=date(2025, 6, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=25.0,
+            proceeds=4500.0,
+            cost_basis=3625.0,
         )
         sell_2026 = TradeFactory(
-            account="Schwab", date=date(2026, 3, 15), ticker="AAPL",
-            action="Sell", quantity=25.0, proceeds=5000.0, cost_basis=3625.0,
+            account="Schwab",
+            date=date(2026, 3, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=25.0,
+            proceeds=5000.0,
+            cost_basis=3625.0,
         )
         tp = compute_tax_position([buy, sell_2025, sell_2026], year=2026)
 
@@ -354,24 +477,41 @@ class TestComputeTaxPosition:
     def test_basis_unknown_excluded_with_count(self):
         """basis_unknown sells excluded from totals, counted."""
         buy_known = TradeFactory(
-            account="Schwab", date=date(2026, 1, 10), ticker="AAPL",
-            action="Buy", quantity=10.0, cost_basis=1500.0,
+            account="Schwab",
+            date=date(2026, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=10.0,
+            cost_basis=1500.0,
         )
         buy_unknown = TradeFactory(
-            account="Schwab", date=date(2026, 1, 15), ticker="MSFT",
-            action="Buy", quantity=10.0, cost_basis=None, basis_unknown=True,
+            account="Schwab",
+            date=date(2026, 1, 15),
+            ticker="MSFT",
+            action="Buy",
+            quantity=10.0,
+            cost_basis=None,
+            basis_unknown=True,
         )
         sell_known = TradeFactory(
-            account="Schwab", date=date(2026, 6, 15), ticker="AAPL",
-            action="Sell", quantity=10.0, proceeds=1800.0, cost_basis=1500.0,
+            account="Schwab",
+            date=date(2026, 6, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=10.0,
+            proceeds=1800.0,
+            cost_basis=1500.0,
         )
         sell_unknown = TradeFactory(
-            account="Schwab", date=date(2026, 6, 20), ticker="MSFT",
-            action="Sell", quantity=10.0, proceeds=2000.0, cost_basis=None,
+            account="Schwab",
+            date=date(2026, 6, 20),
+            ticker="MSFT",
+            action="Sell",
+            quantity=10.0,
+            proceeds=2000.0,
+            cost_basis=None,
         )
-        tp = compute_tax_position(
-            [buy_known, buy_unknown, sell_known, sell_unknown], year=2026
-        )
+        tp = compute_tax_position([buy_known, buy_unknown, sell_known, sell_unknown], year=2026)
 
         assert tp.st_gains == 300.0  # Only AAPL sell
         assert tp.basis_unknown_count == 1
@@ -379,13 +519,22 @@ class TestComputeTaxPosition:
     def test_option_trades_included(self):
         """Option gains/losses count toward YTD totals."""
         buy = TradeFactory(
-            account="Schwab", date=date(2026, 1, 10), ticker="AAPL",
-            action="Buy", quantity=1.0, cost_basis=500.0,
+            account="Schwab",
+            date=date(2026, 1, 10),
+            ticker="AAPL",
+            action="Buy",
+            quantity=1.0,
+            cost_basis=500.0,
             option_details=OptionDetails(strike=150.0, expiry=date(2026, 6, 20), call_put="C"),
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2026, 3, 15), ticker="AAPL",
-            action="Sell", quantity=1.0, proceeds=800.0, cost_basis=500.0,
+            account="Schwab",
+            date=date(2026, 3, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=1.0,
+            proceeds=800.0,
+            cost_basis=500.0,
             option_details=OptionDetails(strike=150.0, expiry=date(2026, 6, 20), call_put="C"),
         )
         tp = compute_tax_position([buy, sell], year=2026)
@@ -395,12 +544,21 @@ class TestComputeTaxPosition:
     def test_cross_year_buy_sell_lt(self):
         """Buy in 2025, sell in 2026 after > 365 days → long-term."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 1, 1), ticker="AAPL",
-            action="Buy", quantity=10.0, cost_basis=1500.0,
+            account="Schwab",
+            date=date(2025, 1, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=10.0,
+            cost_basis=1500.0,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2026, 2, 1), ticker="AAPL",
-            action="Sell", quantity=10.0, proceeds=2000.0, cost_basis=1500.0,
+            account="Schwab",
+            date=date(2026, 2, 1),
+            ticker="AAPL",
+            action="Sell",
+            quantity=10.0,
+            proceeds=2000.0,
+            cost_basis=1500.0,
         )
         tp = compute_tax_position([buy, sell], year=2026)
 
@@ -420,12 +578,20 @@ class TestIdentifyOpenLots:
     def test_basic_open_lots(self):
         """Buys with no sells → all open."""
         buy1 = TradeFactory(
-            account="Schwab", date=date(2025, 6, 1), ticker="AAPL",
-            action="Buy", quantity=50.0, cost_basis=7250.0,
+            account="Schwab",
+            date=date(2025, 6, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=50.0,
+            cost_basis=7250.0,
         )
         buy2 = TradeFactory(
-            account="Robinhood", date=date(2025, 3, 1), ticker="TSLA",
-            action="Buy", quantity=20.0, cost_basis=4200.0,
+            account="Robinhood",
+            date=date(2025, 3, 1),
+            ticker="TSLA",
+            action="Buy",
+            quantity=20.0,
+            cost_basis=4200.0,
         )
         lots = identify_open_lots([buy1, buy2], as_of=date(2026, 4, 14))
 
@@ -434,16 +600,28 @@ class TestIdentifyOpenLots:
     def test_sort_order_days_to_lt_ascending(self):
         """Lots sorted by days_to_long_term ascending, then ticker."""
         buy_far = TradeFactory(
-            account="Schwab", date=date(2026, 3, 1), ticker="MSFT",
-            action="Buy", quantity=15.0, cost_basis=4350.0,
+            account="Schwab",
+            date=date(2026, 3, 1),
+            ticker="MSFT",
+            action="Buy",
+            quantity=15.0,
+            cost_basis=4350.0,
         )
         buy_close = TradeFactory(
-            account="Schwab", date=date(2025, 6, 1), ticker="AAPL",
-            action="Buy", quantity=50.0, cost_basis=7250.0,
+            account="Schwab",
+            date=date(2025, 6, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=50.0,
+            cost_basis=7250.0,
         )
         buy_lt = TradeFactory(
-            account="Robinhood", date=date(2025, 3, 1), ticker="TSLA",
-            action="Buy", quantity=20.0, cost_basis=4200.0,
+            account="Robinhood",
+            date=date(2025, 3, 1),
+            ticker="TSLA",
+            action="Buy",
+            quantity=20.0,
+            cost_basis=4200.0,
         )
         lots = identify_open_lots([buy_far, buy_close, buy_lt], as_of=date(2026, 4, 14))
 
@@ -455,12 +633,20 @@ class TestIdentifyOpenLots:
     def test_options_excluded(self):
         """Option buys excluded from open lots."""
         equity_buy = TradeFactory(
-            account="Schwab", date=date(2025, 6, 1), ticker="AAPL",
-            action="Buy", quantity=50.0, cost_basis=7250.0,
+            account="Schwab",
+            date=date(2025, 6, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=50.0,
+            cost_basis=7250.0,
         )
         option_buy = TradeFactory(
-            account="Schwab", date=date(2025, 6, 1), ticker="AAPL",
-            action="Buy", quantity=1.0, cost_basis=500.0,
+            account="Schwab",
+            date=date(2025, 6, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=1.0,
+            cost_basis=500.0,
             option_details=OptionDetails(strike=150.0, expiry=date(2025, 12, 20), call_put="C"),
         )
         lots = identify_open_lots([equity_buy, option_buy], as_of=date(2026, 4, 14))
@@ -471,12 +657,21 @@ class TestIdentifyOpenLots:
     def test_partially_consumed_lot(self):
         """After partial sell, open lot shows remaining."""
         buy = TradeFactory(
-            account="Schwab", date=date(2025, 6, 1), ticker="AAPL",
-            action="Buy", quantity=100.0, cost_basis=15000.0,
+            account="Schwab",
+            date=date(2025, 6, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=100.0,
+            cost_basis=15000.0,
         )
         sell = TradeFactory(
-            account="Schwab", date=date(2025, 9, 1), ticker="AAPL",
-            action="Sell", quantity=60.0, proceeds=10200.0, cost_basis=9000.0,
+            account="Schwab",
+            date=date(2025, 9, 1),
+            ticker="AAPL",
+            action="Sell",
+            quantity=60.0,
+            proceeds=10200.0,
+            cost_basis=9000.0,
         )
         lots = identify_open_lots([buy, sell], as_of=date(2026, 4, 14))
 
@@ -494,19 +689,31 @@ class TestSelectLots:
         """Helper: 3 open lots at different prices and holding periods."""
         return [
             OpenLotFactory(
-                ticker="AAPL", account="Schwab", quantity=50.0,
+                ticker="AAPL",
+                account="Schwab",
+                quantity=50.0,
                 adjusted_basis_per_share=145.0,
-                purchase_date=date(2025, 8, 15), days_held=242, days_to_long_term=124,
+                purchase_date=date(2025, 8, 15),
+                days_held=242,
+                days_to_long_term=124,
             ),
             OpenLotFactory(
-                ticker="AAPL", account="Robinhood", quantity=50.0,
+                ticker="AAPL",
+                account="Robinhood",
+                quantity=50.0,
                 adjusted_basis_per_share=112.0,
-                purchase_date=date(2025, 1, 10), days_held=459, days_to_long_term=0,
+                purchase_date=date(2025, 1, 10),
+                days_held=459,
+                days_to_long_term=0,
             ),
             OpenLotFactory(
-                ticker="AAPL", account="Schwab", quantity=50.0,
+                ticker="AAPL",
+                account="Schwab",
+                quantity=50.0,
                 adjusted_basis_per_share=195.0,
-                purchase_date=date(2025, 11, 20), days_held=145, days_to_long_term=221,
+                purchase_date=date(2025, 11, 20),
+                days_held=145,
+                days_to_long_term=221,
             ),
         ]
 
@@ -583,9 +790,12 @@ class TestSelectLots:
 class TestRecommendLotMethod:
     def _make_tax_position(self, st_gains=0.0, st_losses=0.0, lt_gains=0.0, lt_losses=0.0):
         return TaxPosition(
-            st_gains=st_gains, st_losses=st_losses,
-            lt_gains=lt_gains, lt_losses=lt_losses,
-            year=2026, basis_unknown_count=0,
+            st_gains=st_gains,
+            st_losses=st_losses,
+            lt_gains=lt_gains,
+            lt_losses=lt_losses,
+            year=2026,
+            basis_unknown_count=0,
         )
 
     def _make_selection(self, method, st_gain_loss=0.0, lt_gain_loss=0.0, wash_sale_risk=False):

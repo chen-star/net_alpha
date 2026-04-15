@@ -8,19 +8,30 @@ from net_alpha.models.domain import (
     LotRecommendation,
     LotSelection,
     OpenLot,
-    TaxPosition,
 )
 
 runner = CliRunner()
 
 
-def _make_open_lot(ticker="AAPL", account="Schwab", qty=50.0, basis=145.0,
-                    purchase_date=date(2025, 8, 15), days_held=242, days_to_lt=124):
+def _make_open_lot(
+    ticker="AAPL",
+    account="Schwab",
+    qty=50.0,
+    basis=145.0,
+    purchase_date=date(2025, 8, 15),
+    days_held=242,
+    days_to_lt=124,
+):
     return OpenLot(
-        ticker=ticker, account=account, quantity=qty,
-        adjusted_basis_per_share=basis, purchase_date=purchase_date,
-        days_held=days_held, days_to_long_term=days_to_lt,
-        basis_unknown=False, is_option=False,
+        ticker=ticker,
+        account=account,
+        quantity=qty,
+        adjusted_basis_per_share=basis,
+        purchase_date=purchase_date,
+        days_held=days_held,
+        days_to_long_term=days_to_lt,
+        basis_unknown=False,
+        is_option=False,
     )
 
 
@@ -34,25 +45,37 @@ class TestSimulateSellLotSelection:
         mock_lots.return_value = (
             {
                 "FIFO": LotSelection(
-                    method="FIFO", lots_used=[_make_open_lot()],
-                    st_gain_loss=1750.0, lt_gain_loss=0.0,
-                    total_gain_loss=1750.0, wash_sale_risk=False,
+                    method="FIFO",
+                    lots_used=[_make_open_lot()],
+                    st_gain_loss=1750.0,
+                    lt_gain_loss=0.0,
+                    total_gain_loss=1750.0,
+                    wash_sale_risk=False,
                 ),
                 "HIFO": LotSelection(
-                    method="HIFO", lots_used=[_make_open_lot(basis=112.0)],
-                    st_gain_loss=0.0, lt_gain_loss=3400.0,
-                    total_gain_loss=3400.0, wash_sale_risk=False,
+                    method="HIFO",
+                    lots_used=[_make_open_lot(basis=112.0)],
+                    st_gain_loss=0.0,
+                    lt_gain_loss=3400.0,
+                    total_gain_loss=3400.0,
+                    wash_sale_risk=False,
                 ),
                 "LIFO": LotSelection(
-                    method="LIFO", lots_used=[_make_open_lot(basis=195.0)],
-                    st_gain_loss=-750.0, lt_gain_loss=0.0,
-                    total_gain_loss=-750.0, wash_sale_risk=False,
+                    method="LIFO",
+                    lots_used=[_make_open_lot(basis=195.0)],
+                    st_gain_loss=-750.0,
+                    lt_gain_loss=0.0,
+                    total_gain_loss=-750.0,
+                    wash_sale_risk=False,
                 ),
             },
             LotRecommendation(
-                preferred_method="LIFO", reason="st_loss_offset",
-                has_wash_risk=False, safe_sell_date=None,
-                fallback_method=None, fallback_reason=None,
+                preferred_method="LIFO",
+                reason="st_loss_offset",
+                has_wash_risk=False,
+                safe_sell_date=None,
+                fallback_method=None,
+                fallback_reason=None,
             ),
         )
         result = runner.invoke(app, ["simulate", "sell", "AAPL", "50", "--price", "180"])
@@ -95,25 +118,37 @@ class TestSimulateSellLotSelection:
         mock_lots.return_value = (
             {
                 "FIFO": LotSelection(
-                    method="FIFO", lots_used=[_make_open_lot()],
-                    st_gain_loss=1750.0, lt_gain_loss=0.0,
-                    total_gain_loss=1750.0, wash_sale_risk=False,
+                    method="FIFO",
+                    lots_used=[_make_open_lot()],
+                    st_gain_loss=1750.0,
+                    lt_gain_loss=0.0,
+                    total_gain_loss=1750.0,
+                    wash_sale_risk=False,
                 ),
                 "HIFO": LotSelection(
-                    method="HIFO", lots_used=[_make_open_lot(basis=112.0)],
-                    st_gain_loss=0.0, lt_gain_loss=3400.0,
-                    total_gain_loss=3400.0, wash_sale_risk=False,
+                    method="HIFO",
+                    lots_used=[_make_open_lot(basis=112.0)],
+                    st_gain_loss=0.0,
+                    lt_gain_loss=3400.0,
+                    total_gain_loss=3400.0,
+                    wash_sale_risk=False,
                 ),
                 "LIFO": LotSelection(
-                    method="LIFO", lots_used=[_make_open_lot(basis=195.0)],
-                    st_gain_loss=-750.0, lt_gain_loss=0.0,
-                    total_gain_loss=-750.0, wash_sale_risk=True,
+                    method="LIFO",
+                    lots_used=[_make_open_lot(basis=195.0)],
+                    st_gain_loss=-750.0,
+                    lt_gain_loss=0.0,
+                    total_gain_loss=-750.0,
+                    wash_sale_risk=True,
                 ),
             },
             LotRecommendation(
-                preferred_method="LIFO", reason="st_loss_offset",
-                has_wash_risk=True, safe_sell_date=date(2026, 1, 15),
-                fallback_method="FIFO", fallback_reason="least_gain",
+                preferred_method="LIFO",
+                reason="st_loss_offset",
+                has_wash_risk=True,
+                safe_sell_date=date(2026, 1, 15),
+                fallback_method="FIFO",
+                fallback_reason="least_gain",
             ),
         )
         result = runner.invoke(app, ["simulate", "sell", "AAPL", "50", "--price", "180"])

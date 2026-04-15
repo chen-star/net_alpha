@@ -24,10 +24,7 @@ def tax_position_command(
     _render_open_lots(open_lots)
 
     if tp.basis_unknown_count > 0:
-        console.print(
-            f"\n  [yellow]{tp.basis_unknown_count} sell(s) excluded due to "
-            "unknown cost basis.[/yellow]"
-        )
+        console.print(f"\n  [yellow]{tp.basis_unknown_count} sell(s) excluded due to unknown cost basis.[/yellow]")
 
     print_disclaimer(console)
 
