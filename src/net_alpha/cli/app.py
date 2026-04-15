@@ -9,6 +9,7 @@ from net_alpha.cli.import_cmd import import_command
 from net_alpha.cli.rebuys import rebuys_command
 from net_alpha.cli.report import report_command
 from net_alpha.cli.simulate import simulate_app
+from net_alpha.cli.tax_position import tax_position_command
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.migrations import run_migrations
@@ -25,6 +26,7 @@ app.command(name="check")(check_command)
 app.add_typer(simulate_app, name="simulate")
 app.command(name="rebuys")(rebuys_command)
 app.command(name="report")(report_command)
+app.command(name="tax-position")(tax_position_command)
 
 
 def _bootstrap() -> tuple[Settings, Session]:
