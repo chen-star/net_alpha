@@ -2,6 +2,58 @@
 
 
 
+## v0.2.0 (2026-04-15)
+
+### Documentation
+
+* docs: add tax optimization suite design spec
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c97cfe1`](https://github.com/chen-star/net_alpha/commit/c97cfe1ac2d45251c4732edf6d564f2f1a16e68f))
+
+### Feature
+
+* feat: enhance simulate sell with lot selection comparison
+
+When --price is given, shows FIFO/HIFO/LIFO comparison table with
+ST/LT gain/loss split, wash sale risk flags, and tax-aware
+recommendation. Reuses existing wash sale check logic. ([`ab9ced7`](https://github.com/chen-star/net_alpha/commit/ab9ced771773922811d850f07ff4362d06f93e26))
+
+* feat: add tax-position CLI command
+
+Shows YTD realized ST/LT gains and losses, net capital position,
+loss-to-zero-st, carryforward, and open lots with holding period
+tracker. Sorted by days-to-long-term ascending. ([`1f2e21c`](https://github.com/chen-star/net_alpha/commit/1f2e21c524deebafeabf29b13aa747aaeaf021f2))
+
+* feat: implement tax position engine (Tasks 3-8)
+
+- _allocate_lots: per-(account,ticker) FIFO with realized pairs + open lots
+- compute_tax_position: YTD ST/LT aggregation, year-filtered, basis_unknown counted
+- identify_open_lots: sorted by days_to_long_term asc, LT lots last
+- select_lots: FIFO/HIFO/LIFO across accounts with ST/LT split
+- recommend_lot_method: rule-based decision tree with wash risk + fallback
+- 42 tests covering all edge cases: boundaries, per-account isolation,
+  basis_unknown, option exclusion, holding period, tiebreaks ([`fe59ea2`](https://github.com/chen-star/net_alpha/commit/fe59ea28d5831d561a817af3976cb4a84a9f2908))
+
+* feat: add OpenLotFactory and RealizedPairFactory test fixtures ([`5d55480`](https://github.com/chen-star/net_alpha/commit/5d5548059108a881b7d0e376598ac702ed912509))
+
+* feat: add domain models for tax optimization suite
+
+Add TaxPosition, OpenLot, LotSelection, LotRecommendation,
+AllocationResult, and RealizedPair to models/domain.py.
+Includes computed properties for net_st, net_lt, net_capital_gain,
+loss_needed_to_zero_st, and carryforward ($3,000 cap). ([`ca6cd6f`](https://github.com/chen-star/net_alpha/commit/ca6cd6f5667526bc8c6e2a5f1566981de563870a))
+
+### Style
+
+* style: fix lint and formatting for tax optimization suite ([`6981633`](https://github.com/chen-star/net_alpha/commit/69816330e097105285e7a000af3bfd3f7cd7fe22))
+
+### Test
+
+* test: fix lint and add missing tests for domain models
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c406523`](https://github.com/chen-star/net_alpha/commit/c4065237f3c1c6aa3986a5c81925400c120ffee8))
+
+
 ## v0.1.3 (2026-04-14)
 
 ### Fix
