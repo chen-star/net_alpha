@@ -20,6 +20,7 @@ When you trade across multiple brokers, each platform only tracks wash sales wit
 
 ## Features
 
+- **AI-Powered Agent** — built-in Claude agent for interactive tax strategy, portfolio analysis, and natural language queries
 - **Universal CSV importer** — Claude AI detects your broker's column layout on first import; confirmed schema is cached for fully-offline subsequent imports
 - **Cross-account detection** — scans all imported accounts together in a single pass
 - **Equities, options, and ETFs** — covers substantially-identical security matching per IRS Publication 550
@@ -27,6 +28,7 @@ When you trade across multiple brokers, each platform only tracks wash sales wit
 - **Adjusted cost basis tracking** — disallowed losses roll into replacement lots automatically
 - **Sell simulator** — checks whether a planned sale would trigger a wash sale against recent buys or open positions
 - **Safe-to-rebuy tracker** — shows which sold securities are past the 30-day window
+- **Interactive Terminal UI** — rich, color-coded output with progress spinners and clear tax-risk status dashboards
 - **Local-first** — all trade data stays on your machine; the only remote call is the one-time LLM schema detection
 
 ---
