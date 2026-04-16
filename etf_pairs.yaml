@@ -12,3 +12,43 @@ russell2000:
 gold:
   - GLD
   - IAU
+total_us_market:
+  - VTI
+  - ITOT
+  - SCHB
+  - SPTM
+total_international:
+  - VXUS
+  - IXUS
+developed_markets:
+  - VEA
+  - IEFA
+  - SCHF
+emerging_markets:
+  - VWO
+  - IEMG
+  - SCHE
+total_us_bond:
+  - BND
+  - AGG
+  - SCHZ
+  - SPAB
+us_dividend:
+  - SCHD
+  - VYM
+mid_cap:
+  - VO
+  - IJH
+small_cap:
+  - VB
+  - IJR
+bitcoin:
+  - IBIT
+  - FBTC
+  - ARKB
+  - BITB
+ethereum:
+  - ETHA
+  - FETH
+  - ETHW
+  - CETH
