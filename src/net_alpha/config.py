@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-haiku-4-5"
     llm_max_retries: int = 3
+    agent_api_key: str | None = None
+    agent_model: str = "claude-haiku-4-5"
+
+    @property
+    def resolved_agent_api_key(self) -> str | None:
+        """Return agent_api_key if set, otherwise fall back to anthropic_api_key."""
+        return self.agent_api_key or self.anthropic_api_key
 
     @property
     def db_path(self) -> Path:

@@ -34,3 +34,37 @@ def test_anthropic_api_key_from_env(monkeypatch):
         data_dir=Path(tempfile.mkdtemp()),
     )
     assert settings.anthropic_api_key == "sk-test-123"
+
+
+def test_agent_model_default():
+    settings = Settings(_env_file=None, data_dir=Path(tempfile.mkdtemp()))
+    assert settings.agent_model == "claude-haiku-4-5"
+
+
+def test_agent_api_key_defaults_to_none():
+    settings = Settings(_env_file=None, data_dir=Path(tempfile.mkdtemp()))
+    assert settings.agent_api_key is None
+
+
+def test_resolved_agent_api_key_uses_agent_key_first():
+    settings = Settings(
+        _env_file=None,
+        data_dir=Path(tempfile.mkdtemp()),
+        agent_api_key="agent-key",
+        anthropic_api_key="shared-key",
+    )
+    assert settings.resolved_agent_api_key == "agent-key"
+
+
+def test_resolved_agent_api_key_falls_back_to_anthropic_key():
+    settings = Settings(
+        _env_file=None,
+        data_dir=Path(tempfile.mkdtemp()),
+        anthropic_api_key="shared-key",
+    )
+    assert settings.resolved_agent_api_key == "shared-key"
+
+
+def test_resolved_agent_api_key_returns_none_when_neither_set():
+    settings = Settings(_env_file=None, data_dir=Path(tempfile.mkdtemp()))
+    assert settings.resolved_agent_api_key is None
