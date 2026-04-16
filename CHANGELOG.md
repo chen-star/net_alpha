@@ -2,6 +2,25 @@
 
 
 
+## v0.5.0 (2026-04-16)
+
+### Chore
+
+* chore: update release script, Makefile, and local lockfile ([`7cad10b`](https://github.com/chen-star/net_alpha/commit/7cad10b421152a9555aaef82e6ff52643a49cee9))
+
+### Ci
+
+* ci: fix automated release and add manual release fallback ([`f6bd838`](https://github.com/chen-star/net_alpha/commit/f6bd838efd11d842befe0d4bf5b583ad1be5bc0b))
+
+### Documentation
+
+* docs: update codecov badge with private token ([`1980c62`](https://github.com/chen-star/net_alpha/commit/1980c62eb47dc79708868bc791808350996de24b))
+
+### Feature
+
+* feat: enhance README with AI agent and interactive TUI features ([`d7b75ae`](https://github.com/chen-star/net_alpha/commit/d7b75aef04d444f440d2ed623c752d8aebaa519d))
+
+
 ## v0.4.2 (2026-04-16)
 
 ### Ci
