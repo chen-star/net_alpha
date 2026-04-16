@@ -9,6 +9,7 @@ from sqlmodel import Session
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.repository import (
     LotRepository,
+    MetaRepository,
     SchemaCacheRepository,
     TradeRepository,
     ViolationRepository,
@@ -231,6 +232,27 @@ def test_violation_delete_all(db_session):
     repo.delete_all()
     db_session.commit()
     assert len(repo.list_all()) == 0
+
+
+def test_meta_repository_get_missing(db_session):
+    repo = MetaRepository(db_session)
+    assert repo.get("nonexistent_key") is None
+
+
+def test_meta_repository_set_and_get(db_session):
+    repo = MetaRepository(db_session)
+    repo.set("last_check_at", "2026-04-14")
+    db_session.commit()
+    assert repo.get("last_check_at") == "2026-04-14"
+
+
+def test_meta_repository_set_overwrites(db_session):
+    repo = MetaRepository(db_session)
+    repo.set("last_check_at", "2026-04-10")
+    db_session.commit()
+    repo.set("last_check_at", "2026-04-14")
+    db_session.commit()
+    assert repo.get("last_check_at") == "2026-04-14"
 
 
 def test_schema_cache_save_and_find(db_session):

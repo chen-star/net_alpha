@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 
 from net_alpha.db.tables import (
     LotRow,
+    MetaRow,
     SchemaCacheRow,
     TradeRow,
     WashSaleViolationRow,
@@ -134,6 +135,23 @@ class ViolationRepository:
         rows = self._session.exec(select(WashSaleViolationRow)).all()
         for row in rows:
             self._session.delete(row)
+
+
+class MetaRepository:
+    def __init__(self, session: Session):
+        self._session = session
+
+    def get(self, key: str) -> str | None:
+        row = self._session.exec(select(MetaRow).where(MetaRow.key == key)).first()
+        return row.value if row else None
+
+    def set(self, key: str, value: str) -> None:
+        row = self._session.exec(select(MetaRow).where(MetaRow.key == key)).first()
+        if row:
+            row.value = value
+            self._session.add(row)
+        else:
+            self._session.add(MetaRow(key=key, value=value))
 
 
 class SchemaCacheRepository:
