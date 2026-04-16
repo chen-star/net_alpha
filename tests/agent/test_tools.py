@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import pytest
-from unittest.mock import patch
-
 from net_alpha.agent.tools import (
     TOOL_SCHEMAS,
     execute_tool,
@@ -14,8 +11,8 @@ from net_alpha.agent.tools import (
     run_tax_position,
 )
 
-
 # --- Capture mechanism ---
+
 
 def test_run_status_captures_output(monkeypatch):
     import net_alpha.cli.status as status_mod
@@ -41,6 +38,7 @@ def test_run_check_captures_output(monkeypatch):
 
 def test_run_check_passes_quiet_param(monkeypatch):
     import net_alpha.cli.check as check_mod
+
     captured = {}
 
     def fake_check_command(**kwargs):
@@ -98,6 +96,7 @@ def test_run_tax_position_captures_output(monkeypatch):
 def test_capture_handles_system_exit(monkeypatch):
     """typer.Exit (SystemExit subclass) should not propagate out of run_* functions."""
     import typer
+
     import net_alpha.cli.check as check_mod
 
     def fake_check_command(**kwargs):
@@ -111,14 +110,17 @@ def test_capture_handles_system_exit(monkeypatch):
 
 # --- execute_tool dispatch ---
 
+
 def test_execute_tool_dispatches_run_status(monkeypatch):
     from net_alpha.agent import tools as tools_mod
+
     monkeypatch.setattr(tools_mod, "run_status", lambda: "status result")
     assert execute_tool("run_status", {}) == "status result"
 
 
 def test_execute_tool_dispatches_run_check(monkeypatch):
     from net_alpha.agent import tools as tools_mod
+
     captured = {}
 
     def fake_check(ticker=None, type=None, year=None, quiet=False):
@@ -134,6 +136,7 @@ def test_execute_tool_dispatches_run_check(monkeypatch):
 
 def test_execute_tool_dispatches_run_simulate_sell(monkeypatch):
     from net_alpha.agent import tools as tools_mod
+
     monkeypatch.setattr(tools_mod, "run_simulate_sell", lambda **kw: "sim result")
     assert execute_tool("run_simulate_sell", {"ticker": "AAPL", "qty": 5.0}) == "sim result"
 
@@ -144,6 +147,7 @@ def test_execute_tool_unknown_name():
 
 
 # --- Schema validity ---
+
 
 def test_tool_schemas_have_required_fields():
     for schema in TOOL_SCHEMAS:

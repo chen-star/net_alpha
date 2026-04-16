@@ -22,6 +22,7 @@ def test_build_system_prompt_contains_wash_sale_knowledge():
 
 def test_build_system_prompt_contains_today_date():
     from datetime import date
+
     prompt = build_system_prompt("snapshot")
     assert date.today().isoformat() in prompt
 

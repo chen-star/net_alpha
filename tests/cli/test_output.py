@@ -6,7 +6,9 @@ from net_alpha.cli.output import (
     DISCLAIMER,
     confidence_style,
     format_currency,
+    format_currency_colored,
     print_disclaimer,
+    print_hint,
 )
 
 
@@ -41,9 +43,6 @@ def test_confidence_style():
     assert confidence_style("Unknown") == ""
 
 
-from net_alpha.cli.output import format_currency_colored, print_hint
-
-
 def test_format_currency_colored_positive():
     result = format_currency_colored(1200.0)
     assert "[green]" in result
@@ -65,7 +64,9 @@ def test_format_currency_colored_zero():
 
 def test_print_hint():
     from io import StringIO
+
     from rich.console import Console
+
     buf = StringIO()
     console = Console(file=buf, no_color=True)
     print_hint(console, "Run net-alpha check to scan")

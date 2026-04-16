@@ -6,8 +6,6 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
-from net_alpha.cli.output import DISCLAIMER
-
 console = Console()
 
 _HELP_TEXT = """[bold]net-alpha agent[/bold] — natural language interface
@@ -118,9 +116,7 @@ def agent_command() -> None:
         messages.append({"role": "user", "content": user_input})
         try:
             with console.status("Thinking\u2026", spinner="dots"):
-                response = run_react_turn(
-                    client, model, system_prompt, messages, TOOL_SCHEMAS, execute_tool
-                )
+                response = run_react_turn(client, model, system_prompt, messages, TOOL_SCHEMAS, execute_tool)
         except Exception as e:
             console.print(f"\n  [red]API error:[/red] {e}\n  Try again or type [bold]exit[/bold].\n")
             messages.pop()  # Remove failed user message from history

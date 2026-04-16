@@ -20,6 +20,7 @@ def test_validate_type_none():
 
 def test_validate_type_invalid():
     import typer
+
     with pytest.raises(typer.Exit):
         _validate_type("option")
 

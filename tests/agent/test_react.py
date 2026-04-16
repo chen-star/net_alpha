@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 from net_alpha.agent.react import MAX_ITERATIONS, run_react_turn
 
-
 # --- Test helpers ---
+
 
 def _text_block(text: str) -> MagicMock:
     block = MagicMock()
@@ -38,6 +38,7 @@ def _tool_use_response(name: str, input_: dict, id_: str = "tu_1") -> MagicMock:
 
 
 # --- Tests ---
+
 
 def test_text_only_response_returned_immediately():
     client = MagicMock()
@@ -119,10 +120,9 @@ def test_max_iterations_cap_triggers_summary_call():
     """After MAX_ITERATIONS tool calls, a final summarization API call is made."""
     client = MagicMock()
     # Always return tool_use to saturate the cap
-    client.messages.create.side_effect = (
-        [_tool_use_response("run_status", {})] * MAX_ITERATIONS
-        + [_end_turn_response("Here is my summary.")]
-    )
+    client.messages.create.side_effect = [_tool_use_response("run_status", {})] * MAX_ITERATIONS + [
+        _end_turn_response("Here is my summary.")
+    ]
     messages = []
     result = run_react_turn(client, "model", "system", messages, [], lambda n, i: "")
 

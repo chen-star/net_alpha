@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from io import StringIO
-from typing import Any, Callable
+from typing import Any
 
 from rich.console import Console
 
@@ -24,6 +25,7 @@ def _capture(module: Any, fn_name: str, **kwargs: Any) -> str:
         pass  # typer.Exit (SystemExit subclass) — error message already captured in buf
     except Exception as e:
         import typer
+
         if isinstance(e, typer.Exit):
             pass  # typer.Exit is an Exception in some versions — treat same as SystemExit
         else:
@@ -36,6 +38,7 @@ def _capture(module: Any, fn_name: str, **kwargs: Any) -> str:
 def run_status() -> str:
     """Run the status command and return output as plain text."""
     import net_alpha.cli.status as _mod
+
     return _capture(_mod, "status_command")
 
 
@@ -47,6 +50,7 @@ def run_check(
 ) -> str:
     """Run the check command and return output as plain text."""
     import net_alpha.cli.check as _mod
+
     return _capture(_mod, "check_command", ticker=ticker, type=type, year=year, quiet=quiet)
 
 
@@ -57,24 +61,28 @@ def run_simulate_sell(
 ) -> str:
     """Run the simulate sell command and return output as plain text."""
     import net_alpha.cli.simulate as _mod
+
     return _capture(_mod, "sell_command", ticker=ticker, qty=qty, price=price)
 
 
 def run_rebuys() -> str:
     """Run the rebuys command and return output as plain text."""
     import net_alpha.cli.rebuys as _mod
+
     return _capture(_mod, "rebuys_command")
 
 
 def run_report(year: int | None = None, csv: bool = False) -> str:
     """Run the report command and return output as plain text."""
     import net_alpha.cli.report as _mod
+
     return _capture(_mod, "report_command", year=year, csv=csv, quiet=False)
 
 
 def run_tax_position(year: int | None = None) -> str:
     """Run the tax-position command and return output as plain text."""
     import net_alpha.cli.tax_position as _mod
+
     return _capture(_mod, "tax_position_command", year=year)
 
 

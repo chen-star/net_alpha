@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -45,6 +44,7 @@ def _make_text_response(text: str) -> MagicMock:
 def test_agent_command_registered():
     """Verify 'agent' is a registered command in the Typer app."""
     from typer.testing import CliRunner
+
     runner = CliRunner()
     result = runner.invoke(app, ["--help"])
     assert "agent" in result.output

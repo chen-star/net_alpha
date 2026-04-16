@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import date
 
 from sqlmodel import Session
-from typer.testing import CliRunner
 
 from net_alpha.cli.app import app
 from net_alpha.db.repository import TradeRepository

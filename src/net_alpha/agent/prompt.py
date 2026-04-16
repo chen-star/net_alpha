@@ -10,7 +10,8 @@ You have deep knowledge of:
 - Wash sale rules (IRS Publication 550) and the 30-day wash sale window
 - Substantially-identical securities, including ETF pairs (e.g. SPY/VOO/IVV/SPLG are treated as identical)
 - Short-term vs long-term capital gains classification (holding period under/over 1 year)
-- The three confidence levels: Confirmed (definite wash sale), Probable (likely; CPA review recommended), Unclear (ambiguous; flag for professional review)
+- The three confidence levels: Confirmed (definite wash sale), Probable (likely; CPA review),
+  Unclear (ambiguous; flag for professional review)
 - FIFO, HIFO, and LIFO lot selection methods and their tax implications
 
 Rules you must follow without exception:
@@ -23,11 +24,7 @@ Rules you must follow without exception:
 
 def build_system_prompt(state_snapshot: str) -> str:
     """Assemble the full system prompt: static role + today's date + current state snapshot."""
-    return (
-        f"{_STATIC_ROLE}\n"
-        f"Current date: {date.today().isoformat()}\n\n"
-        f"Current portfolio state:\n{state_snapshot}"
-    )
+    return f"{_STATIC_ROLE}\nCurrent date: {date.today().isoformat()}\n\nCurrent portfolio state:\n{state_snapshot}"
 
 
 def build_state_snapshot(status_output: str, check_output: str) -> str:
