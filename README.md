@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/chen-star/net_alpha/actions/workflows/ci.yml/badge.svg)](https://github.com/chen-star/net_alpha/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/wash-alpha.svg)](https://pypi.org/project/wash-alpha/)
-[![codecov](https://codecov.io/gh/chen-star/net_alpha/graph/badge.svg)](https://codecov.io/gh/chen-star/net_alpha)
+[![codecov](https://codecov.io/github/chen-star/net_alpha/graph/badge.svg?token=XETFUGJO3L)](https://codecov.io/github/chen-star/net_alpha)
 
 Cross-account wash sale detection for equities, options, and ETFs.
 
