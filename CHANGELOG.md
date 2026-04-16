@@ -2,6 +2,21 @@
 
 
 
+## v0.4.2 (2026-04-16)
+
+### Ci
+
+* ci: fix codecov badge and improve upload debugging ([`a865c7a`](https://github.com/chen-star/net_alpha/commit/a865c7ab58b01746da3a135b1ce8b2b15a9f7b51))
+
+* ci: remove [skip ci] from release commits to allow workflow triggering ([`bd3fd48`](https://github.com/chen-star/net_alpha/commit/bd3fd484f214c5f84954c848bbb542ec6219055c))
+
+### Fix
+
+* fix: sync internal version and trigger release automation ([`a1e8063`](https://github.com/chen-star/net_alpha/commit/a1e806369cd7e1f9a222074be9aa49e73a0ebb46))
+
+* fix: trigger release automation verification ([`a138042`](https://github.com/chen-star/net_alpha/commit/a138042e96ac7a8b2d995944e116e7f9bb80bd21))
+
+
 ## v0.4.1 (2026-04-16)
 
 ### Chore
