@@ -49,7 +49,8 @@ def import_command(
     )
 
     try:
-        result = run_import(ctx)
+        with console.status("Importing trades\u2026", spinner="dots"):
+            result = run_import(ctx)
     except RuntimeError as e:
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)

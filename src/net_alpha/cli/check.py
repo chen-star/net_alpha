@@ -48,7 +48,8 @@ def check_command(
     etf_pairs = load_etf_pairs(user_pairs_path=user_pairs)
 
     # Run detection
-    result = detect_wash_sales(all_trades, etf_pairs)
+    with console.status("Scanning for wash sales\u2026", spinner="dots"):
+        result = detect_wash_sales(all_trades, etf_pairs)
 
     # Persist results (clear old, write new)
     violation_repo.delete_all()

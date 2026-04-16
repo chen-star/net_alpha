@@ -41,7 +41,8 @@ def report_command(
     etf_pairs = load_etf_pairs(user_pairs_path=user_pairs)
 
     # Run fresh detection
-    result = detect_wash_sales(all_trades, etf_pairs)
+    with console.status("Scanning for wash sales\u2026", spinner="dots"):
+        result = detect_wash_sales(all_trades, etf_pairs)
     trade_map = {t.id: t for t in all_trades}
 
     report_year = year or date.today().year
