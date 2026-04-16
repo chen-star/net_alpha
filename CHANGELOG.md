@@ -2,6 +2,17 @@
 
 
 
+## v0.4.1 (2026-04-16)
+
+### Chore
+
+* chore: add MCP config and tax optimization suite plan ([`8234502`](https://github.com/chen-star/net_alpha/commit/823450251db8461d4b4e9f52f106ba2d97b8d61b))
+
+### Fix
+
+* fix: resolve linting and formatting issues to fix CI ([`5fd12d9`](https://github.com/chen-star/net_alpha/commit/5fd12d984837b3a0f1817dd65de3a58ffa10d72d))
+
+
 ## v0.4.0 (2026-04-16)
 
 ### Chore
