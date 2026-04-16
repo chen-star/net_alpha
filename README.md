@@ -27,6 +27,8 @@ Your trade data never leaves your machine. No cloud, no tracking, no telemetry. 
 [![PyPI version](https://badge.fury.io/py/wash-alpha.svg)](https://pypi.org/project/wash-alpha/)
 [![codecov](https://codecov.io/github/chen-star/net_alpha/graph/badge.svg?token=XETFUGJO3L)](https://codecov.io/github/chen-star/net_alpha)
 
+---
+
 ## The Problem
 
 When you trade across multiple brokers, each platform only tracks wash sales within its own account. A loss sale on Schwab can be silently neutralized by a repurchase on Robinhood — and you won't find out until February. This problem compounds when you hold options alongside stocks, or ETFs that track the same underlying index.
