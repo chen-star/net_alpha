@@ -12,6 +12,17 @@ from net_alpha.config import Settings
 
 console = Console()
 
+KNOWN_BROKERS = [
+    "schwab",
+    "robinhood",
+    "fidelity",
+    "etrade",
+    "td_ameritrade",
+    "interactive_brokers",
+    "webull",
+    "tastytrade",
+]
+
 
 def run_wizard(settings: Settings) -> None:
     """Interactive first-run wizard. Runs when `net-alpha` is called with no trades."""
@@ -41,7 +52,11 @@ def run_wizard(settings: Settings) -> None:
     # Import loop
     while True:
         console.print()
-        broker = questionary.text("Which broker is your next account? (e.g., schwab, robinhood):").ask()
+        broker = questionary.autocomplete(
+            "Which broker is your next account?",
+            choices=KNOWN_BROKERS,
+            validate=lambda x: len(x) > 0 or "Broker name required",
+        ).ask()
 
         if not broker:
             break
@@ -83,7 +98,12 @@ def run_wizard(settings: Settings) -> None:
         pass
 
     console.print()
-    console.print("  Run [bold]net-alpha check[/bold] anytime to re-scan.")
+    console.print("  [green]\u2713 You're set up. Here's what to run next:[/green]")
+    console.print()
+    console.print("    [bold]net-alpha check[/bold]              Re-scan for wash sales anytime")
+    console.print("    [bold]net-alpha simulate sell[/bold]      Check a trade before you make it")
+    console.print("    [bold]net-alpha status[/bold]             See your full picture at a glance")
+    console.print("    [bold]net-alpha report --csv[/bold]       Export for your tax preparer")
     print_disclaimer(console)
 
 
