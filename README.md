@@ -24,7 +24,7 @@ Your trade data never leaves your machine. No cloud, no tracking, no telemetry. 
 ---
 
 [![CI](https://github.com/chen-star/net_alpha/actions/workflows/ci.yml/badge.svg)](https://github.com/chen-star/net_alpha/actions/workflows/ci.yml)
-[![PyPI version](https://badge.fury.io/py/wash-alpha.svg)](https://pypi.org/project/wash-alpha/)
+[![PyPI version](https://img.shields.io/pypi/v/wash-alpha.svg)](https://pypi.org/project/wash-alpha/)
 [![codecov](https://codecov.io/github/chen-star/net_alpha/graph/badge.svg?token=XETFUGJO3L)](https://codecov.io/github/chen-star/net_alpha)
 
 ---
