@@ -141,22 +141,29 @@ Add your own pairs in `~/.net_alpha/etf_pairs.yaml` — your file extends the de
 
 ---
 
-## Data & Privacy
+## Under the Hood
 
-- All trade data is stored in `~/.net_alpha/net_alpha.db` (SQLite)
-- The only outbound network call is the one-time LLM schema detection per broker format
-- No telemetry, no remote storage, no account sync
-- Requires `ANTHROPIC_API_KEY` for schema detection only — set via environment variable or prompted on first run
+### 🛡️ Zero-Knowledge Privacy
+We believe your financial data is your business.
+- **Local-First:** All trades are stored in a local SQLite database (`~/.net_alpha/net_alpha.db`).
+- **Anonymized AI:** For schema detection, we only send CSV headers and 3 fake, anonymized sample rows to Claude. No account numbers, no real dollar amounts.
+- **Offline Core:** Once a schema is mapped, the entire detection engine runs 100% offline.
 
----
+### 🛠️ Modern Tech Stack
+Built with the latest Python ecosystem for speed and reliability:
+- **Python 3.11+** with strict Pydantic v2 typing.
+- **Typer & Rich** for a premium, color-coded terminal UX.
+- **SQLModel** (Pydantic + SQLAlchemy) for local relational storage.
+- **uv** for ultra-fast, reproducible builds.
 
-## Configuration
+### ⚙️ Extensibility
+Add your own substantially-identical security pairs (e.g., custom ETF pairs) in `~/.net_alpha/etf_pairs.yaml`.
 
-| Location                      | Purpose                                  |
-| ----------------------------- | ---------------------------------------- |
-| `~/.net_alpha/config.toml`    | API key, user preferences                |
-| `~/.net_alpha/etf_pairs.yaml` | Custom substantially-identical ETF pairs |
-| `~/.net_alpha/net_alpha.db`   | All imported trade data (SQLite)         |
+```yaml
+# Example: Custom ETF matching
+- SPY, VOO, IVV, SPLG
+- QQQ, QQQM
+```
 
 ---
 
@@ -183,20 +190,6 @@ uv run pytest tests/path/to/test_file.py
 # Run tests matching a pattern
 uv run pytest -k "test_wash_sale"
 ```
-
-### Tech Stack
-
-| Layer       | Library                              |
-| ----------- | ------------------------------------ |
-| CLI         | `typer[all]` (includes `rich`)       |
-| Prompts     | `questionary`                        |
-| Data models | `pydantic` v2                        |
-| Storage     | `sqlmodel` over SQLite               |
-| LLM         | `anthropic` SDK (`claude-haiku-4-5`) |
-| Config      | `pydantic-settings`                  |
-| Logging     | `loguru`                             |
-| Lint/format | `ruff`                               |
-| Tests       | `pytest`, `factory_boy`              |
 
 ### Testing
 
