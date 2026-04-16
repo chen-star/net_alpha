@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from net_alpha.cli.output import format_currency, print_disclaimer
+from net_alpha.cli.output import format_currency, format_currency_colored, print_disclaimer, print_hint
 from net_alpha.models.domain import OpenLot, TaxPosition
 
 console = Console()
@@ -25,6 +25,9 @@ def tax_position_command(
 
     if tp.basis_unknown_count > 0:
         console.print(f"\n  [yellow]{tp.basis_unknown_count} sell(s) excluded due to unknown cost basis.[/yellow]")
+
+    if tp.net_st > 0:
+        print_hint(console, "Run net-alpha simulate sell to check loss harvesting options")
 
     print_disclaimer(console)
 
@@ -54,19 +57,23 @@ def _render_tax_position(tp: TaxPosition) -> None:
     console.print()
     console.print(f"  [bold]TAX POSITION \u2014 {tp.year} (all accounts)[/bold]")
     console.print("  " + "\u2500" * 50)
-    console.print(f"  Short-term gains:          {format_currency(tp.st_gains):>12s}")
-    console.print(f"  Short-term losses:         {format_currency(tp.st_losses):>12s}")
-    console.print(f"  Net short-term:            {format_currency(tp.net_st):>12s}   (taxed at ordinary income rates)")
+    console.print(f"  Short-term gains:          {format_currency_colored(tp.st_gains):>12s}")
+    console.print(f"  Short-term losses:         {format_currency_colored(tp.st_losses):>12s}")
+    net_st_str = format_currency_colored(tp.net_st)
+    console.print(f"  Net short-term:            {net_st_str:>12s}   (taxed at ordinary income rates)")
     console.print()
-    console.print(f"  Long-term gains:           {format_currency(tp.lt_gains):>12s}")
-    console.print(f"  Long-term losses:          {format_currency(tp.lt_losses):>12s}")
-    console.print(f"  Net long-term:             {format_currency(tp.net_lt):>12s}   (taxed at preferential rates)")
+    console.print(f"  Long-term gains:           {format_currency_colored(tp.lt_gains):>12s}")
+    console.print(f"  Long-term losses:          {format_currency_colored(tp.lt_losses):>12s}")
+    net_lt_str = format_currency_colored(tp.net_lt)
+    console.print(f"  Net long-term:             {net_lt_str:>12s}   (taxed at preferential rates)")
     console.print()
     console.print("  " + "\u2500" * 50)
-    console.print(f"  Net capital gain:          {format_currency(tp.net_capital_gain):>12s}")
+    console.print(f"  Net capital gain:          {format_currency_colored(tp.net_capital_gain):>12s}")
 
     if tp.net_st > 0:
-        console.print(f"  Loss still needed to zero short-term:  {format_currency(tp.loss_needed_to_zero_st)}")
+        console.print(
+            f"  Loss still needed to zero short-term:  {format_currency(tp.loss_needed_to_zero_st)}"
+        )
 
     if tp.carryforward > 0:
         console.print(f"  Loss carryforward (above $3,000 cap):  {format_currency(tp.carryforward)}")
