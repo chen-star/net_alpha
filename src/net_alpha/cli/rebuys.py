@@ -5,9 +5,18 @@ from datetime import date, timedelta
 from rich.console import Console
 from rich.table import Table
 
-from net_alpha.cli.output import print_disclaimer
+from net_alpha.cli.output import print_disclaimer, print_hint
 
 console = Console()
+
+
+def _days_remaining_style(days: int) -> str:
+    """Return Rich style string based on urgency of days remaining."""
+    if days <= 7:
+        return "bold red"
+    if days <= 14:
+        return "yellow"
+    return ""
 
 
 def rebuys_command() -> None:
@@ -74,17 +83,21 @@ def rebuys_command() -> None:
     table.add_column("Days Remaining", justify="right")
 
     for entry in sorted(rebuy_entries, key=lambda e: e["safe_date"]):
+        days_val = entry["days_remaining"]
+        style = _days_remaining_style(days_val)
+        days_str = f"[{style}]{days_val} days[/{style}]" if style else f"{days_val} days"
         table.add_row(
             entry["ticker"],
             entry["qty_display"],
             str(entry["sold_date"]),
             entry["account"],
             str(entry["safe_date"]),
-            f"{entry['days_remaining']} days",
+            days_str,
         )
 
     console.print(table)
     console.print(f"\n  {len(rebuy_entries)} positions in wash sale window.")
 
+    print_hint(console, "Run net-alpha simulate sell <ticker> before you trade")
     print_disclaimer(console)
     session.close()
