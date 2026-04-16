@@ -9,6 +9,7 @@ from net_alpha.cli.import_cmd import import_command
 from net_alpha.cli.rebuys import rebuys_command
 from net_alpha.cli.report import report_command
 from net_alpha.cli.simulate import simulate_app
+from net_alpha.cli.status import status_command
 from net_alpha.cli.tax_position import tax_position_command
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
@@ -27,6 +28,7 @@ app.add_typer(simulate_app, name="simulate")
 app.command(name="rebuys")(rebuys_command)
 app.command(name="report")(report_command)
 app.command(name="tax-position")(tax_position_command)
+app.command(name="status")(status_command)
 
 
 def _bootstrap() -> tuple[Settings, Session]:
@@ -58,8 +60,9 @@ def main_callback(ctx: typer.Context):
 
         run_wizard(settings)
     else:
-        # Show help if trades exist but no command given
-        console.print(ctx.get_help())
+        # Show status overview if trades exist but no command given
+        from net_alpha.cli.status import status_command
+        status_command()
 
 
 def main():
