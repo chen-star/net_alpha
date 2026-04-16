@@ -94,6 +94,29 @@ def test_check_no_data(cli_setup):
     assert "no trades" in result.output.lower() or "import" in result.output.lower()
 
 
+def test_check_quiet_no_violations(cli_setup):
+    runner, engine, settings = cli_setup
+    # seed a buy trade (no loss) so there are trades to scan
+    with Session(engine) as s:
+        TradeRepository(s).save(
+            Trade(
+                account="schwab",
+                date=date(2026, 1, 10),
+                ticker="AAPL",
+                action="Buy",
+                quantity=10,
+                proceeds=None,
+                cost_basis=1500.0,
+            )
+        )
+        s.commit()
+
+    result = runner.invoke(app, ["check", "--quiet"])
+    assert result.exit_code == 0
+    assert "0 violations" in result.output
+    assert "informational only" in result.output
+
+
 def test_check_staleness_warning(cli_setup):
     """Account with latest trade > 30 days ago: staleness warning shown."""
     runner, engine, _ = cli_setup

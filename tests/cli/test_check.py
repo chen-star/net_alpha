@@ -1,7 +1,27 @@
 from datetime import date
 
-from net_alpha.cli.check import _build_summary, _filter_violations_by_year
+import pytest
+
+from net_alpha.cli.check import _build_summary, _filter_violations_by_year, _validate_type
 from net_alpha.models.domain import Trade, WashSaleViolation
+
+
+def test_validate_type_valid_equities():
+    assert _validate_type("equities") == "equities"
+
+
+def test_validate_type_valid_options():
+    assert _validate_type("options") == "options"
+
+
+def test_validate_type_none():
+    assert _validate_type(None) is None
+
+
+def test_validate_type_invalid():
+    import typer
+    with pytest.raises(typer.Exit):
+        _validate_type("option")
 
 
 def test_build_summary():

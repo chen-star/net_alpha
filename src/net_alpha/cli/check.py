@@ -10,15 +10,31 @@ from net_alpha.cli.output import (
     confidence_style,
     format_currency,
     print_disclaimer,
+    print_hint,
 )
 
 console = Console()
+
+_VALID_TYPES = {"equities", "options"}
+
+
+def _validate_type(type_str: str | None) -> str | None:
+    """Validate --type option. Raises typer.Exit(1) on invalid input."""
+    if type_str is None:
+        return None
+    if type_str.lower() not in _VALID_TYPES:
+        console.print(
+            f"[red]Error:[/red] --type must be 'equities' or 'options'. Got: '{type_str}'"
+        )
+        raise typer.Exit(1)
+    return type_str.lower()
 
 
 def check_command(
     ticker: str | None = typer.Option(None, help="Filter by ticker"),
     type: str | None = typer.Option(None, help="Filter by type: equities, options"),
     year: int | None = typer.Option(None, help="Tax year (default: current)"),
+    quiet: bool = typer.Option(False, "--quiet", help="Print summary line only (for scripting)"),
 ) -> None:
     """Scan all trades for wash sale violations."""
 
@@ -30,6 +46,8 @@ def check_command(
     )
     from net_alpha.engine.detector import detect_wash_sales
     from net_alpha.engine.etf_pairs import load_etf_pairs
+
+    type = _validate_type(type)
 
     settings, session = _bootstrap()
     trade_repo = TradeRepository(session)
@@ -58,6 +76,12 @@ def check_command(
     lot_repo.save_batch(result.lots)
     session.commit()
 
+    # Write last_check_at
+    from net_alpha.db.repository import MetaRepository
+    meta_repo = MetaRepository(session)
+    meta_repo.set("last_check_at", date.today().isoformat())
+    session.commit()
+
     # Build trade lookup
     trade_map = {t.id: t for t in all_trades}
 
@@ -75,6 +99,20 @@ def check_command(
             violations = [v for v in violations if trade_map[v.loss_trade_id].is_option()]
         elif type.lower() == "equities":
             violations = [v for v in violations if not trade_map[v.loss_trade_id].is_option()]
+
+    # Quiet mode: summary line only
+    if quiet:
+        total = sum(v.disallowed_loss for v in violations)
+        if violations:
+            console.print(
+                f"  {len(violations)} violation(s)  "
+                f"{format_currency(total)} disallowed  [{scan_year}]"
+            )
+        else:
+            console.print(f"  0 violations  [{scan_year}]")
+        print_disclaimer(console)
+        session.close()
+        return
 
     # Staleness warning
     _print_staleness_warnings(trade_repo, console)
@@ -105,6 +143,10 @@ def check_command(
             "(e.g. Robinhood) will not appear as loss sales — wash sale "
             "exposure from expired options may be undetected.[/dim]"
         )
+
+    if violations:
+        print_hint(console, "Run net-alpha tax-position to see your YTD gain/loss picture")
+        print_hint(console, "Run net-alpha report --csv to export for your tax preparer")
 
     print_disclaimer(console)
     session.close()
