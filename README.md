@@ -35,18 +35,38 @@ When you trade across multiple brokers, each platform only tracks wash sales wit
 
 ---
 
-## Features
+## The Workflow
 
-- **AI-Powered Agent** — built-in Claude agent for interactive tax strategy, portfolio analysis, and natural language queries
-- **Universal CSV importer** — Claude AI detects your broker's column layout on first import; confirmed schema is cached for fully-offline subsequent imports
-- **Cross-account detection** — scans all imported accounts together in a single pass
-- **Equities, options, and ETFs** — covers substantially-identical security matching per IRS Publication 550
-- **3-tier confidence labels** — `Confirmed` (red), `Probable` (yellow), `Unclear` (blue) so you know what needs a CPA
-- **Adjusted cost basis tracking** — disallowed losses roll into replacement lots automatically
-- **Sell simulator** — checks whether a planned sale would trigger a wash sale against recent buys or open positions
-- **Safe-to-rebuy tracker** — shows which sold securities are past the 30-day window
-- **Interactive Terminal UI** — rich, color-coded output with progress spinners and clear tax-risk status dashboards
-- **Local-first** — all trade data stays on your machine; the only remote call is the one-time LLM schema detection
+Get from raw CSVs to a tax-ready report in seconds.
+
+### 1. 📂 Smart Import
+Claude detects your broker's schema. Confirm once, and it's cached forever for fully offline subsequent imports.
+
+```bash
+net-alpha import schwab   schwab_2024.csv
+net-alpha import robinhood rh_2024.csv
+```
+
+### 2. 🔍 Cross-Account Check
+Scan all accounts together. `net-alpha` detects wash sales across different brokers, assets (Equities/Options/ETFs), and dates.
+
+```bash
+net-alpha check
+```
+
+### 3. 🧪 Sell Simulator
+Planning a trade? Test it against your current holdings and recent buys before you place the order.
+
+```bash
+net-alpha simulate sell TSLA 10 --price 185.50
+```
+
+### 4. 📄 Tax-Ready Reporting
+Generate a summary for your accountant or tax software with adjusted cost basis tracking.
+
+```bash
+net-alpha report --year 2024
+```
 
 ---
 
@@ -65,39 +85,6 @@ git clone https://github.com/your-org/net-alpha
 cd net-alpha
 uv sync
 uv run net-alpha
-```
-
----
-
-## Quick Start
-
-```bash
-# First run — wizard prompts for API key and creates ~/.net_alpha/
-net-alpha
-
-# Import trade history
-net-alpha import schwab   schwab_2024.csv
-net-alpha import robinhood robinhood_2024.csv
-
-# Check for wash sale violations (all accounts, current year)
-net-alpha check
-
-# Narrow the check
-net-alpha check --ticker TSLA
-net-alpha check --type options
-net-alpha check --year 2023
-
-# Simulate a planned sale before you place the order
-net-alpha simulate sell TSLA 10
-net-alpha simulate sell TSLA 10 --price 185.50
-
-# See which securities are safe to repurchase
-net-alpha rebuys
-
-# Generate a report for your accountant
-net-alpha report
-net-alpha report --year 2024
-net-alpha report --year 2024 --csv
 ```
 
 ---
