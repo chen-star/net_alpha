@@ -4,6 +4,7 @@ import typer
 from rich.console import Console
 from sqlmodel import Session
 
+from net_alpha.cli.agent import agent_command
 from net_alpha.cli.check import check_command
 from net_alpha.cli.import_cmd import import_command
 from net_alpha.cli.rebuys import rebuys_command
@@ -29,6 +30,7 @@ app.command(name="rebuys")(rebuys_command)
 app.command(name="report")(report_command)
 app.command(name="tax-position")(tax_position_command)
 app.command(name="status")(status_command)
+app.command(name="agent")(agent_command)
 
 
 def _bootstrap() -> tuple[Settings, Session]:
