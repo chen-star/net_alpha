@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 from datetime import date, timedelta
 
 import typer
@@ -12,6 +13,14 @@ from net_alpha.engine.matcher import get_match_confidence, is_within_wash_sale_w
 console = Console()
 
 simulate_app = typer.Typer(help="Pre-trade simulation")
+
+
+def _suggest_ticker(ticker: str, known_tickers: list[str]) -> str | None:
+    """Return a close-match suggestion for a possibly mistyped ticker, or None."""
+    if ticker in known_tickers:
+        return None
+    matches = difflib.get_close_matches(ticker, known_tickers, n=1, cutoff=0.6)
+    return matches[0] if matches else None
 
 
 @simulate_app.command(name="sell")
@@ -32,6 +41,34 @@ def sell_command(
     else:
         console.print(f"  [bold]SIMULATION: Sell {int(qty)} {ticker}[/bold]")
     console.print("  " + "\u2500" * 50)
+
+    # Validate ticker exists in known open lots (or has ETF-equivalent lots)
+    from net_alpha.engine.tax_position import identify_open_lots
+    open_lots = identify_open_lots(all_trades, as_of=today)
+    known_tickers = list({lot.ticker for lot in open_lots})
+
+    # Build set of all tickers reachable via ETF pairs
+    etf_group = {ticker}
+    for group in etf_pairs.values():
+        if ticker in group:
+            etf_group.update(group)
+
+    has_lots = bool(etf_group & set(known_tickers))
+    if not has_lots:
+        suggestion = _suggest_ticker(ticker, known_tickers)
+        if suggestion:
+            console.print(
+                f"  [red]Error:[/red] No open lots for '{ticker}'. "
+                f"Did you mean: [bold]{suggestion}[/bold]?"
+            )
+        else:
+            console.print(f"  [red]Error:[/red] No open lots for '{ticker}'.")
+        console.print(
+            "  [dim]\u2192 Run net-alpha tax-position to see all open positions.[/dim]"
+        )
+        if session:
+            session.close()
+        raise typer.Exit(1)
 
     # Check look-back: any buys of this ticker within last 30 days
     lookback_triggers = _find_lookback_triggers(ticker, today, all_trades, etf_pairs)

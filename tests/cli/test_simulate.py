@@ -1,7 +1,22 @@
 from datetime import date
 
-from net_alpha.cli.simulate import _compute_safe_date, _find_lookback_triggers
+from net_alpha.cli.simulate import _compute_safe_date, _find_lookback_triggers, _suggest_ticker
 from net_alpha.models.domain import Trade
+
+
+def test_suggest_ticker_typo():
+    known = ["AAPL", "TSLA", "GOOG"]
+    assert _suggest_ticker("APPL", known) == "AAPL"
+
+
+def test_suggest_ticker_no_match():
+    known = ["AAPL", "TSLA", "GOOG"]
+    assert _suggest_ticker("XYZ", known) is None
+
+
+def test_suggest_ticker_exact():
+    known = ["AAPL", "TSLA"]
+    assert _suggest_ticker("AAPL", known) is None  # exact match — no suggestion needed
 
 
 def test_find_lookback_triggers():
