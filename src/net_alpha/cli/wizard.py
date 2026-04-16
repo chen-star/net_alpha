@@ -77,7 +77,7 @@ def run_wizard(settings: Settings) -> None:
         except SystemExit:
             pass
         except Exception as e:
-            console.print(f"  [red]Import failed: {e}[/red]")
+            console.print(f"  [red]Error:[/red] Import failed: {e}")
             continue
 
         another = questionary.confirm("Do you have another account to import?", default=False).ask()

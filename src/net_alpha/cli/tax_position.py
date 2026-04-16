@@ -71,9 +71,7 @@ def _render_tax_position(tp: TaxPosition) -> None:
     console.print(f"  Net capital gain:          {format_currency_colored(tp.net_capital_gain):>12s}")
 
     if tp.net_st > 0:
-        console.print(
-            f"  Loss still needed to zero short-term:  {format_currency(tp.loss_needed_to_zero_st)}"
-        )
+        console.print(f"  Loss still needed to zero short-term:  {format_currency(tp.loss_needed_to_zero_st)}")
 
     if tp.carryforward > 0:
         console.print(f"  Loss carryforward (above $3,000 cap):  {format_currency(tp.carryforward)}")

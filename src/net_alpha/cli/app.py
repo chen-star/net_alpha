@@ -62,6 +62,7 @@ def main_callback(ctx: typer.Context):
     else:
         # Show status overview if trades exist but no command given
         from net_alpha.cli.status import status_command
+
         status_command()
 
 

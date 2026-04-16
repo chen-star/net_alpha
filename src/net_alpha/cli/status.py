@@ -37,10 +37,7 @@ def status_command() -> None:
         days_str = _days_ago_str(latest) if latest else "unknown"
         style = _staleness_style(latest) if latest else "yellow"
         stale_marker = "  [yellow]\u26a0[/yellow]" if style == "yellow" else ""
-        console.print(
-            f"  {account:<20} {count:>5} trades    last import: {latest}  "
-            f"({days_str}){stale_marker}"
-        )
+        console.print(f"  {account:<20} {count:>5} trades    last import: {latest}  ({days_str}){stale_marker}")
 
     # Violation summary
     violations = violation_repo.list_all()
@@ -78,10 +75,7 @@ def status_command() -> None:
         console.print()
         console.print("  [bold]OPEN REBUY WINDOWS[/bold]")
         console.print("  " + "\u2500" * 50)
-        console.print(
-            f"  {rebuy_count} position(s) still in 30-day window \u2014 "
-            "run [bold]net-alpha rebuys[/bold]"
-        )
+        console.print(f"  {rebuy_count} position(s) still in 30-day window \u2014 run [bold]net-alpha rebuys[/bold]")
 
     console.print()
     console.print("  " + "\u2500" * 50)

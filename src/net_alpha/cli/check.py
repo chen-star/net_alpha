@@ -23,9 +23,7 @@ def _validate_type(type_str: str | None) -> str | None:
     if type_str is None:
         return None
     if type_str.lower() not in _VALID_TYPES:
-        console.print(
-            f"[red]Error:[/red] --type must be 'equities' or 'options'. Got: '{type_str}'"
-        )
+        console.print(f"  [red]Error:[/red] --type must be 'equities' or 'options'. Got: '{type_str}'")
         raise typer.Exit(1)
     return type_str.lower()
 
@@ -78,6 +76,7 @@ def check_command(
 
     # Write last_check_at
     from net_alpha.db.repository import MetaRepository
+
     meta_repo = MetaRepository(session)
     meta_repo.set("last_check_at", date.today().isoformat())
     session.commit()
@@ -104,10 +103,7 @@ def check_command(
     if quiet:
         total = sum(v.disallowed_loss for v in violations)
         if violations:
-            console.print(
-                f"  {len(violations)} violation(s)  "
-                f"{format_currency(total)} disallowed  [{scan_year}]"
-            )
+            console.print(f"  {len(violations)} violation(s)  {format_currency(total)} disallowed  [{scan_year}]")
         else:
             console.print(f"  0 violations  [{scan_year}]")
         print_disclaimer(console)

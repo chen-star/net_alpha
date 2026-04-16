@@ -55,8 +55,7 @@ def report_command(
 
     if quiet:
         console.print(
-            f"  {len(violations)} violation(s)  "
-            f"{format_currency(total_disallowed)} disallowed  [{report_year}]"
+            f"  {len(violations)} violation(s)  {format_currency(total_disallowed)} disallowed  [{report_year}]"
         )
         if csv:
             csv_path = Path.cwd() / f"wash_sale_report_{report_year}.csv"

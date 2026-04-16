@@ -29,7 +29,7 @@ def import_command(
     api_key = settings.anthropic_api_key
     if not api_key:
         console.print(
-            "[red]Error:[/red] ANTHROPIC_API_KEY not set. "
+            "  [red]Error:[/red] ANTHROPIC_API_KEY not set. "
             "Set it via environment variable or in ~/.net_alpha/config.toml"
         )
         raise typer.Exit(1)
@@ -52,7 +52,7 @@ def import_command(
         with console.status("Importing trades\u2026", spinner="dots"):
             result = run_import(ctx)
     except RuntimeError as e:
-        console.print(f"[red]Error:[/red] {e}")
+        console.print(f"  [red]Error:[/red] {e}")
         raise typer.Exit(1)
     finally:
         session.close()
@@ -71,9 +71,7 @@ def import_command(
     print_disclaimer(console)
 
 
-def _confirm_schema(
-    mapping: SchemaMapping, headers: list[str], examples: dict[str, str] | None = None
-) -> bool:
+def _confirm_schema(mapping: SchemaMapping, headers: list[str], examples: dict[str, str] | None = None) -> bool:
     """Display detected schema and ask user to confirm."""
     console.print()
     console.print("  Detected schema:")

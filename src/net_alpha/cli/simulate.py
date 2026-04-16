@@ -57,15 +57,10 @@ def sell_command(
     if not has_lots:
         suggestion = _suggest_ticker(ticker, known_tickers)
         if suggestion:
-            console.print(
-                f"  [red]Error:[/red] No open lots for '{ticker}'. "
-                f"Did you mean: [bold]{suggestion}[/bold]?"
-            )
+            console.print(f"  [red]Error:[/red] No open lots for '{ticker}'. Did you mean: [bold]{suggestion}[/bold]?")
         else:
             console.print(f"  [red]Error:[/red] No open lots for '{ticker}'.")
-        console.print(
-            "  [dim]\u2192 Run net-alpha tax-position to see all open positions.[/dim]"
-        )
+        console.print("  [dim]\u2192 Run net-alpha tax-position to see all open positions.[/dim]")
         if session:
             session.close()
         raise typer.Exit(1)
