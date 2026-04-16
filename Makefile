@@ -1,4 +1,4 @@
-.PHONY: test lint format check
+.PHONY: test lint format check release
 
 test:
 	uv run pytest
@@ -12,3 +12,6 @@ format:
 	uv run ruff check --fix .
 
 check: lint test
+
+release:
+	./scripts/release.sh
