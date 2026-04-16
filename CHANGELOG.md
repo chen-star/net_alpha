@@ -2,6 +2,37 @@
 
 
 
+## v0.4.0 (2026-04-16)
+
+### Chore
+
+* chore: update GitNexus metadata and bump version ([`47998bb`](https://github.com/chen-star/net_alpha/commit/47998bb131d3afc1b3fead9e8d717e83bbdd13c2))
+
+### Documentation
+
+* docs: add AI agent wrapper implementation plan
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`47c5220`](https://github.com/chen-star/net_alpha/commit/47c52208e127e5f9adacc25968380ab859535836))
+
+* docs: add AI agent wrapper design spec
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ccf2a03`](https://github.com/chen-star/net_alpha/commit/ccf2a033003e0402a96833f8e975c6c8b0347792))
+
+### Feature
+
+* feat: wire agent command into CLI app and add integration smoke test ([`cba39c8`](https://github.com/chen-star/net_alpha/commit/cba39c8549f6145d21a22565baf6cd36cb3ab10a))
+
+* feat: add agent REPL with local routing and session-start scan ([`61ecab9`](https://github.com/chen-star/net_alpha/commit/61ecab935888443e423cf2ea8853e99ee04dedba))
+
+* feat: add ReAct loop for Claude tool-use agent ([`fcc8e08`](https://github.com/chen-star/net_alpha/commit/fcc8e085f43b1a8b30a4f84eda662a3d219cccb8))
+
+* feat: add agent system prompt assembly ([`a9f7334`](https://github.com/chen-star/net_alpha/commit/a9f733441d8ec6e76fa98711f32546428327b657))
+
+* feat: add agent tool executors and Claude tool schemas ([`d67be5a`](https://github.com/chen-star/net_alpha/commit/d67be5a74de65cc5a1be3456b9996d522ef32967))
+
+* feat: add agent_api_key, agent_model, resolved_agent_api_key to Settings ([`e32e4a9`](https://github.com/chen-star/net_alpha/commit/e32e4a95bd0c37f59f20492bd59f3966b90c75c8))
+
+
 ## v0.3.0 (2026-04-16)
 
 ### Documentation
