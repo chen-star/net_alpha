@@ -1,14 +1,31 @@
 # net-alpha
 
+```text
+  _   _  _____ _____         ___   _     ____  _   _    _    
+ | \ | || ____|_   _|       / _ \ | |   |  _ \| | | |  / \   
+ |  \| ||  _|   | |   _____| |_| || |   | |_) | |_| | / _ \  
+ | |\  || |___  | |  |_____|  _  || |___|  __/|  _  |/ ___ \ 
+ |_| \_||_____| |_|        |_| |_||_____|_|   |_| |_/_/   \_\
+```
+
+> **The only open-source tool that detects wash sales across multiple brokerage accounts — including options and ETFs.**
+
+---
+
+### 🤖 AI-Powered Import
+Claude automatically detects your broker's CSV layout. No more manual column mapping or broken parsers.
+
+### 🌐 Cross-Account View
+Matches a Schwab loss sale against a Robinhood repurchase in a single pass. Total visibility across your portfolio.
+
+### 🔒 100% Local & Private
+Your trade data never leaves your machine. No cloud, no tracking, no telemetry. Zero-knowledge by design.
+
+---
+
 [![CI](https://github.com/chen-star/net_alpha/actions/workflows/ci.yml/badge.svg)](https://github.com/chen-star/net_alpha/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/wash-alpha.svg)](https://pypi.org/project/wash-alpha/)
 [![codecov](https://codecov.io/github/chen-star/net_alpha/graph/badge.svg?token=XETFUGJO3L)](https://codecov.io/github/chen-star/net_alpha)
-
-Cross-account wash sale detection for equities, options, and ETFs.
-
-> The only open-source tool that detects wash sales across multiple brokerage accounts — including options and ETFs.
-
----
 
 ## The Problem
 
