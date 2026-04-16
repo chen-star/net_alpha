@@ -9,6 +9,7 @@ from rich.table import Table
 
 from net_alpha.cli.output import format_currency, print_disclaimer
 from net_alpha.engine.matcher import get_match_confidence, is_within_wash_sale_window
+from net_alpha.engine.tax_position import identify_open_lots
 
 console = Console()
 
@@ -43,7 +44,6 @@ def sell_command(
     console.print("  " + "\u2500" * 50)
 
     # Validate ticker exists in known open lots (or has ETF-equivalent lots)
-    from net_alpha.engine.tax_position import identify_open_lots
     open_lots = identify_open_lots(all_trades, as_of=today)
     known_tickers = list({lot.ticker for lot in open_lots})
 

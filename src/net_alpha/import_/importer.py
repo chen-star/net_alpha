@@ -42,6 +42,29 @@ class ImportContext:
     session: object  # SQLModel Session
 
 
+def _extract_examples(mapping: SchemaMapping, sample_rows: list[dict]) -> dict[str, str]:
+    """Extract first non-empty value per mapped column from sample rows."""
+    fields = {
+        "date": mapping.date,
+        "ticker": mapping.ticker,
+        "action": mapping.action,
+        "quantity": mapping.quantity,
+    }
+    if mapping.proceeds:
+        fields["proceeds"] = mapping.proceeds
+    if mapping.cost_basis:
+        fields["cost_basis"] = mapping.cost_basis
+
+    examples: dict[str, str] = {}
+    for field_name, col_name in fields.items():
+        for row in sample_rows:
+            val = str(row.get(col_name, "")).strip()
+            if val:
+                examples[field_name] = val
+                break
+    return examples
+
+
 def run_import(ctx: ImportContext) -> ImportResult:
     """Run the full import pipeline.
 
@@ -73,7 +96,8 @@ def run_import(ctx: ImportContext) -> ImportResult:
         )
 
         # User confirmation
-        if not ctx.confirm_schema(mapping, headers):
+        examples = _extract_examples(mapping, raw_samples)
+        if not ctx.confirm_schema(mapping, headers, examples):
             raise RuntimeError("Schema rejected by user. Import cancelled.")
 
         # Cache the confirmed schema

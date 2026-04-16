@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
@@ -35,7 +35,14 @@ def _make_open_lot(
     )
 
 
+def _patch_identify_open_lots(ticker="AAPL"):
+    """Patch identify_open_lots to return one lot so ticker validation passes."""
+    mock = MagicMock(return_value=[_make_open_lot(ticker=ticker)])
+    return patch("net_alpha.cli.simulate.identify_open_lots", mock)
+
+
 class TestSimulateSellLotSelection:
+    @_patch_identify_open_lots()
     @patch("net_alpha.cli.simulate._get_lot_selection_data")
     @patch("net_alpha.cli.simulate._find_lookback_triggers")
     @patch("net_alpha.cli.simulate._bootstrap_and_load")
@@ -87,6 +94,7 @@ class TestSimulateSellLotSelection:
         assert "LIFO" in result.output
         assert "Recommendation" in result.output
 
+    @_patch_identify_open_lots()
     @patch("net_alpha.cli.simulate._find_lookback_triggers")
     @patch("net_alpha.cli.simulate._bootstrap_and_load")
     def test_lot_table_not_shown_without_price(self, mock_boot, mock_lookback):
@@ -97,6 +105,7 @@ class TestSimulateSellLotSelection:
         assert result.exit_code == 0
         assert "LOT SELECTION" not in result.output
 
+    @_patch_identify_open_lots()
     @patch("net_alpha.cli.simulate._get_lot_selection_data")
     @patch("net_alpha.cli.simulate._find_lookback_triggers")
     @patch("net_alpha.cli.simulate._bootstrap_and_load")
@@ -109,6 +118,7 @@ class TestSimulateSellLotSelection:
         assert result.exit_code == 0
         assert "No open lots" in result.output or "no open lots" in result.output
 
+    @_patch_identify_open_lots()
     @patch("net_alpha.cli.simulate._get_lot_selection_data")
     @patch("net_alpha.cli.simulate._find_lookback_triggers")
     @patch("net_alpha.cli.simulate._bootstrap_and_load")

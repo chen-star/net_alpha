@@ -23,7 +23,7 @@ def _ctx(session, csv_path: Path, broker: str, mock_client) -> ImportContext:
         anthropic_client=mock_client,
         model="claude-haiku-4-5",
         max_retries=1,
-        confirm_schema=lambda mapping, headers: True,  # auto-confirm
+        confirm_schema=lambda mapping, headers, examples=None: True,  # auto-confirm
         trade_repo=TradeRepository(session),
         schema_cache_repo=SchemaCacheRepository(session),
         session=session,

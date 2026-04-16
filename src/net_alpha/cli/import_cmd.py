@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from net_alpha.cli.output import print_disclaimer
+from net_alpha.cli.output import print_disclaimer, print_hint
 from net_alpha.import_.schema_detection import SchemaMapping
 
 console = Console()
@@ -67,10 +67,13 @@ def import_command(
     if result.duplicates_skipped > 0:
         console.print(f"  {result.duplicates_skipped} duplicate trades skipped.")
 
+    print_hint(console, "Run net-alpha check to scan for wash sales with your latest data")
     print_disclaimer(console)
 
 
-def _confirm_schema(mapping: SchemaMapping, headers: list[str]) -> bool:
+def _confirm_schema(
+    mapping: SchemaMapping, headers: list[str], examples: dict[str, str] | None = None
+) -> bool:
     """Display detected schema and ask user to confirm."""
     console.print()
     console.print("  Detected schema:")
@@ -79,10 +82,12 @@ def _confirm_schema(mapping: SchemaMapping, headers: list[str]) -> bool:
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_column("Field", style="cyan")
     table.add_column("Column", style="white")
-    table.add_column("Info", style="dim")
+    table.add_column("Example", style="dim")
 
-    table.add_row("date", f'"{mapping.date}"', "")
-    table.add_row("ticker", f'"{mapping.ticker}"', "")
+    ex = examples or {}
+
+    table.add_row("date", f'"{mapping.date}"', ex.get("date", ""))
+    table.add_row("ticker", f'"{mapping.ticker}"', ex.get("ticker", ""))
     buy_vals = ", ".join(mapping.buy_values)
     sell_vals = ", ".join(mapping.sell_values)
     table.add_row(
@@ -90,11 +95,11 @@ def _confirm_schema(mapping: SchemaMapping, headers: list[str]) -> bool:
         f'"{mapping.action}"',
         f"[buy: {buy_vals}]  [sell: {sell_vals}]",
     )
-    table.add_row("quantity", f'"{mapping.quantity}"', "")
+    table.add_row("quantity", f'"{mapping.quantity}"', ex.get("quantity", ""))
     if mapping.proceeds:
-        table.add_row("proceeds", f'"{mapping.proceeds}"', "")
+        table.add_row("proceeds", f'"{mapping.proceeds}"', ex.get("proceeds", ""))
     if mapping.cost_basis:
-        table.add_row("cost_basis", f'"{mapping.cost_basis}"', "")
+        table.add_row("cost_basis", f'"{mapping.cost_basis}"', ex.get("cost_basis", ""))
     if mapping.option_format:
         table.add_row("options", f'"{mapping.option_format}"', "")
 
