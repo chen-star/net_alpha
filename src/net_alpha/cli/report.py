@@ -20,6 +20,7 @@ console = Console()
 def report_command(
     year: int | None = typer.Option(None, help="Tax year (default: current)"),
     csv: bool = typer.Option(False, "--csv", help="Also export CSV to current directory"),
+    quiet: bool = typer.Option(False, "--quiet", help="Print summary line only (for scripting)"),
 ) -> None:
     """Generate a wash sale report for a tax year."""
 
@@ -50,13 +51,27 @@ def report_command(
     # Filter violations by year (loss sale year)
     violations = [v for v in result.violations if trade_map[v.loss_trade_id].date.year == report_year]
 
+    total_disallowed = sum(v.disallowed_loss for v in violations)
+
+    if quiet:
+        console.print(
+            f"  {len(violations)} violation(s)  "
+            f"{format_currency(total_disallowed)} disallowed  [{report_year}]"
+        )
+        if csv:
+            csv_path = Path.cwd() / f"wash_sale_report_{report_year}.csv"
+            _write_csv(csv_path, violations, trade_map)
+            console.print(f"  CSV exported to: {csv_path}")
+        print_disclaimer(console)
+        session.close()
+        return
+
     # Summary stats
     total_trades = len(all_trades)
     loss_trades = sum(1 for t in all_trades if t.is_loss() and t.date.year == report_year)
     confirmed = sum(1 for v in violations if v.confidence == "Confirmed")
     probable = sum(1 for v in violations if v.confidence == "Probable")
     unclear = sum(1 for v in violations if v.confidence == "Unclear")
-    total_disallowed = sum(v.disallowed_loss for v in violations)
 
     console.print()
     console.print(f"  [bold]WASH SALE REPORT — Tax Year {report_year}[/bold]")
