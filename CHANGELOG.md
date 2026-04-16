@@ -2,6 +2,49 @@
 
 
 
+## v0.3.0 (2026-04-16)
+
+### Documentation
+
+* docs: add CLI UX improvements implementation plan
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9fc1222`](https://github.com/chen-star/net_alpha/commit/9fc12226a4f802bdd0eb979ae235c2eb149d6880))
+
+* docs: add CLI UX improvements design spec
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7c69862`](https://github.com/chen-star/net_alpha/commit/7c698625dbabf080ded29d61a8ccbd63efabf25b))
+
+### Feature
+
+* feat: show example values in schema confirmation and add post-import nudge ([`9d0c8bd`](https://github.com/chen-star/net_alpha/commit/9d0c8bdbb54dc72340c53fcda35f5df971b28f01))
+
+* feat: add broker autocomplete and what-to-do-next panel to wizard ([`648c647`](https://github.com/chen-star/net_alpha/commit/648c647c30b79e9a1f414b5dcf719e4746383f4c))
+
+* feat: add ticker validation with close-match suggestion to simulate sell ([`f1a2097`](https://github.com/chen-star/net_alpha/commit/f1a2097cec3a4b1cd02705efcec64d81773c3baf))
+
+* feat: add --quiet flag to report command ([`9e4fd82`](https://github.com/chen-star/net_alpha/commit/9e4fd82b5c2d07f99075a2a1d2f19b978c142d92))
+
+* feat: add --quiet flag, --type validation, hints, and last_check_at to check command ([`d002753`](https://github.com/chen-star/net_alpha/commit/d0027531daacf198766a90acffddb111059e0e7f))
+
+* feat: add urgency coloring and cross-command hint to rebuys ([`6f75fa1`](https://github.com/chen-star/net_alpha/commit/6f75fa19f79b601ca79b9098824b010c6516f8ce))
+
+* feat: color-code tax-position monetary values and add cross-command hint ([`2d2da80`](https://github.com/chen-star/net_alpha/commit/2d2da80a51789dfffd6ada28d990ff731234d51e))
+
+* feat: add progress spinners to check, report, and import commands ([`854ba64`](https://github.com/chen-star/net_alpha/commit/854ba64f7a19ec2045deb56556ea3745f16038e9))
+
+* feat: add net-alpha status dashboard command ([`e9be993`](https://github.com/chen-star/net_alpha/commit/e9be99349d5989bfb8c12442d898b49c45f5c5f9))
+
+* feat: add MetaRepository for reading and writing meta key-value pairs ([`31a759f`](https://github.com/chen-star/net_alpha/commit/31a759f68a9110a5dbf4ba9f5c9164ad2ccc082f))
+
+* feat: add print_hint and format_currency_colored output helpers
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ba78737`](https://github.com/chen-star/net_alpha/commit/ba78737f7f87d7af28d34b8b49eec581f1e4717d))
+
+### Style
+
+* style: normalize error message formatting across CLI commands ([`477e5a6`](https://github.com/chen-star/net_alpha/commit/477e5a664a96c912e98307d0203df21275902c9b))
+
+
 ## v0.2.0 (2026-04-15)
 
 ### Documentation
