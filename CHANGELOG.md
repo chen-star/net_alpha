@@ -2,6 +2,29 @@
 
 
 
+## v0.6.0 (2026-04-16)
+
+### Documentation
+
+* docs: update PyPI badge to Shields.io and refresh GitNexus index ([`e280434`](https://github.com/chen-star/net_alpha/commit/e2804340bf5a96ffb52f483f85e6db151145780f))
+
+* docs: include design spec and implementation plan for README overhaul ([`2f16adc`](https://github.com/chen-star/net_alpha/commit/2f16adc24e390d11700aa279fc17c9697f1a539b))
+
+* docs: add summary for README overhaul plan ([`c70433d`](https://github.com/chen-star/net_alpha/commit/c70433d77266fd1892ba661c2c86fe070b4a5673))
+
+* docs: final polish of README overhaul ([`9a9968f`](https://github.com/chen-star/net_alpha/commit/9a9968fe57f38a14701543e172d1752e1316d5db))
+
+* docs: add technical deep-dive and privacy section to README ([`057964f`](https://github.com/chen-star/net_alpha/commit/057964f984e342c54dac5d7aa9ddd8a8ede7da85))
+
+* docs: add modern workflow walkthrough to README ([`676bd1c`](https://github.com/chen-star/net_alpha/commit/676bd1c2ebb9bd16997d637395be5c5a872a75d1))
+
+* docs: add hero header and value prop to README ([`4c197fa`](https://github.com/chen-star/net_alpha/commit/4c197faab0624aacb9a1a6f0081883332ea7a3db))
+
+### Feature
+
+* feat: add crypto and common ETF pairs for tax loss harvesting ([`4636381`](https://github.com/chen-star/net_alpha/commit/4636381fd1e9bb009bebc3b6121adb705422ad34))
+
+
 ## v0.5.0 (2026-04-16)
 
 ### Chore
