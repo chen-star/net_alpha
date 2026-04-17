@@ -1,3 +1,4 @@
+<!-- generated-by: gsd-doc-writer -->
 # net-alpha
 
 ```text
@@ -139,7 +140,7 @@ If your broker changes its export format, the next import triggers a new detecti
 | Russell 2000 | IWM, VTWO           |
 | Gold         | GLD, IAU            |
 
-Add your own pairs in `~/.net_alpha/etf_pairs.yaml` — your file extends the defaults, never replaces them.
+Add your own pairs in <!-- VERIFY: ~/.net_alpha/etf_pairs.yaml --> — your file extends the defaults, never replaces them.
 
 ---
 
@@ -159,7 +160,7 @@ Built with the latest Python ecosystem for speed and reliability:
 - **uv** for ultra-fast, reproducible builds.
 
 ### ⚙️ Extensibility
-Add your own substantially-identical security pairs (e.g., custom ETF pairs) in `~/.net_alpha/etf_pairs.yaml`.
+Add your own substantially-identical security pairs (e.g., custom ETF pairs) in <!-- VERIFY: ~/.net_alpha/etf_pairs.yaml -->.
 
 ```yaml
 # Example: Custom ETF matching
@@ -219,6 +220,44 @@ uv run pytest -k "test_wash_sale"
 - Tax-loss harvest scanner — find unrealized losses worth taking before year-end
 - Replacement security suggester — correlated-but-not-identical alternatives
 - Optional local web dashboard (`net-alpha serve`)
+
+
+## Quick start
+
+The fastest way to get your cross-account wash sale report:
+
+1. **Initialize the tool and launch the setup wizard:**
+   ```bash
+   net-alpha
+   ```
+2. **Scan your entire imported portfolio for wash sales:**
+   ```bash
+   net-alpha check
+   ```
+
+## Usage examples
+
+**1. Import a broker statement**
+Automatically parse and import your trade history using AI-powered schema detection.
+```bash
+net-alpha import schwab 2024_transactions.csv
+```
+
+**2. Simulate a trade before execution**
+Check if selling a position will trigger a wash sale against recent repurchases, and view recommended tax-lot selection.
+```bash
+net-alpha simulate sell TSLA 50 --price 185.50
+```
+
+**3. Ask the AI agent about your portfolio**
+Use natural language to query your tax positions, recent trades, or wash sale exposure.
+```bash
+net-alpha agent "What is my total realized loss this year across all accounts?"
+```
+
+## License
+
+No license documented.
 
 ---
 
