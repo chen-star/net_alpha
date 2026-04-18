@@ -1,0 +1,25 @@
+Screen {
+    layout: horizontal;
+}
+
+#holdings-pane {
+    width: 60%;
+    height: 100%;
+    border-right: solid green;
+}
+
+#simulator-pane {
+    width: 40%;
+    height: 100%;
+    padding: 1;
+}
+
+.warning {
+    color: orange;
+}
+.error {
+    color: red;
+}
+.safe {
+    color: green;
+}
