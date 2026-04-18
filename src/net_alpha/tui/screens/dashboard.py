@@ -59,7 +59,7 @@ class DashboardScreen(Screen):
             return
 
         # Run engine
-        success, result, error = simulate_trade(
+        success, result, error, virtual_id = simulate_trade(
             self.app.trades, 
             self.app.etf_pairs, 
             str(action), 
@@ -74,9 +74,18 @@ class DashboardScreen(Screen):
             status_label.set_classes("error")
             return
 
-        if len(result.violations) > 0:
-            status_label.update("⚠️ Wash Sale Triggered!")
-            status_label.set_classes("warning")
+        sim_violations = [v for v in result.violations if v.loss_trade_id == virtual_id or v.replacement_trade_id == virtual_id]
+
+        if sim_violations:
+            disallowed = sum(v.disallowed_loss for v in sim_violations)
+            confidence = sim_violations[0].confidence
+            
+            if confidence == "Confirmed":
+                status_label.update(f"❌ Wash Sale! Disallowed: ${disallowed:,.2f}")
+                status_label.set_classes("error")
+            else:
+                status_label.update(f"⚠️ {confidence} Wash Sale! Disallowed: ${disallowed:,.2f}")
+                status_label.set_classes("warning")
         else:
             status_label.update("✅ Safe to Trade")
             status_label.set_classes("safe")

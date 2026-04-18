@@ -10,9 +10,9 @@ def simulate_trade(
     quantity: float,
     price: float,
     trade_date: date
-) -> tuple[bool, DetectionResult | None, str | None]:
+) -> tuple[bool, DetectionResult | None, str | None, str | None]:
     """
-    Simulates a trade and returns (success, result, error_msg).
+    Simulates a trade and returns (success, result, error_msg, virtual_id).
     success is False if inputs are invalid.
     """
     try:
@@ -29,6 +29,6 @@ def simulate_trade(
         
         combined_trades = existing_trades + [virtual_trade]
         result = detect_wash_sales(combined_trades, etf_pairs)
-        return True, result, None
+        return True, result, None, virtual_trade.id
     except Exception as e:
-        return False, None, str(e)
+        return False, None, str(e), None
