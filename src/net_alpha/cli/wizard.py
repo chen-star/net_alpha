@@ -36,8 +36,6 @@ def run_wizard(settings: Settings) -> None:
     console.print("  [bold]net-alpha Interactive Wizard[/bold]")
     console.print()
 
-    _ensure_api_key(settings)
-
     while True:
         action = questionary.select(
             "What would you like to do?",
