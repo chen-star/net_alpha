@@ -2,6 +2,35 @@
 
 
 
+## v0.8.0 (2026-04-18)
+
+### Chore
+
+* chore: add textual dependency for TUI ([`2c3261a`](https://github.com/chen-star/net_alpha/commit/2c3261af9b71d1df80968fc6fe894074beb101c9))
+
+* chore: install ui-ux-pro-max-skill for cluade and antigravity ([`e0fcc72`](https://github.com/chen-star/net_alpha/commit/e0fcc721d8e3b40ca8e01bdec610265b71a3df37))
+
+### Documentation
+
+* docs: sync architecture, cli, and readme with tui implementation and update model versions ([`89558c2`](https://github.com/chen-star/net_alpha/commit/89558c27d088b314f45386fa9ecaba19b7aa3024))
+
+* docs: add interactive simulator TUI design spec ([`d8c4e0f`](https://github.com/chen-star/net_alpha/commit/d8c4e0f3125cc2cbd479c97db38db3a53cb335e1))
+
+### Feature
+
+* feat(tui): accurately track and display virtual trade wash sales ([`283a238`](https://github.com/chen-star/net_alpha/commit/283a2381e80332d47666974f54125215bbf5a9e7))
+
+* feat(tui): wire reactive inputs to simulation engine ([`a6408a2`](https://github.com/chen-star/net_alpha/commit/a6408a25f31848fc451fcf9ca9725425c861bd81))
+
+* feat(tui): add simulation engine helper ([`5d146a9`](https://github.com/chen-star/net_alpha/commit/5d146a9059a89e35166017e551d83e4e02f799a2))
+
+* feat(tui): load and display database trades in DataTable ([`b1335b8`](https://github.com/chen-star/net_alpha/commit/b1335b868cc9f974989aa28fd487433257e1053a))
+
+* feat(tui): build split-pane dashboard layout ([`d7e5428`](https://github.com/chen-star/net_alpha/commit/d7e54280ea839401adf0cd571b72614913e134b8))
+
+* feat(tui): scaffold base textual app and cli command ([`a5338fb`](https://github.com/chen-star/net_alpha/commit/a5338fb2cdfba604dcc5281fefae3d03c82d93c0))
+
+
 ## v0.7.0 (2026-04-18)
 
 ### Chore
