@@ -31,7 +31,7 @@ class ImportContext:
 
     csv_path: Path
     broker_name: str
-    anthropic_client: object  # Anthropic client instance
+    anthropic_client: object | None  # Anthropic client instance
     model: str
     max_retries: int
     # Callbacks for user interaction (injected by CLI layer)
@@ -83,36 +83,48 @@ def run_import(ctx: ImportContext) -> ImportResult:
         mapping = SchemaMapping(**json.loads(cached.column_mapping))
         schema_cache_id = cached.id
     else:
-        # Anonymize samples before LLM call
-        anon_samples = [anonymize_row(row) for row in raw_samples]
+        from net_alpha.import_.schema_detection import KNOWN_BROKER_SCHEMAS
+        
+        if ctx.broker_name in KNOWN_BROKER_SCHEMAS:
+            mapping = KNOWN_BROKER_SCHEMAS[ctx.broker_name]
+            schema_cache_id = None
+        else:
+            if not ctx.anthropic_client:
+                raise RuntimeError(
+                    f"We don't have a built-in schema for '{ctx.broker_name}'. "
+                    "To import this file, you must set an ANTHROPIC_API_KEY so the AI can analyze it."
+                )
 
-        # LLM schema detection
-        mapping = detect_schema(
-            client=ctx.anthropic_client,
-            headers=headers,
-            sample_rows=anon_samples,
-            model=ctx.model,
-            max_retries=ctx.max_retries,
-        )
+            # Anonymize samples before LLM call
+            anon_samples = [anonymize_row(row) for row in raw_samples]
 
-        # User confirmation
-        examples = _extract_examples(mapping, raw_samples)
-        if not ctx.confirm_schema(mapping, headers, examples):
-            raise RuntimeError("Schema rejected by user. Import cancelled.")
+            # LLM schema detection
+            mapping = detect_schema(
+                client=ctx.anthropic_client,
+                headers=headers,
+                sample_rows=anon_samples,
+                model=ctx.model,
+                max_retries=ctx.max_retries,
+            )
 
-        # Cache the confirmed schema
-        from net_alpha.db.tables import SchemaCacheRow
+            # User confirmation
+            examples = _extract_examples(mapping, raw_samples)
+            if not ctx.confirm_schema(mapping, headers, examples):
+                raise RuntimeError("Schema rejected by user. Import cancelled.")
 
-        schema_cache_id = str(uuid4())
-        cache_row = SchemaCacheRow(
-            id=schema_cache_id,
-            broker_name=ctx.broker_name,
-            header_hash=header_hash,
-            column_mapping=mapping.model_dump_json(),
-            option_format=mapping.option_format,
-        )
-        ctx.schema_cache_repo.save(cache_row)
-        ctx.session.commit()
+            # Cache the confirmed schema
+            from net_alpha.db.tables import SchemaCacheRow
+
+            schema_cache_id = str(uuid4())
+            cache_row = SchemaCacheRow(
+                id=schema_cache_id,
+                broker_name=ctx.broker_name,
+                header_hash=header_hash,
+                column_mapping=mapping.model_dump_json(),
+                option_format=mapping.option_format,
+            )
+            ctx.schema_cache_repo.save(cache_row)
+            ctx.session.commit()
 
     # Parse all CSV rows
     trades = read_csv_with_mapping(
