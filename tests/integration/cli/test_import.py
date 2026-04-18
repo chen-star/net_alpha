@@ -40,7 +40,7 @@ def test_schwab_import_llm_path(cli_setup, schwab_csv, monkeypatch):
     mock_client.messages.create.return_value = make_llm_response(SCHWAB_MAPPING)
     _patch_import(monkeypatch, mock_client)
 
-    result = runner.invoke(app, ["import", "Schwab", str(schwab_csv)])
+    result = runner.invoke(app, ["import", "unknown_broker", str(schwab_csv)])
 
     assert result.exit_code == 0, result.output
     assert "4" in result.output
@@ -58,8 +58,8 @@ def test_schwab_import_cache_hit(cli_setup, schwab_csv, monkeypatch):
     mock_client.messages.create.return_value = make_llm_response(SCHWAB_MAPPING)
     _patch_import(monkeypatch, mock_client)
 
-    runner.invoke(app, ["import", "Schwab", str(schwab_csv)])  # first: LLM called
-    result = runner.invoke(app, ["import", "Schwab", str(schwab_csv)])  # second: cache hit
+    runner.invoke(app, ["import", "unknown_broker", str(schwab_csv)])  # first: LLM called
+    result = runner.invoke(app, ["import", "unknown_broker", str(schwab_csv)])  # second: cache hit
 
     assert result.exit_code == 0, result.output
     assert mock_client.messages.create.call_count == 1
@@ -72,7 +72,7 @@ def test_robinhood_import_llm_path(cli_setup, robinhood_csv, monkeypatch):
     mock_client.messages.create.return_value = make_llm_response(ROBINHOOD_MAPPING)
     _patch_import(monkeypatch, mock_client)
 
-    result = runner.invoke(app, ["import", "Robinhood", str(robinhood_csv)])
+    result = runner.invoke(app, ["import", "unknown_broker_2", str(robinhood_csv)])
 
     assert result.exit_code == 0, result.output
     assert "4" in result.output
@@ -86,8 +86,8 @@ def test_duplicate_import_skips(cli_setup, schwab_csv, monkeypatch):
     mock_client.messages.create.return_value = make_llm_response(SCHWAB_MAPPING)
     _patch_import(monkeypatch, mock_client)
 
-    runner.invoke(app, ["import", "Schwab", str(schwab_csv)])
-    result = runner.invoke(app, ["import", "Schwab", str(schwab_csv)])
+    runner.invoke(app, ["import", "unknown_broker", str(schwab_csv)])
+    result = runner.invoke(app, ["import", "unknown_broker", str(schwab_csv)])
 
     assert result.exit_code == 0, result.output
     # Second run: new_imported=0, duplicates_skipped=4
@@ -101,16 +101,16 @@ def test_cross_account_same_ticker(cli_setup, schwab_csv, robinhood_csv, monkeyp
     _patch_import(monkeypatch, mock_client)
 
     mock_client.messages.create.return_value = make_llm_response(SCHWAB_MAPPING)
-    r1 = runner.invoke(app, ["import", "Schwab", str(schwab_csv)])
+    r1 = runner.invoke(app, ["import", "unknown_broker", str(schwab_csv)])
     assert r1.exit_code == 0, r1.output
 
     mock_client.messages.create.return_value = make_llm_response(ROBINHOOD_MAPPING)
-    r2 = runner.invoke(app, ["import", "Robinhood", str(robinhood_csv)])
+    r2 = runner.invoke(app, ["import", "unknown_broker_2", str(robinhood_csv)])
     assert r2.exit_code == 0, r2.output
 
     with Session(engine) as s:
         trades = TradeRepository(s).list_all()
         accounts = {t.account for t in trades}
         assert len(trades) == 8
-        assert "schwab" in accounts
-        assert "robinhood" in accounts
+        assert "unknown_broker" in accounts
+        assert "unknown_broker_2" in accounts

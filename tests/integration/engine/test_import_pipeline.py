@@ -40,7 +40,7 @@ def test_schwab_full_pipeline(temp_db, schwab_csv, mock_anthropic_client):
     engine, session, _ = temp_db
     mock_anthropic_client.messages.create.return_value = make_llm_response(SCHWAB_MAPPING)
 
-    result = run_import(_ctx(session, schwab_csv, "schwab", mock_anthropic_client))
+    result = run_import(_ctx(session, schwab_csv, "unknown_broker", mock_anthropic_client))
 
     assert result.new_imported == 4
     assert result.duplicates_skipped == 0
@@ -64,13 +64,13 @@ def test_robinhood_full_pipeline(temp_db, robinhood_csv, mock_anthropic_client):
     engine, session, _ = temp_db
     mock_anthropic_client.messages.create.return_value = make_llm_response(ROBINHOOD_MAPPING)
 
-    result = run_import(_ctx(session, robinhood_csv, "robinhood", mock_anthropic_client))
+    result = run_import(_ctx(session, robinhood_csv, "unknown_broker_2", mock_anthropic_client))
 
     assert result.new_imported == 4
 
     headers, _ = get_headers_and_samples(robinhood_csv)
     hash_ = compute_header_hash(headers)
-    cached = SchemaCacheRepository(session).find_by_broker_and_hash("robinhood", hash_)
+    cached = SchemaCacheRepository(session).find_by_broker_and_hash("unknown_broker_2", hash_)
     assert cached is not None
     assert cached.option_format == "robinhood_human"
 
@@ -85,11 +85,11 @@ def test_schema_cache_written_after_first_import(temp_db, schwab_csv, mock_anthr
     engine, session, _ = temp_db
     mock_anthropic_client.messages.create.return_value = make_llm_response(SCHWAB_MAPPING)
 
-    run_import(_ctx(session, schwab_csv, "schwab", mock_anthropic_client))
+    run_import(_ctx(session, schwab_csv, "unknown_broker", mock_anthropic_client))
 
     headers, _ = get_headers_and_samples(schwab_csv)
     hash_ = compute_header_hash(headers)
-    cached = SchemaCacheRepository(session).find_by_broker_and_hash("schwab", hash_)
+    cached = SchemaCacheRepository(session).find_by_broker_and_hash("unknown_broker", hash_)
     assert cached is not None
     assert json.loads(cached.column_mapping)["ticker"] == "Symbol"
 
@@ -99,8 +99,8 @@ def test_schema_cache_hit_skips_llm(temp_db, schwab_csv, mock_anthropic_client):
     engine, session, _ = temp_db
     mock_anthropic_client.messages.create.return_value = make_llm_response(SCHWAB_MAPPING)
 
-    run_import(_ctx(session, schwab_csv, "schwab", mock_anthropic_client))  # LLM called
-    run_import(_ctx(session, schwab_csv, "schwab", mock_anthropic_client))  # cache hit
+    run_import(_ctx(session, schwab_csv, "unknown_broker", mock_anthropic_client))  # LLM called
+    run_import(_ctx(session, schwab_csv, "unknown_broker", mock_anthropic_client))  # cache hit
 
     assert mock_anthropic_client.messages.create.call_count == 1
 
@@ -115,8 +115,8 @@ def test_dedup_hash_match(temp_db, schwab_csv, mock_anthropic_client):
     engine, session, _ = temp_db
     mock_anthropic_client.messages.create.return_value = make_llm_response(SCHWAB_MAPPING)
 
-    first = run_import(_ctx(session, schwab_csv, "schwab", mock_anthropic_client))
-    second = run_import(_ctx(session, schwab_csv, "schwab", mock_anthropic_client))
+    first = run_import(_ctx(session, schwab_csv, "unknown_broker", mock_anthropic_client))
+    second = run_import(_ctx(session, schwab_csv, "unknown_broker", mock_anthropic_client))
 
     assert first.new_imported == 4
     assert second.new_imported == 0
@@ -129,13 +129,13 @@ def test_cross_account_no_dedup(temp_db, schwab_csv, robinhood_csv, mock_anthrop
     engine, session, _ = temp_db
 
     mock_anthropic_client.messages.create.return_value = make_llm_response(SCHWAB_MAPPING)
-    run_import(_ctx(session, schwab_csv, "schwab", mock_anthropic_client))
+    run_import(_ctx(session, schwab_csv, "unknown_broker", mock_anthropic_client))
 
     mock_anthropic_client.messages.create.return_value = make_llm_response(ROBINHOOD_MAPPING)
-    run_import(_ctx(session, robinhood_csv, "robinhood", mock_anthropic_client))
+    run_import(_ctx(session, robinhood_csv, "unknown_broker_2", mock_anthropic_client))
 
     trades = TradeRepository(session).list_all()
     accounts = {t.account for t in trades}
     assert len(trades) == 8
-    assert "schwab" in accounts
-    assert "robinhood" in accounts
+    assert "unknown_broker" in accounts
+    assert "unknown_broker_2" in accounts
