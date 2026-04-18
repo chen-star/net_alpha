@@ -25,16 +25,11 @@ def import_command(
 
     settings, session = _bootstrap()
 
-    # Resolve API key
+    # Resolve API key (optional at startup; only required for new schemas)
     api_key = settings.anthropic_api_key
-    if not api_key:
-        console.print(
-            "  [red]Error:[/red] ANTHROPIC_API_KEY not set. "
-            "Set it via environment variable or in ~/.net_alpha/config.toml"
-        )
-        raise typer.Exit(1)
-
-    client = Anthropic(api_key=api_key)
+    client = None
+    if api_key:
+        client = Anthropic(api_key=api_key)
 
     ctx = ImportContext(
         csv_path=file,
