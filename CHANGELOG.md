@@ -2,6 +2,37 @@
 
 
 
+## v0.9.0 (2026-04-18)
+
+### Chore
+
+* chore: update GitNexus index statistics in documentation files ([`b0e940b`](https://github.com/chen-star/net_alpha/commit/b0e940b508fcdd7f58286dfe71184f5894dd5f70))
+
+### Documentation
+
+* docs: sync PRD commands with current implementation and update GitNexus stats ([`12d8616`](https://github.com/chen-star/net_alpha/commit/12d8616911551307a17d8427b16f9a44068f3abc))
+
+* docs(plans): add api key fallback implementation plan ([`5c05dbf`](https://github.com/chen-star/net_alpha/commit/5c05dbfe83f509e51ea8990748c654a50276ed79))
+
+* docs(specs): add api key fallback design spec ([`48734bb`](https://github.com/chen-star/net_alpha/commit/48734bb8039da72f3b4bbb967dcb5a8c3e8005a3))
+
+* docs: modernize README and update agent configuration ([`1f5920b`](https://github.com/chen-star/net_alpha/commit/1f5920b5c323433deec649fac4fe700b99251e0d))
+
+### Feature
+
+* feat(cli): remove eager api key prompt from interactive wizard ([`5759c10`](https://github.com/chen-star/net_alpha/commit/5759c10b5b2b5b24b513a39c0f4bbb2991a08d4d))
+
+* feat(cli): make API key optional for import command ([`49edb65`](https://github.com/chen-star/net_alpha/commit/49edb65956ec01916b0720310afb0cfcf324bb4d))
+
+* feat(import): run_import uses hardcoded schema if cache misses and no API key ([`4ca8bea`](https://github.com/chen-star/net_alpha/commit/4ca8beaf5939ebf675857debb0289d2768207e3e))
+
+* feat(import): add hardcoded schemas for schwab and robinhood ([`0d8ab77`](https://github.com/chen-star/net_alpha/commit/0d8ab776d74fd169d20872a66307cc0a81383c48))
+
+### Test
+
+* test: update tests to test LLM branch using unknown_broker instead of known brokers ([`f576a66`](https://github.com/chen-star/net_alpha/commit/f576a66956110ae7d7edc94a28f521baf8d26fec))
+
+
 ## v0.8.0 (2026-04-18)
 
 ### Chore
