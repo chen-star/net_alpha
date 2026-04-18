@@ -37,8 +37,17 @@ app.command(name="agent")(agent_command)
 def tui_command():
     """Launch the interactive dashboard and simulator."""
     from net_alpha.tui.app import NetAlphaTUI
-    tui_app = NetAlphaTUI()
-    tui_app.run()
+    from net_alpha.cli.app import _bootstrap
+    from net_alpha.db.repository import TradeRepository
+    
+    settings, session = _bootstrap()
+    try:
+        repo = TradeRepository(session)
+        trades = repo.list_all()
+        tui_app = NetAlphaTUI(trades=trades, etf_pairs=settings.etf_pairs)
+        tui_app.run()
+    finally:
+        session.close()
 
 
 def _bootstrap() -> tuple[Settings, Session]:
