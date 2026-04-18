@@ -46,7 +46,7 @@ def test_detect_schema_success():
         },
     ]
 
-    result = detect_schema(mock_client, headers, sample_rows, "claude-haiku-4-5")
+    result = detect_schema(mock_client, headers, sample_rows, "claude-3-5-haiku-latest")
     assert isinstance(result, SchemaMapping)
     assert result.date == "Date"
     assert result.ticker == "Symbol"
@@ -66,7 +66,7 @@ def test_detect_schema_retry_on_failure():
         {"Date": "2024-10-15", "Symbol": "TSLA", "Action": "Buy", "Quantity": "1.00", "Amount": "1.00"},
     ]
 
-    result = detect_schema(mock_client, headers, sample_rows, "claude-haiku-4-5", max_retries=3)
+    result = detect_schema(mock_client, headers, sample_rows, "claude-3-5-haiku-latest", max_retries=3)
     assert result is not None
     assert mock_client.messages.create.call_count == 3
 
@@ -79,7 +79,7 @@ def test_detect_schema_hard_fail_after_retries():
     sample_rows = [{"Date": "2024-10-15", "Symbol": "TSLA"}]
 
     with pytest.raises(RuntimeError, match="Schema detection failed"):
-        detect_schema(mock_client, headers, sample_rows, "claude-haiku-4-5", max_retries=3)
+        detect_schema(mock_client, headers, sample_rows, "claude-3-5-haiku-latest", max_retries=3)
 
     assert mock_client.messages.create.call_count == 3
 

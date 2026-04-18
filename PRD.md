@@ -80,11 +80,12 @@ Track how disallowed losses roll into the cost basis of replacement shares/contr
 - Running total of disallowed losses YTD
 - Export adjusted basis report as CSV for tax filing reference
 
-### F4 — CLI Interface
-Clean, fast command-line interface as the primary UX.
+### F4 — CLI & TUI Interface
+Clean, fast command-line interface as the primary UX, supplemented by a real-time interactive simulation dashboard (TUI).
 
-```
+```bash
 net-alpha
+net-alpha tui
 net-alpha import schwab trades_2024.csv
 net-alpha import robinhood trades_2024.csv
 net-alpha check
@@ -143,7 +144,7 @@ All `Probable` and `Unclear` results include prominent disclaimer recommending C
 - **Language:** Python 3.11+
 - **CLI framework:** Typer
 - **Data models:** Pydantic v2
-- **LLM integration:** Anthropic Claude API (`claude-haiku-4-5` for cost efficiency on schema detection)
+- **LLM integration:** Anthropic Claude API (`claude-3-5-haiku-latest` for cost efficiency on schema detection)
 - **Local storage:** SQLite via SQLModel (portable, zero-infrastructure)
 - **Packaging:** `pyproject.toml`, installable via `pip install net-alpha`
 
@@ -246,7 +247,6 @@ A wash sale occurs when you sell a security at a loss AND buy the same or substa
 - **Tax-loss harvest scanner** — scan portfolio for unrealized losses worth harvesting before year-end
 - **Replacement security suggester** — given a position to harvest, suggest correlated-but-not-identical alternatives
 - **Robinhood robin_stocks integration** — semi-automated import
-- **Interactive dashboard** — optional `net-alpha serve` for a local web UI
 
 ---
 

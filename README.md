@@ -58,9 +58,11 @@ net-alpha check
 ```
 
 ### 3. 🧪 Sell Simulator
-Planning a trade? Test it against your current holdings and recent buys before you place the order.
+Planning a trade? Test it against your current holdings and recent buys before you place the order via the interactive TUI or CLI.
 
 ```bash
+net-alpha tui
+# or
 net-alpha simulate sell TSLA 10 --price 185.50
 ```
 
@@ -78,7 +80,7 @@ net-alpha report --year 2024
 Requires Python 3.11+ and [`uv`](https://github.com/astral-sh/uv).
 
 ```bash
-pip install net-alpha
+pip install wash-alpha
 ```
 
 Or run from source:
@@ -140,7 +142,7 @@ If your broker changes its export format, the next import triggers a new detecti
 | Russell 2000 | IWM, VTWO           |
 | Gold         | GLD, IAU            |
 
-Add your own pairs in <!-- VERIFY: ~/.net_alpha/etf_pairs.yaml --> — your file extends the defaults, never replaces them.
+Add your own pairs in `~/.net_alpha/etf_pairs.yaml` — your file extends the defaults, never replaces them.
 
 ---
 
@@ -160,7 +162,7 @@ Built with the latest Python ecosystem for speed and reliability:
 - **uv** for ultra-fast, reproducible builds.
 
 ### ⚙️ Extensibility
-Add your own substantially-identical security pairs (e.g., custom ETF pairs) in <!-- VERIFY: ~/.net_alpha/etf_pairs.yaml -->.
+Add your own substantially-identical security pairs (e.g., custom ETF pairs) in `~/.net_alpha/etf_pairs.yaml`.
 
 ```yaml
 # Example: Custom ETF matching
@@ -244,8 +246,10 @@ net-alpha import schwab 2024_transactions.csv
 ```
 
 **2. Simulate a trade before execution**
-Check if selling a position will trigger a wash sale against recent repurchases, and view recommended tax-lot selection.
+Check if selling a position will trigger a wash sale against recent repurchases. Use the interactive TUI for a real-time dashboard or the CLI for a quick check.
 ```bash
+net-alpha tui
+# or
 net-alpha simulate sell TSLA 50 --price 185.50
 ```
 

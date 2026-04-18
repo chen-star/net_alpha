@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Interactive prompts:** `questionary`
 - **Data models:** `pydantic` v2
 - **ORM/storage:** `sqlmodel` over SQLite at `~/.net_alpha/net_alpha.db`
-- **LLM:** `anthropic` SDK — `claude-haiku-4-5` for CSV schema detection only
+- **LLM:** `anthropic` SDK — `claude-3-5-haiku-latest` for CSV schema detection only
 - **Date arithmetic:** stdlib `datetime.date` + `timedelta` (trade dates stored as `YYYY-MM-DD` strings as-is from broker CSV; no timezone conversion)
 - **Config:** `pydantic-settings` reading `~/.net_alpha/config.toml`
 - **Logging:** `loguru`
@@ -126,48 +126,48 @@ All trade data stays local. The only remote call is the one-time LLM schema dete
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **net_alpha** (1503 symbols, 3520 relationships, 108 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **net_alpha** (1686 symbols, 3884 relationships, 138 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> If any GitNexus tool warns the index is stale, run the GitNexus analyze command in terminal first.
+> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
 ## Always Do
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run the `gitnexus_impact` tool (direction: "upstream") and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run the `gitnexus_detect_changes` tool before committing** to verify your changes only affect expected symbols and execution flows.
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
 - **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use the `gitnexus_query` tool to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use the `gitnexus_context` tool.
+- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
 
 ## When Debugging
 
-1. Use the `gitnexus_query` tool to find execution flows related to the issue
-2. Use the `gitnexus_context` tool to see all callers, callees, and process participation
+1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
+2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
 3. `READ gitnexus://repo/net_alpha/process/{processName}` — trace the full execution flow step by step
-4. For regressions: use the `gitnexus_detect_changes` tool to see what your branch changed
+4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
 
 ## When Refactoring
 
-- **Renaming**: MUST use the `gitnexus_rename` tool first. Review the preview — graph edits are safe, text_search edits need manual review.
-- **Extracting/Splitting**: MUST run the `gitnexus_context` tool to see all incoming/outgoing refs, then the `gitnexus_impact` tool (direction: "upstream") to find all external callers before moving code.
-- After any refactor: run the `gitnexus_detect_changes` tool to verify only expected files changed.
+- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
+- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
+- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
 
 ## Never Do
 
 - NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
 - NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes` to check affected scope.
+- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
 
 ## Tools Quick Reference
 
 | Tool | When to use | Command |
 |------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query` |
-| `context` | 360-degree view of one symbol | `gitnexus_context` |
-| `impact` | Blast radius before editing | `gitnexus_impact` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes` |
-| `rename` | Safe multi-file rename | `gitnexus_rename` |
-| `cypher` | Custom graph queries | `gitnexus_cypher` |
+| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
+| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
+| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
+| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
+| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
+| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
 
 ## Impact Risk Levels
 
@@ -191,7 +191,7 @@ This project is indexed by GitNexus as **net_alpha** (1503 symbols, 3520 relatio
 Before completing any code modification task, verify:
 1. `gitnexus_impact` was run for all modified symbols
 2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes` confirms changes match expected scope
+3. `gitnexus_detect_changes()` confirms changes match expected scope
 4. All d=1 (WILL BREAK) dependents were updated
 
 ## Keeping the Index Fresh
@@ -199,13 +199,13 @@ Before completing any code modification task, verify:
 After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
 
 ```bash
-gitnexus analyze
+npx gitnexus analyze
 ```
 
 If the index previously included embeddings, preserve them by adding `--embeddings`:
 
 ```bash
-gitnexus analyze --embeddings
+npx gitnexus analyze --embeddings
 ```
 
 To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**

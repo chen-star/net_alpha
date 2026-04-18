@@ -17,10 +17,10 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=_DEFAULT_DATA_DIR)
     db_name: str = "net_alpha.db"
     anthropic_api_key: str | None = None
-    anthropic_model: str = "claude-haiku-4-5"
+    anthropic_model: str = "claude-3-5-haiku-latest"
     llm_max_retries: int = 3
     agent_api_key: str | None = None
-    agent_model: str = "claude-haiku-4-5"
+    agent_model: str = "claude-3-5-haiku-latest"
 
     @property
     def resolved_agent_api_key(self) -> str | None:

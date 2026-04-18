@@ -21,7 +21,7 @@ def agent_setup(tmp_path, monkeypatch):
     settings = Settings(
         data_dir=tmp_path,
         anthropic_api_key="test-key",
-        agent_model="claude-haiku-4-5",
+        agent_model="claude-3-5-haiku-latest",
     )
 
     def fake_bootstrap():

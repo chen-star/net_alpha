@@ -11,7 +11,7 @@ def test_default_settings():
         data_dir=Path(tempfile.mkdtemp()),
     )
     assert settings.db_name == "net_alpha.db"
-    assert settings.anthropic_model == "claude-haiku-4-5"
+    assert settings.anthropic_model == "claude-3-5-haiku-latest"
     assert settings.llm_max_retries == 3
 
 
@@ -38,7 +38,7 @@ def test_anthropic_api_key_from_env(monkeypatch):
 
 def test_agent_model_default():
     settings = Settings(_env_file=None, data_dir=Path(tempfile.mkdtemp()))
-    assert settings.agent_model == "claude-haiku-4-5"
+    assert settings.agent_model == "claude-3-5-haiku-latest"
 
 
 def test_agent_api_key_defaults_to_none():
