@@ -1,5 +1,4 @@
-<!-- generated-by: gsd-doc-writer -->
-# net-alpha
+<div align="center">
 
 ```text
   _   _  _____ _____         ___   _     ____  _   _    _    
@@ -9,65 +8,98 @@
  |_| \_||_____| |_|        |_| |_||_____|_|   |_| |_/_/   \_\
 ```
 
-> **The only open-source tool that detects wash sales across multiple brokerage accounts — including options and ETFs.**
-
----
-
-### 🤖 AI-Powered Import
-Claude automatically detects your broker's CSV layout. No more manual column mapping or broken parsers.
-
-### 🌐 Cross-Account View
-Matches a Schwab loss sale against a Robinhood repurchase in a single pass. Total visibility across your portfolio.
-
-### 🔒 100% Local & Private
-Your trade data never leaves your machine. No cloud, no tracking, no telemetry. Zero-knowledge by design.
-
----
+**The definitive open-source engine for cross-account wash sale detection.**
 
 [![CI](https://github.com/chen-star/net_alpha/actions/workflows/ci.yml/badge.svg)](https://github.com/chen-star/net_alpha/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/wash-alpha.svg)](https://pypi.org/project/wash-alpha/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![codecov](https://codecov.io/github/chen-star/net_alpha/graph/badge.svg?token=XETFUGJO3L)](https://codecov.io/github/chen-star/net_alpha)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+*Stop flying blind. Detect wash sales across Schwab, Robinhood, options, and ETFs in seconds.*
+
+[Installation](#-installation) •
+[Features](#-key-features) •
+[Usage](#-usage) •
+[How it Works](#-how-the-rules-work)
+
+</div>
 
 ---
 
-## The Problem
+## ⚡ The Problem
 
-When you trade across multiple brokers, each platform only tracks wash sales within its own account. A loss sale on Schwab can be silently neutralized by a repurchase on Robinhood — and you won't find out until February. This problem compounds when you hold options alongside stocks, or ETFs that track the same underlying index.
+When you trade across multiple brokerages, each platform only tracks wash sales **within its own ecosystem**. A loss sale on Schwab can be silently neutralized by a repurchase on Robinhood, and you won't find out until tax season.
 
-**net-alpha** solves this by giving you a single, cross-account view of wash sale exposure — before it's too late to act.
+The problem compounds when you trade **options** alongside stocks, or **ETFs** that track the same underlying index.
+
+**net-alpha** solves this by providing a single, unified view of your wash sale exposure—*before* it's too late to act.
 
 ---
 
-## The Workflow
+## 🌟 Key Features
 
-Get from raw CSVs to a tax-ready report in seconds.
+- **🤖 AI-Powered Smart Import:** Claude automatically detects and parses your broker's CSV layout. No more manual column mapping or writing brittle regex parsers.
+- **🌐 Cross-Account Intelligence:** Seamlessly match a loss sale on one broker against a repurchase on another in a single pass.
+- **🔒 100% Local & Zero-Knowledge:** Your financial data is yours. `net-alpha` runs entirely locally. No cloud uploads, no tracking, no telemetry.
+- **🧪 Interactive Sell Simulator:** Planning a trade? Test it against your current holdings and recent buys in real-time using our beautiful terminal UI (TUI).
+- **🗣️ Natural Language Agent:** Ask questions about your tax positions using plain English (e.g., *"What is my total realized loss this year across all accounts?"*).
 
-### 1. 📂 Smart Import
-Claude detects your broker's schema. Confirm once, and it's cached forever for fully offline subsequent imports.
+---
+
+## 🚀 Installation
+
+`net-alpha` requires Python 3.11 or higher. We recommend using [`uv`](https://github.com/astral-sh/uv) for lightning-fast installation.
 
 ```bash
-net-alpha import schwab   schwab_2024.csv
+pip install wash-alpha
+```
+
+> [!NOTE]
+> While the package is named `wash-alpha` on PyPI, the CLI command is `net-alpha`.
+
+---
+
+## 💻 Usage
+
+### 1. The Interactive Wizard
+The fastest way to get started. Just run `net-alpha` without arguments to launch the guided setup.
+
+```bash
+net-alpha
+```
+
+### 2. Import Your Data
+Import your trade history from any broker. Our AI-powered engine will detect the schema automatically.
+
+```bash
+net-alpha import schwab 2024_transactions.csv
 net-alpha import robinhood rh_2024.csv
 ```
 
-### 2. 🔍 Cross-Account Check
-Scan all accounts together. `net-alpha` detects wash sales across different brokers, assets (Equities/Options/ETFs), and dates.
+> [!TIP]  
+> **How AI Import Works:** On your first import, Claude analyzes your CSV headers and three *anonymized* sample rows to propose a mapping. Once confirmed, the mapping is cached locally. Future imports of the same format are **100% offline and instantaneous**.
+
+### 3. Scan for Wash Sales
+Analyze your entire portfolio across all accounts in milliseconds.
 
 ```bash
 net-alpha check
 ```
 
-### 3. 🧪 Sell Simulator
-Planning a trade? Test it against your current holdings and recent buys before you place the order via the interactive TUI or CLI.
+### 4. Simulate Before You Trade
+Use the real-time Terminal UI to simulate a trade, or use the CLI for a quick check.
 
 ```bash
+# Launch the interactive dashboard
 net-alpha tui
-# or
-net-alpha simulate sell TSLA 10 --price 185.50
+
+# Or use the CLI directly
+net-alpha simulate sell TSLA 50 --price 185.50
 ```
 
-### 4. 📄 Tax-Ready Reporting
-Generate a summary for your accountant or tax software with adjusted cost basis tracking.
+### 5. Generate Tax Reports
+Export a tax-ready summary for your accountant or tax software.
 
 ```bash
 net-alpha report --year 2024
@@ -75,198 +107,30 @@ net-alpha report --year 2024
 
 ---
 
-## Installation
+## 🧠 How the Rules Work
 
-Requires Python 3.11+ and [`uv`](https://github.com/astral-sh/uv).
+**net-alpha** strictly follows IRS Publication 550. A wash sale is triggered when you sell a security at a loss and buy a *"substantially identical"* security within 30 days before or after the sale.
 
-```bash
-pip install wash-alpha
-```
+| Asset Type | Scenario | Confidence |
+| :--- | :--- | :--- |
+| **Equities** | Sold ticker `X` at a loss, bought ticker `X` within 30 days. | 🟢 **Confirmed** |
+| **Options** | Sold option at a loss, bought same option (exact strike + expiry). | 🟢 **Confirmed** |
+| **Options** | Sold option at a loss, bought option on the same underlying. | 🟡 **Probable** |
+| **ETFs** | Sold ETF at a loss, bought the exact same ETF ticker. | 🟢 **Confirmed** |
+| **ETFs** | Sold ETF at a loss, bought ETF tracking the same index (e.g., `SPY` → `VOO`). | 🟠 **Unclear** |
 
-Or run from source:
-
-```bash
-git clone https://github.com/your-org/net-alpha
-cd net-alpha
-uv sync
-uv run net-alpha
-```
+> **Custom ETF Matching:** You can easily add your own "substantially identical" security pairs (like custom ETFs) by editing `~/.net_alpha/etf_pairs.yaml`.
 
 ---
 
-## How CSV Import Works
+## 🛡️ Disclaimer
 
-On the first import of any broker format:
+> [!IMPORTANT]
+> **This tool is for informational purposes only and does not constitute tax or legal advice.**
+> Wash sale rules—especially concerning options and ETFs—involve unsettled areas of tax law. Scenarios marked as `Probable` or `Unclear` should always be reviewed with a qualified CPA or tax professional before making filing decisions.
 
-1. Claude reads your CSV headers and three anonymized sample rows (no account numbers, no real dollar amounts)
-2. It proposes a column mapping — you confirm or abort before any data is stored
-3. The confirmed mapping is cached locally, keyed by broker name and a SHA-256 hash of the header row
-4. All subsequent imports of the same format are fully offline
+<br>
 
-If your broker changes its export format, the next import triggers a new detection and confirmation step automatically.
-
----
-
-## Wash Sale Detection
-
-**Rule (IRS Publication 550):** A wash sale occurs when you sell a security at a loss and buy the same or substantially identical security within 30 calendar days before or after the sale.
-
-### Equities
-
-| Scenario                                                               | Confidence  |
-| ---------------------------------------------------------------------- | ----------- |
-| Sold ticker X at a loss, bought ticker X within 30 days in any account | `Confirmed` |
-
-### Options
-
-| Scenario                                                                                         | Confidence  |
-| ------------------------------------------------------------------------------------------------ | ----------- |
-| Sold option at a loss, bought same option (same strike + expiry) within 30 days                  | `Confirmed` |
-| Sold option at a loss, bought option on same underlying (different strike/expiry) within 30 days | `Probable`  |
-| Sold stock at a loss, bought call on the same stock within 30 days (IRS Rev. Rul. 2008-5)        | `Probable`  |
-| Sold stock at a loss, sold put on the same stock within 30 days                                  | `Unclear`   |
-
-### ETFs
-
-| Scenario                                                                 | Confidence  |
-| ------------------------------------------------------------------------ | ----------- |
-| Sold ETF at a loss, bought the same ETF ticker                           | `Confirmed` |
-| Sold ETF at a loss, bought ETF tracking the same index (e.g., SPY → VOO) | `Unclear`   |
-
-**Built-in substantially-identical ETF pairs:**
-
-| Category     | Tickers             |
-| ------------ | ------------------- |
-| S&P 500      | SPY, VOO, IVV, SPLG |
-| Nasdaq-100   | QQQ, QQQM           |
-| Russell 2000 | IWM, VTWO           |
-| Gold         | GLD, IAU            |
-
-Add your own pairs in `~/.net_alpha/etf_pairs.yaml` — your file extends the defaults, never replaces them.
-
----
-
-## Under the Hood
-
-### 🛡️ Zero-Knowledge Privacy
-We believe your financial data is your business.
-- **Local-First:** All trades are stored in a local SQLite database (`~/.net_alpha/net_alpha.db`).
-- **Anonymized AI:** For schema detection, we only send CSV headers and 3 fake, anonymized sample rows to Claude. No account numbers, no real dollar amounts.
-- **Offline Core:** Once a schema is mapped, the entire detection engine runs 100% offline.
-
-### 🛠️ Modern Tech Stack
-Built with the latest Python ecosystem for speed and reliability:
-- **Python 3.11+** with strict Pydantic v2 typing.
-- **Typer & Rich** for a premium, color-coded terminal UX.
-- **SQLModel** (Pydantic + SQLAlchemy) for local relational storage.
-- **uv** for ultra-fast, reproducible builds.
-
-### ⚙️ Extensibility
-Add your own substantially-identical security pairs (e.g., custom ETF pairs) in `~/.net_alpha/etf_pairs.yaml`.
-
-```yaml
-# Example: Custom ETF matching
-- SPY, VOO, IVV, SPLG
-- QQQ, QQQM
-```
-
----
-
-## Development
-
-```bash
-# Install with dev dependencies
-uv sync
-
-# Run tests
-uv run pytest
-# or
-make test
-
-# Run linter and formatter
-uv run ruff check .
-uv run ruff format .
-# or
-make lint
-
-# Run a single test file
-uv run pytest tests/path/to/test_file.py
-
-# Run tests matching a pattern
-uv run pytest -k "test_wash_sale"
-```
-
-### Testing
-
-- Wash sale engine has 100% unit test coverage with pure functions and no mocks
-- LLM schema detection tests mock the Anthropic client and cover retry logic, caching, and error paths
-- Integration tests use anonymized broker CSV fixtures and verify end-to-end `Trade` output
-
----
-
-## Supported Brokers
-
-| Broker     | Method             | Status                                  |
-| ---------- | ------------------ | --------------------------------------- |
-| Schwab     | CSV (LLM-parsed)   | Supported                               |
-| Robinhood  | CSV (LLM-parsed)   | Supported                               |
-| Any broker | CSV (LLM-parsed)   | Works; community-tested formats welcome |
-| Schwab     | Official OAuth API | Planned (v2)                            |
-| Robinhood  | robin_stocks       | Planned (v2)                            |
-
----
-
-## Roadmap (v2)
-
-- Schwab OAuth API integration — no more manual CSV downloads
-- Tax-loss harvest scanner — find unrealized losses worth taking before year-end
-- Replacement security suggester — correlated-but-not-identical alternatives
-- Optional local web dashboard (`net-alpha serve`)
-
-
-## Quick start
-
-The fastest way to get your cross-account wash sale report:
-
-1. **Launch the interactive wizard (No CLI arguments needed):**
-   ```bash
-   net-alpha
-   ```
-2. **Scan your entire imported portfolio for wash sales:**
-   ```bash
-   net-alpha check
-   ```
-
-## Usage examples
-
-**1. Import a broker statement**
-Automatically parse and import your trade history using AI-powered schema detection.
-```bash
-net-alpha import schwab 2024_transactions.csv
-```
-
-**2. Simulate a trade before execution**
-Check if selling a position will trigger a wash sale against recent repurchases. Use the interactive TUI for a real-time dashboard or the CLI for a quick check.
-```bash
-net-alpha tui
-# or
-net-alpha simulate sell TSLA 50 --price 185.50
-```
-
-**3. Ask the AI agent about your portfolio**
-Use natural language to query your tax positions, recent trades, or wash sale exposure.
-```bash
-net-alpha agent "What is my total realized loss this year across all accounts?"
-```
-
-## License
-
-No license documented.
-
----
-
-## Disclaimer
-
-> **This tool is informational only. It does not constitute tax or legal advice. Consult a qualified tax professional before making filing decisions.**
-
-Wash sale rules — especially for options and ETFs — involve unsettled areas of tax law. `Probable` and `Unclear` results should always be reviewed with a CPA.
+<div align="center">
+  <i>Built with ❤️ for traders who want to take control of their taxes.</i><br>
+</div>
