@@ -2,6 +2,34 @@
 
 
 
+## v0.7.0 (2026-04-18)
+
+### Chore
+
+* chore: remove tmp_skills from git ([`88aafed`](https://github.com/chen-star/net_alpha/commit/88aafed0856cfec30f651c21d0034f9970f4c728))
+
+### Documentation
+
+* docs(design): add interactive wizard CLI UX spec ([`6214582`](https://github.com/chen-star/net_alpha/commit/6214582dcc22d86d0ef1bbd1c92a27fd72bfd39e))
+
+* docs: fix verification failures and update codebase references
+
+- Resolve gitnexus tool reference failures in CLAUDE.md and AGENTS.md
+- Correct CI/CD workflow paths to .github/workflows/ in release plan
+- Update CLI test path to integration test location in CLI plan
+- Update project name to wash-alpha and fix SchemaCacheRow symbol ([`e9c31d0`](https://github.com/chen-star/net_alpha/commit/e9c31d0dbaf0b55cfbadce4f5f3487aa1db82ac8))
+
+* docs: update project documentation ([`2f8113f`](https://github.com/chen-star/net_alpha/commit/2f8113fd68d2e1441e048c18fe1ce3d536a2a33e))
+
+### Feature
+
+* feat(cli): add interactive wizard mode ([`dfec553`](https://github.com/chen-star/net_alpha/commit/dfec5538ed0c1d5727953e035519cb108cc6a498))
+
+### Unknown
+
+* merge: synchronize with origin/master and finalize v0.6.0 release ([`af439b3`](https://github.com/chen-star/net_alpha/commit/af439b3f789b0e467e6a22eb44d6dd37fff563c0))
+
+
 ## v0.6.0 (2026-04-16)
 
 ### Documentation
