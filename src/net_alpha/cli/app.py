@@ -33,6 +33,14 @@ app.command(name="status")(status_command)
 app.command(name="agent")(agent_command)
 
 
+@app.command(name="tui")
+def tui_command():
+    """Launch the interactive dashboard and simulator."""
+    from net_alpha.tui.app import NetAlphaTUI
+    tui_app = NetAlphaTUI()
+    tui_app.run()
+
+
 def _bootstrap() -> tuple[Settings, Session]:
     """Initialize settings, DB engine, run migrations, return (settings, session)."""
     settings = Settings()
