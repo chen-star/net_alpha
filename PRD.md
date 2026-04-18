@@ -87,13 +87,14 @@ Clean, fast command-line interface as the primary UX, supplemented by a real-tim
 net-alpha
 net-alpha tui
 net-alpha import schwab trades_2024.csv
-net-alpha import robinhood trades_2024.csv
 net-alpha check
 net-alpha check --ticker TSLA
-net-alpha check --type options
-net-alpha simulate sell TSLA 10
+net-alpha simulate sell TSLA 10 --price 185.50
 net-alpha rebuys
 net-alpha report --year 2024
+net-alpha tax-position --year 2024
+net-alpha status
+net-alpha agent
 ```
 
 ---
