@@ -111,3 +111,20 @@ def test_schema_mapping_optional_fields():
     assert minimal.proceeds is None
     assert minimal.cost_basis is None
     assert minimal.option_format is None
+
+
+from net_alpha.import_.schema_detection import KNOWN_BROKER_SCHEMAS, SchemaMapping
+
+def test_known_broker_schemas_exist():
+    assert "schwab" in KNOWN_BROKER_SCHEMAS
+    assert "robinhood" in KNOWN_BROKER_SCHEMAS
+
+    schwab = KNOWN_BROKER_SCHEMAS["schwab"]
+    assert isinstance(schwab, SchemaMapping)
+    assert schwab.date == "Date"
+    assert schwab.ticker == "Symbol"
+
+    rh = KNOWN_BROKER_SCHEMAS["robinhood"]
+    assert isinstance(rh, SchemaMapping)
+    assert rh.date == "Activity Date"
+    assert rh.ticker == "Instrument"

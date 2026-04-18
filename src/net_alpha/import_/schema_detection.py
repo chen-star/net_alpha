@@ -93,3 +93,29 @@ def _extract_json(text: str) -> str:
         lines = [line for line in lines if not line.strip().startswith("```")]
         text = "\n".join(lines)
     return text.strip()
+
+
+KNOWN_BROKER_SCHEMAS: dict[str, SchemaMapping] = {
+    "schwab": SchemaMapping(
+        date="Date",
+        ticker="Symbol",
+        action="Action",
+        quantity="Quantity",
+        proceeds="Amount",
+        cost_basis="Cost Basis",
+        buy_values=["Buy", "Reinvest"],
+        sell_values=["Sell"],
+        option_format="schwab_human",
+    ),
+    "robinhood": SchemaMapping(
+        date="Activity Date",
+        ticker="Instrument",
+        action="Trans Code",
+        quantity="Quantity",
+        proceeds="Amount",
+        cost_basis=None,  # Robinhood doesn't provide cost basis in standard export
+        buy_values=["Buy"],
+        sell_values=["Sell"],
+        option_format="robinhood_human",
+    ),
+}
