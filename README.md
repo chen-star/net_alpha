@@ -226,7 +226,7 @@ uv run pytest -k "test_wash_sale"
 
 The fastest way to get your cross-account wash sale report:
 
-1. **Initialize the tool and launch the setup wizard:**
+1. **Launch the interactive wizard (No CLI arguments needed):**
    ```bash
    net-alpha
    ```

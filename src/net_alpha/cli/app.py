@@ -45,27 +45,25 @@ def _bootstrap() -> tuple[Settings, Session]:
 
 @app.callback(invoke_without_command=True)
 def main_callback(ctx: typer.Context):
-    """Entry point — runs wizard if no command given and no trades exist."""
+    """Entry point \u2014 runs wizard if no command given."""
     if ctx.invoked_subcommand is not None:
         return
 
     settings, session = _bootstrap()
-    from net_alpha.db.repository import TradeRepository
-
-    repo = TradeRepository(session)
-    trade_count = len(repo.list_all())
     session.close()
 
-    if trade_count == 0:
-        # First-run wizard
-        from net_alpha.cli.wizard import run_wizard
+    from net_alpha.cli.wizard import run_wizard
+    run_wizard(settings)
 
-        run_wizard(settings)
-    else:
-        # Show status overview if trades exist but no command given
-        from net_alpha.cli.status import status_command
 
-        status_command()
+@app.command(name="wizard")
+def wizard_command():
+    """Interactive wizard mode."""
+    settings, session = _bootstrap()
+    session.close()
+
+    from net_alpha.cli.wizard import run_wizard
+    run_wizard(settings)
 
 
 def main():
