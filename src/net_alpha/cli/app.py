@@ -36,10 +36,10 @@ app.command(name="agent")(agent_command)
 @app.command(name="tui")
 def tui_command():
     """Launch the interactive dashboard and simulator."""
-    from net_alpha.tui.app import NetAlphaTUI
     from net_alpha.cli.app import _bootstrap
     from net_alpha.db.repository import TradeRepository
-    
+    from net_alpha.tui.app import NetAlphaTUI
+
     settings, session = _bootstrap()
     try:
         repo = TradeRepository(session)
@@ -70,6 +70,7 @@ def main_callback(ctx: typer.Context):
     session.close()
 
     from net_alpha.cli.wizard import run_wizard
+
     run_wizard(settings)
 
 
@@ -80,6 +81,7 @@ def wizard_command():
     session.close()
 
     from net_alpha.cli.wizard import run_wizard
+
     run_wizard(settings)
 
 

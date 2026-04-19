@@ -117,7 +117,7 @@ def _wizard_import(settings: Settings):
         console.print(f"  [red]Error:[/red] {e}")
 
     print_teaching_tip(f"net-alpha import {broker} {csv_path_str}")
-    
+
     # Prompt for next actions
     next_action = questionary.confirm("Do you want to check portfolio for wash sales now?", default=True).ask()
     if next_action:
@@ -160,6 +160,7 @@ def _wizard_check():
     ).ask()
 
     import typer
+
     cmd = "net-alpha check"
 
     try:

@@ -84,7 +84,7 @@ def run_import(ctx: ImportContext) -> ImportResult:
         schema_cache_id = cached.id
     else:
         from net_alpha.import_.schema_detection import KNOWN_BROKER_SCHEMAS
-        
+
         if ctx.broker_name in KNOWN_BROKER_SCHEMAS:
             mapping = KNOWN_BROKER_SCHEMAS[ctx.broker_name]
             schema_cache_id = None

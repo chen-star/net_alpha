@@ -1,19 +1,22 @@
 from datetime import date
+
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
 from textual.screen import Screen
 from textual.widgets import DataTable, Input, Label, Select
+
 from net_alpha.tui.simulator import simulate_trade
+
 
 class DashboardScreen(Screen):
     """Split-pane view for holdings and simulator."""
-    
+
     def compose(self) -> ComposeResult:
         with Container(id="holdings-pane"):
             yield Label("Portfolio Holdings")
             yield DataTable(id="holdings-table")
-            
+
         with Vertical(id="simulator-pane"):
             yield Label("Draft Trade Simulator", classes="section-title")
             yield Input(placeholder="Ticker (e.g. TSLA)", id="sim-ticker")
@@ -35,7 +38,7 @@ class DashboardScreen(Screen):
 
     def run_simulation(self) -> None:
         status_label = self.query_one("#sim-status", Label)
-        
+
         # Read inputs
         ticker = self.query_one("#sim-ticker", Input).value
         action = self.query_one("#sim-action", Select).value
@@ -60,13 +63,7 @@ class DashboardScreen(Screen):
 
         # Run engine
         success, result, error, virtual_id = simulate_trade(
-            self.app.trades, 
-            self.app.etf_pairs, 
-            str(action), 
-            ticker, 
-            qty, 
-            price, 
-            trade_date
+            self.app.trades, self.app.etf_pairs, str(action), ticker, qty, price, trade_date
         )
 
         if not success:
@@ -74,12 +71,14 @@ class DashboardScreen(Screen):
             status_label.set_classes("error")
             return
 
-        sim_violations = [v for v in result.violations if v.loss_trade_id == virtual_id or v.replacement_trade_id == virtual_id]
+        sim_violations = [
+            v for v in result.violations if v.loss_trade_id == virtual_id or v.replacement_trade_id == virtual_id
+        ]
 
         if sim_violations:
             disallowed = sum(v.disallowed_loss for v in sim_violations)
             confidence = sim_violations[0].confidence
-            
+
             if confidence == "Confirmed":
                 status_label.update(f"❌ Wash Sale! Disallowed: ${disallowed:,.2f}")
                 status_label.set_classes("error")
@@ -94,13 +93,13 @@ class DashboardScreen(Screen):
     async def load_trades(self) -> None:
         table = self.query_one("#holdings-table", DataTable)
         trades = self.app.trades
-        
+
         if not trades:
             self.query_one("#holdings-pane").mount(Label("No trade data found. Press 'i' to import."))
             # Disable simulator
             for input_widget in self.query(Input):
                 input_widget.disabled = True
             return
-            
+
         for t in trades:
             table.add_row(str(t.date), t.account, t.action, t.ticker, str(t.quantity))

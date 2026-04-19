@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from net_alpha.import_.schema_detection import (
+    KNOWN_BROKER_SCHEMAS,
     SchemaMapping,
     _build_prompt,
     detect_schema,
@@ -112,8 +113,6 @@ def test_schema_mapping_optional_fields():
     assert minimal.cost_basis is None
     assert minimal.option_format is None
 
-
-from net_alpha.import_.schema_detection import KNOWN_BROKER_SCHEMAS, SchemaMapping
 
 def test_known_broker_schemas_exist():
     assert "schwab" in KNOWN_BROKER_SCHEMAS
