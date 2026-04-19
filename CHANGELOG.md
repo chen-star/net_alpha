@@ -2,6 +2,13 @@
 
 
 
+## v0.9.1 (2026-04-19)
+
+### Fix
+
+* fix: resolve all linting and formatting errors to fix failing CI ([`d8deb63`](https://github.com/chen-star/net_alpha/commit/d8deb631e5ec593fe776b77cdb146a5ff7b4bd21))
+
+
 ## v0.9.0 (2026-04-18)
 
 ### Chore
