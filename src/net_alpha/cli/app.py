@@ -9,6 +9,7 @@ from typer.core import TyperGroup
 
 from net_alpha.cli import default as default_cmd
 from net_alpha.cli import imports as imports_cmd
+from net_alpha.cli import migrate as migrate_cmd
 from net_alpha.cli import sim as sim_cmd
 
 
@@ -91,6 +92,16 @@ def imports_rm(
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
 ):
     raise typer.Exit(imports_cmd.remove_cmd(import_id, yes))
+
+
+# ---------------------------------------------------------------------------
+# migrate-from-v1 command
+# ---------------------------------------------------------------------------
+
+
+@app.command(name="migrate-from-v1", help="One-shot migration of v1 DB into v2 schema.")
+def migrate_from_v1(yes: bool = typer.Option(False, "--yes", "-y")):
+    raise typer.Exit(migrate_cmd.run(yes))
 
 
 # ---------------------------------------------------------------------------
