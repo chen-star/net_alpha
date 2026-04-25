@@ -8,11 +8,14 @@ from net_alpha.db.tables import (
     AccountRow,
     ImportRecordRow,
     MetaRow,
+    TradeRow,
 )
 from net_alpha.models.domain import (
     Account,
+    AddImportResult,
     ImportRecord,
     ImportSummary,
+    Trade,
 )
 
 
@@ -82,8 +85,65 @@ class Repository:
                 trade_count=row.trade_count,
             )
 
-    # Methods added in later tasks: trades_for_import, add_import, remove_import,
-    # existing_natural_keys, all_trades, all_lots, all_violations,
+    def existing_natural_keys(self, account_id: int) -> set[str]:
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(TradeRow.natural_key).where(TradeRow.account_id == account_id)
+            ).all()
+            return set(rows)
+
+    def add_import(
+        self, account: Account, record: ImportRecord, trades: list[Trade]
+    ) -> AddImportResult:
+        """Insert trades for a new ImportRecord. Caller should pre-filter dups
+        with existing_natural_keys; we still rely on the UNIQUE constraint as
+        the safety net for anything the caller missed.
+        """
+        with Session(self.engine) as s:
+            ir = ImportRecordRow(
+                account_id=account.id,
+                csv_filename=record.csv_filename,
+                csv_sha256=record.csv_sha256,
+                imported_at=record.imported_at,
+                trade_count=len(trades),
+            )
+            s.add(ir)
+            s.flush()  # populate ir.id
+
+            new_count = 0
+            dup_count = 0
+            for t in trades:
+                tr = TradeRow(
+                    import_id=ir.id,
+                    account_id=account.id,
+                    natural_key=t.compute_natural_key(),
+                    ticker=t.ticker,
+                    trade_date=t.date.isoformat(),
+                    action=t.action,
+                    quantity=t.quantity,
+                    proceeds=t.proceeds,
+                    cost_basis=t.cost_basis,
+                    basis_unknown=t.basis_unknown,
+                    option_strike=(t.option_details.strike if t.option_details else None),
+                    option_expiry=(t.option_details.expiry.isoformat() if t.option_details else None),
+                    option_call_put=(t.option_details.call_put if t.option_details else None),
+                )
+                try:
+                    s.add(tr)
+                    s.flush()
+                    new_count += 1
+                except Exception:  # IntegrityError on UNIQUE
+                    s.rollback()
+                    # Reattach the ImportRecord row before retrying the next trade
+                    s.add(ir)
+                    dup_count += 1
+
+            ir.trade_count = new_count
+            s.commit()
+            return AddImportResult(import_id=ir.id, new_trades=new_count, duplicate_trades=dup_count)
+
+    # Methods added in later tasks: trades_for_import, remove_import,
+    # all_trades, all_lots, all_violations,
     # violations_for_year, trades_in_window, replace_violations_in_window
 
 
