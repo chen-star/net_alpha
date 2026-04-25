@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from net_alpha.cli.output import print_disclaimer, print_hint
-from net_alpha.import_.schema_detection import SchemaMapping
+from net_alpha.import_.csv_reader import SchemaMapping
 
 console = Console()
 

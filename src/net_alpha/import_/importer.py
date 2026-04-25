@@ -1,18 +1,141 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from net_alpha.import_.anonymizer import anonymize_row
 from net_alpha.import_.csv_reader import (
+    SchemaMapping,
     compute_header_hash,
     get_headers_and_samples,
     read_csv_with_mapping,
 )
 from net_alpha.import_.dedup import deduplicate_trades
-from net_alpha.import_.schema_detection import SchemaMapping, detect_schema
+
+# ---------------------------------------------------------------------------
+# Anonymizer (inlined from deleted anonymizer.py)
+# ---------------------------------------------------------------------------
+
+_ACCOUNT_PATTERN = re.compile(r"^\d{4,}$|[-_]\d{4,}$|\d{4,}[-_]$|^\w*-\d{4,}$")
+_NUMERIC_PATTERN = re.compile(r"^[($-]*[\d,]+\.?\d*[)]*$")
+_DATE_PATTERN = re.compile(
+    r"^\d{4}-\d{2}-\d{2}$"
+    r"|^\d{1,2}/\d{1,2}/\d{2,4}$"
+    r"|^\w+ \d{1,2}, \d{4}$"
+)
+_TICKER_PATTERN = re.compile(r"^[A-Z]{1,5}(\s|$)")
+
+
+def _anonymize_value(value: str) -> str:
+    if not value or not value.strip():
+        return value
+    stripped = value.strip()
+    if _DATE_PATTERN.match(stripped):
+        return value
+    if _TICKER_PATTERN.match(stripped) and not stripped.isdigit():
+        return value
+    if _ACCOUNT_PATTERN.match(stripped):
+        return "XXXX"
+    clean = stripped.replace("$", "").replace(",", "").replace("(", "").replace(")", "")
+    try:
+        float(clean)
+        return "1.00"
+    except ValueError:
+        pass
+    return value
+
+
+def anonymize_row(raw_row: dict[str, str]) -> dict[str, str]:
+    return {key: _anonymize_value(value) for key, value in raw_row.items()}
+
+
+# ---------------------------------------------------------------------------
+# Schema detection (inlined from deleted schema_detection.py)
+# ---------------------------------------------------------------------------
+
+KNOWN_BROKER_SCHEMAS: dict[str, SchemaMapping] = {
+    "schwab": SchemaMapping(
+        date="Date",
+        ticker="Symbol",
+        action="Action",
+        quantity="Quantity",
+        proceeds="Amount",
+        cost_basis="Cost Basis",
+        buy_values=["Buy", "Reinvest"],
+        sell_values=["Sell"],
+        option_format="schwab_human",
+    ),
+    "robinhood": SchemaMapping(
+        date="Activity Date",
+        ticker="Instrument",
+        action="Trans Code",
+        quantity="Quantity",
+        proceeds="Amount",
+        cost_basis=None,
+        buy_values=["Buy"],
+        sell_values=["Sell"],
+        option_format="robinhood_human",
+    ),
+}
+
+
+def detect_schema(
+    client,
+    headers: list[str],
+    sample_rows: list[dict[str, str]],
+    model: str,
+    max_retries: int = 3,
+) -> SchemaMapping:
+    """Call LLM to detect CSV schema from headers and anonymized sample rows."""
+    import json as _json
+    import time
+
+    prompt = _build_schema_prompt(headers, sample_rows)
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            response = client.messages.create(
+                model=model,
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = response.content[0].text.strip()
+            if text.startswith("```"):
+                lines = [l for l in text.split("\n") if not l.strip().startswith("```")]
+                text = "\n".join(lines).strip()
+            data = _json.loads(text)
+            return SchemaMapping(**data)
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                time.sleep(2**attempt)
+    raise RuntimeError(f"Schema detection failed after {max_retries} attempts. Last error: {last_error}")
+
+
+def _build_schema_prompt(headers: list[str], sample_rows: list[dict[str, str]]) -> str:
+    header_str = ", ".join(headers)
+    rows_str = "\n".join(", ".join(f"{k}: {v}" for k, v in row.items()) for row in sample_rows)
+    return f"""Analyze this broker CSV format and return a JSON mapping.
+
+CSV Headers: {header_str}
+
+Sample rows (anonymized):
+{rows_str}
+
+Return a JSON object with these fields:
+- "date": column name containing trade date
+- "ticker": column name containing ticker/symbol
+- "action": column name containing buy/sell action
+- "quantity": column name containing quantity/shares
+- "proceeds": column name containing sale proceeds or total amount (null if not present)
+- "cost_basis": column name containing cost basis (null if not present)
+- "buy_values": list of values in the action column that mean "buy"
+- "sell_values": list of values in the action column that mean "sell"
+- "option_format": if options are present: "occ_standard", "schwab_human", or "robinhood_human" (null if none)
+
+Return ONLY the JSON object, no other text."""
 
 
 @dataclass
@@ -83,8 +206,6 @@ def run_import(ctx: ImportContext) -> ImportResult:
         mapping = SchemaMapping(**json.loads(cached.column_mapping))
         schema_cache_id = cached.id
     else:
-        from net_alpha.import_.schema_detection import KNOWN_BROKER_SCHEMAS
-
         if ctx.broker_name in KNOWN_BROKER_SCHEMAS:
             mapping = KNOWN_BROKER_SCHEMAS[ctx.broker_name]
             schema_cache_id = None

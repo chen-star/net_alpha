@@ -1,8 +1,7 @@
 from datetime import date
 from pathlib import Path
 
-from net_alpha.import_.csv_reader import read_csv_with_mapping
-from net_alpha.import_.schema_detection import SchemaMapping
+from net_alpha.import_.csv_reader import SchemaMapping, read_csv_with_mapping
 
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 

@@ -5,9 +5,24 @@ import hashlib
 from datetime import date, datetime
 from pathlib import Path
 
+from pydantic import BaseModel
+
 from net_alpha.import_.option_parser import extract_underlying, parse_option_symbol
-from net_alpha.import_.schema_detection import SchemaMapping
 from net_alpha.models.domain import Trade
+
+
+class SchemaMapping(BaseModel):
+    """Detected column mapping from a broker CSV."""
+
+    date: str
+    ticker: str
+    action: str
+    quantity: str
+    proceeds: str | None = None
+    cost_basis: str | None = None
+    buy_values: list[str]
+    sell_values: list[str]
+    option_format: str | None = None
 
 
 def read_csv_with_mapping(
