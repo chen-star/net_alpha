@@ -133,7 +133,7 @@ def _bootstrap_and_load() -> tuple[list, dict, object]:
     all_trades = trade_repo.list_all()
 
     user_pairs_path = settings.user_etf_pairs_path
-    etf_pairs = load_etf_pairs(user_pairs_path=user_pairs_path)
+    etf_pairs = load_etf_pairs(user_path=user_pairs_path)
 
     return all_trades, etf_pairs, session
 

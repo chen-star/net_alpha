@@ -10,10 +10,13 @@ from sqlmodel import SQLModel, create_engine
 from net_alpha.brokers.registry import detect_broker
 from net_alpha.db.repository import Repository
 from net_alpha.engine.detector import detect_in_window
+from net_alpha.engine.etf_pairs import load_etf_pairs
 from net_alpha.ingest.csv_loader import compute_csv_sha256, load_csv
 from net_alpha.ingest.dedup import filter_new
 from net_alpha.models.domain import ImportRecord
 from net_alpha.output import disclaimer, watch_list, ytd_impact
+
+ETF_PAIRS = load_etf_pairs(user_path=str(Path.home() / ".net_alpha" / "etf_pairs.yaml"))
 
 
 def _engine():
@@ -69,8 +72,7 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
         win_start = min(t.date for t in all_new_trades) - timedelta(days=30)
         win_end = max(t.date for t in all_new_trades) + timedelta(days=30)
         window_trades = repo.trades_in_window(win_start, win_end)
-        # TODO(Task 16): replace etf_pairs={} with load_etf_pairs(...)
-        new_violations = detect_in_window(window_trades, win_start, win_end, etf_pairs={}).violations
+        new_violations = detect_in_window(window_trades, win_start, win_end, etf_pairs=ETF_PAIRS).violations
         repo.replace_violations_in_window(win_start, win_end, new_violations)
 
     today = date.today()

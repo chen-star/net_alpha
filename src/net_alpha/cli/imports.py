@@ -1,12 +1,17 @@
 # src/net_alpha/cli/imports.py
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 
 from net_alpha.cli.default import _engine
 from net_alpha.db.repository import Repository
 from net_alpha.engine.detector import detect_in_window
+from net_alpha.engine.etf_pairs import load_etf_pairs
 from net_alpha.output.imports_table import render as render_table
+
+ETF_PAIRS = load_etf_pairs(user_path=str(Path.home() / ".net_alpha" / "etf_pairs.yaml"))
 
 
 def list_cmd() -> int:
@@ -30,8 +35,7 @@ def remove_cmd(import_id: int, yes: bool) -> int:
     if result.recompute_window is not None:
         win_start, win_end = result.recompute_window
         window_trades = repo.trades_in_window(win_start, win_end)
-        # TODO(Task 16): replace etf_pairs={} with load_etf_pairs(...)
-        new_violations = detect_in_window(window_trades, win_start, win_end, etf_pairs={}).violations
+        new_violations = detect_in_window(window_trades, win_start, win_end, etf_pairs=ETF_PAIRS).violations
         repo.replace_violations_in_window(win_start, win_end, new_violations)
         typer.echo("Recomputed wash sales over affected window.")
     return 0
