@@ -21,6 +21,7 @@ from net_alpha.models.domain import (
     ImportSummary,
     Lot,
     OptionDetails,
+    RemoveImportResult,
     Trade,
     WashSaleViolation,
 )
@@ -246,7 +247,68 @@ class Repository:
                 for r in rows
             ]
 
-    # Methods added in later tasks: remove_import, replace_violations_in_window
+    # --- Mutations ---
+
+    def remove_import(self, import_id: int) -> RemoveImportResult:
+        from datetime import timedelta
+
+        with Session(self.engine) as s:
+            trade_rows = s.exec(select(TradeRow).where(TradeRow.import_id == import_id)).all()
+            trade_ids = [r.id for r in trade_rows]
+            removed_dates = [date.fromisoformat(r.trade_date) for r in trade_rows]
+
+            # Cascade-delete derived rows that reference these trades
+            if trade_ids:
+                s.exec(
+                    LotRow.__table__.delete().where(LotRow.trade_id.in_(trade_ids))
+                )
+                s.exec(
+                    WashSaleViolationRow.__table__.delete().where(
+                        (WashSaleViolationRow.loss_trade_id.in_(trade_ids))
+                        | (WashSaleViolationRow.replacement_trade_id.in_(trade_ids))
+                    )
+                )
+            s.exec(TradeRow.__table__.delete().where(TradeRow.import_id == import_id))
+            s.exec(ImportRecordRow.__table__.delete().where(ImportRecordRow.id == import_id))
+            s.commit()
+
+            if not removed_dates:
+                return RemoveImportResult(removed_trade_count=0, recompute_window=None)
+
+            window = (
+                min(removed_dates) - timedelta(days=30),
+                max(removed_dates) + timedelta(days=30),
+            )
+            return RemoveImportResult(removed_trade_count=len(trade_ids), recompute_window=window)
+
+    def replace_violations_in_window(
+        self, start: date, end: date, new_violations: list[WashSaleViolation]
+    ) -> None:
+        with Session(self.engine) as s:
+            s.exec(
+                WashSaleViolationRow.__table__.delete().where(
+                    WashSaleViolationRow.loss_sale_date >= start.isoformat(),
+                    WashSaleViolationRow.loss_sale_date <= end.isoformat(),
+                )
+            )
+            for v in new_violations:
+                s.add(self._violation_to_row(v))
+            s.commit()
+
+    # NOTE: _violation_to_row uses getattr defaults for fields added in Task 9.
+    # Task 9 will replace this with the typed-fields version.
+    def _violation_to_row(self, v: WashSaleViolation) -> WashSaleViolationRow:
+        return WashSaleViolationRow(
+            loss_trade_id=int(v.loss_trade_id),
+            replacement_trade_id=int(v.replacement_trade_id),
+            loss_account_id=getattr(v, "loss_account_id", 0),
+            buy_account_id=getattr(v, "buy_account_id", 0),
+            loss_sale_date=getattr(v, "loss_sale_date", "1970-01-01"),
+            triggering_buy_date=getattr(v, "triggering_buy_date", "1970-01-01"),
+            confidence=v.confidence,
+            disallowed_loss=v.disallowed_loss,
+            matched_quantity=v.matched_quantity,
+        )
 
 
 # ---------------------------------------------------------------------------
