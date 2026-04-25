@@ -2,6 +2,273 @@
 
 
 
+## v0.10.0 (2026-04-25)
+
+### Chore
+
+* chore(deps): drop questionary, anthropic, pydantic-settings, textual; bump to 2.0.0
+
+Runtime dep set is now: pydantic, sqlmodel, typer[all], loguru, pyyaml.
+Description reflects the v2 simplified product. config.py migrated from
+BaseSettings to plain pydantic BaseModel; LLM-related config fields removed.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c19ba5f`](https://github.com/chen-star/net_alpha/commit/c19ba5fe32b194d0794f7bf4ea4691c42b85dd09))
+
+* chore(v2): delete legacy import_/, cli/import_cmd, cli/simulate, unused models
+
+v2 surfaces (default + sim + imports + migrate-from-v1) replace all
+prior import/check/simulate paths. Repository stubs and unused
+Pydantic models follow them out. MetaRepository remains for the
+migration boot in cli/app.py.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ae5ab0b`](https://github.com/chen-star/net_alpha/commit/ae5ab0b3c8b09f204fdb8cc4ab9788ae84913db8))
+
+* chore: move etf_pairs.yaml into package, wire loader through CLI
+
+Bundled file now lives at src/net_alpha/etf_pairs.yaml so pip install
+ships it. User override at ~/.net_alpha/etf_pairs.yaml extends bundled
+pairs (does not replace). Both CLI recompute call sites now use the
+real loader instead of an empty dict stub.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`82c2348`](https://github.com/chen-star/net_alpha/commit/82c2348add81832ddd66aafe412c05904cea12e8))
+
+* chore(v2): remove TUI, agent, wizard, and dropped CLI commands
+
+These surfaces are cut in v2. Engine, db, and import_ packages remain
+in place pending replacement in later tasks.
+
+SchemaMapping and anonymize_row were inlined into csv_reader.py and
+importer.py respectively (both kept), since schema_detection.py and
+anonymizer.py were their sole definitions but still consumed by kept modules.
+Integration tests for the deleted commands were also removed.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4fde88e`](https://github.com/chen-star/net_alpha/commit/4fde88e26242a2b4e4412f2e4b5475670a3764c8))
+
+* chore(v2): branch start — implementing v2 simplification spec ([`60d7aba`](https://github.com/chen-star/net_alpha/commit/60d7aba5af3cd7653b812a2c3dbe3091b29fc62e))
+
+### Documentation
+
+* docs: rewrite README, CLAUDE.md, AGENTS.md for v2 surface
+
+Remove all v1-era references (AI import, LLM/Anthropic, questionary,
+pydantic-settings, textual TUI, wizard, agent, check/report/rebuys
+subcommands). Replace with v2 command surface (default import+check,
+sim, imports, imports rm, migrate-from-v1) and bundled-Schwab-parser
+description throughout.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`85b7a26`](https://github.com/chen-star/net_alpha/commit/85b7a26a1e334e42da457bc873f3cc72a6d30a98))
+
+* docs(plans): add v2 simplification implementation plan
+
+21 tasks covering worktree setup, legacy module removal, schema
+rewrite, repository v2, brokers/ + ingest/ + output/ packages,
+detect_in_window, simulate_sell, CLI surface (default/sim/imports),
+migrate-from-v1 helper, dep cleanup, docs, and final verification.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`956e5eb`](https://github.com/chen-star/net_alpha/commit/956e5ebea9b637f2a2a642452700649c1925ff8b))
+
+* docs(specs): revise v2 sim — cross-account what-if planner
+
+Sim no longer requires --account; instead enumerates every account
+that holds the ticker and shows one option per account with FIFO
+lots, P&amp;L, and a cross-account wash-sale verdict per option.
+--account becomes an optional filter. Resolves all open questions
+on sim, --detail, and account display format.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`eb0c404`](https://github.com/chen-star/net_alpha/commit/eb0c404b6dc9b4c4541ce91ef2cf8156ccc910d3))
+
+* docs(specs): add v2 simplification design
+
+v2 collapses 10 CLI commands + wizard + TUI + agent into 4 commands
+to address surface sprawl and setup ceremony in v1. Removes LLM CSV
+import, Robinhood, TUI, and agent surfaces. Estimated ~4000 LOC →
+~1800 LOC. Stateful/incremental persistence preserved with
+windowed wash-sale recompute and idempotent multi-account imports.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9c7f3b3`](https://github.com/chen-star/net_alpha/commit/9c7f3b38fc63cf519bb651dbadc816e8635dd9d2))
+
+### Feature
+
+* feat(cli): migrate-from-v1 helper (v2.0.x only)
+
+Reads ~/.net_alpha/net_alpha.db (v1 schema) and writes a parallel
+v2 DB at ~/.net_alpha/net_alpha.db.v2. User then moves it into
+place. Refuses to overwrite an existing v2 file.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`be10af3`](https://github.com/chen-star/net_alpha/commit/be10af3731331d57a6fcde99262bd4911b744742))
+
+* feat(cli): v2 surface — default import/check, sim, imports, imports rm
+
+Rewrites app.py with a _FileFirstGroup that routes file-path arguments to
+a hidden &#39;run&#39; sub-command, enabling `net-alpha &lt;csv&gt; --account &lt;label&gt;`
+as the default entry point alongside explicit `sim` and `imports` sub-commands.
+Deletes test_simulate_lots.py (v1 simulate tests superseded by test_app_v2.py).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8d5f09e`](https://github.com/chen-star/net_alpha/commit/8d5f09e2a0241f06900e1a0d6928cd3415869920))
+
+* feat: thread ticker through WashSaleViolation for renderer enrichment
+
+Add ticker field to WashSaleViolation domain model, WashSaleViolationRow
+table, detector emission, repository read/write paths, and watch_list
+renderer. Removes the hardcoded &#39;TKR&#39; placeholder.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6c19716`](https://github.com/chen-star/net_alpha/commit/6c1971618ae9a19bc930effa87873d28a7e46be8))
+
+* feat(output): renderers — disclaimer, watch_list, ytd_impact, sim_result, imports_table, detail
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c6784b5`](https://github.com/chen-star/net_alpha/commit/c6784b55bc32fc6510cc7cdb9bab25141c70d79b))
+
+* feat(brokers): protocol + registry + Schwab parser
+
+Add BrokerParser Protocol, detect_broker registry, and SchwabParser
+implementing buy/sell/reinvest/option action parsing for Schwab CSVs.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`450c6d9`](https://github.com/chen-star/net_alpha/commit/450c6d9d28e5f321944367e035f54998276d05b3))
+
+* feat(ingest): csv_loader, option_parser port, dedup by natural_key
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`26e36dc`](https://github.com/chen-star/net_alpha/commit/26e36dc660deb08bf436c9d2f6638b2b6eaf83e9))
+
+* feat(engine): simulate_sell — cross-account what-if planner
+
+Implements Task 11: simulator.py with FIFO lot consumption, realized P&amp;L,
+cross-account wash sale detection, insufficient-shares flagging, and
+lookforward_block_until date. 7 new tests; full suite at 215.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`57a4311`](https://github.com/chen-star/net_alpha/commit/57a43119f4437f8843d9a757ac7979a4a29e9fae))
+
+* feat(engine): detect_in_window for incremental recompute
+
+Append new function detect_in_window to detector.py that runs the full
+detection algorithm but emits only violations whose loss_sale_date falls
+within the supplied window. Caller is responsible for passing trades that
+include ±30 days around the window for correct cross-window matching.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9a5d854`](https://github.com/chen-star/net_alpha/commit/9a5d8543697ea57c532241f059ac0117afc92a48))
+
+* feat(engine): violations carry loss_account, buy_account, sale/buy dates
+
+Tightens the scaffolded _violation_to_row helper from Task 8 to use
+the new typed fields. Wash sale violations now have full provenance
+(which accounts, when) needed by the v2 watch list and YTD renderers.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fa5401f`](https://github.com/chen-star/net_alpha/commit/fa5401f8322fc031bb5cef95c7d74fad8616bde4))
+
+* feat(db): repository remove_import + replace_violations_in_window
+
+Add three methods to v2 Repository: remove_import (cascading delete of
+import/trades/lots/violations + recompute window), replace_violations_in_window
+(atomic clear-and-rewrite of violations in date range), and _violation_to_row
+(scaffolded with getattr defaults for Task-9 fields loss_account_id,
+buy_account_id, loss_sale_date, triggering_buy_date).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8716132`](https://github.com/chen-star/net_alpha/commit/8716132626cde08b5f7a33fadc9c56015f9dee78))
+
+* feat(db): repository reads — trades, lots, violations, windowed
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e20ac26`](https://github.com/chen-star/net_alpha/commit/e20ac266803aa3711229f1d9cae30d1d526bd02a))
+
+* feat(db): add_import with dedup via natural_key UNIQUE constraint
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`76054c7`](https://github.com/chen-star/net_alpha/commit/76054c75128d321ece5e4f04c720e5d1f94600ee))
+
+* feat(db): repository v2 skeleton + account/import management methods
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`767c754`](https://github.com/chen-star/net_alpha/commit/767c7545251dd55ebf2dd39b7185567c2bf6af63))
+
+* feat(models): add Trade.compute_natural_key for v2 idempotent imports
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`714a60c`](https://github.com/chen-star/net_alpha/commit/714a60c1fabe23a24239eb83f559792f2bbce2a0))
+
+* feat(db): replace tables with v2 schema (Account, Import, FKs, natural_key)
+
+v1 schema is dropped wholesale. Schema starts at version 1. v1 -&gt; v2
+upgrade lives in a separate migrate-from-v1 helper (Task 17).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`934a73f`](https://github.com/chen-star/net_alpha/commit/934a73f5dda0163680d5db1a6b1657fae0af7313))
+
+* feat(models): add v2 domain types — Account, ImportRecord, SimulationOption
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`80cc7ff`](https://github.com/chen-star/net_alpha/commit/80cc7ffe116ada255cafdee6e723b5f2f29a6e9a))
+
+### Fix
+
+* fix(cli,db): persist lots after wash-sale recompute
+
+The default and imports-rm flows were calling detect_in_window then
+discarding the result.lots half. As a consequence repo.all_lots() was
+always empty and sim reported &#39;no holdings of &lt;ticker&gt;&#39; for any
+import. Adds Repository.replace_lots_in_window mirroring the
+violations method, and updates both CLI handlers to persist both
+halves of the DetectionResult.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`daf22de`](https://github.com/chen-star/net_alpha/commit/daf22de3443f353198f4944fd2ace24a82585828))
+
+* fix(cli,db): tighten violation_to_row session, account annotation, mark TODOs
+
+- repository._violation_to_row now takes the parent session as a
+  parameter, matching the row-helper pattern used elsewhere.
+- cli/app.py callback&#39;s --account annotation is str | None (was str
+  with None default).
+- Both etf_pairs={} sites tagged with TODO(Task 16) so the loader
+  wire-up isn&#39;t missed.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8239395`](https://github.com/chen-star/net_alpha/commit/8239395aa452004e2cb37d13f21110453d911efd))
+
+* fix(db): repository violation reads populate full field set
+
+Both all_violations() and violations_for_year() were dropping
+loss_sale_date, triggering_buy_date, loss_account, and buy_account
+when reconstructing Pydantic WashSaleViolation from the row. This
+silently broke watch_list filtering (predicate on triggering_buy_date)
+and produced &#39;None ... on None&#39; garbage from --detail.
+
+Also: drop hardcoded &#39;schwab&#39; from sim&#39;s no-such-account message.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1cd2dd5`](https://github.com/chen-star/net_alpha/commit/1cd2dd5bf877ed20c8f1313ee78f6a1574432f16))
+
+* fix(db): consolidate CURRENT_SCHEMA_VERSION; guard removed LLM path
+
+- importer.py: replace SchemaCacheRow LLM branch with explicit
+  NotImplementedError so the import path doesn&#39;t crash silently.
+- connection.py: import CURRENT_SCHEMA_VERSION from migrations
+  (eliminates duplicate constant).
+- migrations.py: add scaffolding comment for future schema versions.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3ac3671`](https://github.com/chen-star/net_alpha/commit/3ac3671b778664aa21c9d964f27b5e10bb950c74))
+
+* fix(import_): rename ambiguous &#39;l&#39; var, drop dead _NUMERIC_PATTERN
+
+Both regressions were introduced when inlining anonymizer.py and
+schema_detection.py during Task 1. Will be deleted entirely in Task 18,
+but fixing now to keep CI green.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4b82513`](https://github.com/chen-star/net_alpha/commit/4b82513548d8b731077efec6723dfba50e092da8))
+
+### Unknown
+
+* Merge v2 simplification rewrite into master
+
+v2 collapses the surface from 10 CLI commands + wizard + TUI + agent
+into 4 commands (sim, imports, imports rm, migrate-from-v1, plus the
+default &lt;csv&gt; flow). Removes LLM CSV import, Robinhood, TUI, agent,
+wizard, schema cache, and pydantic-settings/anthropic/questionary/
+textual deps. New brokers/, ingest/, output/ packages. Repository
+v2 with idempotent multi-account imports and windowed wash-sale
+recompute. simulate_sell as a cross-account what-if planner.
+
+22 tasks executed via subagent-driven-development with two-stage
+review (spec compliance + code quality) per task. Final state:
+150 passing tests, lint clean, ruff format clean, package builds
+as wash_alpha-2.0.0.
+
+See:
+- docs/superpowers/specs/2026-04-25-v2-simplification-design.md
+- docs/superpowers/plans/2026-04-25-v2-simplification.md
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`14495ba`](https://github.com/chen-star/net_alpha/commit/14495ba56aaec0120e8c1ce49e45e75149fa91aa))
+
+
 ## v0.9.1 (2026-04-19)
 
 ### Fix
