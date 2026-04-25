@@ -68,6 +68,10 @@ def detect_wash_sales(
                     confidence=confidence,
                     disallowed_loss=disallowed,
                     matched_quantity=allocable,
+                    loss_account=loss_sale.account,
+                    buy_account=candidate.account,
+                    loss_sale_date=loss_sale.date,
+                    triggering_buy_date=candidate.date,
                 )
             )
 

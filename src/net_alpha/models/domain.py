@@ -109,6 +109,10 @@ class WashSaleViolation(BaseModel):
     confidence: str  # "Confirmed", "Probable", or "Unclear"
     disallowed_loss: float
     matched_quantity: float
+    loss_account: str = ""
+    buy_account: str = ""
+    loss_sale_date: date | None = None
+    triggering_buy_date: date | None = None
 
 
 class DetectionResult(BaseModel):

@@ -295,20 +295,31 @@ class Repository:
                 s.add(self._violation_to_row(v))
             s.commit()
 
-    # NOTE: _violation_to_row uses getattr defaults for fields added in Task 9.
-    # Task 9 will replace this with the typed-fields version.
     def _violation_to_row(self, v: WashSaleViolation) -> WashSaleViolationRow:
-        return WashSaleViolationRow(
-            loss_trade_id=int(v.loss_trade_id),
-            replacement_trade_id=int(v.replacement_trade_id),
-            loss_account_id=getattr(v, "loss_account_id", 0),
-            buy_account_id=getattr(v, "buy_account_id", 0),
-            loss_sale_date=getattr(v, "loss_sale_date", "1970-01-01"),
-            triggering_buy_date=getattr(v, "triggering_buy_date", "1970-01-01"),
-            confidence=v.confidence,
-            disallowed_loss=v.disallowed_loss,
-            matched_quantity=v.matched_quantity,
-        )
+        # account_id resolution by display string ("schwab/personal")
+        with Session(self.engine) as s:
+            la = self._account_id_for_display(s, v.loss_account)
+            ba = self._account_id_for_display(s, v.buy_account)
+            return WashSaleViolationRow(
+                loss_trade_id=int(v.loss_trade_id),
+                replacement_trade_id=int(v.replacement_trade_id),
+                loss_account_id=la,
+                buy_account_id=ba,
+                loss_sale_date=v.loss_sale_date.isoformat(),
+                triggering_buy_date=v.triggering_buy_date.isoformat(),
+                confidence=v.confidence,
+                disallowed_loss=v.disallowed_loss,
+                matched_quantity=v.matched_quantity,
+            )
+
+    def _account_id_for_display(self, s: Session, display: str) -> int:
+        broker, label = display.split("/", 1)
+        row = s.exec(
+            select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)
+        ).first()
+        if row is None:
+            raise RuntimeError(f"no account row for {display!r}")
+        return row.id
 
 
 # ---------------------------------------------------------------------------
