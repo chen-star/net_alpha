@@ -1,38 +1,63 @@
 # src/net_alpha/db/tables.py
 from __future__ import annotations
 
+from datetime import datetime
+
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
+
+
+class AccountRow(SQLModel, table=True):
+    __tablename__ = "accounts"
+    __table_args__ = (UniqueConstraint("broker", "label", name="uq_account_broker_label"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    broker: str = Field(index=True)
+    label: str = Field(index=True)
+
+
+class ImportRecordRow(SQLModel, table=True):
+    __tablename__ = "imports"
+
+    id: int | None = Field(default=None, primary_key=True)
+    account_id: int = Field(foreign_key="accounts.id", index=True)
+    csv_filename: str
+    csv_sha256: str = Field(index=True)
+    imported_at: datetime
+    trade_count: int
 
 
 class TradeRow(SQLModel, table=True):
     __tablename__ = "trades"
+    __table_args__ = (UniqueConstraint("account_id", "natural_key", name="uq_trade_account_natkey"),)
 
-    id: str = Field(primary_key=True)
-    account: str = Field(index=True)
-    date: str = Field(index=True)  # YYYY-MM-DD
+    id: int | None = Field(default=None, primary_key=True)
+    import_id: int = Field(foreign_key="imports.id", index=True)
+    account_id: int = Field(foreign_key="accounts.id", index=True)
+    natural_key: str = Field(index=True)
+
     ticker: str = Field(index=True)
+    trade_date: str = Field(index=True)  # YYYY-MM-DD as-is from broker
     action: str
     quantity: float
     proceeds: float | None = None
     cost_basis: float | None = None
     basis_unknown: bool = False
-    raw_row_hash: str | None = Field(default=None, index=True)
-    schema_cache_id: str | None = Field(default=None)
 
-    # Option fields (flattened — no nested tables)
     option_strike: float | None = None
-    option_expiry: str | None = None  # YYYY-MM-DD
-    option_call_put: str | None = None  # "C" or "P"
+    option_expiry: str | None = None
+    option_call_put: str | None = None
 
 
 class LotRow(SQLModel, table=True):
     __tablename__ = "lots"
 
-    id: str = Field(primary_key=True)
-    trade_id: str = Field(index=True)
-    account: str
-    date: str
+    id: int | None = Field(default=None, primary_key=True)
+    trade_id: int = Field(foreign_key="trades.id", index=True)
+    account_id: int = Field(foreign_key="accounts.id", index=True)
+
     ticker: str = Field(index=True)
+    trade_date: str
     quantity: float
     cost_basis: float
     adjusted_basis: float
@@ -45,22 +70,16 @@ class LotRow(SQLModel, table=True):
 class WashSaleViolationRow(SQLModel, table=True):
     __tablename__ = "wash_sale_violations"
 
-    id: str = Field(primary_key=True)
-    loss_trade_id: str = Field(index=True)
-    replacement_trade_id: str = Field(index=True)
+    id: int | None = Field(default=None, primary_key=True)
+    loss_trade_id: int = Field(foreign_key="trades.id", index=True)
+    replacement_trade_id: int = Field(foreign_key="trades.id", index=True)
+    loss_account_id: int = Field(foreign_key="accounts.id", index=True)
+    buy_account_id: int = Field(foreign_key="accounts.id", index=True)
+    loss_sale_date: str = Field(index=True)
+    triggering_buy_date: str = Field(index=True)
     confidence: str
     disallowed_loss: float
     matched_quantity: float
-
-
-class SchemaCacheRow(SQLModel, table=True):
-    __tablename__ = "schema_cache"
-
-    id: str = Field(primary_key=True)
-    broker_name: str = Field(index=True)
-    header_hash: str = Field(index=True)
-    column_mapping: str  # JSON string
-    option_format: str | None = None
 
 
 class MetaRow(SQLModel, table=True):

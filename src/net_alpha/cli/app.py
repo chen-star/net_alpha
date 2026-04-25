@@ -7,7 +7,7 @@ from net_alpha.cli.import_cmd import import_command
 from net_alpha.cli.simulate import simulate_app
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
-from net_alpha.db.migrations import run_migrations
+from net_alpha.db.migrations import migrate
 
 app = typer.Typer(
     name="net-alpha",
@@ -25,7 +25,8 @@ def _bootstrap() -> tuple[Settings, Session]:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     engine = get_engine(settings.db_path)
     init_db(engine)
-    run_migrations(engine)
+    with Session(engine) as mig_session:
+        migrate(mig_session)
     return settings, Session(engine)
 
 

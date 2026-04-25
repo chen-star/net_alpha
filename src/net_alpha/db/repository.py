@@ -1,143 +1,94 @@
 # src/net_alpha/db/repository.py
+# NOTE: This is a v1→v2 transition stub. The v1 schema has been replaced by
+# the v2 schema (AccountRow, ImportRecordRow, int PKs, natural_key, etc.).
+# All repository classes that depended on v1 TradeRow/LotRow/WashSaleViolationRow
+# are stubbed here and will be fully rewritten in Task 5.
+# MetaRepository is the only class that remains functional.
 from __future__ import annotations
 
-from datetime import date
-
-from sqlalchemy import distinct
 from sqlmodel import Session, select
 
-from net_alpha.db.tables import (
-    LotRow,
-    MetaRow,
-    SchemaCacheRow,
-    TradeRow,
-    WashSaleViolationRow,
-)
-from net_alpha.models.domain import (
-    Lot,
-    OptionDetails,
-    Trade,
-    WashSaleViolation,
-)
+from net_alpha.db.tables import MetaRow
 
 
 class TradeRepository:
+    """Stub — full rewrite in Task 5."""
+
     def __init__(self, session: Session):
         self._session = session
 
-    def save(self, trade: Trade) -> None:
-        row = _trade_to_row(trade)
-        self._session.add(row)
+    def save(self, trade) -> None:
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
-    def save_batch(self, trades: list[Trade]) -> None:
-        for trade in trades:
-            self.save(trade)
+    def save_batch(self, trades) -> None:
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
-    def get_by_id(self, trade_id: str) -> Trade | None:
-        row = self._session.get(TradeRow, trade_id)
-        if row is None:
-            return None
-        return _row_to_trade(row)
+    def get_by_id(self, trade_id) -> None:
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
-    def list_all(self) -> list[Trade]:
-        rows = self._session.exec(select(TradeRow)).all()
-        return [_row_to_trade(r) for r in rows]
+    def list_all(self) -> list:
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
-    def list_by_account(self, account: str) -> list[Trade]:
-        rows = self._session.exec(select(TradeRow).where(TradeRow.account == account)).all()
-        return [_row_to_trade(r) for r in rows]
+    def list_by_account(self, account: str) -> list:
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
-    def find_by_hash(self, raw_row_hash: str) -> Trade | None:
-        row = self._session.exec(select(TradeRow).where(TradeRow.raw_row_hash == raw_row_hash)).first()
-        if row is None:
-            return None
-        return _row_to_trade(row)
+    def find_by_hash(self, raw_row_hash: str) -> None:
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
-    def find_by_semantic_key(
-        self,
-        account: str,
-        date_str: str,
-        ticker: str,
-        action: str,
-        quantity: float,
-        proceeds: float | None,
-    ) -> Trade | None:
-        stmt = select(TradeRow).where(
-            TradeRow.account == account,
-            TradeRow.date == date_str,
-            TradeRow.ticker == ticker,
-            TradeRow.action == action,
-            TradeRow.quantity == quantity,
-        )
-        if proceeds is not None:
-            stmt = stmt.where(TradeRow.proceeds == proceeds)
-        else:
-            stmt = stmt.where(TradeRow.proceeds.is_(None))
-        row = self._session.exec(stmt).first()
-        if row is None:
-            return None
-        return _row_to_trade(row)
+    def find_by_semantic_key(self, account, date_str, ticker, action, quantity, proceeds) -> None:
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
-    def list_accounts(self) -> list[str]:
-        rows = self._session.exec(select(distinct(TradeRow.account))).all()
-        return list(rows)
+    def list_accounts(self) -> list:
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
     def count_by_account(self, account: str) -> int:
-        rows = self._session.exec(select(TradeRow).where(TradeRow.account == account)).all()
-        return len(rows)
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
     def latest_trade_date_by_account(self, account: str) -> str | None:
-        row = self._session.exec(
-            select(TradeRow.date).where(TradeRow.account == account).order_by(TradeRow.date.desc())
-        ).first()
-        return row
+        raise NotImplementedError("TradeRepository will be rewritten in Task 5 (v2 schema)")
 
 
 class LotRepository:
+    """Stub — full rewrite in Task 5."""
+
     def __init__(self, session: Session):
         self._session = session
 
-    def save(self, lot: Lot) -> None:
-        row = _lot_to_row(lot)
-        self._session.add(row)
+    def save(self, lot) -> None:
+        raise NotImplementedError("LotRepository will be rewritten in Task 5 (v2 schema)")
 
-    def save_batch(self, lots: list[Lot]) -> None:
-        for lot in lots:
-            self.save(lot)
+    def save_batch(self, lots) -> None:
+        raise NotImplementedError("LotRepository will be rewritten in Task 5 (v2 schema)")
 
-    def list_all(self) -> list[Lot]:
-        rows = self._session.exec(select(LotRow)).all()
-        return [_row_to_lot(r) for r in rows]
+    def list_all(self) -> list:
+        raise NotImplementedError("LotRepository will be rewritten in Task 5 (v2 schema)")
 
     def delete_all(self) -> None:
-        rows = self._session.exec(select(LotRow)).all()
-        for row in rows:
-            self._session.delete(row)
+        raise NotImplementedError("LotRepository will be rewritten in Task 5 (v2 schema)")
 
 
 class ViolationRepository:
+    """Stub — full rewrite in Task 5."""
+
     def __init__(self, session: Session):
         self._session = session
 
-    def save(self, violation: WashSaleViolation) -> None:
-        row = _violation_to_row(violation)
-        self._session.add(row)
+    def save(self, violation) -> None:
+        raise NotImplementedError("ViolationRepository will be rewritten in Task 5 (v2 schema)")
 
-    def save_batch(self, violations: list[WashSaleViolation]) -> None:
-        for v in violations:
-            self.save(v)
+    def save_batch(self, violations) -> None:
+        raise NotImplementedError("ViolationRepository will be rewritten in Task 5 (v2 schema)")
 
-    def list_all(self) -> list[WashSaleViolation]:
-        rows = self._session.exec(select(WashSaleViolationRow)).all()
-        return [_row_to_violation(r) for r in rows]
+    def list_all(self) -> list:
+        raise NotImplementedError("ViolationRepository will be rewritten in Task 5 (v2 schema)")
 
     def delete_all(self) -> None:
-        rows = self._session.exec(select(WashSaleViolationRow)).all()
-        for row in rows:
-            self._session.delete(row)
+        raise NotImplementedError("ViolationRepository will be rewritten in Task 5 (v2 schema)")
 
 
 class MetaRepository:
+    """Functional — MetaRow schema is unchanged in v2."""
+
     def __init__(self, session: Session):
         self._session = session
 
@@ -155,129 +106,16 @@ class MetaRepository:
 
 
 class SchemaCacheRepository:
+    """Removed in v2 — schema cache is gone (no LLM in v2). Stub for import compat."""
+
     def __init__(self, session: Session):
         self._session = session
 
-    def save(self, row: SchemaCacheRow) -> None:
-        self._session.add(row)
+    def save(self, row) -> None:
+        raise NotImplementedError("SchemaCacheRepository removed in v2 (no LLM schema cache)")
 
-    def find_by_broker_and_hash(self, broker_name: str, header_hash: str) -> SchemaCacheRow | None:
-        return self._session.exec(
-            select(SchemaCacheRow).where(
-                SchemaCacheRow.broker_name == broker_name,
-                SchemaCacheRow.header_hash == header_hash,
-            )
-        ).first()
+    def find_by_broker_and_hash(self, broker_name: str, header_hash: str) -> None:
+        raise NotImplementedError("SchemaCacheRepository removed in v2 (no LLM schema cache)")
 
-    def list_by_broker(self, broker_name: str) -> list[SchemaCacheRow]:
-        rows = self._session.exec(select(SchemaCacheRow).where(SchemaCacheRow.broker_name == broker_name)).all()
-        return list(rows)
-
-
-# --- Mapping functions: domain <-> table ---
-
-
-def _trade_to_row(trade: Trade) -> TradeRow:
-    row = TradeRow(
-        id=trade.id,
-        account=trade.account,
-        date=trade.date.isoformat(),
-        ticker=trade.ticker,
-        action=trade.action,
-        quantity=trade.quantity,
-        proceeds=trade.proceeds,
-        cost_basis=trade.cost_basis,
-        basis_unknown=trade.basis_unknown,
-        raw_row_hash=trade.raw_row_hash,
-        schema_cache_id=trade.schema_cache_id,
-    )
-    if trade.option_details:
-        row.option_strike = trade.option_details.strike
-        row.option_expiry = trade.option_details.expiry.isoformat()
-        row.option_call_put = trade.option_details.call_put
-    return row
-
-
-def _row_to_trade(row: TradeRow) -> Trade:
-    option_details = None
-    if row.option_strike is not None and row.option_call_put is not None:
-        option_details = OptionDetails(
-            strike=row.option_strike,
-            expiry=date.fromisoformat(row.option_expiry),
-            call_put=row.option_call_put,
-        )
-    return Trade(
-        id=row.id,
-        account=row.account,
-        date=date.fromisoformat(row.date),
-        ticker=row.ticker,
-        action=row.action,
-        quantity=row.quantity,
-        proceeds=row.proceeds,
-        cost_basis=row.cost_basis,
-        basis_unknown=row.basis_unknown,
-        option_details=option_details,
-        raw_row_hash=row.raw_row_hash,
-        schema_cache_id=row.schema_cache_id,
-    )
-
-
-def _lot_to_row(lot: Lot) -> LotRow:
-    row = LotRow(
-        id=lot.id,
-        trade_id=lot.trade_id,
-        account=lot.account,
-        date=lot.date.isoformat(),
-        ticker=lot.ticker,
-        quantity=lot.quantity,
-        cost_basis=lot.cost_basis,
-        adjusted_basis=lot.adjusted_basis,
-    )
-    if lot.option_details:
-        row.option_strike = lot.option_details.strike
-        row.option_expiry = lot.option_details.expiry.isoformat()
-        row.option_call_put = lot.option_details.call_put
-    return row
-
-
-def _row_to_lot(row: LotRow) -> Lot:
-    option_details = None
-    if row.option_strike is not None and row.option_call_put is not None:
-        option_details = OptionDetails(
-            strike=row.option_strike,
-            expiry=date.fromisoformat(row.option_expiry),
-            call_put=row.option_call_put,
-        )
-    return Lot(
-        id=row.id,
-        trade_id=row.trade_id,
-        account=row.account,
-        date=date.fromisoformat(row.date),
-        ticker=row.ticker,
-        quantity=row.quantity,
-        cost_basis=row.cost_basis,
-        adjusted_basis=row.adjusted_basis,
-        option_details=option_details,
-    )
-
-
-def _violation_to_row(v: WashSaleViolation) -> WashSaleViolationRow:
-    return WashSaleViolationRow(
-        id=v.id,
-        loss_trade_id=v.loss_trade_id,
-        replacement_trade_id=v.replacement_trade_id,
-        confidence=v.confidence,
-        disallowed_loss=v.disallowed_loss,
-        matched_quantity=v.matched_quantity,
-    )
-
-
-def _row_to_violation(row: WashSaleViolationRow) -> WashSaleViolation:
-    return WashSaleViolation(
-        id=row.id,
-        loss_trade_id=row.loss_trade_id,
-        replacement_trade_id=row.replacement_trade_id,
-        confidence=row.confidence,
-        disallowed_loss=row.disallowed_loss,
-        matched_quantity=row.matched_quantity,
-    )
+    def list_by_broker(self, broker_name: str) -> list:
+        raise NotImplementedError("SchemaCacheRepository removed in v2 (no LLM schema cache)")
