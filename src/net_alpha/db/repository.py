@@ -225,6 +225,7 @@ class Repository:
                     confidence=r.confidence,
                     disallowed_loss=r.disallowed_loss,
                     matched_quantity=r.matched_quantity,
+                    ticker=r.ticker,
                 )
                 for r in rows
             ]
@@ -243,6 +244,7 @@ class Repository:
                     confidence=r.confidence,
                     disallowed_loss=r.disallowed_loss,
                     matched_quantity=r.matched_quantity,
+                    ticker=r.ticker,
                 )
                 for r in rows
             ]
@@ -259,9 +261,7 @@ class Repository:
 
             # Cascade-delete derived rows that reference these trades
             if trade_ids:
-                s.exec(
-                    LotRow.__table__.delete().where(LotRow.trade_id.in_(trade_ids))
-                )
+                s.exec(LotRow.__table__.delete().where(LotRow.trade_id.in_(trade_ids)))
                 s.exec(
                     WashSaleViolationRow.__table__.delete().where(
                         (WashSaleViolationRow.loss_trade_id.in_(trade_ids))
@@ -281,9 +281,7 @@ class Repository:
             )
             return RemoveImportResult(removed_trade_count=len(trade_ids), recompute_window=window)
 
-    def replace_violations_in_window(
-        self, start: date, end: date, new_violations: list[WashSaleViolation]
-    ) -> None:
+    def replace_violations_in_window(self, start: date, end: date, new_violations: list[WashSaleViolation]) -> None:
         with Session(self.engine) as s:
             s.exec(
                 WashSaleViolationRow.__table__.delete().where(
@@ -307,6 +305,7 @@ class Repository:
                 buy_account_id=ba,
                 loss_sale_date=v.loss_sale_date.isoformat(),
                 triggering_buy_date=v.triggering_buy_date.isoformat(),
+                ticker=v.ticker,
                 confidence=v.confidence,
                 disallowed_loss=v.disallowed_loss,
                 matched_quantity=v.matched_quantity,
@@ -314,9 +313,7 @@ class Repository:
 
     def _account_id_for_display(self, s: Session, display: str) -> int:
         broker, label = display.split("/", 1)
-        row = s.exec(
-            select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)
-        ).first()
+        row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
         if row is None:
             raise RuntimeError(f"no account row for {display!r}")
         return row.id

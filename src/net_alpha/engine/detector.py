@@ -74,6 +74,7 @@ def detect_wash_sales(
                     buy_account=candidate.account,
                     loss_sale_date=loss_sale.date,
                     triggering_buy_date=candidate.date,
+                    ticker=loss_sale.ticker,
                 )
             )
 
@@ -126,9 +127,7 @@ def detect_in_window(
     """
     full = detect_wash_sales(trades, etf_pairs)
     in_window = [
-        v for v in full.violations
-        if v.loss_sale_date is not None
-        and window_start <= v.loss_sale_date <= window_end
+        v for v in full.violations if v.loss_sale_date is not None and window_start <= v.loss_sale_date <= window_end
     ]
     # Lots are recomputed downstream from the full trade set, so we still return all.
     return DetectionResult(

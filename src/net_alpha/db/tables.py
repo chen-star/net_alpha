@@ -77,6 +77,7 @@ class WashSaleViolationRow(SQLModel, table=True):
     buy_account_id: int = Field(foreign_key="accounts.id", index=True)
     loss_sale_date: str = Field(index=True)
     triggering_buy_date: str = Field(index=True)
+    ticker: str = Field(index=True, default="")
     confidence: str
     disallowed_loss: float
     matched_quantity: float

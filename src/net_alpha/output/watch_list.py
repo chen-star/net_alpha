@@ -11,7 +11,7 @@ def render(lots, violations, today: date) -> str:
 
     for v in violations:
         if v.triggering_buy_date and v.triggering_buy_date >= today - timedelta(days=30):
-            ticker = _ticker_for_violation(v)
+            ticker = v.ticker
             lines.append(
                 f"🔴 {ticker}   wash sale TRIGGERED on {v.loss_sale_date} "
                 f"({ticker} buy on {v.triggering_buy_date})"
@@ -21,10 +21,3 @@ def render(lots, violations, today: date) -> str:
                 f"{v.triggering_buy_date} lot"
             )
     return "\n".join(lines)
-
-
-def _ticker_for_violation(v) -> str:
-    """v2.0 placeholder — violations don't carry the ticker directly.
-    Future enhancement: caller can join through trade rows and pass it in.
-    """
-    return "TKR"

@@ -60,16 +60,18 @@ class Trade(BaseModel):
         if self.option_details is not None:
             o = self.option_details
             opt = f"{o.strike}|{o.expiry.isoformat()}|{o.call_put}"
-        payload = "|".join([
-            self.account,
-            self.date.isoformat(),
-            self.ticker,
-            self.action,
-            str(self.quantity),
-            str(self.proceeds if self.proceeds is not None else ""),
-            str(self.cost_basis if self.cost_basis is not None else ""),
-            opt,
-        ])
+        payload = "|".join(
+            [
+                self.account,
+                self.date.isoformat(),
+                self.ticker,
+                self.action,
+                str(self.quantity),
+                str(self.proceeds if self.proceeds is not None else ""),
+                str(self.cost_basis if self.cost_basis is not None else ""),
+                opt,
+            ]
+        )
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -113,6 +115,7 @@ class WashSaleViolation(BaseModel):
     buy_account: str = ""
     loss_sale_date: date | None = None
     triggering_buy_date: date | None = None
+    ticker: str = ""
 
 
 class DetectionResult(BaseModel):
