@@ -44,8 +44,11 @@ def test_remove_import_result_reports_removed():
 
 def test_import_summary_has_display_account():
     s = ImportSummary(
-        id=1, account_display="schwab/personal", csv_filename="q1.csv",
-        trade_count=412, imported_at=datetime(2026, 4, 25, 10, 0),
+        id=1,
+        account_display="schwab/personal",
+        csv_filename="q1.csv",
+        trade_count=412,
+        imported_at=datetime(2026, 4, 25, 10, 0),
     )
     assert s.account_display == "schwab/personal"
 

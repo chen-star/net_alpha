@@ -35,9 +35,7 @@ class SchwabParser:
             try:
                 trade_date = datetime.strptime(row["Date"].strip()[:10], "%m/%d/%Y").date()
             except ValueError as e:
-                raise ValueError(
-                    f"Row {i}: 'Date' value {row['Date']!r} is not a valid date"
-                ) from e
+                raise ValueError(f"Row {i}: 'Date' value {row['Date']!r} is not a valid date") from e
 
             symbol = row["Symbol"].strip()
             opt = parse_option_symbol(symbol)

@@ -5,7 +5,6 @@ def render(summaries) -> str:
     lines.append("-" * 70)
     for s in summaries:
         lines.append(
-            f"{s.id:>3} {s.account_display:<20} {s.csv_filename:<30} "
-            f"{s.trade_count:>7}  {s.imported_at.date()}"
+            f"{s.id:>3} {s.account_display:<20} {s.csv_filename:<30} {s.trade_count:>7}  {s.imported_at.date()}"
         )
     return "\n".join(lines)

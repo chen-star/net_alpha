@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import factory
 
-from net_alpha.models.domain import Lot, OpenLot, OptionDetails, RealizedPair, Trade
+from net_alpha.models.domain import Lot, OptionDetails, Trade
 
 
 class TradeFactory(factory.Factory):
@@ -46,30 +46,3 @@ class LotFactory(factory.Factory):
     adjusted_basis = 2400.0
 
 
-class OpenLotFactory(factory.Factory):
-    class Meta:
-        model = OpenLot
-
-    ticker = "AAPL"
-    account = "Schwab"
-    quantity = 50.0
-    adjusted_basis_per_share = 145.0
-    purchase_date = factory.LazyFunction(lambda: date(2025, 6, 1))
-    days_held = 315
-    days_to_long_term = 50
-    basis_unknown = False
-    is_option = False
-
-
-class RealizedPairFactory(factory.Factory):
-    class Meta:
-        model = RealizedPair
-
-    sell_trade_id = factory.LazyFunction(lambda: str(uuid4()))
-    buy_lot_date = factory.LazyFunction(lambda: date(2025, 1, 15))
-    buy_lot_account = "Schwab"
-    quantity = 10.0
-    proceeds = 1800.0
-    basis = 1500.0
-    basis_unknown = False
-    is_long_term = False

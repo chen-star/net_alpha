@@ -4,6 +4,7 @@
 v1 → v2 is a clean break. Users either re-import their CSVs or run
 `net-alpha migrate-from-v1`. There is no in-place upgrade.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import text
@@ -19,10 +20,7 @@ def get_schema_version(session: Session) -> int:
 
 def set_schema_version(session: Session, version: int) -> None:
     session.exec(
-        text(
-            "INSERT INTO meta(key, value) VALUES ('schema_version', :v) "
-            "ON CONFLICT(key) DO UPDATE SET value=:v"
-        ),
+        text("INSERT INTO meta(key, value) VALUES ('schema_version', :v) ON CONFLICT(key) DO UPDATE SET value=:v"),
         params={"v": str(version)},
     )
     session.commit()

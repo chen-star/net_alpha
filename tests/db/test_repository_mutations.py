@@ -16,16 +16,26 @@ def repo(tmp_path):
 
 def test_remove_import_cascades_trades(repo):
     acct = repo.get_or_create_account("schwab", "personal")
-    rec = ImportRecord(account_id=acct.id, csv_filename="x.csv", csv_sha256="h",
-                       imported_at=datetime(2026, 4, 25), trade_count=0)
+    rec = ImportRecord(
+        account_id=acct.id, csv_filename="x.csv", csv_sha256="h", imported_at=datetime(2026, 4, 25), trade_count=0
+    )
     trades = [
         Trade(
-            account=acct.display(), date=date(2024, 6, 1), ticker="TSLA",
-            action="Sell", quantity=10, proceeds=1500, cost_basis=2000,
+            account=acct.display(),
+            date=date(2024, 6, 1),
+            ticker="TSLA",
+            action="Sell",
+            quantity=10,
+            proceeds=1500,
+            cost_basis=2000,
         ),
         Trade(
-            account=acct.display(), date=date(2024, 6, 5), ticker="TSLA",
-            action="Buy", quantity=10, cost_basis=1700,
+            account=acct.display(),
+            date=date(2024, 6, 5),
+            ticker="TSLA",
+            action="Buy",
+            quantity=10,
+            cost_basis=1700,
         ),
     ]
     res = repo.add_import(acct, rec, trades)
@@ -37,8 +47,9 @@ def test_remove_import_cascades_trades(repo):
 
 def test_remove_import_returns_none_window_for_empty_import(repo):
     acct = repo.get_or_create_account("schwab", "personal")
-    rec = ImportRecord(account_id=acct.id, csv_filename="empty.csv", csv_sha256="h",
-                       imported_at=datetime(2026, 4, 25), trade_count=0)
+    rec = ImportRecord(
+        account_id=acct.id, csv_filename="empty.csv", csv_sha256="h", imported_at=datetime(2026, 4, 25), trade_count=0
+    )
     res = repo.add_import(acct, rec, [])
     rm = repo.remove_import(res.import_id)
     assert rm.removed_trade_count == 0
