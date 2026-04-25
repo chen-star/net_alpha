@@ -24,7 +24,7 @@ def cli_setup(tmp_path, monkeypatch):
     engine = get_engine(db_path)
     init_db(engine)
 
-    settings = Settings(data_dir=tmp_path, anthropic_api_key="test-key")
+    settings = Settings(data_dir=tmp_path)
 
     def fake_bootstrap():
         return settings, Session(engine)

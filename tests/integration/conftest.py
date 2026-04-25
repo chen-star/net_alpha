@@ -11,8 +11,6 @@ import yaml
 from sqlmodel import Session
 
 from net_alpha.db.connection import get_engine, init_db
-from net_alpha.db.repository import TradeRepository
-from net_alpha.models.domain import Trade
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -48,29 +46,6 @@ def temp_db(tmp_path):
     init_db(engine)
     with Session(engine) as session:
         yield engine, session, db_path
-
-
-@pytest.fixture
-def seeded_session(temp_db):
-    """
-    Factory fixture. Call the returned function with a list of Trade objects
-    to persist them and get back the session.
-
-    Usage::
-
-        def test_foo(seeded_session):
-            session = seeded_session([trade1, trade2])
-            result = detect_wash_sales(session.exec(select(Trade)).all(), {})
-    """
-    engine, session, db_path = temp_db
-
-    def _seed(trades: list[Trade]) -> Session:
-        repo = TradeRepository(session)
-        repo.save_batch(trades)
-        session.commit()
-        return session
-
-    return _seed
 
 
 # ---------------------------------------------------------------------------

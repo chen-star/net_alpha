@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date as _date
+
 from net_alpha.engine.matcher import get_match_confidence, is_within_wash_sale_window
 from net_alpha.models.domain import DetectionResult, Lot, Trade, WashSaleViolation
 
@@ -68,6 +70,11 @@ def detect_wash_sales(
                     confidence=confidence,
                     disallowed_loss=disallowed,
                     matched_quantity=allocable,
+                    loss_account=loss_sale.account,
+                    buy_account=candidate.account,
+                    loss_sale_date=loss_sale.date,
+                    triggering_buy_date=candidate.date,
+                    ticker=loss_sale.ticker,
                 )
             )
 
@@ -104,3 +111,27 @@ def _find_candidates(
             candidates.append((t, confidence))
     candidates.sort(key=lambda x: x[0].date)
     return candidates
+
+
+def detect_in_window(
+    trades: list[Trade],
+    window_start: _date,
+    window_end: _date,
+    etf_pairs: dict[str, list[str]],
+) -> DetectionResult:
+    """Run the full detection algorithm but emit only violations whose
+    loss_sale_date is within [window_start, window_end].
+
+    `trades` MUST include all trades within ±30 days of [window_start, window_end]
+    so cross-window matching is correct. The caller is responsible for that.
+    """
+    full = detect_wash_sales(trades, etf_pairs)
+    in_window = [
+        v for v in full.violations if v.loss_sale_date is not None and window_start <= v.loss_sale_date <= window_end
+    ]
+    # Lots are recomputed downstream from the full trade set, so we still return all.
+    return DetectionResult(
+        violations=in_window,
+        lots=full.lots,
+        basis_unknown_count=full.basis_unknown_count,
+    )

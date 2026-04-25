@@ -5,9 +5,8 @@ from pathlib import Path
 
 from sqlmodel import Session, SQLModel, create_engine, select
 
+from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION
 from net_alpha.db.tables import MetaRow
-
-CURRENT_SCHEMA_VERSION = 1
 
 
 def get_engine(db_path: Path):

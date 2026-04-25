@@ -1,49 +1,40 @@
 # src/net_alpha/db/migrations.py
+"""Hand-written migrations. v2 starts at schema_version=1.
+
+v1 → v2 is a clean break. Users either re-import their CSVs or run
+`net-alpha migrate-from-v1`. There is no in-place upgrade.
+"""
+
 from __future__ import annotations
 
-from sqlmodel import Session, select
+from sqlalchemy import text
+from sqlmodel import Session
 
-from net_alpha.db.connection import CURRENT_SCHEMA_VERSION
-from net_alpha.db.tables import MetaRow
-
-
-def run_migrations(engine) -> None:
-    """Run hand-written migrations to bring DB to current schema version.
-
-    Each migration documents the behavioral implication of NULL values
-    in newly added columns and specifies the fallback explicitly.
-    """
-    with Session(engine) as session:
-        meta = session.exec(select(MetaRow).where(MetaRow.key == "schema_version")).first()
-        if meta is None:
-            return
-
-        current = int(meta.value)
-
-        if current < 1:
-            _migrate_v0_to_v1(session)
-            current = 1
-
-        # Future migrations go here:
-        # if current < 2:
-        #     _migrate_v1_to_v2(session)
-        #     current = 2
-
-        meta.value = str(CURRENT_SCHEMA_VERSION)
-        session.add(meta)
-        session.commit()
+CURRENT_SCHEMA_VERSION = 1
 
 
-def _migrate_v0_to_v1(session: Session) -> None:
-    """v0 → v1: Initial schema. All tables created by init_db.
+def get_schema_version(session: Session) -> int:
+    row = session.exec(text("SELECT value FROM meta WHERE key='schema_version'")).first()
+    return int(row[0]) if row else 0
 
-    Migration v0→v1 is a no-op because init_db already creates all v1 tables.
-    This exists as a placeholder for the migration framework pattern.
 
-    NULL policy for v1 columns:
-    - raw_row_hash IS NULL → trade was imported before dedup was added;
-      dedup logic treats NULL as "use semantic key only"
-    - schema_cache_id IS NULL → trade was imported before schema caching;
-      option parser falls back to best-effort cascade
-    """
-    pass
+def set_schema_version(session: Session, version: int) -> None:
+    session.exec(
+        text("INSERT INTO meta(key, value) VALUES ('schema_version', :v) ON CONFLICT(key) DO UPDATE SET value=:v"),
+        params={"v": str(version)},
+    )
+    session.commit()
+
+
+def migrate(session: Session) -> None:
+    """Apply pending migrations. v2.0.0 is schema_version=1 — no upgrades exist yet."""
+    current = get_schema_version(session)
+    if current == 0:
+        set_schema_version(session, CURRENT_SCHEMA_VERSION)
+        return
+    if current > CURRENT_SCHEMA_VERSION:
+        raise RuntimeError(
+            f"DB schema_version={current} is newer than this binary "
+            f"(supports {CURRENT_SCHEMA_VERSION}). Upgrade net-alpha."
+        )
+    # Add upgrade branches here when adding schema_version=2, 3, ...

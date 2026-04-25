@@ -6,7 +6,7 @@ from net_alpha.engine.etf_pairs import load_etf_pairs
 
 
 def test_load_bundled_pairs():
-    pairs = load_etf_pairs(user_pairs_path=None)
+    pairs = load_etf_pairs(user_path=None)
     assert "SPY" in pairs["sp500"]
     assert "VOO" in pairs["sp500"]
     assert "QQQ" in pairs["nasdaq100"]
@@ -18,7 +18,7 @@ def test_user_pairs_extend_defaults():
         f.write("tech_growth:\n  - VGT\n  - XLK\n")
         f.flush()
         try:
-            pairs = load_etf_pairs(user_pairs_path=Path(f.name))
+            pairs = load_etf_pairs(user_path=Path(f.name))
             # Bundled pairs still present
             assert "SPY" in pairs["sp500"]
             # User pairs added
@@ -33,7 +33,7 @@ def test_user_pairs_do_not_replace_defaults():
         f.write("sp500:\n  - VFINX\n")
         f.flush()
         try:
-            pairs = load_etf_pairs(user_pairs_path=Path(f.name))
+            pairs = load_etf_pairs(user_path=Path(f.name))
             # Bundled entries preserved
             assert "SPY" in pairs["sp500"]
             assert "VOO" in pairs["sp500"]
@@ -44,5 +44,5 @@ def test_user_pairs_do_not_replace_defaults():
 
 
 def test_missing_user_file_ignored():
-    pairs = load_etf_pairs(user_pairs_path=Path("/nonexistent/path.yaml"))
+    pairs = load_etf_pairs(user_path=Path("/nonexistent/path.yaml"))
     assert "SPY" in pairs["sp500"]
