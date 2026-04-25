@@ -1,21 +1,28 @@
 # src/net_alpha/db/repository.py
 from __future__ import annotations
 
+from datetime import date
+
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
 from net_alpha.db.tables import (
     AccountRow,
     ImportRecordRow,
+    LotRow,
     MetaRow,
     TradeRow,
+    WashSaleViolationRow,
 )
 from net_alpha.models.domain import (
     Account,
     AddImportResult,
     ImportRecord,
     ImportSummary,
+    Lot,
+    OptionDetails,
     Trade,
+    WashSaleViolation,
 )
 
 
@@ -29,9 +36,7 @@ class Repository:
 
     def get_or_create_account(self, broker: str, label: str) -> Account:
         with Session(self.engine) as s:
-            row = s.exec(
-                select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)
-            ).first()
+            row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
             if row is None:
                 row = AccountRow(broker=broker, label=label)
                 s.add(row)
@@ -41,9 +46,7 @@ class Repository:
 
     def get_account(self, broker: str, label: str) -> Account | None:
         with Session(self.engine) as s:
-            row = s.exec(
-                select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)
-            ).first()
+            row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
             if row is None:
                 return None
             return Account(id=row.id, broker=row.broker, label=row.label)
@@ -87,14 +90,10 @@ class Repository:
 
     def existing_natural_keys(self, account_id: int) -> set[str]:
         with Session(self.engine) as s:
-            rows = s.exec(
-                select(TradeRow.natural_key).where(TradeRow.account_id == account_id)
-            ).all()
+            rows = s.exec(select(TradeRow.natural_key).where(TradeRow.account_id == account_id)).all()
             return set(rows)
 
-    def add_import(
-        self, account: Account, record: ImportRecord, trades: list[Trade]
-    ) -> AddImportResult:
+    def add_import(self, account: Account, record: ImportRecord, trades: list[Trade]) -> AddImportResult:
         """Insert trades for a new ImportRecord. Caller should pre-filter dups
         with existing_natural_keys; we still rely on the UNIQUE constraint as
         the safety net for anything the caller missed.
@@ -142,9 +141,112 @@ class Repository:
             s.commit()
             return AddImportResult(import_id=ir.id, new_trades=new_count, duplicate_trades=dup_count)
 
-    # Methods added in later tasks: trades_for_import, remove_import,
-    # all_trades, all_lots, all_violations,
-    # violations_for_year, trades_in_window, replace_violations_in_window
+    # --- Reads ---
+
+    def _row_to_trade(self, row: TradeRow, account_display: str) -> Trade:
+        opt = None
+        if row.option_strike is not None:
+            opt = OptionDetails(
+                strike=row.option_strike,
+                expiry=date.fromisoformat(row.option_expiry),
+                call_put=row.option_call_put,
+            )
+        return Trade(
+            id=str(row.id),
+            account=account_display,
+            date=date.fromisoformat(row.trade_date),
+            ticker=row.ticker,
+            action=row.action,
+            quantity=row.quantity,
+            proceeds=row.proceeds,
+            cost_basis=row.cost_basis,
+            basis_unknown=row.basis_unknown,
+            option_details=opt,
+        )
+
+    def _account_display_for_id(self, s: Session, account_id: int) -> str:
+        a = s.get(AccountRow, account_id)
+        return f"{a.broker}/{a.label}"
+
+    def all_trades(self) -> list[Trade]:
+        with Session(self.engine) as s:
+            rows = s.exec(select(TradeRow)).all()
+            return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
+    def trades_in_window(self, start: date, end: date) -> list[Trade]:
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(TradeRow).where(
+                    TradeRow.trade_date >= start.isoformat(),
+                    TradeRow.trade_date <= end.isoformat(),
+                )
+            ).all()
+            return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
+    def trades_for_import(self, import_id: int) -> list[Trade]:
+        with Session(self.engine) as s:
+            rows = s.exec(select(TradeRow).where(TradeRow.import_id == import_id)).all()
+            return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
+    def _row_to_lot(self, row: LotRow, account_display: str) -> Lot:
+        opt = None
+        if row.option_strike is not None:
+            opt = OptionDetails(
+                strike=row.option_strike,
+                expiry=date.fromisoformat(row.option_expiry),
+                call_put=row.option_call_put,
+            )
+        return Lot(
+            id=str(row.id),
+            trade_id=str(row.trade_id),
+            account=account_display,
+            date=date.fromisoformat(row.trade_date),
+            ticker=row.ticker,
+            quantity=row.quantity,
+            cost_basis=row.cost_basis,
+            adjusted_basis=row.adjusted_basis,
+            option_details=opt,
+        )
+
+    def all_lots(self) -> list[Lot]:
+        with Session(self.engine) as s:
+            rows = s.exec(select(LotRow)).all()
+            return [self._row_to_lot(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
+    def all_violations(self) -> list[WashSaleViolation]:
+        with Session(self.engine) as s:
+            rows = s.exec(select(WashSaleViolationRow)).all()
+            return [
+                WashSaleViolation(
+                    id=str(r.id),
+                    loss_trade_id=str(r.loss_trade_id),
+                    replacement_trade_id=str(r.replacement_trade_id),
+                    confidence=r.confidence,
+                    disallowed_loss=r.disallowed_loss,
+                    matched_quantity=r.matched_quantity,
+                )
+                for r in rows
+            ]
+
+    def violations_for_year(self, year: int) -> list[WashSaleViolation]:
+        prefix = f"{year}-"
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(WashSaleViolationRow).where(WashSaleViolationRow.loss_sale_date.startswith(prefix))
+            ).all()
+            return [
+                WashSaleViolation(
+                    id=str(r.id),
+                    loss_trade_id=str(r.loss_trade_id),
+                    replacement_trade_id=str(r.replacement_trade_id),
+                    confidence=r.confidence,
+                    disallowed_loss=r.disallowed_loss,
+                    matched_quantity=r.matched_quantity,
+                )
+                for r in rows
+            ]
+
+    # Methods added in later tasks: remove_import, replace_violations_in_window
 
 
 # ---------------------------------------------------------------------------
