@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -183,3 +184,72 @@ class LotRecommendation(BaseModel):
     safe_sell_date: date | None
     fallback_method: str | None
     fallback_reason: str | None
+
+
+# v2 additions ----------------------------------------------------------------
+
+
+class Account(BaseModel):
+    """A user-named account scoped to a single broker."""
+
+    id: int | None = None
+    broker: str
+    label: str
+
+    def display(self) -> str:
+        return f"{self.broker}/{self.label}"
+
+
+class ImportRecord(BaseModel):
+    """Metadata for one CSV import. Trades hold a FK to this."""
+
+    id: int | None = None
+    account_id: int
+    csv_filename: str
+    csv_sha256: str
+    imported_at: datetime
+    trade_count: int
+
+
+class AddImportResult(BaseModel):
+    import_id: int
+    new_trades: int
+    duplicate_trades: int
+
+
+class RemoveImportResult(BaseModel):
+    removed_trade_count: int
+    recompute_window: tuple[date, date] | None = None
+
+
+class ImportSummary(BaseModel):
+    """Display row for `net-alpha imports`."""
+
+    id: int
+    account_display: str
+    csv_filename: str
+    trade_count: int
+    imported_at: datetime
+
+
+class LotConsumption(BaseModel):
+    """One lot consumed (partially or fully) by a hypothetical sell."""
+
+    lot_id: int
+    quantity: Decimal
+    basis_per_share: Decimal
+    purchase_date: date
+
+
+class SimulationOption(BaseModel):
+    """One scenario in `sim`'s output: 'sell from this account'."""
+
+    account: Account
+    lots_consumed_fifo: list[LotConsumption]
+    realized_pnl: Decimal
+    would_trigger_wash_sale: bool
+    blocking_buys: list[Trade]
+    lookforward_block_until: date | None
+    confidence: str  # "Confirmed" | "Probable" | "Unclear" | "N/A"
+    insufficient_shares: bool
+    available_shares: Decimal
