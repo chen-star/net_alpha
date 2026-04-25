@@ -39,3 +39,4 @@ def migrate(session: Session) -> None:
             f"DB schema_version={current} is newer than this binary "
             f"(supports {CURRENT_SCHEMA_VERSION}). Upgrade net-alpha."
         )
+    # Add upgrade branches here when adding schema_version=2, 3, ...

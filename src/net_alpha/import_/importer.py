@@ -4,7 +4,6 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from uuid import uuid4
 
 from net_alpha.import_.csv_reader import (
     SchemaMapping,
@@ -215,36 +214,10 @@ def run_import(ctx: ImportContext) -> ImportResult:
                     "To import this file, you must set an ANTHROPIC_API_KEY so the AI can analyze it."
                 )
 
-            # Anonymize samples before LLM call
-            anon_samples = [anonymize_row(row) for row in raw_samples]
-
-            # LLM schema detection
-            mapping = detect_schema(
-                client=ctx.anthropic_client,
-                headers=headers,
-                sample_rows=anon_samples,
-                model=ctx.model,
-                max_retries=ctx.max_retries,
+            raise NotImplementedError(
+                "LLM-based schema detection is removed in v2. "
+                "Only bundled brokers are supported."
             )
-
-            # User confirmation
-            examples = _extract_examples(mapping, raw_samples)
-            if not ctx.confirm_schema(mapping, headers, examples):
-                raise RuntimeError("Schema rejected by user. Import cancelled.")
-
-            # Cache the confirmed schema
-            from net_alpha.db.tables import SchemaCacheRow
-
-            schema_cache_id = str(uuid4())
-            cache_row = SchemaCacheRow(
-                id=schema_cache_id,
-                broker_name=ctx.broker_name,
-                header_hash=header_hash,
-                column_mapping=mapping.model_dump_json(),
-                option_format=mapping.option_format,
-            )
-            ctx.schema_cache_repo.save(cache_row)
-            ctx.session.commit()
 
     # Parse all CSV rows
     trades = read_csv_with_mapping(
