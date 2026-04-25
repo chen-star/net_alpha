@@ -303,6 +303,33 @@ class Repository:
             matched_quantity=v.matched_quantity,
         )
 
+    def replace_lots_in_window(self, start: date, end: date, new_lots: list[Lot]) -> None:
+        with Session(self.engine) as s:
+            s.exec(
+                LotRow.__table__.delete().where(
+                    LotRow.trade_date >= start.isoformat(),
+                    LotRow.trade_date <= end.isoformat(),
+                )
+            )
+            for lot in new_lots:
+                s.add(self._lot_to_row(s, lot))
+            s.commit()
+
+    def _lot_to_row(self, s: Session, lot: Lot) -> LotRow:
+        # account is "schwab/personal"; trade_id is stringified int from _row_to_trade
+        return LotRow(
+            trade_id=int(lot.trade_id),
+            account_id=self._account_id_for_display(s, lot.account),
+            ticker=lot.ticker,
+            trade_date=lot.date.isoformat(),
+            quantity=lot.quantity,
+            cost_basis=lot.cost_basis,
+            adjusted_basis=lot.adjusted_basis,
+            option_strike=(lot.option_details.strike if lot.option_details else None),
+            option_expiry=(lot.option_details.expiry.isoformat() if lot.option_details else None),
+            option_call_put=(lot.option_details.call_put if lot.option_details else None),
+        )
+
     def _account_id_for_display(self, s: Session, display: str) -> int:
         broker, label = display.split("/", 1)
         row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
