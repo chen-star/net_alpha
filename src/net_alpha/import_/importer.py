@@ -19,7 +19,6 @@ from net_alpha.import_.dedup import deduplicate_trades
 # ---------------------------------------------------------------------------
 
 _ACCOUNT_PATTERN = re.compile(r"^\d{4,}$|[-_]\d{4,}$|\d{4,}[-_]$|^\w*-\d{4,}$")
-_NUMERIC_PATTERN = re.compile(r"^[($-]*[\d,]+\.?\d*[)]*$")
 _DATE_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}$"
     r"|^\d{1,2}/\d{1,2}/\d{2,4}$"
@@ -103,7 +102,7 @@ def detect_schema(
             )
             text = response.content[0].text.strip()
             if text.startswith("```"):
-                lines = [l for l in text.split("\n") if not l.strip().startswith("```")]
+                lines = [line for line in text.split("\n") if not line.strip().startswith("```")]
                 text = "\n".join(lines).strip()
             data = _json.loads(text)
             return SchemaMapping(**data)
