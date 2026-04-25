@@ -1,3 +1,85 @@
+# AGENTS.md
+
+This file provides guidance to AI coding agents working with code in this repository.
+
+## Project Overview
+
+`wash-alpha` (package `net_alpha`) is a local-first Python CLI tool for cross-account wash sale detection, covering equities, options, and ETFs. The v2 design spec lives in `docs/superpowers/specs/2026-04-25-v2-simplification-design.md`.
+
+## Tech Stack
+
+- **Python 3.11+** (pinned in `.python-version`)
+- **Package manager:** `uv` — always use `uv run <cmd>`, never activate venv manually
+- **Build backend:** `hatch` via `pyproject.toml`
+- **CLI framework:** `typer[all]` (bundles `rich` and `click`)
+- **Data models:** `pydantic` v2
+- **ORM/storage:** `sqlmodel` over SQLite at `~/.net_alpha/net_alpha.db`
+- **Date arithmetic:** stdlib `datetime.date` + `timedelta` (trade dates stored as `YYYY-MM-DD` strings as-is from broker CSV; no timezone conversion)
+- **Config:** `pyyaml` for `etf_pairs.yaml`
+- **Logging:** `loguru`
+- **Linter/formatter:** `ruff` (replaces flake8 + black)
+- **Tests:** `pytest`, `pytest-cov`, `factory_boy`
+
+## Commands
+
+```bash
+# Install dependencies
+uv sync
+
+# Run the CLI
+uv run net-alpha --help
+
+# Run tests
+uv run pytest
+# or via Makefile:
+make test
+
+# Run linter
+uv run ruff check .
+uv run ruff format .
+# or:
+make lint
+
+# Run a single test file
+uv run pytest tests/path/to/test_file.py
+
+# Run tests matching a pattern
+uv run pytest -k "test_wash_sale"
+```
+
+## Architecture
+
+### CLI Commands (Typer)
+
+```
+net-alpha <csv> [<csv>...] --account <label> [--detail]   # default: import + check + render
+net-alpha sim <ticker> <qty> --price P [--account <l>]    # pre-trade what-if planner
+net-alpha imports                                          # list past imports
+net-alpha imports rm <id> [--yes]                          # remove an import
+net-alpha migrate-from-v1 [--yes]                          # v1 → v2 helper (v2.0.x only)
+```
+
+### Data Flow
+
+1. **CSV import** → bundled BrokerParser detects from headers (Schwab at launch) → trades parsed → idempotent dedup via natural_key → stored to SQLite
+2. **Wash sale engine** → incremental window-based recompute (±30 days around new/removed trade dates) → assigns confidence label → adjusts cost basis of replacement lot
+
+### Broker Support
+
+**Supported brokers (v2.0):** Schwab.
+
+Other brokers can be added by contributing a parser at `src/net_alpha/brokers/<name>.py` — implement the `BrokerParser` Protocol and register it in `brokers/registry.py`.
+
+### Disclaimer Policy
+
+Every command output ends with exactly:
+
+> ⚠ This is informational only. Consult a tax professional before filing.
+
+No exceptions. Not skippable.
+
+---
+
 <!-- generated-by: gsd-doc-writer -->
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

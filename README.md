@@ -16,7 +16,7 @@
 [![codecov](https://codecov.io/github/chen-star/net_alpha/graph/badge.svg?token=XETFUGJO3L)](https://codecov.io/github/chen-star/net_alpha)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-*Stop flying blind. Detect wash sales across Schwab, Robinhood, options, and ETFs in seconds.*
+*Stop flying blind. Detect wash sales across accounts, options, and ETFs in seconds.*
 
 [Installation](#-installation) •
 [Features](#-key-features) •
@@ -39,11 +39,10 @@ The problem compounds when you trade **options** alongside stocks, or **ETFs** t
 
 ## 🌟 Key Features
 
-- **🤖 AI-Powered Smart Import:** Claude automatically detects and parses your broker's CSV layout. No more manual column mapping or writing brittle regex parsers.
+- **📂 Bundled Broker Parsers:** Schwab CSV is supported out of the box. Other brokers can be added by contributing a parser — no configuration needed for supported formats.
 - **🌐 Cross-Account Intelligence:** Seamlessly match a loss sale on one broker against a repurchase on another in a single pass.
 - **🔒 100% Local & Zero-Knowledge:** Your financial data is yours. `net-alpha` runs entirely locally. No cloud uploads, no tracking, no telemetry.
-- **🧪 Interactive Sell Simulator:** Planning a trade? Test it against your current holdings and recent buys in real-time using our beautiful terminal UI (TUI).
-- **🗣️ Natural Language Agent:** Ask questions about your tax positions using plain English (e.g., *"What is my total realized loss this year across all accounts?"*).
+- **🧪 Pre-Trade Simulation:** Planning a trade? Run `net-alpha sim` to see FIFO lot consumption, realized P&L, and a cross-account wash-sale verdict before you execute.
 
 ---
 
@@ -62,48 +61,36 @@ pip install wash-alpha
 
 ## 💻 Usage
 
-### 1. The Interactive Wizard
-The fastest way to get started. Just run `net-alpha` without arguments to launch the guided setup.
+### Import + check (the only command you usually run)
 
 ```bash
-net-alpha
+net-alpha schwab.csv --account personal
 ```
 
-### 2. Import Your Data
-Import your trade history from any broker. Our AI-powered engine will detect the schema automatically.
+This imports the CSV, recomputes wash sales over the affected window, and prints a watch list plus a year-to-date impact summary. Add `--detail` for a per-violation breakdown.
+
+### Pre-trade simulation
 
 ```bash
-net-alpha import schwab 2024_transactions.csv
-net-alpha import robinhood rh_2024.csv
+net-alpha sim TSLA 10 --price 180
 ```
 
-> [!TIP]  
-> **How AI Import Works:** On your first import, Claude analyzes your CSV headers and three *anonymized* sample rows to propose a mapping. Once confirmed, the mapping is cached locally. Future imports of the same format are **100% offline and instantaneous**.
+Lists every account that holds the ticker, with FIFO lot consumption, realized P&L, and a cross-account wash-sale verdict per account.
 
-### 3. Scan for Wash Sales
-Analyze your entire portfolio across all accounts in milliseconds.
+### Manage past imports
 
 ```bash
-net-alpha check
+net-alpha imports                # list
+net-alpha imports rm 3 --yes     # remove an import (recomputes wash sales)
 ```
 
-### 4. Simulate Before You Trade
-Use the real-time Terminal UI to simulate a trade, or use the CLI for a quick check.
+### Migrate from v0.x
 
 ```bash
-# Launch the interactive dashboard
-net-alpha tui
-
-# Or use the CLI directly
-net-alpha simulate sell TSLA 50 --price 185.50
+net-alpha migrate-from-v1 --yes
 ```
 
-### 5. Generate Tax Reports
-Export a tax-ready summary for your accountant or tax software.
-
-```bash
-net-alpha report --year 2024
-```
+Reads `~/.net_alpha/net_alpha.db` (v1 schema) and writes a fresh v2 DB at `~/.net_alpha/net_alpha.db.v2`. This helper exists only in the v2.0.x line.
 
 ---
 
@@ -120,6 +107,10 @@ net-alpha report --year 2024
 | **ETFs** | Sold ETF at a loss, bought ETF tracking the same index (e.g., `SPY` → `VOO`). | 🟠 **Unclear** |
 
 > **Custom ETF Matching:** You can easily add your own "substantially identical" security pairs (like custom ETFs) by editing `~/.net_alpha/etf_pairs.yaml`.
+
+**Supported brokers (v2.0):** Schwab.
+
+Other brokers can be added by contributing a parser at `src/net_alpha/brokers/<name>.py` — implement the `BrokerParser` Protocol and register it in `brokers/registry.py`.
 
 ---
 
