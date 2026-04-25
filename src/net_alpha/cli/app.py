@@ -44,7 +44,7 @@ app.add_typer(imports_app, name="imports", help="List or remove past imports.")
 @app.command(name="run", hidden=True, context_settings={"allow_interspersed_args": True})
 def run_cmd(
     csv_paths: list[Path] = typer.Argument(..., help="One or more broker CSV files"),
-    account: str = typer.Option(None, "--account", help="Required: account label"),
+    account: str | None = typer.Option(None, "--account", help="Required: account label"),
     detail: bool = typer.Option(False, "--detail", help="Show per-violation breakdown"),
 ):
     """Import one or more CSVs, run wash-sale detection, and render results."""

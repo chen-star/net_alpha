@@ -30,6 +30,7 @@ def remove_cmd(import_id: int, yes: bool) -> int:
     if result.recompute_window is not None:
         win_start, win_end = result.recompute_window
         window_trades = repo.trades_in_window(win_start, win_end)
+        # TODO(Task 16): replace etf_pairs={} with load_etf_pairs(...)
         new_violations = detect_in_window(window_trades, win_start, win_end, etf_pairs={}).violations
         repo.replace_violations_in_window(win_start, win_end, new_violations)
         typer.echo("Recomputed wash sales over affected window.")

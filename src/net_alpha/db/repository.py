@@ -283,26 +283,25 @@ class Repository:
                 )
             )
             for v in new_violations:
-                s.add(self._violation_to_row(v))
+                s.add(self._violation_to_row(s, v))
             s.commit()
 
-    def _violation_to_row(self, v: WashSaleViolation) -> WashSaleViolationRow:
+    def _violation_to_row(self, s: Session, v: WashSaleViolation) -> WashSaleViolationRow:
         # account_id resolution by display string ("schwab/personal")
-        with Session(self.engine) as s:
-            la = self._account_id_for_display(s, v.loss_account)
-            ba = self._account_id_for_display(s, v.buy_account)
-            return WashSaleViolationRow(
-                loss_trade_id=int(v.loss_trade_id),
-                replacement_trade_id=int(v.replacement_trade_id),
-                loss_account_id=la,
-                buy_account_id=ba,
-                loss_sale_date=v.loss_sale_date.isoformat(),
-                triggering_buy_date=v.triggering_buy_date.isoformat(),
-                ticker=v.ticker,
-                confidence=v.confidence,
-                disallowed_loss=v.disallowed_loss,
-                matched_quantity=v.matched_quantity,
-            )
+        la = self._account_id_for_display(s, v.loss_account)
+        ba = self._account_id_for_display(s, v.buy_account)
+        return WashSaleViolationRow(
+            loss_trade_id=int(v.loss_trade_id),
+            replacement_trade_id=int(v.replacement_trade_id),
+            loss_account_id=la,
+            buy_account_id=ba,
+            loss_sale_date=v.loss_sale_date.isoformat(),
+            triggering_buy_date=v.triggering_buy_date.isoformat(),
+            ticker=v.ticker,
+            confidence=v.confidence,
+            disallowed_loss=v.disallowed_loss,
+            matched_quantity=v.matched_quantity,
+        )
 
     def _account_id_for_display(self, s: Session, display: str) -> int:
         broker, label = display.split("/", 1)
