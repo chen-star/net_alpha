@@ -214,21 +214,25 @@ class Repository:
             rows = s.exec(select(LotRow)).all()
             return [self._row_to_lot(r, self._account_display_for_id(s, r.account_id)) for r in rows]
 
+    def _row_to_violation(self, s: Session, row: WashSaleViolationRow) -> WashSaleViolation:
+        return WashSaleViolation(
+            id=str(row.id),
+            loss_trade_id=str(row.loss_trade_id),
+            replacement_trade_id=str(row.replacement_trade_id),
+            confidence=row.confidence,
+            disallowed_loss=row.disallowed_loss,
+            matched_quantity=row.matched_quantity,
+            ticker=row.ticker,
+            loss_account=self._account_display_for_id(s, row.loss_account_id),
+            buy_account=self._account_display_for_id(s, row.buy_account_id),
+            loss_sale_date=date.fromisoformat(row.loss_sale_date),
+            triggering_buy_date=date.fromisoformat(row.triggering_buy_date),
+        )
+
     def all_violations(self) -> list[WashSaleViolation]:
         with Session(self.engine) as s:
             rows = s.exec(select(WashSaleViolationRow)).all()
-            return [
-                WashSaleViolation(
-                    id=str(r.id),
-                    loss_trade_id=str(r.loss_trade_id),
-                    replacement_trade_id=str(r.replacement_trade_id),
-                    confidence=r.confidence,
-                    disallowed_loss=r.disallowed_loss,
-                    matched_quantity=r.matched_quantity,
-                    ticker=r.ticker,
-                )
-                for r in rows
-            ]
+            return [self._row_to_violation(s, r) for r in rows]
 
     def violations_for_year(self, year: int) -> list[WashSaleViolation]:
         prefix = f"{year}-"
@@ -236,18 +240,7 @@ class Repository:
             rows = s.exec(
                 select(WashSaleViolationRow).where(WashSaleViolationRow.loss_sale_date.startswith(prefix))
             ).all()
-            return [
-                WashSaleViolation(
-                    id=str(r.id),
-                    loss_trade_id=str(r.loss_trade_id),
-                    replacement_trade_id=str(r.replacement_trade_id),
-                    confidence=r.confidence,
-                    disallowed_loss=r.disallowed_loss,
-                    matched_quantity=r.matched_quantity,
-                    ticker=r.ticker,
-                )
-                for r in rows
-            ]
+            return [self._row_to_violation(s, r) for r in rows]
 
     # --- Mutations ---
 

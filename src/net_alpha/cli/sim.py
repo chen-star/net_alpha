@@ -17,7 +17,7 @@ def run(ticker: str, qty: Decimal, price: Decimal, account_label: str | None) ->
     if account_label:
         accounts = [a for a in accounts if a.label == account_label]
         if not accounts:
-            typer.echo(f"Error: account schwab/{account_label} does not exist.", err=True)
+            typer.echo(f"Error: account with label '{account_label}' does not exist.", err=True)
             return 6
 
     options = simulate_sell(
