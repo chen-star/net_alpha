@@ -18,14 +18,22 @@ def repo(tmp_path):
 def _setup_one_violation(repo):
     a = repo.get_or_create_account("schwab", "personal")
     b = repo.get_or_create_account("schwab", "roth")
-    rec_a = ImportRecord(account_id=a.id, csv_filename="a.csv", csv_sha256="h",
-                         imported_at=datetime(2026, 4, 25), trade_count=0)
-    rec_b = ImportRecord(account_id=b.id, csv_filename="b.csv", csv_sha256="h",
-                         imported_at=datetime(2026, 4, 25), trade_count=0)
-    sell = Trade(account=a.display(), date=date(2024, 6, 1), ticker="TSLA",
-                 action="Sell", quantity=10, proceeds=1500.0, cost_basis=2000.0)
-    buy = Trade(account=b.display(), date=date(2024, 6, 5), ticker="TSLA",
-                action="Buy", quantity=10, cost_basis=1700.0)
+    rec_a = ImportRecord(
+        account_id=a.id, csv_filename="a.csv", csv_sha256="h", imported_at=datetime(2026, 4, 25), trade_count=0
+    )
+    rec_b = ImportRecord(
+        account_id=b.id, csv_filename="b.csv", csv_sha256="h", imported_at=datetime(2026, 4, 25), trade_count=0
+    )
+    sell = Trade(
+        account=a.display(),
+        date=date(2024, 6, 1),
+        ticker="TSLA",
+        action="Sell",
+        quantity=10,
+        proceeds=1500.0,
+        cost_basis=2000.0,
+    )
+    buy = Trade(account=b.display(), date=date(2024, 6, 5), ticker="TSLA", action="Buy", quantity=10, cost_basis=1700.0)
     repo.add_import(a, rec_a, [sell])
     repo.add_import(b, rec_b, [buy])
 

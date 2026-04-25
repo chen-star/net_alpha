@@ -333,5 +333,3 @@ class MetaRepository:
             self._session.add(row)
         else:
             self._session.add(MetaRow(key=key, value=value))
-
-

@@ -142,5 +142,3 @@ def test_detection_result():
     assert result.violations == []
     assert result.lots == []
     assert result.basis_unknown_count == 0
-
-

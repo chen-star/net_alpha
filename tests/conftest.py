@@ -44,5 +44,3 @@ class LotFactory(factory.Factory):
     quantity = 10.0
     cost_basis = 2400.0
     adjusted_basis = 2400.0
-
-
