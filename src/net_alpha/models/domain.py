@@ -52,6 +52,26 @@ class Trade(BaseModel):
             return self.cost_basis - self.proceeds
         return 0.0
 
+    def compute_natural_key(self) -> str:
+        """SHA256 over canonical fields used for idempotent re-import dedup."""
+        import hashlib
+
+        opt = ""
+        if self.option_details is not None:
+            o = self.option_details
+            opt = f"{o.strike}|{o.expiry.isoformat()}|{o.call_put}"
+        payload = "|".join([
+            self.account,
+            self.date.isoformat(),
+            self.ticker,
+            self.action,
+            str(self.quantity),
+            str(self.proceeds if self.proceeds is not None else ""),
+            str(self.cost_basis if self.cost_basis is not None else ""),
+            opt,
+        ])
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
 
 class Lot(BaseModel):
     """A buy lot with adjustable cost basis for wash sale tracking."""
