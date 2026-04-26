@@ -242,6 +242,38 @@ class Repository:
             ).all()
             return [self._row_to_violation(s, r) for r in rows]
 
+    def list_distinct_tickers(self) -> list[str]:
+        """All distinct tickers across all imported trades, sorted ascending."""
+        with Session(self.engine) as s:
+            rows = s.exec(select(TradeRow.ticker).distinct().order_by(TradeRow.ticker)).all()
+            return list(rows)
+
+    def get_trades_for_ticker(self, ticker: str) -> list[Trade]:
+        """All trades for a ticker, sorted by trade_date ascending."""
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(TradeRow).where(TradeRow.ticker == ticker).order_by(TradeRow.trade_date)
+            ).all()
+            return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
+    def get_lots_for_ticker(self, ticker: str) -> list[Lot]:
+        """Open lots for a ticker, sorted by trade_date ascending."""
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(LotRow).where(LotRow.ticker == ticker).order_by(LotRow.trade_date)
+            ).all()
+            return [self._row_to_lot(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
+    def get_violations_for_ticker(self, ticker: str) -> list[WashSaleViolation]:
+        """All violations for a ticker, sorted by loss_sale_date ascending."""
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(WashSaleViolationRow)
+                .where(WashSaleViolationRow.ticker == ticker)
+                .order_by(WashSaleViolationRow.loss_sale_date)
+            ).all()
+            return [self._row_to_violation(s, r) for r in rows]
+
     # --- Mutations ---
 
     def remove_import(self, import_id: int) -> RemoveImportResult:
