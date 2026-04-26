@@ -2,6 +2,34 @@
 
 
 
+## v0.15.1 (2026-04-26)
+
+### Fix
+
+* fix(web): polish Portfolio page — treemap, equity axes, table paging, KPI
+
+- Allocation treemap uses squarified algorithm for square-ish tiles;
+  adds 220px height, 2px gaps, layered labels, hover-detail tooltip,
+  and an &#34;OTHER&#34; bucket P/L that surfaces as unknown when every
+  rolled-up position is itself unpriced.
+- Equity curve gains $-labelled Y gridlines (always includes $0),
+  Jan-Dec X axis, sell-event dots, a tethered &#34;+ unrealized&#34; dot,
+  and per-point hover tooltips.
+- Position table gains 25-row HTMX paging, an Open / All toggle
+  (All adds period-closed positions tagged &#34;closed&#34;), and native
+  per-column tooltips that explain each calculation.
+- KPI grid gains &#34;Net P/L (Lifetime) = Lifetime Realized + Unrealized&#34;
+  in slot 6 plus tooltips on every existing card.
+- compute_kpis now returns partial sums when only some symbols are
+  unpriced (priced_market - priced_basis is correctly subset-scoped),
+  along with a missing_symbols list. The KPI fragment surfaces an
+  asterisk on each affected card and an amber footer naming the
+  unpriced tickers. Falls back to &#34;—&#34; only when every equity lot
+  is unpriced (true no-data).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f125d21`](https://github.com/chen-star/net_alpha/commit/f125d2116cae9b52160a048957a4537ffa00e933))
+
+
 ## v0.15.0 (2026-04-26)
 
 ### Chore
