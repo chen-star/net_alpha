@@ -69,3 +69,14 @@ class AgingLot:
     qty: Decimal
     acquired_on: date
     days_to_ltcg: int  # negative if already long-term (excluded by callers)
+
+
+@dataclass(frozen=True)
+class MonthlyPnl:
+    """One month's realized P&L for the calendar P&L ribbon."""
+
+    month: int  # 1..12
+    net_pl: Decimal  # gain - loss
+    gross_gain: Decimal  # sum of positive sell P&L
+    gross_loss: Decimal  # sum of |negative sell P&L| (positive number)
+    trade_count: int  # number of sell trades contributing
