@@ -6,12 +6,16 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from net_alpha.config import Settings
+from net_alpha.config import Settings, load_pricing_config
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.engine.etf_pairs import load_etf_pairs
+from net_alpha.output.disclaimer import price_source_line
 from net_alpha.output.disclaimer import render as disclaimer_render
-from net_alpha.web.routes import calendar, dashboard, detail, sim, system, ticker
+from net_alpha.pricing.cache import PriceCache
+from net_alpha.pricing.yahoo import YahooPriceProvider
+from net_alpha.web.routes import calendar, detail, sim, system, ticker
 from net_alpha.web.routes import imports as imports_routes
+from net_alpha.web.routes import portfolio as portfolio_routes
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -23,12 +27,20 @@ def create_app(settings: Settings) -> FastAPI:
     engine = get_engine(settings.db_path)
     init_db(engine)
 
+    pricing_config = load_pricing_config(settings.config_yaml_path)
+    app.state.pricing_config = pricing_config
+    app.state.price_provider = YahooPriceProvider() if pricing_config.source == "yahoo" else None
+    app.state.price_cache = PriceCache(engine, ttl_seconds=pricing_config.cache_ttl_seconds)
+
     static_dir = files("net_alpha.web") / "static"
     templates_dir = files("net_alpha.web") / "templates"
 
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     templates = Jinja2Templates(directory=str(templates_dir))
     templates.env.globals["disclaimer"] = disclaimer_render()
+    templates.env.globals["price_disclosure"] = (
+        price_source_line("Yahoo Finance") if pricing_config.enable_remote else ""
+    )
     app.state.templates = templates
 
     @app.get("/healthz")
@@ -36,11 +48,11 @@ def create_app(settings: Settings) -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(calendar.router)
-    app.include_router(dashboard.router)
     app.include_router(imports_routes.router)
     app.include_router(detail.router)
     app.include_router(sim.router)
     app.include_router(ticker.router)
+    app.include_router(portfolio_routes.router)
     app.include_router(system.router)
 
     system.register_error_handlers(app)

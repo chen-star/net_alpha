@@ -12,7 +12,7 @@
   <header class="bg-white border-b border-slate-200">
     <nav class="max-w-7xl mx-auto px-6 py-3 flex items-center gap-6">
       <a href="/" class="font-mono font-bold text-primary text-lg">net-alpha</a>
-      <a href="/" class="text-sm text-slate-700 hover:text-primary">Dashboard</a>
+      <a href="/" class="text-sm text-slate-700 hover:text-primary">Portfolio</a>
       <a href="/calendar" class="text-sm text-slate-700 hover:text-primary">Calendar</a>
       <a href="/imports" class="text-sm text-slate-700 hover:text-primary">Imports</a>
       <a href="/sim" class="text-sm text-slate-700 hover:text-primary">Sim</a>
@@ -28,6 +28,9 @@
     <div class="max-w-7xl mx-auto px-6 text-xs text-slate-500">
       {{ disclaimer }}
     </div>
+    {% if price_disclosure %}
+      <div class="text-xs text-slate-400 text-center mt-1">{{ price_disclosure }}</div>
+    {% endif %}
   </footer>
 </body>
 </html>

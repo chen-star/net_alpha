@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Portfolio · net-alpha{% endblock %}
+{% block content %}
+  <h1 class="text-2xl mb-4">Portfolio</h1>
+
+  {% if not imports %}
+    {% include "_portfolio_empty_state.html" %}
+  {% else %}
+    {% include "_portfolio_toolbar.html" %}
+
+    <div id="portfolio-kpis"
+         hx-get="/portfolio/kpis?period={{ selected_period }}&account={{ selected_account }}"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         class="mt-4"></div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+      <div id="portfolio-treemap"
+           hx-get="/portfolio/treemap?account={{ selected_account }}"
+           hx-trigger="load"
+           hx-swap="innerHTML"
+           class="kpi-card"></div>
+      <div id="portfolio-equity"
+           hx-get="/portfolio/equity-curve?period={{ selected_period }}&account={{ selected_account }}"
+           hx-trigger="load"
+           hx-swap="innerHTML"
+           class="kpi-card"></div>
+      <div id="portfolio-wash"
+           hx-get="/portfolio/wash-impact?period={{ selected_period }}&account={{ selected_account }}"
+           hx-trigger="load"
+           hx-swap="innerHTML"
+           class="kpi-card"></div>
+      <div id="portfolio-aging"
+           hx-get="/portfolio/lot-aging?account={{ selected_account }}"
+           hx-trigger="load"
+           hx-swap="innerHTML"
+           class="kpi-card"></div>
+    </div>
+
+    <div id="portfolio-positions"
+         hx-get="/portfolio/positions?period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         class="mt-6"></div>
+  {% endif %}
+{% endblock %}

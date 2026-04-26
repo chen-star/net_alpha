@@ -1,0 +1,19 @@
+<div class="text-xs text-slate-500 uppercase mb-1">Allocation</div>
+{% if not tiles %}
+  <div class="text-sm text-slate-400">No priced positions.</div>
+{% else %}
+  <div class="relative" style="height:160px">
+    {% for t in tiles %}
+      <div class="absolute text-white text-xs p-1 overflow-hidden rounded"
+           style="left:{{ '%.2f'|format(t.x_pct) }}%; top:{{ '%.2f'|format(t.y_pct) }}%;
+                  width:{{ '%.2f'|format(t.width_pct) }}%; height:{{ '%.2f'|format(t.height_pct) }}%;
+                  background-color: {% if t.unrealized_pl is none %}#64748b
+                                    {% elif t.unrealized_pl > 0 %}#16a34a
+                                    {% elif t.unrealized_pl < 0 %}#dc2626
+                                    {% else %}#64748b{% endif %};">
+        <div class="font-mono">{{ t.symbol }}</div>
+        <div class="text-[10px] opacity-80">${{ "%.0f"|format(t.market_value|float) }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

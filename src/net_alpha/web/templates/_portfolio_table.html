@@ -1,0 +1,49 @@
+{% if not rows %}
+  <div class="kpi-card text-slate-500 text-sm">No open positions.</div>
+{% else %}
+  <table class="w-full text-sm bg-white rounded-lg shadow-sm border border-slate-200">
+    <thead class="text-left text-xs text-slate-500 uppercase border-b border-slate-200">
+      <tr>
+        <th class="px-3 py-2">Symbol</th>
+        <th class="px-3 py-2">Accounts</th>
+        <th class="px-3 py-2 text-right">Qty</th>
+        <th class="px-3 py-2 text-right">Mkt $</th>
+        <th class="px-3 py-2 text-right">Open Cost</th>
+        <th class="px-3 py-2 text-right">Avg Basis</th>
+        <th class="px-3 py-2 text-right">Cash Sunk/sh</th>
+        <th class="px-3 py-2 text-right">{{ period_label }} Realized</th>
+        <th class="px-3 py-2 text-right">Unrealized</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr class="row-hover border-b border-slate-100 last:border-b-0 cursor-pointer"
+            onclick="window.location='/ticker/{{ r.symbol }}'">
+          <td class="px-3 py-2 font-mono">{{ r.symbol }}</td>
+          <td class="px-3 py-2 text-xs text-slate-500">
+            {% if r.accounts|length <= 3 %}
+              {{ r.accounts|join(' · ') }}
+            {% else %}
+              {{ r.accounts[0] }} +{{ r.accounts|length - 1 }} more
+            {% endif %}
+          </td>
+          <td class="px-3 py-2 font-mono text-right">{{ "%.4f"|format(r.qty|float) }}</td>
+          <td class="px-3 py-2 font-mono text-right">
+            {% if r.market_value is none %}<span class="text-slate-400">—</span>
+            {% else %}${{ "%.2f"|format(r.market_value|float) }}{% endif %}
+          </td>
+          <td class="px-3 py-2 font-mono text-right">${{ "%.2f"|format(r.open_cost|float) }}</td>
+          <td class="px-3 py-2 font-mono text-right">${{ "%.2f"|format(r.avg_basis|float) }}</td>
+          <td class="px-3 py-2 font-mono text-right">${{ "%.2f"|format(r.cash_sunk_per_share|float) }}</td>
+          <td class="px-3 py-2 font-mono text-right {% if r.realized_pl < 0 %}text-confirmed{% elif r.realized_pl > 0 %}text-emerald-600{% endif %}">
+            {% if r.realized_pl != 0 %}{% if r.realized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.realized_pl|float|abs) }}{% else %}—{% endif %}
+          </td>
+          <td class="px-3 py-2 font-mono text-right {% if r.unrealized_pl is not none and r.unrealized_pl < 0 %}text-confirmed{% elif r.unrealized_pl is not none and r.unrealized_pl > 0 %}text-emerald-600{% endif %}">
+            {% if r.unrealized_pl is none %}<span class="text-slate-400">—</span>
+            {% else %}{% if r.unrealized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.unrealized_pl|float|abs) }}{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}

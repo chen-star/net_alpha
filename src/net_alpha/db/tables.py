@@ -118,3 +118,13 @@ class RealizedGLLotRow(SQLModel, table=True):
     option_call_put: str | None = None
 
     natural_key: str = Field(unique=True, index=True)
+
+
+class PriceCacheRow(SQLModel, table=True):
+    __tablename__ = "price_cache"
+
+    symbol: str = Field(primary_key=True)
+    price: float
+    as_of: str  # ISO 8601 timestamp from provider
+    fetched_at: str  # ISO 8601 UTC timestamp; TTL check performed by cache.py
+    source: str  # e.g. "yahoo"
