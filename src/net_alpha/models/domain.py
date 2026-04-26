@@ -210,3 +210,26 @@ class SimulationOption(BaseModel):
     confidence: str  # "Confirmed" | "Probable" | "Unclear" | "N/A"
     insufficient_shares: bool
     available_shares: Decimal
+
+
+class SimBuyMatch(BaseModel):
+    """One pre-existing loss sale that the proposed buy would wash-trigger."""
+
+    loss_trade_id: str
+    loss_sale_date: date
+    loss_account: str
+    loss_ticker: str
+    matched_quantity: Decimal
+    disallowed_loss: Decimal
+    confidence: str  # "Confirmed" | "Probable" | "Unclear"
+
+
+class SimulationBuyOption(BaseModel):
+    """One scenario in `sim`'s buy output: 'buy in this account'."""
+
+    account: Account
+    matches: list[SimBuyMatch]
+    total_disallowed: Decimal
+    proposed_basis: Decimal       # qty * price (raw cost basis pre-adjustment)
+    adjusted_basis: Decimal       # proposed_basis + total_disallowed
+    clean: bool                   # True iff matches == []
