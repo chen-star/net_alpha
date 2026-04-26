@@ -1,0 +1,44 @@
+{# Inputs:
+    rows: list[LossCloseRow]
+    window_days: int (default 30) #}
+{% set window = window_days|default(30) %}
+
+<div class="panel-head">
+  <h4>Wash-sale watch</h4>
+  <span class="meta">
+    Loss closes in the last {{ window }} days · don't buy back ·
+    {{ rows|length }} symbol{% if rows|length != 1 %}s{% endif %}
+  </span>
+</div>
+
+{% if not rows %}
+  <div class="text-label-2 text-[13px] py-3">All clear · no loss closes in the last {{ window }} days.</div>
+{% else %}
+  <div class="flex flex-col">
+    {% for r in rows %}
+      {% if r.days_to_safe >= 21 %}{% set cd_class = 'text-neg' %}
+      {% elif r.days_to_safe >= 7 %}{% set cd_class = 'text-warn' %}
+      {% else %}{% set cd_class = 'text-pos' %}{% endif %}
+      {% set fill_pct = (r.days_since / window * 100)|round(0, 'common') %}
+      <div class="grid items-center gap-[14px] py-[9px] text-[13px]"
+           style="grid-template-columns: 90px 90px 1fr 110px; border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+        <div class="flex items-center gap-2 font-semibold tracking-tightish">
+          <span style="width:6px; height:6px; border-radius:50%; background:#FF453A; box-shadow: 0 0 6px #FF453A;"></span>
+          {{ r.symbol }}
+        </div>
+        <div class="num text-neg text-[12px] font-medium">−${{ "%.2f"|format(r.loss_amount|float) }}</div>
+        <div class="flex items-center gap-[10px]">
+          <span class="text-[11px] text-label-2 num min-w-[80px]">closed {{ r.days_since }}d ago</span>
+          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: rgba(255,255,255,0.06);">
+            <div style="width: {{ fill_pct }}%; height: 100%;
+                        background: linear-gradient(90deg, #FF453A 0%, #FF9F0A 70%, #30D158 100%);
+                        border-radius: 999px;"></div>
+          </div>
+        </div>
+        <div class="text-right num text-[13px] font-semibold {{ cd_class }}">
+          {{ r.days_to_safe }}d <small class="text-[10px] text-label-3 font-normal ml-1">to safe</small>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
