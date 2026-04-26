@@ -11,6 +11,7 @@ from net_alpha.db.tables import (
     ImportRecordRow,
     LotRow,
     MetaRow,
+    RealizedGLLotRow,
     TradeRow,
     WashSaleViolationRow,
 )
@@ -25,6 +26,7 @@ from net_alpha.models.domain import (
     Trade,
     WashSaleViolation,
 )
+from net_alpha.models.realized_gl import RealizedGLLot
 
 
 class Repository:
@@ -162,6 +164,7 @@ class Repository:
             proceeds=row.proceeds,
             cost_basis=row.cost_basis,
             basis_unknown=row.basis_unknown,
+            basis_source=row.basis_source,
             option_details=opt,
         )
 
@@ -364,6 +367,133 @@ class Repository:
         if row is None:
             raise RuntimeError(f"no account row for {display!r}")
         return row.id
+
+    # ----- Realized G/L methods (schema v2) -----
+
+    def add_gl_lots(self, account: Account, import_id: int, lots: list[RealizedGLLot]) -> int:
+        """Insert G/L lots, deduplicated on natural_key. Returns count of new rows."""
+        if account.id is None:
+            raise ValueError("Account must have an id")
+        inserted = 0
+        with Session(self.engine) as s:
+            existing = set(
+                s.exec(select(RealizedGLLotRow.natural_key).where(RealizedGLLotRow.account_id == account.id)).all()
+            )
+            for lot in lots:
+                key = lot.compute_natural_key()
+                if key in existing:
+                    continue
+                row = RealizedGLLotRow(
+                    import_id=import_id,
+                    account_id=account.id,
+                    symbol_raw=lot.symbol_raw,
+                    ticker=lot.ticker,
+                    closed_date=lot.closed_date.isoformat(),
+                    opened_date=lot.opened_date.isoformat(),
+                    quantity=lot.quantity,
+                    proceeds=lot.proceeds,
+                    cost_basis=lot.cost_basis,
+                    unadjusted_cost_basis=lot.unadjusted_cost_basis,
+                    wash_sale=lot.wash_sale,
+                    disallowed_loss=lot.disallowed_loss,
+                    term=lot.term,
+                    option_strike=lot.option_strike,
+                    option_expiry=lot.option_expiry,
+                    option_call_put=lot.option_call_put,
+                    natural_key=key,
+                )
+                s.add(row)
+                existing.add(key)
+                inserted += 1
+            s.commit()
+        return inserted
+
+    def get_gl_lots_for_match(self, *, account_id: int, symbol_raw: str, closed_date: date) -> list[RealizedGLLot]:
+        """All G/L lots in this account that match a Sell trade by symbol+closed_date."""
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(RealizedGLLotRow).where(
+                    RealizedGLLotRow.account_id == account_id,
+                    RealizedGLLotRow.symbol_raw == symbol_raw,
+                    RealizedGLLotRow.closed_date == closed_date.isoformat(),
+                )
+            ).all()
+            account_display = self._account_display_for_id(s, account_id)
+        return [self._row_to_gl_lot(r, account_display) for r in rows]
+
+    def get_gl_lots_for_ticker(self, account_id: int, ticker: str) -> list[RealizedGLLot]:
+        """All G/L lots for a ticker in this account, sorted by closed_date."""
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(RealizedGLLotRow)
+                .where(
+                    RealizedGLLotRow.account_id == account_id,
+                    RealizedGLLotRow.ticker == ticker,
+                )
+                .order_by(RealizedGLLotRow.closed_date)
+            ).all()
+            account_display = self._account_display_for_id(s, account_id)
+        return [self._row_to_gl_lot(r, account_display) for r in rows]
+
+    def _row_to_gl_lot(self, row: RealizedGLLotRow, account_display: str) -> RealizedGLLot:
+        return RealizedGLLot(
+            account_display=account_display,
+            symbol_raw=row.symbol_raw,
+            ticker=row.ticker,
+            closed_date=date.fromisoformat(row.closed_date),
+            opened_date=date.fromisoformat(row.opened_date),
+            quantity=row.quantity,
+            proceeds=row.proceeds,
+            cost_basis=row.cost_basis,
+            unadjusted_cost_basis=row.unadjusted_cost_basis,
+            wash_sale=row.wash_sale,
+            disallowed_loss=row.disallowed_loss,
+            term=row.term,
+            option_strike=row.option_strike,
+            option_expiry=row.option_expiry,
+            option_call_put=row.option_call_put,
+        )
+
+    # ----- Stitch helpers (schema v2) -----
+
+    def get_sells_for_account(self, account_id: int) -> list[Trade]:
+        """All Sell trades in this account. Used by stitch as input set."""
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(TradeRow).where(
+                    TradeRow.account_id == account_id,
+                    TradeRow.action == "Sell",
+                )
+            ).all()
+            account_display = self._account_display_for_id(s, account_id)
+        return [self._row_to_trade(r, account_display) for r in rows]
+
+    def get_buys_before_date(self, *, account_id: int, ticker: str, before_date: date) -> list[Trade]:
+        """Buy trades in this account+ticker on or before `before_date`, oldest first."""
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(TradeRow)
+                .where(
+                    TradeRow.account_id == account_id,
+                    TradeRow.ticker == ticker,
+                    TradeRow.action == "Buy",
+                    TradeRow.trade_date <= before_date.isoformat(),
+                )
+                .order_by(TradeRow.trade_date)
+            ).all()
+            account_display = self._account_display_for_id(s, account_id)
+        return [self._row_to_trade(r, account_display) for r in rows]
+
+    def update_trade_basis(self, trade_id: str, cost_basis: float | None, basis_source: str) -> None:
+        """Persist hydrated cost_basis and basis_source on a Trade row."""
+        with Session(self.engine) as s:
+            row = s.exec(select(TradeRow).where(TradeRow.id == int(trade_id))).first()
+            if row is None:
+                raise LookupError(f"Trade id {trade_id} not found")
+            row.cost_basis = cost_basis
+            row.basis_source = basis_source
+            s.add(row)
+            s.commit()
 
 
 # ---------------------------------------------------------------------------
