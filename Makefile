@@ -31,3 +31,8 @@ vendor-fonts:
 	curl -sSL -o src/net_alpha/web/static/fonts/Inter-Bold.woff2     https://rsms.me/inter/font-files/Inter-Bold.woff2
 	curl -sSL -o src/net_alpha/web/static/fonts/JetBrainsMono-Regular.woff2 https://github.com/JetBrains/JetBrainsMono/raw/master/fonts/webfonts/JetBrainsMono-Regular.woff2
 	curl -sSL -o src/net_alpha/web/static/fonts/JetBrainsMono-Medium.woff2  https://github.com/JetBrains/JetBrainsMono/raw/master/fonts/webfonts/JetBrainsMono-Medium.woff2
+
+vendor-apex:
+	@mkdir -p src/net_alpha/web/static/vendor/apexcharts
+	curl -sSL -o src/net_alpha/web/static/vendor/apexcharts/apexcharts.min.js  https://cdn.jsdelivr.net/npm/apexcharts@3.51.0/dist/apexcharts.min.js
+	curl -sSL -o src/net_alpha/web/static/vendor/apexcharts/apexcharts.min.css https://cdn.jsdelivr.net/npm/apexcharts@3.51.0/dist/apexcharts.min.css
