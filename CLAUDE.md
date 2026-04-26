@@ -95,6 +95,11 @@ Bundled in `etf_pairs.yaml` (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, et
 - Schema versioning via `meta` table (`schema_version` integer); hand-written `ALTER TABLE` migrations — no migration framework
 - Wash sale recompute is incremental: only the ±30-day window around affected trade dates is recalculated on import or import removal
 
+### Pricing & Portfolio modules
+
+- Pricing subsystem: `pricing/` — PriceProvider ABC, YahooPriceProvider, SQLite-backed PriceCache, PricingService orchestrator.
+- Portfolio aggregations: `portfolio/` — pure functions for positions, KPIs, treemap, equity curve, lot aging.
+
 ### Web UI (optional, v2.1+)
 
 `src/net_alpha/web/` is an optional FastAPI subpackage providing a local browser UI. It only calls existing public seams (`Repository`, engine functions, `csv_loader`, `BrokerParser`) — **no business logic in `web/`**. Templates use Jinja with HTMX for fragment swaps and Alpine for tiny client state. Static assets (htmx, alpine, built `app.css`) are vendored under `web/static/` — no CDN at runtime, no node, no npm.
@@ -102,6 +107,10 @@ Bundled in `etf_pairs.yaml` (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, et
 Launch with `net-alpha ui`. Binds to loopback only, dies on Ctrl-C. UI deps are in the `[ui]` optional group; install with `uv sync --extra ui`.
 
 Tailwind CSS rebuild: `make build-css` (uses `pytailwindcss` from dev extras).
+
+### Web UI conventions
+
+Each scoped page uses a top-of-page toolbar: `Period` (YTD / specific year / Lifetime) + `Account` (All / per-account). State is per-page (not global). Heavy panels load lazily as HTMX fragments under stable IDs.
 
 ### Disclaimer Policy
 
@@ -119,7 +128,14 @@ No exceptions. Not skippable.
 
 ## Data Privacy Constraints
 
-All trade data stays local. There are no remote calls. No telemetry.
+All trade data stays local. No telemetry.
+
+### Price data (Phase 1+)
+
+Symbols are sent to Yahoo Finance to fetch current quotes for the Portfolio
+page. Trade data, accounts, P&L, and any other personally-identifying data
+never leave the box. Disable price fetches by setting
+`prices.enable_remote: false` in `~/.net_alpha/config.yaml`.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
