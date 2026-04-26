@@ -52,8 +52,14 @@ def calendar_page(
         }
         for v in violations
     ]
-    years = sorted({v.loss_sale_date.year for v in all_v if v.loss_sale_date}) or [today.year]
     pl_trades = repo.all_trades()
+    # Year list spans every year with trade or violation activity, plus the
+    # current year — the dropdown should never miss the year the user is
+    # actively trading in (the ribbon header derives from selected_year).
+    year_set = {v.loss_sale_date.year for v in all_v if v.loss_sale_date}
+    year_set.update(t.date.year for t in pl_trades)
+    year_set.add(today.year)
+    years = sorted(year_set, reverse=True)
     if ticker:
         pl_trades = [t for t in pl_trades if t.ticker == ticker.upper()]
     monthly_pl = monthly_realized_pl(
