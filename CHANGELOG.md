@@ -2,6 +2,36 @@
 
 
 
+## v0.12.1 (2026-04-26)
+
+### Chore
+
+* chore: sync uv.lock to v0.12.0 ([`c50b56d`](https://github.com/chen-star/net_alpha/commit/c50b56d92d0efd343445a54af492e5a8154868bc))
+
+* chore: sync uv.lock with v0.11.0 release version bump
+
+After pulling the v0.11.0 release commit, uv sync re-generated the lock
+to reflect wash-alpha&#39;s new version.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`deb44bf`](https://github.com/chen-star/net_alpha/commit/deb44bfb750264ca7878a24769c18fb125f65e8c))
+
+### Fix
+
+* fix(web): drop zone — include #csv-input in HTMX request
+
+The drop-zone div is not a &lt;form&gt;, so HTMX did not auto-include the file
+input when posting to /imports/preview, causing FastAPI to return 422
+Unprocessable Entity (missing &#39;files&#39; field). Adding hx-include=&#34;#csv-input&#34;
+explicitly tells HTMX to serialize that input into the request body.
+
+Web tests pass (42/42) — they don&#39;t catch this because they POST directly
+without going through HTMX. ([`8ec2bef`](https://github.com/chen-star/net_alpha/commit/8ec2bef20296a99b0f049cb18a55c5645a0d51ba))
+
+### Unknown
+
+* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`f8e1ce8`](https://github.com/chen-star/net_alpha/commit/f8e1ce817a68c5dc7444dab13df323391416cb81))
+
+
 ## v0.12.0 (2026-04-26)
 
 ### Chore
