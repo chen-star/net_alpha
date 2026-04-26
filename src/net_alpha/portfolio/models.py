@@ -17,7 +17,7 @@ class PositionRow:
     accounts: tuple[str, ...]
     qty: Decimal
     market_value: Decimal | None       # None when no price is available
-    open_cost: Decimal                  # sum of (open_qty × adjusted_basis)
+    open_cost: Decimal                  # sum of adjusted_basis across open lots
     avg_basis: Decimal                  # open_cost / qty (formula C)
     cash_sunk_per_share: Decimal        # (buys − sells − option_premium) / qty (formula A)
     realized_pl: Decimal                # period-scoped
