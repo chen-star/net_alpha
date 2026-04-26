@@ -172,6 +172,7 @@ class ImportSummary(BaseModel):
     csv_filename: str
     trade_count: int
     imported_at: datetime
+    gl_lot_count: int = 0
 
 
 class LotConsumption(BaseModel):

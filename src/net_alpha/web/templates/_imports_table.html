@@ -9,6 +9,7 @@
         <th class="px-3 py-2">Account</th>
         <th class="px-3 py-2">Filename</th>
         <th class="px-3 py-2">Trades</th>
+        <th class="px-3 py-2">G/L lots</th>
         <th class="px-3 py-2">Actions</th>
       </tr>
     </thead>
@@ -20,10 +21,11 @@
           <td class="px-3 py-2">{{ imp.account_display }}</td>
           <td class="px-3 py-2">{{ imp.csv_filename }}</td>
           <td class="px-3 py-2 font-mono">{{ imp.trade_count }}</td>
+          <td class="px-3 py-2 font-mono">{{ imp.gl_lot_count or "—" }}</td>
           <td class="px-3 py-2">
             <button class="btn-ghost text-confirmed border-confirmed/30"
                     hx-delete="/imports/{{ imp.id }}"
-                    hx-confirm="Remove import #{{ imp.id }} ({{ imp.trade_count }} trades)? Wash sales will be recomputed."
+                    hx-confirm="Remove import #{{ imp.id }} ({{ imp.trade_count }} trades, {{ imp.gl_lot_count }} G/L lots)? Wash sales will be recomputed."
                     hx-target="#imports-table"
                     hx-swap="innerHTML">
               Remove

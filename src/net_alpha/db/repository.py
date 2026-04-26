@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from sqlalchemy import func
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
@@ -66,16 +67,22 @@ class Repository:
                 .join(AccountRow, AccountRow.id == ImportRecordRow.account_id)
                 .order_by(ImportRecordRow.imported_at.desc())
             )
-            return [
-                ImportSummary(
-                    id=ir.id,
-                    account_display=f"{a.broker}/{a.label}",
-                    csv_filename=ir.csv_filename,
-                    trade_count=ir.trade_count,
-                    imported_at=ir.imported_at,
+            out: list[ImportSummary] = []
+            for ir, a in s.exec(stmt).all():
+                gl_count = s.exec(
+                    select(func.count(RealizedGLLotRow.id)).where(RealizedGLLotRow.import_id == ir.id)
+                ).one()
+                out.append(
+                    ImportSummary(
+                        id=ir.id,
+                        account_display=f"{a.broker}/{a.label}",
+                        csv_filename=ir.csv_filename,
+                        trade_count=ir.trade_count,
+                        imported_at=ir.imported_at,
+                        gl_lot_count=int(gl_count or 0),
+                    )
                 )
-                for ir, a in s.exec(stmt).all()
-            ]
+            return out
 
     def get_import(self, import_id: int) -> ImportRecord | None:
         with Session(self.engine) as s:
