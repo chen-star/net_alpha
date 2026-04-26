@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · net-alpha{% endblock %}
+{% block content %}
+  <h1 class="text-2xl mb-4">Dashboard</h1>
+
+  {% if not imports %}
+    <div class="kpi-card text-center text-slate-500 py-12">
+      <p class="text-lg mb-2">No imports yet</p>
+      <p class="text-sm">Drop your first CSV to get started.</p>
+    </div>
+    <h2 class="text-xl mt-8 mb-3">Watch list</h2>
+    <div class="kpi-card text-slate-500 text-sm">No violations detected.</div>
+  {% else %}
+    {% include "_ytd_impact.html" %}
+    <h2 class="text-xl mt-8 mb-3">Watch list</h2>
+    {% include "_watch_list.html" %}
+  {% endif %}
+{% endblock %}

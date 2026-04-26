@@ -24,7 +24,7 @@ def test_root_renders_base_html_with_disclaimer(tmp_path):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "<!DOCTYPE html>" in resp.text
-    assert "net-alpha" in resp.text
+    assert "Dashboard" in resp.text
     assert "Consult a tax professional" in resp.text
 
 
