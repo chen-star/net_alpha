@@ -29,7 +29,7 @@ def test_dashboard_shows_watch_list_after_import(client, repo, builders):
     repo.replace_violations_in_window(win_start, win_end, result.violations)
     repo.replace_lots_in_window(win_start, win_end, result.lots)
 
-    resp = client.get("/")
+    resp = client.get("/?year=all")
     assert resp.status_code == 200
     assert "TSLA" in resp.text
     assert "schwab/personal" in resp.text

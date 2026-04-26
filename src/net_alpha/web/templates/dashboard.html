@@ -14,7 +14,24 @@
     <div class="kpi-card text-slate-500 text-sm">No violations detected.</div>
   {% else %}
     {% include "_ytd_impact.html" %}
-    <h2 class="text-xl mt-8 mb-3">Watch list</h2>
+    <div class="flex items-baseline justify-between mt-8 mb-3">
+      <h2 class="text-xl">Watch list</h2>
+      {% if available_years %}
+        <form method="get" action="/" class="text-sm">
+          <label for="year-filter" class="text-slate-500 mr-2">Period:</label>
+          <select id="year-filter" name="year"
+                  onchange="this.form.submit()"
+                  class="border border-slate-300 rounded px-2 py-1 bg-white cursor-pointer">
+            {% for y in available_years %}
+              <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>
+                {{ y }}{% if y == current_year %} (current){% endif %}
+              </option>
+            {% endfor %}
+            <option value="all" {% if selected_year is none %}selected{% endif %}>All time</option>
+          </select>
+        </form>
+      {% endif %}
+    </div>
     {% include "_watch_list.html" %}
   {% endif %}
 {% endblock %}
