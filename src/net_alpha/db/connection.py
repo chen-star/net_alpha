@@ -15,7 +15,14 @@ def get_engine(db_path: Path):
 
 
 def init_db(engine) -> None:
-    """Create all tables (idempotent) and run pending migrations."""
+    """Create all tables (idempotent), run pending migrations, and backfill
+    aggregate columns on legacy import rows."""
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         migrate(session)
+    # Backfill must run after migrate so the v4 columns exist; uses its own
+    # sessions internally via Repository.
+    from net_alpha.db.repository import Repository
+    from net_alpha.import_.backfill import backfill_import_aggregates
+
+    backfill_import_aggregates(Repository(engine))
