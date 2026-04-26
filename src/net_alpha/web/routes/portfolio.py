@@ -108,11 +108,22 @@ def portfolio_kpis(
         period=period_tuple,
         account=account or None,
     )
+    wi = compute_wash_impact(
+        violations=repo.all_violations(),
+        period_label=period_label,
+        period=period_tuple,
+        account=account or None,
+    )
     snap = svc.last_snapshot()
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_kpis.html",
-        {"kpis": kpis, "snapshot": snap},
+        {
+            "kpis": kpis,
+            "snapshot": snap,
+            "wash_impact_total": wi.disallowed_total,
+            "wash_violations": wi.violation_count,
+        },
     )
 
 
