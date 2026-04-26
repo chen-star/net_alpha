@@ -41,7 +41,7 @@ def test_aggregates_only_sells_in_target_year():
     trades = [
         _sell(dt.date(2026, 3, 5), proceeds=1500, cost=1000),  # gain 500 in Mar
         _sell(dt.date(2025, 3, 5), proceeds=1500, cost=1000),  # different year — skipped
-        _buy(dt.date(2026, 3, 5)),                              # buys ignored
+        _buy(dt.date(2026, 3, 5)),  # buys ignored
     ]
     out = monthly_realized_pl(trades=trades, year=2026, ticker=None, account=None)
     march = next(m for m in out if m.month == 3)
@@ -57,7 +57,7 @@ def test_aggregates_only_sells_in_target_year():
 def test_mixed_month_splits_gain_and_loss():
     trades = [
         _sell(dt.date(2026, 4, 1), proceeds=1500, cost=1000),  # +500
-        _sell(dt.date(2026, 4, 2), proceeds=800, cost=1200),   # -400
+        _sell(dt.date(2026, 4, 2), proceeds=800, cost=1200),  # -400
     ]
     out = monthly_realized_pl(trades=trades, year=2026, ticker=None, account=None)
     apr = next(m for m in out if m.month == 4)
@@ -92,10 +92,24 @@ def test_account_filter_drops_other_accounts():
 def test_trades_with_missing_proceeds_or_cost_skipped():
     trades = [
         _sell(dt.date(2026, 7, 1), proceeds=1500, cost=1000),
-        Trade(account="Tax", date=dt.date(2026, 7, 2), ticker="SPY", action="Sell",
-              quantity=10.0, proceeds=None, cost_basis=1000.0),
-        Trade(account="Tax", date=dt.date(2026, 7, 3), ticker="SPY", action="Sell",
-              quantity=10.0, proceeds=1500.0, cost_basis=None),
+        Trade(
+            account="Tax",
+            date=dt.date(2026, 7, 2),
+            ticker="SPY",
+            action="Sell",
+            quantity=10.0,
+            proceeds=None,
+            cost_basis=1000.0,
+        ),
+        Trade(
+            account="Tax",
+            date=dt.date(2026, 7, 3),
+            ticker="SPY",
+            action="Sell",
+            quantity=10.0,
+            proceeds=1500.0,
+            cost_basis=None,
+        ),
     ]
     out = monthly_realized_pl(trades=trades, year=2026, ticker=None, account=None)
     jul = next(m for m in out if m.month == 7)
@@ -106,7 +120,7 @@ def test_trades_with_missing_proceeds_or_cost_skipped():
 def test_year_boundary_dec31_jan1():
     trades = [
         _sell(dt.date(2026, 12, 31), proceeds=1500, cost=1000),  # last day — included
-        _sell(dt.date(2027, 1, 1), proceeds=1500, cost=1000),    # next year — excluded
+        _sell(dt.date(2027, 1, 1), proceeds=1500, cost=1000),  # next year — excluded
     ]
     out = monthly_realized_pl(trades=trades, year=2026, ticker=None, account=None)
     dec = next(m for m in out if m.month == 12)

@@ -73,6 +73,7 @@ def test_calendar_focus_404_for_unknown_id(client):
 
 def test_calendar_renders_monthly_pl_ribbon(client, repo, builders):
     from datetime import date
+
     trades = [
         builders.make_sell("schwab/personal", "AAPL", date(2026, 3, 5), qty=10, proceeds=1500, cost=1000),
         builders.make_sell("schwab/personal", "AAPL", date(2026, 5, 12), qty=10, proceeds=800, cost=1200),

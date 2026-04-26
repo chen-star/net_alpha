@@ -15,11 +15,7 @@ def _build_v3_db(db_path: Path):
     eng = create_engine(f"sqlite:///{db_path}", echo=False)
     with Session(eng) as s:
         s.exec(text("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)"))
-        s.exec(
-            text(
-                "CREATE TABLE accounts (id INTEGER PRIMARY KEY, broker TEXT, label TEXT)"
-            )
-        )
+        s.exec(text("CREATE TABLE accounts (id INTEGER PRIMARY KEY, broker TEXT, label TEXT)"))
         s.exec(
             text(
                 "CREATE TABLE imports ("
@@ -56,9 +52,7 @@ def test_v3_to_v4_adds_columns_and_bumps_version(tmp_path: Path):
         ]:
             assert col in cols, f"missing column: {col}"
         # Existing row preserved with NULL aggregates.
-        row = s.exec(
-            text("SELECT min_trade_date, equity_count FROM imports WHERE id = 1")
-        ).first()
+        row = s.exec(text("SELECT min_trade_date, equity_count FROM imports WHERE id = 1")).first()
         assert row[0] is None
         assert row[1] is None
 
