@@ -1,0 +1,26 @@
+<div x-data="{
+        dragOver: false,
+        async openModal(file) {
+          const fd = new FormData();
+          fd.append('file', file);
+          const resp = await fetch('/imports/preview', { method: 'POST', body: fd });
+          const html = await resp.text();
+          const modal = document.getElementById('import-modal');
+          modal.innerHTML = html;
+          modal.classList.remove('hidden');
+        }
+     }"
+     @dragover.prevent="dragOver = true"
+     @dragleave.prevent="dragOver = false"
+     @drop.prevent="dragOver = false; if ($event.dataTransfer.files.length) openModal($event.dataTransfer.files[0])"
+     :class="dragOver ? 'border-primary bg-blue-50' : 'border-slate-300 bg-white'"
+     class="border-2 border-dashed rounded-lg p-8 text-center mb-6 transition-colors duration-200 cursor-pointer"
+     onclick="document.getElementById('file-input').click()">
+  <p class="text-slate-700 mb-1">Drop CSV here or <span class="text-primary underline">click to browse</span></p>
+  <p class="text-xs text-slate-500">Schwab CSV format · max 50 MB</p>
+  <input id="file-input" type="file" accept=".csv" class="hidden"
+         @change="if ($event.target.files.length) openModal($event.target.files[0])"/>
+</div>
+
+<div id="import-modal" class="hidden fixed inset-0 bg-black/40 z-40 flex items-center justify-center"
+     onclick="this.classList.add('hidden')"></div>
