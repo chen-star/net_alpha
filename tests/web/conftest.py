@@ -1,0 +1,114 @@
+from __future__ import annotations
+
+from datetime import date, datetime
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import SQLModel
+
+from net_alpha.config import Settings
+from net_alpha.db.connection import get_engine
+from net_alpha.db.repository import Repository
+from net_alpha.models.domain import Account, ImportRecord, Trade
+from net_alpha.web.app import create_app
+
+
+@pytest.fixture
+def settings(tmp_path: Path) -> Settings:
+    """Settings pointing at a temp data dir for full test isolation."""
+    return Settings(data_dir=tmp_path)
+
+
+@pytest.fixture
+def engine(settings: Settings):
+    """Engine bound to the temp DB; creates all tables once."""
+    eng = get_engine(settings.db_path)
+    SQLModel.metadata.create_all(eng)
+    return eng
+
+
+@pytest.fixture
+def repo(engine) -> Repository:
+    """Repository ready for direct seeding from tests."""
+    return Repository(engine)
+
+
+@pytest.fixture
+def client(settings: Settings, engine) -> TestClient:
+    """TestClient with the app pointed at the temp DB."""
+    app = create_app(settings)
+    return TestClient(app)
+
+
+# --- Trade builders ---------------------------------------------------------
+
+
+def make_buy(
+    account_display: str,
+    ticker: str,
+    day: date,
+    qty: float = 10.0,
+    cost: float = 1800.0,
+) -> Trade:
+    return Trade(
+        account=account_display,
+        date=day,
+        ticker=ticker,
+        action="Buy",
+        quantity=qty,
+        proceeds=None,
+        cost_basis=cost,
+    )
+
+
+def make_sell(
+    account_display: str,
+    ticker: str,
+    day: date,
+    qty: float = 10.0,
+    proceeds: float = 1500.0,
+    cost: float = 1800.0,
+) -> Trade:
+    return Trade(
+        account=account_display,
+        date=day,
+        ticker=ticker,
+        action="Sell",
+        quantity=qty,
+        proceeds=proceeds,
+        cost_basis=cost,
+    )
+
+
+def seed_import(
+    repo: Repository,
+    broker: str,
+    label: str,
+    trades: list[Trade],
+    csv_filename: str = "seed.csv",
+) -> tuple[Account, int]:
+    """Create the account, build an ImportRecord, and call repo.add_import.
+
+    Returns (account, import_id).
+    """
+    account = repo.get_or_create_account(broker, label)
+    record = ImportRecord(
+        account_id=account.id,
+        csv_filename=csv_filename,
+        csv_sha256=f"sha-{csv_filename}",
+        imported_at=datetime.now(),
+        trade_count=len(trades),
+    )
+    result = repo.add_import(account, record, trades)
+    return account, result.import_id
+
+
+@pytest.fixture
+def builders():
+    """Expose builder functions to tests via a single fixture."""
+    return type("B", (), {
+        "make_buy": staticmethod(make_buy),
+        "make_sell": staticmethod(make_sell),
+        "seed_import": staticmethod(seed_import),
+    })
