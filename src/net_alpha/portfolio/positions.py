@@ -24,8 +24,14 @@ def compute_open_positions(
     prices: dict[str, Quote],
     period: tuple[int, int] | None = None,  # (year_start, year_end_exclusive); None = all time
     account: str | None = None,
+    include_closed: bool = False,
 ) -> list[PositionRow]:
-    """Return positions sorted by market value desc (None last)."""
+    """Return positions sorted by market value desc (None last).
+
+    When ``include_closed`` is True, also include symbols that have no open
+    quantity but had Sell activity in the period — useful for "All" table mode
+    where the user wants to see realized P/L on positions they've fully exited.
+    """
     trades = list(trades)
     lots = list(lots)
 
@@ -83,5 +89,27 @@ def compute_open_positions(
                 unrealized_pl=unrealized,
             )
         )
+    if include_closed:
+        seen = {r.symbol for r in rows}
+        # Closed symbols: had Sell activity (period-scoped if a period is set)
+        # but no remaining open quantity.
+        for sym, realized in realized_by_sym.items():
+            if sym in seen:
+                continue
+            if qty_by_sym.get(sym, Decimal("0")) != 0:
+                continue
+            rows.append(
+                PositionRow(
+                    symbol=sym,
+                    accounts=tuple(sorted(accounts_by_sym[sym])),
+                    qty=Decimal("0"),
+                    market_value=Decimal("0"),
+                    open_cost=Decimal("0"),
+                    avg_basis=Decimal("0"),
+                    cash_sunk_per_share=Decimal("0"),
+                    realized_pl=realized,
+                    unrealized_pl=Decimal("0"),
+                )
+            )
     rows.sort(key=lambda r: (r.market_value is None, -(r.market_value or Decimal("0"))))
     return rows

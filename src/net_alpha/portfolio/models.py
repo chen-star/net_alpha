@@ -32,6 +32,8 @@ class KpiSet:
     lifetime_realized: Decimal
     lifetime_unrealized: Decimal | None
     open_position_value: Decimal | None
+    lifetime_net_pl: Decimal | None  # realized + unrealized; None when prices unavailable
+    missing_symbols: tuple[str, ...] = ()  # tickers without a quote — affected KPIs are partial sums
 
 
 @dataclass(frozen=True)

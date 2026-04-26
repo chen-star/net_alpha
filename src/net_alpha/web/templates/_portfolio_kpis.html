@@ -1,12 +1,14 @@
-<div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-  <div class="kpi-card">
+{% set partial = kpis.missing_symbols and (kpis.open_position_value is not none) %}
+{% set partial_marker %}{% if partial %}<sup class="text-amber-600" title="Partial sum — {{ kpis.missing_symbols|length }} symbol(s) unpriced: {{ kpis.missing_symbols|join(', ') }}">*</sup>{% endif %}{% endset %}
+<div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
+  <div class="kpi-card" title="Sum of (proceeds − cost basis) on Sell trades within the selected period. Wash-sale-disallowed losses are excluded from cost basis here (basis is rolled into the replacement lot instead).">
     <div class="text-xs text-slate-500 uppercase">{{ kpis.period_label }} Realized</div>
     <div class="text-2xl font-mono mt-1 {% if kpis.period_realized < 0 %}text-confirmed{% else %}text-emerald-600{% endif %}">
       {% if kpis.period_realized < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized|float|abs) }}
     </div>
   </div>
-  <div class="kpi-card">
-    <div class="text-xs text-slate-500 uppercase">{{ kpis.period_label }} Unrealized</div>
+  <div class="kpi-card" title="Current unrealized P/L = market value − adjusted basis on open lots. Snapshot at fetch time; not period-scoped.">
+    <div class="text-xs text-slate-500 uppercase">{{ kpis.period_label }} Unrealized {{ partial_marker|safe }}</div>
     <div class="text-2xl font-mono mt-1">
       {% if kpis.period_unrealized is none %}
         <span class="text-slate-400">—</span>
@@ -17,14 +19,14 @@
       {% endif %}
     </div>
   </div>
-  <div class="kpi-card">
+  <div class="kpi-card" title="Sum of (proceeds − cost basis) on every Sell ever recorded in this account scope.">
     <div class="text-xs text-slate-500 uppercase">Lifetime Realized</div>
     <div class="text-2xl font-mono mt-1 {% if kpis.lifetime_realized < 0 %}text-confirmed{% else %}text-emerald-600{% endif %}">
       {% if kpis.lifetime_realized < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(kpis.lifetime_realized|float|abs) }}
     </div>
   </div>
-  <div class="kpi-card">
-    <div class="text-xs text-slate-500 uppercase">Lifetime Unrealized</div>
+  <div class="kpi-card" title="Same number as Period Unrealized — unrealized P/L is a now-snapshot, not period-scoped.">
+    <div class="text-xs text-slate-500 uppercase">Lifetime Unrealized {{ partial_marker|safe }}</div>
     <div class="text-2xl font-mono mt-1">
       {% if kpis.lifetime_unrealized is none %}
         <span class="text-slate-400">—</span>
@@ -35,8 +37,8 @@
       {% endif %}
     </div>
   </div>
-  <div class="kpi-card">
-    <div class="text-xs text-slate-500 uppercase">Open Position $</div>
+  <div class="kpi-card" title="Sum of open lot quantity × latest price (equity only).">
+    <div class="text-xs text-slate-500 uppercase">Open Position $ {{ partial_marker|safe }}</div>
     <div class="text-2xl font-mono mt-1">
       {% if kpis.open_position_value is none %}
         <span class="text-slate-400">—</span>
@@ -45,7 +47,30 @@
       {% endif %}
     </div>
   </div>
+  <div class="kpi-card" title="Lifetime realized P&L + current unrealized P&L. Your all-time bottom line on this account scope.">
+    <div class="text-xs text-slate-500 uppercase">Net P/L (Lifetime) {{ partial_marker|safe }}</div>
+    <div class="text-2xl font-mono mt-1">
+      {% if kpis.lifetime_net_pl is none %}
+        <span class="text-slate-400">—</span>
+      {% elif kpis.lifetime_net_pl < 0 %}
+        <span class="text-confirmed">-${{ "%.2f"|format(kpis.lifetime_net_pl|float|abs) }}</span>
+      {% else %}
+        <span class="text-emerald-600">+${{ "%.2f"|format(kpis.lifetime_net_pl|float) }}</span>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% if snapshot.degraded %}
   <div class="text-xs text-amber-600 mt-2">Showing stale prices (provider unavailable).</div>
+{% endif %}
+{% if kpis.missing_symbols %}
+  <div class="text-xs text-amber-600 mt-2">
+    <span class="font-semibold">*</span>
+    {% if kpis.open_position_value is none %}
+      No quotes available — values shown as —.
+    {% else %}
+      Partial sum — {{ kpis.missing_symbols|length }} symbol{% if kpis.missing_symbols|length != 1 %}s{% endif %} unpriced:
+      <span class="font-mono">{{ kpis.missing_symbols|join(', ') }}</span>
+    {% endif %}
+  </div>
 {% endif %}

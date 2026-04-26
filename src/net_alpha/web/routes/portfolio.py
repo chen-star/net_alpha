@@ -116,12 +116,17 @@ def portfolio_kpis(
     )
 
 
+PAGE_SIZE = 25
+
+
 @router.get("/portfolio/positions", response_class=HTMLResponse)
 def portfolio_positions(
     request: Request,
     period: str | None = None,
     account: str | None = None,
     group_options: str = "merge",
+    show: str = "open",  # "open" | "all"
+    page: int = 1,
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
@@ -131,17 +136,35 @@ def portfolio_positions(
     lots = repo.all_lots()
     symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(symbols)
+    include_closed = show == "all"
     rows = compute_open_positions(
         trades=trades,
         lots=lots,
         prices=prices,
         period=period_tuple,
         account=account or None,
+        include_closed=include_closed,
     )
+    total_rows = len(rows)
+    total_pages = max(1, (total_rows + PAGE_SIZE - 1) // PAGE_SIZE)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * PAGE_SIZE
+    page_rows = rows[start : start + PAGE_SIZE]
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_table.html",
-        {"rows": rows, "period_label": period_label},
+        {
+            "rows": page_rows,
+            "period_label": period_label,
+            "show": show,
+            "page": page,
+            "total_pages": total_pages,
+            "total_rows": total_rows,
+            "page_size": PAGE_SIZE,
+            "selected_period": period or "ytd",
+            "selected_account": account or "",
+            "group_options": group_options,
+        },
     )
 
 

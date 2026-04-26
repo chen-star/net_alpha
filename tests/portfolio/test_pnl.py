@@ -48,6 +48,7 @@ def test_kpis_zero_when_no_trades():
     assert k.period_realized == Decimal("0")
     assert k.lifetime_realized == Decimal("0")
     assert k.open_position_value == Decimal("0")
+    assert k.lifetime_net_pl == Decimal("0")  # 0 realized + 0 unrealized (no missing prices since no lots)
 
 
 def test_kpis_realized_split_by_period():
@@ -73,14 +74,46 @@ def test_kpis_unrealized_uses_prices_when_available():
     assert k.open_position_value == Decimal("46000")
     assert k.period_unrealized == Decimal("6000")
     assert k.lifetime_unrealized == Decimal("6000")
+    assert k.lifetime_net_pl == Decimal("6000")  # 0 realized (Buy only) + 6000 unrealized
+    assert k.missing_symbols == ()
 
 
-def test_kpis_unrealized_none_when_prices_missing():
+def test_kpis_unrealized_none_when_all_lots_unpriced():
     lots = [_lot()]
     k = compute_kpis(trades=[_trade()], lots=lots, prices={}, period_label="YTD", period=(2026, 2027), account=None)
     assert k.open_position_value is None
     assert k.period_unrealized is None
     assert k.lifetime_unrealized is None
+    assert k.lifetime_net_pl is None
+    assert k.missing_symbols == ("SPY",)
+
+
+def test_kpis_partial_when_some_lots_unpriced():
+    """When some symbols can be priced and others can't, KPIs should reflect
+    a partial sum scoped to the priced subset rather than collapsing to None."""
+    lots = [
+        _lot(id="l1", ticker="SPY", quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0),
+        _lot(id="l2", ticker="BITF", quantity=10.0, cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    trades = [
+        _trade(id="t1", ticker="SPY", quantity=100, cost_basis=40_000),
+        _trade(id="t2", ticker="BITF", quantity=10, cost_basis=500),
+    ]
+    k = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices={"SPY": _quote("SPY", 460)},  # BITF has no quote
+        period_label="YTD",
+        period=(2026, 2027),
+        account=None,
+    )
+    # Open value reflects only SPY (the priced lot).
+    assert k.open_position_value == Decimal("46000")
+    # Unrealized = priced_market - priced_basis = 46000 - 40000 = 6000 (BITF excluded).
+    assert k.period_unrealized == Decimal("6000")
+    assert k.lifetime_unrealized == Decimal("6000")
+    assert k.lifetime_net_pl == Decimal("6000")
+    assert k.missing_symbols == ("BITF",)
 
 
 def _violation(loss_date, *, disallowed=100.0, confidence="Confirmed", loss_account="Tax", buy_account="Tax"):

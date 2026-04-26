@@ -28,22 +28,32 @@ def _realized_in(trades: Iterable[Trade], period: tuple[int, int] | None) -> Dec
 def _open_market_and_basis(
     lots: Iterable[Lot],
     prices: dict[str, Quote],
-) -> tuple[Decimal | None, Decimal]:
-    """Return (sum(qty × price), sum(adjusted_basis)) or (None, basis) when any lot is unpriced."""
+) -> tuple[Decimal, Decimal, tuple[str, ...]]:
+    """Return (priced_market, priced_basis, missing_symbols).
+
+    priced_market = Σ(qty × price) over equity lots that have a quote.
+    priced_basis  = Σ(adjusted_basis) over the SAME priced lots.
+    missing_symbols = sorted unique tickers we couldn't price.
+
+    Computing both market AND basis from the same priced subset means
+    ``priced_market - priced_basis`` is a correct unrealized P/L for that
+    subset, even when prices for some lots are missing. Callers can then
+    surface partial sums alongside a "N symbols unpriced" caveat instead
+    of throwing the whole aggregate away.
+    """
     total_value: Decimal = Decimal("0")
-    total_basis: Decimal = Decimal("0")
-    any_missing = False
+    priced_basis: Decimal = Decimal("0")
+    missing: set[str] = set()
     for lot in lots:
         if lot.option_details is not None:
             continue  # equity-only for KPI market value
-        qty = Decimal(str(lot.quantity))
-        total_basis += Decimal(str(lot.adjusted_basis))  # NOTE: adjusted_basis is total, not per-share
         quote = prices.get(lot.ticker)
         if quote is None:
-            any_missing = True
+            missing.add(lot.ticker)
             continue
-        total_value += qty * quote.price
-    return (None if any_missing else total_value, total_basis)
+        total_value += Decimal(str(lot.quantity)) * quote.price
+        priced_basis += Decimal(str(lot.adjusted_basis))  # NOTE: adjusted_basis is total, not per-share
+    return total_value, priced_basis, tuple(sorted(missing))
 
 
 def compute_kpis(
@@ -64,16 +74,22 @@ def compute_kpis(
     period_realized = _realized_in(trades, period)
     lifetime_realized = _realized_in(trades, None)
 
-    market, basis = _open_market_and_basis(lots, prices)
-    if market is None:
+    market, basis, missing = _open_market_and_basis(lots, prices)
+    has_equity_lots = any(lot.option_details is None for lot in lots)
+    # "All unpriced" = we have equity lots but couldn't price a single one.
+    # Keep showing — in that case so users see "no data" rather than a misleading $0.
+    all_unpriced = has_equity_lots and bool(missing) and market == 0 and basis == 0
+    if all_unpriced:
         period_unrealized = None
         lifetime_unrealized = None
         open_value = None
+        lifetime_net_pl = None
     else:
-        unrealized = market - basis
+        unrealized = market - basis  # correctly scoped to priced subset
         period_unrealized = unrealized  # unrealized is "now"; period only relabels the card
         lifetime_unrealized = unrealized
         open_value = market
+        lifetime_net_pl = lifetime_realized + unrealized
 
     return KpiSet(
         period_label=period_label,
@@ -82,6 +98,8 @@ def compute_kpis(
         lifetime_realized=lifetime_realized,
         lifetime_unrealized=lifetime_unrealized,
         open_position_value=open_value,
+        lifetime_net_pl=lifetime_net_pl,
+        missing_symbols=missing,
     )
 
 
