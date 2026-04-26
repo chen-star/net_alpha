@@ -2,6 +2,52 @@
 
 
 
+## v0.13.0 (2026-04-26)
+
+### Feature
+
+* feat(web): redesign watch list columns and add period filter
+
+Watch list columns are now Loss date · Ticker · Buy date · Account(s) ·
+Disallowed · Confidence. The Account(s) column collapses to a single label
+when both sides match and shows &#34;loss → buy&#34; only on cross-account violations,
+removing the redundant duplication users were seeing.
+
+Dashboard now defaults to the current year with a year dropdown above the
+watch list (years derived from existing violations, plus the current year
+and All time). KPI labels switch between YTD/FY&lt;year&gt;/All time accordingly.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b9c38c8`](https://github.com/chen-star/net_alpha/commit/b9c38c8f5719c1c3e05512366541b75536a64ec5))
+
+### Fix
+
+* fix(engine): correct stale violations and per-sell G/L allocation
+
+Two bugs were producing wrong dashboard output:
+
+1. Per-import incremental recompute leaves stale Confirmed/Probable labels.
+   Each upload only re-evaluated the ±30-day window of its own affected dates,
+   so when G/L data arrived in a later upload the merge step never re-checked
+   engine violations from earlier uploads outside that narrow window.
+
+   Add engine/recompute.py::recompute_all_violations which re-runs detection
+   and merge over the union of all trade and G/L dates. Wire it into both
+   the upload and delete routes in place of the per-window recompute block.
+
+2. stitch._try_gl summed cost basis across every G/L lot sharing the same
+   (account, symbol, closed_date) tuple, even when several distinct sells
+   existed on that date. A user with two PL sells (proceeds $279.33 and
+   $429.33) and two G/L lots (cost $150.66 + $185.66) saw both sells get
+   cost_basis=$336.32, manufacturing a phantom $56.99 loss.
+
+   When multiple lots match, narrow to lots whose proceeds match this
+   specific sell&#39;s proceeds (within $0.01). Fall back to the full set if
+   none match individually, preserving behavior for the case where Schwab
+   splits a single sell across multiple cost-basis lots.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3504075`](https://github.com/chen-star/net_alpha/commit/3504075c97fb80921b1e306b00aaf8a7a418184d))
+
+
 ## v0.12.1 (2026-04-26)
 
 ### Chore
