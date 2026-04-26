@@ -2,6 +2,210 @@
 
 
 
+## v0.12.0 (2026-04-26)
+
+### Chore
+
+* chore: gitignore private/, drop PRD.md, refresh GitNexus stats, bump uv.lock
+
+- .gitignore: add private/ for local-only Schwab CSVs (not for distribution)
+- PRD.md: remove (now superseded by docs/superpowers/specs/)
+- AGENTS.md / CLAUDE.md: refresh auto-managed GitNexus stats
+- uv.lock: pull in lock churn from feature branch dependencies
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3ffa602`](https://github.com/chen-star/net_alpha/commit/3ffa602cdf34e0cd1f1b4c0a4b5b087b0bf606be))
+
+* chore(web): rebuild Tailwind CSS for new G/L hydration UI elements
+
+Rebuilt via &#39;npx tailwindcss@3&#39; to capture the new utility classes
+introduced by the violation source badges, Schwab lot detail panel,
+and imports table G/L lots column. (pytailwindcss 0.1.4 now downloads
+a Tailwind v4 binary at runtime, which is incompatible with our v3
+config. Using npx pins the v3 tooling explicitly.) ([`8f2ce1d`](https://github.com/chen-star/net_alpha/commit/8f2ce1dfd157d47bb05d7682f8248de018493aed))
+
+### Documentation
+
+* docs: add Schwab Realized G/L hydration implementation plan
+
+13 tasks across 7 phases (foundation, parser, engine, web, polish, CLI,
+smoke). TDD with bite-sized steps, exact code per step, no placeholders.
+Maps directly to the design spec at
+docs/superpowers/specs/2026-04-25-schwab-gl-hydration-design.md.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`33d1354`](https://github.com/chen-star/net_alpha/commit/33d1354d70bcf7dcd58c1b061ef631a3772faca6))
+
+* docs: add Schwab Realized G/L hydration design spec
+
+Captures the brainstormed design for ingesting Schwab&#39;s Realized G/L
+CSV alongside Transaction History to populate cost basis on Sell trades,
+unblocking wash-sale detection. Covers parser, stitch algorithm,
+engine+Schwab merge rules, schema migration, UI changes, and tests.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`167bf82`](https://github.com/chen-star/net_alpha/commit/167bf82f4c6bf4952f20c85fd96ae5de6eded2ee))
+
+### Feature
+
+* feat(cli): G/L hydration + merge in default import command
+
+CLI accepts mixed Transaction History + Realized G/L files in a single
+invocation. Same stitch + merge pipeline as the web UI. Reports
+hydration counts and warnings on stdout. Now uses init_db() to ensure
+schema migrations run.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f85e585`](https://github.com/chen-star/net_alpha/commit/f85e5858e265b2b94d975b7e63fe40e1407fde3a))
+
+* feat(web): show G/L lot count on imports list
+
+ImportSummary gains gl_lot_count. The imports table renders it as a
+new column so G/L-only imports are no longer confusing zero-trade rows. ([`0cabc88`](https://github.com/chen-star/net_alpha/commit/0cabc88458cee9cdeeea240ff48611d4a5bfc85e))
+
+* feat(web): Schwab lot detail panel on ticker drilldown
+
+Read-only table showing closed/opened dates, quantity, cost basis,
+wash sale flag, and disallowed loss for each G/L lot in this ticker.
+Lets users verify our hydrated cost basis against Schwab&#39;s source data.
+Hidden when no G/L rows exist for the ticker.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6172304`](https://github.com/chen-star/net_alpha/commit/6172304e573547f9952ace27e79f306761a0a1e4))
+
+* feat(web): violation source badges (Schwab / Cross-account / Engine)
+
+Renders next to the existing confidence pill so the user knows whether
+a violation came from Schwab&#39;s 1099-B reporting, engine cross-account
+detection, or engine-only substantially-identical inference.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7cc86ed`](https://github.com/chen-star/net_alpha/commit/7cc86edda57d3dc1dbbb279f4b079c8afbce91a3))
+
+* feat(web): multi-file upload with G/L hydration + merge
+
+Drop zone accepts multiple CSVs (Schwab Transactions, Realized G/L,
+or any combination). Per-file detection cards in preview modal.
+Upload route runs each file through its parser, then stitch +
+detect + merge end-to-end, scoped to the affected ±30-day window.
+Flash message reports counts: trades, dups, G/L lots, hydrated sells,
+warnings. ([`6d85d7d`](https://github.com/chen-star/net_alpha/commit/6d85d7d9f16582cdb277456569e405dce67f626b))
+
+* feat(engine): merge_violations — combine engine output with Schwab verdicts
+
+Rules:
+  1. Schwab wash_sale=Yes  -&gt; Confirmed/schwab_g_l violation
+  2. Engine + Schwab agree -&gt; keep Schwab&#39;s
+  3. Engine same-acct cleared by Schwab -&gt; downgrade engine to Unclear
+  4. Engine cross-account  -&gt; Probable/engine
+  5. Engine same-acct without matching Schwab row (substantially identical)
+                          -&gt; Unclear/engine
+  6. No G/L for account    -&gt; engine output unchanged
+
+WashSaleViolation gains a source field; round-tripped via repository.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c79ef7d`](https://github.com/chen-star/net_alpha/commit/c79ef7dccca29df20133cda886fe0d0f589a74fc))
+
+* feat(engine): stitch — hydrate Sell cost_basis from G/L or FIFO
+
+stitch_account walks every Sell trade in an account and populates
+cost_basis from realized_gl_lots (preferred, by symbol+closed_date)
+or FIFO buy-lot consumption (fallback). Records basis_source on
+each Sell so the UI can surface confidence/source. Returns a
+StitchSummary with counts and any quantity-mismatch warnings. ([`52bacc6`](https://github.com/chen-star/net_alpha/commit/52bacc6576c98347bb633ca07665686a6808b358))
+
+* feat(brokers): SchwabRealizedGLParser produces RealizedGLLot rows
+
+Recognizes Realized G/L CSV by headers (Symbol, Closed Date, Opened Date,
+Quantity, Proceeds, Cost Basis (CB), Wash Sale?). Parses both stock and
+option lots, money columns with \$/comma, Yes/No flags, and empty
+Disallowed Loss as 0.0. Registered after SchwabParser in the registry.
+BrokerParser Protocol relaxed to list[Any] since parsers may emit
+different value-object types.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8e1370b`](https://github.com/chen-star/net_alpha/commit/8e1370b2a0ef0b3638c8919ec0f7deee0d311253))
+
+* feat(db): repository methods for G/L lots and stitch helpers
+
+Adds add_gl_lots, get_gl_lots_for_match, get_gl_lots_for_ticker,
+get_sells_for_account, get_buys_before_date, update_trade_basis.
+Idempotent insert dedups on RealizedGLLot.compute_natural_key().
+Trade Pydantic gains basis_source field; round-tripped via repository. ([`1c52964`](https://github.com/chen-star/net_alpha/commit/1c5296492449a1a746c4eecb472fc3798791db6c))
+
+* feat(db): schema v2 — realized_gl_lots table + basis_source/source columns
+
+Adds RealizedGLLotRow table, Trade.basis_source column (default &#39;unknown&#39;),
+and WashSaleViolation.source column (default &#39;engine&#39;). Wires
+migrate(session) into init_db() so v1 DBs upgrade in place. Migration
+is additive and idempotent. ([`2ad08de`](https://github.com/chen-star/net_alpha/commit/2ad08de29dc50e5116b42450fd912050ed778dc7))
+
+* feat(models): add RealizedGLLot domain model
+
+Pydantic value object for one tax-lot row from Schwab&#39;s Realized G/L
+CSV. Includes Schwab&#39;s per-lot wash sale flag and disallowed loss for
+later merge with engine output. compute_natural_key() supports
+idempotent dedup on re-imports. ([`1db4b62`](https://github.com/chen-star/net_alpha/commit/1db4b62b969749606a22f4108be2153a7518804b))
+
+* feat(ingest): smart header detection in load_csv
+
+Skips up to 5 preamble rows (title rows, blank rows) before the real
+header row. Required for Schwab Realized G/L CSVs which have a
+&#39;Realized Gain/Loss - Lot Details ...&#39; title above the column headers.
+Falls back to row 0 when no plausible header row is found, preserving
+backwards compat for files that already had headers on row 0. ([`76b4fd0`](https://github.com/chen-star/net_alpha/commit/76b4fd0f87661304aa65ed50beeff36adbdcf20b))
+
+### Fix
+
+* fix(db): cascade-delete G/L lots on remove_import + re-stitch
+
+Without this, removing an import that contained G/L data leaves orphan
+RealizedGLLotRow rows behind. Subsequent stitch_account calls would
+silently hydrate sells using stale cost basis from those orphans,
+corrupting wash-sale results.
+
+The web DELETE /imports/{id} route now also runs stitch_account before
+re-running detect_in_window, so sells that were hydrated from now-removed
+G/L data get demoted to FIFO/unknown as appropriate. ([`401dbfe`](https://github.com/chen-star/net_alpha/commit/401dbfecbcbd9c28e4d9d6e5ebe6b020dab2a5c8))
+
+* fix(db): resolve real trade IDs for Schwab G/L violations
+
+Schwab G/L violations carry synthetic &#39;schwab_gl_&lt;hash&gt;&#39; trade IDs
+that can&#39;t be int()-cast for the FK column. _violation_to_row now
+detects source=&#39;schwab_g_l&#39; and resolves loss_trade_id by looking
+up the matching Sell trade (account+ticker+date). When no matching
+Sell trade exists, raises LookupError; replace_violations_in_window
+catches and silently skips, supporting G/L-only imports without
+Transaction History. ([`a9efd42`](https://github.com/chen-star/net_alpha/commit/a9efd421b089c320305a294a9141289ed8816d8b))
+
+* fix(ingest): apply ruff format + clarify load_csv docstring
+
+Address code-review feedback for Task 1:
+  - ruff format collapsed implicit string concatenation in tests
+    (same lint rule that blocked d8deb63 on master)
+  - load_csv docstring references _HEADER_SCAN_LIMIT instead of
+    hardcoding the value 5 ([`2d62568`](https://github.com/chen-star/net_alpha/commit/2d62568e878f8e045cfe3389871238fea8ae10e4))
+
+### Unknown
+
+* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`1f97f51`](https://github.com/chen-star/net_alpha/commit/1f97f5118ef86b980240f11e33cbdc109c88709b))
+
+* Merge feature/schwab-gl-hydration — Schwab Realized G/L hydration (v2.2)
+
+Adds Schwab Realized G/L CSV ingestion alongside Transaction History so the
+wash-sale engine can detect violations on Schwab data.
+
+Architecture: a new realized_gl_lots table stores Schwab&#39;s per-lot G/L
+verbatim. SchwabRealizedGLParser produces those rows from G/L CSVs. After
+every import a stitch pass walks each Sell trade and populates cost_basis
+from G/L (preferred) or FIFO buy lots (fallback). Engine output is then
+merged with Schwab&#39;s per-lot wash-sale verdict — Schwab is authoritative
+for closed Schwab positions, our engine adds cross-account and
+substantially-identical detections.
+
+UI: multi-file upload (any combination of CSVs), per-file detection cards,
+violation source badges (Schwab / Cross-account / Engine), Schwab lot
+detail panel on ticker drilldown, G/L lots column on imports list. CLI
+gets the same pipeline. Schema bumped 1→2 with idempotent migration.
+
+249 tests passing. Spec: docs/superpowers/specs/2026-04-25-schwab-gl-hydration-design.md
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cdea0c8`](https://github.com/chen-star/net_alpha/commit/cdea0c89ddf234bdfa17374032a44c97f8bd4b1e))
+
+
 ## v0.11.0 (2026-04-26)
 
 ### Build
