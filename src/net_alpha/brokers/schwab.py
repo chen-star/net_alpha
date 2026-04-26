@@ -57,6 +57,17 @@ class SchwabParser:
             cost_basis = abs(amount) if action == "Buy" else None
             proceeds = abs(amount) if action == "Sell" else None
 
+            # Optional "Cost Basis" column — present in some Schwab exports.
+            # Use it to populate cost_basis on sell trades so the engine can
+            # detect losses without needing a prior matching buy in the DB.
+            if action == "Sell" and "Cost Basis" in row:
+                cb_raw = row["Cost Basis"].replace("$", "").replace(",", "").strip()
+                if cb_raw:
+                    try:
+                        cost_basis = abs(float(cb_raw))
+                    except ValueError:
+                        pass
+
             trades.append(
                 Trade(
                     account=account_display,
