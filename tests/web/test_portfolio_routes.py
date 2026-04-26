@@ -45,3 +45,10 @@ def test_kpis_fragment_renders_with_no_data(tmp_path):
     assert response.status_code == 200
     assert "Realized" in response.text
     assert "Unrealized" in response.text
+
+
+def test_positions_fragment_empty_state(tmp_path):
+    client = _client(tmp_path)
+    response = client.get("/portfolio/positions?period=ytd")
+    assert response.status_code == 200
+    assert "No open positions" in response.text
