@@ -14,6 +14,7 @@ from net_alpha.pricing.cache import PriceCache
 from net_alpha.pricing.yahoo import YahooPriceProvider
 from net_alpha.web.routes import calendar, dashboard, detail, sim, system, ticker
 from net_alpha.web.routes import imports as imports_routes
+from net_alpha.web.routes import portfolio as portfolio_routes
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -48,6 +49,7 @@ def create_app(settings: Settings) -> FastAPI:
     app.include_router(detail.router)
     app.include_router(sim.router)
     app.include_router(ticker.router)
+    app.include_router(portfolio_routes.router)
     app.include_router(system.router)
 
     system.register_error_handlers(app)
