@@ -1,0 +1,37 @@
+{% if gl_lots %}
+  <section class="bg-white border border-slate-200 rounded-lg p-4 mt-4">
+    <h2 class="text-lg mb-2">Schwab Lot Detail (from G/L)</h2>
+    <table class="w-full text-sm">
+      <thead class="text-left text-xs text-slate-500 uppercase">
+        <tr>
+          <th class="px-2 py-1">Closed</th>
+          <th class="px-2 py-1">Opened</th>
+          <th class="px-2 py-1 text-right">Qty</th>
+          <th class="px-2 py-1 text-right">Cost basis</th>
+          <th class="px-2 py-1">Wash sale?</th>
+          <th class="px-2 py-1 text-right">Disallowed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lot in gl_lots %}
+          <tr class="border-t border-slate-100">
+            <td class="px-2 py-1 font-mono">{{ lot.closed_date.isoformat() }}</td>
+            <td class="px-2 py-1 font-mono">{{ lot.opened_date.isoformat() }}</td>
+            <td class="px-2 py-1 text-right font-mono">{{ "%.4f"|format(lot.quantity) }}</td>
+            <td class="px-2 py-1 text-right font-mono">${{ "%.2f"|format(lot.cost_basis) }}</td>
+            <td class="px-2 py-1">
+              {% if lot.wash_sale %}
+                <span class="text-red-700 font-medium">Yes</span>
+              {% else %}
+                <span class="text-slate-500">No</span>
+              {% endif %}
+            </td>
+            <td class="px-2 py-1 text-right font-mono">
+              {% if lot.disallowed_loss %}${{ "%.2f"|format(lot.disallowed_loss) }}{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endif %}
