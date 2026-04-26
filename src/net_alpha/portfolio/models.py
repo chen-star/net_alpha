@@ -93,3 +93,15 @@ class AllocationView:
     top3_pct: Decimal
     top5_pct: Decimal
     top10_pct: Decimal
+
+
+@dataclass(frozen=True)
+class LossCloseRow:
+    """One symbol's recent loss close — input for the home-page wash-sale watch panel."""
+
+    symbol: str
+    account: str  # the account on the most recent loss close in window
+    close_date: date
+    days_since: int  # today - close_date, in days
+    days_to_safe: int  # window_days - days_since, clamped to >= 0
+    loss_amount: Decimal  # positive number, sum of |negative realized P/L| in window for this symbol
