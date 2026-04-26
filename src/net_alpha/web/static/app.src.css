@@ -6,81 +6,27 @@
 
 @layer base {
   body {
-    background-color: #f1f5f9;
-    color: #0f172a;
-    font-family: "Fira Sans", ui-sans-serif, system-ui;
+    @apply bg-bg text-ink font-sans;
   }
   h1, h2, h3 {
-    font-family: "Fira Code", ui-monospace, monospace;
-    font-weight: 600;
-    color: #1e3a8a;
+    @apply font-mono font-semibold text-primary;
   }
 }
 
 @layer components {
   .btn {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
-    background-color: #1e3a8a;
-    color: white;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  .btn:hover {
-    background-color: #1e40af;
+    @apply inline-flex items-center px-3 py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-secondary transition-colors duration-200 cursor-pointer;
   }
   .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
-    background-color: white;
-    color: #1e3a8a;
-    border: 1px solid #cbd5e1;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  .btn-ghost:hover {
-    background-color: #f1f5f9;
+    @apply inline-flex items-center px-3 py-2 rounded-md bg-white text-primary border border-slate-300 text-sm hover:bg-slate-50 transition-colors duration-200 cursor-pointer;
   }
   .kpi-card {
-    background-color: white;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    border: 1px solid #e2e8f0;
-    padding: 1rem;
+    @apply bg-white rounded-lg shadow-sm border border-slate-200 p-4;
   }
   .row-hover:hover {
-    background-color: #f1f5f9;
-    cursor: pointer;
+    @apply bg-slate-50 cursor-pointer;
   }
-  .badge-confirmed {
-    color: white;
-    background-color: #dc2626;
-    font-size: 0.75rem;
-    font-weight: 500;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-  }
-  .badge-probable {
-    color: white;
-    background-color: #f59e0b;
-    font-size: 0.75rem;
-    font-weight: 500;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-  }
-  .badge-unclear {
-    color: white;
-    background-color: #3b82f6;
-    font-size: 0.75rem;
-    font-weight: 500;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-  }
+  .badge-confirmed { @apply text-white bg-confirmed text-xs font-medium px-2 py-0.5 rounded; }
+  .badge-probable  { @apply text-white bg-probable  text-xs font-medium px-2 py-0.5 rounded; }
+  .badge-unclear   { @apply text-white bg-unclear   text-xs font-medium px-2 py-0.5 rounded; }
 }
