@@ -15,7 +15,7 @@
       <label class="block text-xs text-slate-500 uppercase">Account</label>
       <input type="text" name="account" value="{{ filter_account }}" list="account-list" class="border border-slate-300 rounded px-2 py-1 text-sm w-40"/>
       <datalist id="account-list">
-        {% for a in accounts %}<option value="{{ a }}">{% endfor %}
+        {% for a in accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
       </datalist>
     </div>
     <div>
@@ -31,9 +31,23 @@
         <option value="unclear" {% if filter_confidence=='unclear' %}selected{% endif %}>Unclear</option>
       </select>
     </div>
+    {# Preserve current sort across filter submits #}
+    {% if sort %}<input type="hidden" name="sort" value="{{ sort }}"/>{% endif %}
+    {% if order %}<input type="hidden" name="order" value="{{ order }}"/>{% endif %}
     <button type="submit" class="btn">Apply</button>
     <a href="/detail" class="btn-ghost">Reset</a>
   </form>
+
+  {# Totals bar #}
+  {% if summary.violation_count > 0 %}
+    <div class="kpi-card mb-4 text-sm flex gap-4 items-baseline">
+      <div><span class="font-medium">{{ summary.violation_count }}</span> violations</div>
+      <div><span class="font-medium text-confirmed">${{ "%.2f"|format(summary.disallowed_total|float) }}</span> disallowed</div>
+      <div><span class="badge-confirmed">{{ summary.confirmed_count }} confirmed</span></div>
+      <div><span class="badge-probable">{{ summary.probable_count }} probable</span></div>
+      <div><span class="badge-unclear">{{ summary.unclear_count }} unclear</span></div>
+    </div>
+  {% endif %}
 
   {% include "_detail_table.html" %}
 {% endblock %}
