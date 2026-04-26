@@ -2,6 +2,100 @@
 
 
 
+## v0.15.0 (2026-04-26)
+
+### Chore
+
+* chore: ruff format
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4b2c2f4`](https://github.com/chen-star/net_alpha/commit/4b2c2f4ba403c1c0c8a790d10b0b5a640e1215fc))
+
+### Documentation
+
+* docs(plan): add Phase 2 implementation plan — calendar dual-ribbon + imports notes
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ae0befc`](https://github.com/chen-star/net_alpha/commit/ae0befcd8a7c151118d4b0174b87b821a3d50bc4))
+
+### Feature
+
+* feat(web): embed drop zone on imports page
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e90fd9f`](https://github.com/chen-star/net_alpha/commit/e90fd9f04be6076a82358edf0afec39f0ef302c6))
+
+* feat(web): GET /imports/{id}/detail returns expandable detail panel
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a8e5bc1`](https://github.com/chen-star/net_alpha/commit/a8e5bc136eb4f7554e57324dd8f0cde750956241))
+
+* feat(web): summary line and expand toggle on imports table
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a266084`](https://github.com/chen-star/net_alpha/commit/a2660845d5161d550900d980fd7f74f3069dd23b))
+
+* feat(web): compute and persist import aggregates on upload
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6d50d85`](https://github.com/chen-star/net_alpha/commit/6d50d85721b97249abaae3b55c7b1dff02f6400b))
+
+* feat(db): backfill import aggregates on init_db
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`aedb6da`](https://github.com/chen-star/net_alpha/commit/aedb6da80c911c15641c3f1540afb3a1390b0cc0))
+
+* feat(import): backfill aggregates for legacy import rows
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`14cbae7`](https://github.com/chen-star/net_alpha/commit/14cbae782c8668fcc262042f173d213cee1bceb8))
+
+* feat(repo): persist and surface import aggregates; add get_import_detail
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1fef99f`](https://github.com/chen-star/net_alpha/commit/1fef99f88745efe7c3c21c4146d354f4d6139968))
+
+* feat(import): add compute_import_aggregates pure function
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1b86c73`](https://github.com/chen-star/net_alpha/commit/1b86c73a13a9bf4de211ee2768dce09249e7efd8))
+
+* feat(models): extend ImportRecord and ImportSummary with v4 aggregate fields
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1b3a334`](https://github.com/chen-star/net_alpha/commit/1b3a334b4b5f2c7ebba530c033e7a16bd25cec07))
+
+* feat(db): schema v4 — add aggregate columns to imports
+
+Adds 6 nullable columns to the imports table (min/max trade dates,
+equity/option/expiry counts, parse warnings JSON) for the calendar
+imports Phase 2 backfill. Updates existing migration tests to use
+CURRENT_SCHEMA_VERSION instead of hard-coded version literals.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b1790ec`](https://github.com/chen-star/net_alpha/commit/b1790ecb1f00998d0ef970b2999ac9ae0d26abd8))
+
+* feat(web): stack monthly P&amp;L ribbon above wash-sale dots
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7d6406c`](https://github.com/chen-star/net_alpha/commit/7d6406c7b5ab5ba2812691f7d98b47024eb7f90f))
+
+* feat(web): add monthly P&amp;L ribbon partial
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3c71190`](https://github.com/chen-star/net_alpha/commit/3c711901affc25b6c2a7fff94c602a415ed5a772))
+
+* feat(portfolio): add monthly_realized_pl aggregator
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a51885d`](https://github.com/chen-star/net_alpha/commit/a51885da610263f6867e96c036d808b093f6c747))
+
+* feat(portfolio): add MonthlyPnl model for calendar ribbon
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`30aaea6`](https://github.com/chen-star/net_alpha/commit/30aaea621e174d919c8d95b66d74f32d3bf4a137))
+
+### Test
+
+* test(db): cover v3 → v4 migration
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3b4b652`](https://github.com/chen-star/net_alpha/commit/3b4b6529846969417da46f4ee2251f0e4b1c82c4))
+
+* test(portfolio): add Dec-31/Jan-1 boundary case for monthly_realized_pl
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0d1f170`](https://github.com/chen-star/net_alpha/commit/0d1f170f8a56c8532008de0e1e5d331fc1ea8ed1))
+
+### Unknown
+
+* Merge branch &#39;feat/calendar-imports-phase2&#39; — Phase 2 calendar dual-ribbon + imports notes
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`53fac1f`](https://github.com/chen-star/net_alpha/commit/53fac1f2837801910f3178798eda3dfd69a497e8))
+
+
 ## v0.14.0 (2026-04-26)
 
 ### Chore
