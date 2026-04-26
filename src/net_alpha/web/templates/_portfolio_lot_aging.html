@@ -1,0 +1,15 @@
+<div class="text-xs text-slate-500 uppercase mb-1">Lots crossing LTCG soon</div>
+{% if not aging %}
+  <div class="text-sm text-slate-400">No lots crossing the LTCG threshold within 90 days.</div>
+{% else %}
+  <div class="text-xs">
+    {% for a in aging %}
+      <a href="/ticker/{{ a.symbol }}" class="flex justify-between py-1 border-b border-dashed border-slate-200 last:border-0 hover:bg-slate-50">
+        <span class="font-mono">{{ a.symbol }}</span>
+        <span class="{% if a.days_to_ltcg <= 14 %}text-confirmed{% elif a.days_to_ltcg <= 45 %}text-amber-600{% else %}text-slate-700{% endif %}">
+          {{ a.days_to_ltcg }} days
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}

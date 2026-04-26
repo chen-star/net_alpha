@@ -1,0 +1,19 @@
+<div class="text-xs text-slate-500 uppercase mb-1">Wash impact ({{ impact.period_label }})</div>
+<div class="grid grid-cols-2 gap-2 text-xs">
+  <div class="p-2 bg-amber-50 rounded">
+    <div class="font-mono text-base">${{ "%.2f"|format(impact.disallowed_total|float) }}</div>
+    <div class="text-slate-500">disallowed</div>
+  </div>
+  <div class="p-2 bg-amber-50 rounded">
+    <div class="font-mono text-base">{{ impact.violation_count }}</div>
+    <div class="text-slate-500">violations</div>
+  </div>
+  <a href="/calendar?confidence=confirmed" class="p-2 bg-red-50 rounded block hover:bg-red-100">
+    <div class="font-mono text-base text-confirmed">{{ impact.confirmed_count }}</div>
+    <div class="text-slate-500">confirmed</div>
+  </a>
+  <div class="p-2 bg-amber-50 rounded">
+    <div class="font-mono text-base text-amber-600">{{ impact.probable_count }}</div>
+    <div class="text-slate-500">probable</div>
+  </div>
+</div>

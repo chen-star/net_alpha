@@ -1,0 +1,26 @@
+<div class="text-xs text-slate-500 uppercase mb-1">{{ year }} equity curve</div>
+{% if points|length <= 1 %}
+  <div class="text-sm text-slate-400">No realized activity in {{ year }}.</div>
+{% else %}
+  {% set max_v = points|map(attribute='cumulative_realized')|map('float')|max %}
+  {% set min_v = points|map(attribute='cumulative_realized')|map('float')|min %}
+  {% set span = (max_v - min_v) if (max_v - min_v) > 0 else 1.0 %}
+  <svg viewBox="0 0 100 60" preserveAspectRatio="none" class="w-full h-32">
+    <polyline fill="none" stroke="#16a34a" stroke-width="0.5"
+      points="
+      {% for p in points %}
+        {% set x = loop.index0 / (points|length - 1) * 100 %}
+        {% set y = 60 - ((p.cumulative_realized|float - min_v) / span * 60) %}
+        {{ '%.2f'|format(x) }},{{ '%.2f'|format(y) }}
+      {% endfor %}
+      "/>
+    {% set last = points[-1] %}
+    {% if last.unrealized is not none %}
+      {% set last_x = 100 %}
+      {% set last_y = 60 - ((last.cumulative_realized|float + last.unrealized|float - min_v) / span * 60) %}
+      <circle cx="{{ '%.2f'|format(last_x) }}" cy="{{ '%.2f'|format(last_y) }}" r="1.5"
+              fill="{% if last.unrealized > 0 %}#16a34a{% else %}#dc2626{% endif %}"/>
+    {% endif %}
+  </svg>
+  <div class="text-[10px] text-slate-400 mt-1">Line: cumulative realized · Dot: + present-day unrealized</div>
+{% endif %}

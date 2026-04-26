@@ -6,8 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
-from net_alpha.portfolio.pnl import compute_kpis
+from net_alpha.portfolio.equity_curve import build_equity_curve
+from net_alpha.portfolio.lot_aging import top_lots_crossing_ltcg
+from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import compute_open_positions
+from net_alpha.portfolio.treemap import build_treemap
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 
@@ -134,4 +137,88 @@ def portfolio_positions(
         request,
         "_portfolio_table.html",
         {"rows": rows, "period_label": period_label},
+    )
+
+
+@router.get("/portfolio/treemap", response_class=HTMLResponse)
+def portfolio_treemap(
+    request: Request,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    today = date.today()
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
+    prices = svc.get_prices(symbols)
+    rows = compute_open_positions(
+        trades=trades, lots=lots, prices=prices,
+        period=(today.year, today.year + 1), account=account or None,
+    )
+    tiles = build_treemap(positions=rows, top_n=8)
+    return request.app.state.templates.TemplateResponse(
+        request, "_portfolio_treemap.html", {"tiles": tiles},
+    )
+
+
+@router.get("/portfolio/equity-curve", response_class=HTMLResponse)
+def portfolio_equity_curve(
+    request: Request,
+    period: str | None = None,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    today = date.today()
+    period_tuple, period_label = _parse_period(period, today.year)
+    year = period_tuple[0] if period_tuple else today.year
+    trades = repo.all_trades()
+    if account:
+        trades = [t for t in trades if t.account == account]
+    lots = repo.all_lots()
+    if account:
+        lots = [lot for lot in lots if lot.account == account]
+    symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
+    prices = svc.get_prices(symbols)
+    kpis = compute_kpis(
+        trades=trades, lots=lots, prices=prices,
+        period_label=period_label, period=period_tuple, account=None,  # already filtered
+    )
+    points = build_equity_curve(trades=trades, year=year, present_unrealized=kpis.period_unrealized)
+    return request.app.state.templates.TemplateResponse(
+        request, "_portfolio_equity_curve.html", {"points": points, "year": year},
+    )
+
+
+@router.get("/portfolio/wash-impact", response_class=HTMLResponse)
+def portfolio_wash_impact(
+    request: Request,
+    period: str | None = None,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    today = date.today()
+    period_tuple, period_label = _parse_period(period, today.year)
+    impact = compute_wash_impact(
+        violations=repo.all_violations(),
+        period_label=period_label, period=period_tuple, account=account or None,
+    )
+    return request.app.state.templates.TemplateResponse(
+        request, "_portfolio_wash_impact.html", {"impact": impact},
+    )
+
+
+@router.get("/portfolio/lot-aging", response_class=HTMLResponse)
+def portfolio_lot_aging(
+    request: Request,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    lots = repo.all_lots()
+    if account:
+        lots = [lot for lot in lots if lot.account == account]
+    aging = top_lots_crossing_ltcg(lots=lots, horizon_days=90, top_n=5)
+    return request.app.state.templates.TemplateResponse(
+        request, "_portfolio_lot_aging.html", {"aging": aging},
     )
