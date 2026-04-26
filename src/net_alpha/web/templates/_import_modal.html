@@ -1,0 +1,65 @@
+<div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6"
+     onclick="event.stopPropagation()">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl">Import {{ filename }}</h2>
+    <button onclick="document.getElementById('import-modal').classList.add('hidden')"
+            class="text-slate-500 hover:text-slate-800 text-2xl leading-none">&times;</button>
+  </div>
+
+  {% if error %}
+    <div class="bg-red-50 border border-red-300 text-red-800 rounded p-3 mb-4 text-sm">{{ error }}</div>
+  {% else %}
+    <div class="mb-3 text-sm">
+      <span class="text-emerald-800 bg-emerald-100 text-xs font-medium px-2 py-0.5 rounded">{{ broker_name }} CSV detected</span>
+    </div>
+
+    <form action="/imports" method="post" enctype="multipart/form-data" class="space-y-4">
+      <div>
+        <label class="block text-xs text-slate-500 uppercase mb-1">File (re-attach to confirm)</label>
+        <input type="file" name="file" accept=".csv" required class="text-sm"/>
+        <p class="text-xs text-slate-500 mt-1">Browser security requires re-attaching the file at submit time.</p>
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-500 uppercase mb-1">Account label</label>
+        <input type="text" name="account" required list="modal-account-list"
+               class="border border-slate-300 rounded px-2 py-1 text-sm w-full"
+               placeholder="e.g. personal, joint, ira"/>
+        <datalist id="modal-account-list">
+          {% for a in accounts %}
+            <option value="{{ a.split('/')[1] if '/' in a else a }}">
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <div class="text-xs text-slate-500 uppercase mb-1">Preview ({{ preview_trades|length }} of {{ raw_size }} bytes)</div>
+        <table class="w-full text-xs border border-slate-200 rounded">
+          <thead class="bg-slate-50 text-left"><tr>
+            <th class="px-2 py-1">Date</th><th class="px-2 py-1">Action</th>
+            <th class="px-2 py-1">Ticker</th><th class="px-2 py-1">Qty</th><th class="px-2 py-1">$</th>
+          </tr></thead>
+          <tbody>
+            {% for t in preview_trades %}
+              <tr class="border-t border-slate-100">
+                <td class="px-2 py-1 font-mono">{{ t.date }}</td>
+                <td class="px-2 py-1">{{ t.action }}</td>
+                <td class="px-2 py-1 font-mono">{{ t.ticker }}</td>
+                <td class="px-2 py-1 font-mono">{{ t.quantity }}</td>
+                <td class="px-2 py-1 font-mono">{{ t.proceeds if t.proceeds is not none else t.cost_basis }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-xs text-slate-500">{{ disclaimer }}</p>
+
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn-ghost"
+                onclick="document.getElementById('import-modal').classList.add('hidden')">Cancel</button>
+        <button type="submit" class="btn">Import</button>
+      </div>
+    </form>
+  {% endif %}
+</div>

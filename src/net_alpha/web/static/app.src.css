@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans;
+  }
+  h1, h2, h3 {
+    @apply font-mono font-semibold text-primary;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center px-3 py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-secondary transition-colors duration-200 cursor-pointer;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center px-3 py-2 rounded-md bg-white text-primary border border-slate-300 text-sm hover:bg-slate-50 transition-colors duration-200 cursor-pointer;
+  }
+  .kpi-card {
+    @apply bg-white rounded-lg shadow-sm border border-slate-200 p-4;
+  }
+  .row-hover:hover {
+    @apply bg-slate-50 cursor-pointer;
+  }
+  .badge-confirmed { @apply text-white bg-confirmed text-xs font-medium px-2 py-0.5 rounded; }
+  .badge-probable  { @apply text-white bg-probable  text-xs font-medium px-2 py-0.5 rounded; }
+  .badge-unclear   { @apply text-white bg-unclear   text-xs font-medium px-2 py-0.5 rounded; }
+}

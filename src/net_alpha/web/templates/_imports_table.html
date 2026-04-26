@@ -1,0 +1,36 @@
+{% if not imports %}
+  <div class="kpi-card text-slate-500 text-sm">No imports yet.</div>
+{% else %}
+  <table class="w-full text-sm bg-white rounded-lg shadow-sm border border-slate-200">
+    <thead class="text-left text-xs text-slate-500 uppercase border-b border-slate-200">
+      <tr>
+        <th class="px-3 py-2">ID</th>
+        <th class="px-3 py-2">Imported at</th>
+        <th class="px-3 py-2">Account</th>
+        <th class="px-3 py-2">Filename</th>
+        <th class="px-3 py-2">Trades</th>
+        <th class="px-3 py-2">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for imp in imports %}
+        <tr id="import-row-{{ imp.id }}" class="border-b border-slate-100 last:border-b-0">
+          <td class="px-3 py-2 font-mono">#{{ imp.id }}</td>
+          <td class="px-3 py-2 font-mono text-xs">{{ imp.imported_at.strftime("%Y-%m-%d %H:%M") }}</td>
+          <td class="px-3 py-2">{{ imp.account_display }}</td>
+          <td class="px-3 py-2">{{ imp.csv_filename }}</td>
+          <td class="px-3 py-2 font-mono">{{ imp.trade_count }}</td>
+          <td class="px-3 py-2">
+            <button class="btn-ghost text-confirmed border-confirmed/30"
+                    hx-delete="/imports/{{ imp.id }}"
+                    hx-confirm="Remove import #{{ imp.id }} ({{ imp.trade_count }} trades)? Wash sales will be recomputed."
+                    hx-target="#imports-table"
+                    hx-swap="innerHTML">
+              Remove
+            </button>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}

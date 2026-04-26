@@ -1,0 +1,29 @@
+{% if not all_violations %}
+  <div class="kpi-card text-slate-500 text-sm">No violations detected.</div>
+{% else %}
+  <table class="w-full text-sm bg-white rounded-lg shadow-sm border border-slate-200">
+    <thead class="text-left text-xs text-slate-500 uppercase border-b border-slate-200">
+      <tr>
+        <th class="px-3 py-2">Date</th>
+        <th class="px-3 py-2">Ticker</th>
+        <th class="px-3 py-2">Loss in</th>
+        <th class="px-3 py-2">Triggered by</th>
+        <th class="px-3 py-2">Disallowed</th>
+        <th class="px-3 py-2">Confidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in all_violations %}
+        <tr class="row-hover border-b border-slate-100 last:border-b-0"
+            onclick="window.location='/ticker/{{ v.ticker }}'">
+          <td class="px-3 py-2 font-mono">{{ v.loss_sale_date }}</td>
+          <td class="px-3 py-2 font-mono">{{ v.ticker }}</td>
+          <td class="px-3 py-2">{{ v.loss_account or "-" }}</td>
+          <td class="px-3 py-2">{{ v.buy_account or "-" }} on {{ v.triggering_buy_date or "-" }}</td>
+          <td class="px-3 py-2 font-mono text-confirmed">${{ "%.2f"|format(v.disallowed_loss) }}</td>
+          <td class="px-3 py-2"><span class="badge-{{ v.confidence|lower }}">{{ v.confidence }}</span></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}

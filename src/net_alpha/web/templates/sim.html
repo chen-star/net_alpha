@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sim · net-alpha{% endblock %}
+{% block content %}
+  <h1 class="text-2xl mb-4">Simulate a sell</h1>
+
+  <form hx-post="/sim" hx-target="#sim-result" hx-swap="innerHTML"
+        class="kpi-card grid grid-cols-5 gap-3 items-end mb-6">
+    <div>
+      <label class="block text-xs text-slate-500 uppercase">Ticker</label>
+      <input type="text" name="ticker" value="{{ ticker }}" list="ticker-list" required
+             class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+      <datalist id="ticker-list">
+        {% for t in tickers %}<option value="{{ t }}">{% endfor %}
+      </datalist>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-500 uppercase">Quantity</label>
+      <input type="number" name="qty" step="0.01" required
+             class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-500 uppercase">Price</label>
+      <input type="number" name="price" step="0.01" required
+             class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-500 uppercase">Account (optional)</label>
+      <select name="account" class="border border-slate-300 rounded px-2 py-1 text-sm w-full">
+        <option value="">All</option>
+        {% for a in accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn">Run sim</button>
+  </form>
+
+  <div id="sim-result"></div>
+{% endblock %}

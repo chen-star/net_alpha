@@ -1,0 +1,6 @@
+<div class="border-l-4 pl-3"
+     style="border-left-color: {% if violation.confidence=='Confirmed' %}#DC2626{% elif violation.confidence=='Probable' %}#F59E0B{% else %}#3B82F6{% endif %};">
+  <div class="text-sm"><strong>Loss in</strong> {{ violation.loss_account or "-" }} → <strong>triggered by</strong> {{ violation.buy_account or "-" }} on {{ violation.triggering_buy_date or "-" }}</div>
+  <div class="text-sm">Disallowed: <span class="font-mono text-confirmed">${{ "%.2f"|format(violation.disallowed_loss) }}</span> · Matched qty: <span class="font-mono">{{ violation.matched_quantity }}</span></div>
+  <a href="/ticker/{{ violation.ticker }}" class="text-primary text-sm underline">View ticker drilldown →</a>
+</div>

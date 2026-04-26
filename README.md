@@ -54,6 +54,12 @@ The problem compounds when you trade **options** alongside stocks, or **ETFs** t
 pip install wash-alpha
 ```
 
+For the local UI:
+
+```bash
+pip install 'wash-alpha[ui]'
+```
+
 > [!NOTE]
 > While the package is named `wash-alpha` on PyPI, the CLI command is `net-alpha`.
 
@@ -91,6 +97,18 @@ net-alpha migrate-from-v1 --yes
 ```
 
 Reads `~/.net_alpha/net_alpha.db` (v1 schema) and writes a fresh v2 DB at `~/.net_alpha/net_alpha.db.v2`. This helper exists only in the v2.0.x line.
+
+### Local web UI
+
+```bash
+net-alpha ui
+```
+
+Boots an ephemeral local server on `127.0.0.1`, opens your default browser, and exits when you press Ctrl-C. Drag CSVs into the dashboard, see your wash-sale calendar, drill into a ticker.
+
+Optional flags: `--port N` · `--no-browser` · `--reload` (dev).
+
+> **Install with UI extras:** `pip install wash-alpha[ui]` (or `uv sync --extra ui` from source). The CLI works without UI deps; UI deps are optional.
 
 ---
 
