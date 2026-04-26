@@ -230,6 +230,6 @@ class SimulationBuyOption(BaseModel):
     account: Account
     matches: list[SimBuyMatch]
     total_disallowed: Decimal
-    proposed_basis: Decimal       # qty * price (raw cost basis pre-adjustment)
-    adjusted_basis: Decimal       # proposed_basis + total_disallowed
-    clean: bool                   # True iff matches == []
+    proposed_basis: Decimal  # qty * price (raw cost basis pre-adjustment)
+    adjusted_basis: Decimal  # proposed_basis + total_disallowed
+    clean: bool  # True iff matches == []

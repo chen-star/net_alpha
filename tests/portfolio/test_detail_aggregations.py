@@ -13,10 +13,16 @@ from net_alpha.portfolio.detail_aggregations import (
 
 def _v(**kw):
     defaults = dict(
-        loss_trade_id="lt", replacement_trade_id="rt",
-        confidence="Confirmed", disallowed_loss=100.0, matched_quantity=10.0,
-        ticker="TSLA", loss_account="schwab/personal", buy_account="schwab/personal",
-        loss_sale_date=date(2025, 6, 1), triggering_buy_date=date(2025, 6, 13),
+        loss_trade_id="lt",
+        replacement_trade_id="rt",
+        confidence="Confirmed",
+        disallowed_loss=100.0,
+        matched_quantity=10.0,
+        ticker="TSLA",
+        loss_account="schwab/personal",
+        buy_account="schwab/personal",
+        loss_sale_date=date(2025, 6, 1),
+        triggering_buy_date=date(2025, 6, 13),
         source="engine",
     )
     defaults.update(kw)
@@ -25,8 +31,9 @@ def _v(**kw):
 
 def test_summary_zero_for_empty_list():
     s = compute_detail_summary([])
-    assert s == DetailSummary(violation_count=0, disallowed_total=Decimal("0"),
-                              confirmed_count=0, probable_count=0, unclear_count=0)
+    assert s == DetailSummary(
+        violation_count=0, disallowed_total=Decimal("0"), confirmed_count=0, probable_count=0, unclear_count=0
+    )
 
 
 def test_summary_counts_confidence_and_sums():

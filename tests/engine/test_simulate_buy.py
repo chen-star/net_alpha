@@ -7,8 +7,13 @@ from net_alpha.models.domain import Account, Trade
 
 def _sell(account, day, ticker, qty, proceeds, cost):
     return Trade(
-        account=account, date=day, ticker=ticker, action="Sell",
-        quantity=qty, proceeds=proceeds, cost_basis=cost,
+        account=account,
+        date=day,
+        ticker=ticker,
+        action="Sell",
+        quantity=qty,
+        proceeds=proceeds,
+        cost_basis=cost,
     )
 
 
@@ -101,6 +106,7 @@ def test_partial_qty_match_when_buy_qty_lt_loss_qty():
 
 def test_loss_already_wash_matched_is_skipped():
     from net_alpha.models.domain import WashSaleViolation
+
     loss = _sell("schwab/personal", date(2025, 5, 20), "TSLA", qty=10, proceeds=1500, cost=2000)
     existing = WashSaleViolation(
         loss_trade_id=loss.id,
