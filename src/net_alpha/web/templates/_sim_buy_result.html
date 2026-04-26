@@ -1,0 +1,48 @@
+{% if not options %}
+  <div class="kpi-card text-slate-500 text-sm">No accounts available.</div>
+{% else %}
+  <h2 class="text-xl mb-3">Per-account options for buying <span class="font-mono text-primary">{{ ticker }}</span></h2>
+  <div class="grid grid-cols-2 gap-4">
+    {% for opt in options %}
+      <div class="kpi-card">
+        <div class="flex justify-between items-baseline mb-2">
+          <div class="font-mono text-primary">{{ opt.account.display() }}</div>
+          {% if opt.clean %}
+            <span class="text-emerald-700 bg-emerald-100 text-xs font-medium px-2 py-0.5 rounded">No wash sale</span>
+          {% else %}
+            <span class="badge-{{ opt.matches[0].confidence|lower }}">Wash trigger</span>
+          {% endif %}
+        </div>
+
+        <div class="text-xs text-slate-500 uppercase">Proposed basis</div>
+        <div class="text-base font-mono mb-1">${{ "%.2f"|format(opt.proposed_basis|float) }}</div>
+
+        {% if opt.total_disallowed > 0 %}
+          <div class="text-xs text-slate-500 uppercase">Disallowed loss rolled in</div>
+          <div class="text-base font-mono text-confirmed mb-1">+${{ "%.2f"|format(opt.total_disallowed|float) }}</div>
+
+          <div class="text-xs text-slate-500 uppercase">Adjusted basis on new lot</div>
+          <div class="text-lg font-mono mb-2">${{ "%.2f"|format(opt.adjusted_basis|float) }}</div>
+
+          <div class="text-xs text-slate-500 uppercase mb-1">Matched losses</div>
+          <table class="w-full text-xs">
+            <tbody>
+              {% for m in opt.matches %}
+                <tr class="border-b border-slate-100 last:border-b-0">
+                  <td class="py-1 font-mono">{{ m.loss_sale_date }}</td>
+                  <td class="py-1">{{ m.loss_account }}</td>
+                  <td class="py-1 font-mono">{{ m.loss_ticker }}</td>
+                  <td class="py-1 font-mono text-right">{{ m.matched_quantity }}</td>
+                  <td class="py-1 font-mono text-right text-confirmed">${{ "%.2f"|format(m.disallowed_loss|float) }}</td>
+                  <td class="py-1"><span class="badge-{{ m.confidence|lower }}">{{ m.confidence }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="text-xs text-slate-500 mt-1">Adjusted basis: ${{ "%.2f"|format(opt.adjusted_basis|float) }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
