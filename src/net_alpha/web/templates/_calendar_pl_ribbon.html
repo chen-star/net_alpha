@@ -1,6 +1,6 @@
 {% set max_abs = (monthly_pl|map(attribute='net_pl')|map('abs')|max) if monthly_pl else 0 %}
-<div class="kpi-card mb-3">
-  <div class="text-xs text-slate-500 uppercase mb-2">{{ selected_year }} — monthly realized P&amp;L</div>
+<div class="panel mb-3">
+  <div class="text-xs text-label-3 uppercase mb-2">{{ selected_year }} — monthly realized P&amp;L</div>
   <div class="grid grid-cols-12 gap-1 h-16 items-end">
     {% for m in monthly_pl %}
       {% if max_abs and m.net_pl != 0 %}
@@ -10,12 +10,12 @@
       {% endif %}
       <div class="relative h-full flex items-end justify-center" title="{{ '%02d'|format(m.month) }}: net ${{ '%.2f'|format(m.net_pl) }} · gain ${{ '%.2f'|format(m.gross_gain) }} · loss ${{ '%.2f'|format(m.gross_loss) }} · {{ m.trade_count }} trade(s)">
         <div class="w-full rounded-sm transition-opacity hover:opacity-80"
-             style="height: {{ height_pct }}%; background-color: {% if m.net_pl > 0 %}#16A34A{% elif m.net_pl < 0 %}#DC2626{% else %}#E2E8F0{% endif %};">
+             style="height: {{ height_pct }}%; background-color: {% if m.net_pl > 0 %}#30D158{% elif m.net_pl < 0 %}#FF453A{% else %}#2C2C2E{% endif %};">
         </div>
       </div>
     {% endfor %}
   </div>
-  <div class="grid grid-cols-12 gap-1 mt-1 text-[10px] text-slate-400 text-center">
+  <div class="grid grid-cols-12 gap-1 mt-1 text-[10px] text-label-3 text-center">
     {% for label in ["J","F","M","A","M","J","J","A","S","O","N","D"] %}
       <div>{{ label }}</div>
     {% endfor %}

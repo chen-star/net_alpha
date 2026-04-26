@@ -84,5 +84,5 @@ def test_calendar_renders_monthly_pl_ribbon(client, repo, builders):
     body = resp.text
     assert "monthly realized" in body.lower()
     # Green bar for March (gain) and red bar for May (loss) both rendered.
-    assert "#16A34A" in body
-    assert "#DC2626" in body
+    assert "#30D158" in body
+    assert "#FF453A" in body

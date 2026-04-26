@@ -1,12 +1,12 @@
-<div class="kpi-card">
+<div class="panel">
   <div class="flex justify-between items-baseline mb-3">
     <h2 class="text-lg">Focus: <span class="font-mono text-primary">{{ violation.ticker }}</span> on {{ violation.loss_sale_date }}</h2>
-    <span class="badge-{{ violation.confidence|lower }}">{{ violation.confidence }}</span>
+    <span class="chip-{{ violation.confidence|lower }}">{{ violation.confidence }}</span>
   </div>
 
-  <div class="text-xs text-slate-500 mb-1">±30-day window: {{ window_start }} → {{ window_end }}</div>
+  <div class="text-xs text-label-2 mb-1">±30-day window: {{ window_start }} → {{ window_end }}</div>
 
-  <div class="relative h-20 bg-amber-50 border border-amber-200 rounded mt-2">
+  <div class="relative h-20 bg-surface-2 rounded mt-2" style="border: 0.5px solid var(--color-hairline);">
     <div class="absolute top-0 bottom-0 w-px bg-confirmed" style="left: 50%;"></div>
     <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full text-xs text-confirmed font-mono px-1">day 0</div>
 
@@ -14,7 +14,7 @@
       <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 group"
            style="left: {{ m.left_pct }}%;">
         <div class="w-3 h-3 rounded-full
-                    {% if m.is_loss_sale %}bg-confirmed border-2 border-white shadow{% elif m.is_triggering %}ring-4 ring-accent ring-opacity-50 bg-secondary{% else %}bg-slate-400{% endif %}"></div>
+                    {% if m.is_loss_sale %}bg-confirmed border-2 border-white shadow{% elif m.is_triggering %}ring-4 ring-accent ring-opacity-50 bg-secondary{% else %}bg-surface-2{% endif %}"></div>
         <div class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap text-xs bg-ink text-white px-2 py-1 rounded">
           {{ m.trade.action }} {{ m.trade.quantity }} · {{ m.trade.date }} · {{ m.offset_label }}
         </div>

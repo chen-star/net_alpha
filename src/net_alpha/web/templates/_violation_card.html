@@ -1,20 +1,20 @@
 <div class="border-l-4 pl-3"
-     style="border-left-color: {% if violation.confidence=='Confirmed' %}#DC2626{% elif violation.confidence=='Probable' %}#F59E0B{% else %}#3B82F6{% endif %};">
-  <div class="text-sm">
+     style="border-left-color: {% if violation.confidence=='Confirmed' %}#FF453A{% elif violation.confidence=='Probable' %}#FF9F0A{% else %}#64D2FF{% endif %};">
+  <div class="text-sm text-text">
     <strong>Loss in</strong> {{ violation.loss_account or "-" }} → <strong>triggered by</strong> {{ violation.buy_account or "-" }} on {{ violation.triggering_buy_date or "-" }}
     {% if violation.source == "schwab_g_l" %}
-      <span class="ml-2 inline-block px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 border border-blue-300"
+      <span class="ml-2 chip-confirm"
             title="Confirmed by Schwab's 1099-B reporting">Schwab</span>
     {% elif violation.source == "engine" %}
       {% if violation.loss_account != violation.buy_account %}
-        <span class="ml-2 inline-block px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800 border border-amber-300"
+        <span class="ml-2 chip-probable"
               title="Cross-account wash sale detected by net-alpha">Cross-account</span>
       {% else %}
-        <span class="ml-2 inline-block px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-800 border border-slate-300"
+        <span class="ml-2 chip-unclear"
               title="Detected by net-alpha (substantially identical or engine call)">Engine</span>
       {% endif %}
     {% endif %}
   </div>
-  <div class="text-sm">Disallowed: <span class="font-mono text-confirmed">${{ "%.2f"|format(violation.disallowed_loss) }}</span> · Matched qty: <span class="font-mono">{{ violation.matched_quantity }}</span></div>
+  <div class="text-sm">Disallowed: <span class="font-mono text-neg">${{ "%.2f"|format(violation.disallowed_loss) }}</span> · Matched qty: <span class="font-mono text-text">{{ violation.matched_quantity }}</span></div>
   <a href="/ticker/{{ violation.ticker }}" class="text-primary text-sm underline">View ticker drilldown →</a>
 </div>
