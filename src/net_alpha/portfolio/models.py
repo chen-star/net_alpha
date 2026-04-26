@@ -37,17 +37,6 @@ class KpiSet:
 
 
 @dataclass(frozen=True)
-class TreemapTile:
-    symbol: str  # "OTHER" used for the long-tail aggregate tile
-    market_value: Decimal
-    unrealized_pl: Decimal | None
-    x_pct: float  # 0–100, percent of container width
-    y_pct: float
-    width_pct: float
-    height_pct: float
-
-
-@dataclass(frozen=True)
 class EquityPoint:
     on: date
     cumulative_realized: Decimal

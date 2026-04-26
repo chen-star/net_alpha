@@ -61,7 +61,7 @@ def test_portfolio_page_full_render(tmp_path):
         for path in [
             "/portfolio/kpis?period=ytd",
             "/portfolio/positions?period=ytd",
-            "/portfolio/treemap",
+            "/portfolio/allocation",
             "/portfolio/equity-curve?period=ytd",
             "/portfolio/wash-impact?period=ytd",
             "/portfolio/lot-aging",
