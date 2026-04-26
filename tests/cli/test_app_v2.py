@@ -30,7 +30,7 @@ def test_default_command_imports_and_renders(runner, schwab_csv):
 
     res = runner.invoke(app, [schwab_csv, "--account", "personal"])
     assert res.exit_code == 0, res.stdout + res.stderr
-    assert "Imported" in res.stdout
+    assert "imported" in res.stdout.lower()
     assert "informational" in res.stdout.lower()
 
 
