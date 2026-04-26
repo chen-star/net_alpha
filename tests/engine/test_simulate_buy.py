@@ -224,3 +224,41 @@ def test_loss_after_proposed_buy_does_not_match():
         etf_pairs={},
     )
     assert options[0].clean is True
+
+
+def test_etf_substantially_identical_loss_matches_with_unclear_confidence():
+    # Loss on SPY; proposed buy on VOO — bundled S&P 500 pair.
+    loss = _sell("schwab/personal", date(2025, 5, 20), "SPY", qty=10, proceeds=4500, cost=5000)
+    options = simulate_buy(
+        ticker="VOO",
+        qty=Decimal("10"),
+        price=Decimal("450"),
+        account="schwab/personal",
+        on_date=date(2025, 6, 1),
+        accounts=[P],
+        recent_trades=[loss],
+        existing_violations=[],
+        etf_pairs={"sp500": ["SPY", "VOO", "IVV", "SPLG"]},
+    )
+    assert options[0].clean is False
+    assert len(options[0].matches) == 1
+    m = options[0].matches[0]
+    assert m.confidence == "Unclear"
+    assert m.loss_ticker == "SPY"
+
+
+def test_etf_unrelated_pair_does_not_match():
+    # SPY (S&P 500) vs QQQ (Nasdaq-100) — not in same group.
+    loss = _sell("schwab/personal", date(2025, 5, 20), "SPY", qty=10, proceeds=4500, cost=5000)
+    options = simulate_buy(
+        ticker="QQQ",
+        qty=Decimal("10"),
+        price=Decimal("400"),
+        account="schwab/personal",
+        on_date=date(2025, 6, 1),
+        accounts=[P],
+        recent_trades=[loss],
+        existing_violations=[],
+        etf_pairs={"sp500": ["SPY", "VOO"], "nasdaq": ["QQQ", "QQQM"]},
+    )
+    assert options[0].clean is True
