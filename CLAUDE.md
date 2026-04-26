@@ -98,7 +98,7 @@ Bundled in `etf_pairs.yaml` (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, et
 ### Pricing & Portfolio modules
 
 - Pricing subsystem: `pricing/` — PriceProvider ABC, YahooPriceProvider, SQLite-backed PriceCache, PricingService orchestrator.
-- Portfolio aggregations: `portfolio/` — pure functions for positions, KPIs, treemap, equity curve, lot aging.
+- Portfolio aggregations: `portfolio/` — pure functions for positions, KPIs, allocation (donut + leaderboard), equity curve, lot aging, wash-sale watch (recent loss closes).
 
 ### Web UI (optional, v2.1+)
 
