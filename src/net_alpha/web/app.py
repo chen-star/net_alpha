@@ -10,7 +10,7 @@ from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.engine.etf_pairs import load_etf_pairs
 from net_alpha.output.disclaimer import render as disclaimer_render
-from net_alpha.web.routes import calendar, dashboard, detail, sim, ticker
+from net_alpha.web.routes import calendar, dashboard, detail, sim, system, ticker
 from net_alpha.web.routes import imports as imports_routes
 
 
@@ -41,5 +41,8 @@ def create_app(settings: Settings) -> FastAPI:
     app.include_router(detail.router)
     app.include_router(sim.router)
     app.include_router(ticker.router)
+    app.include_router(system.router)
+
+    system.register_error_handlers(app)
 
     return app

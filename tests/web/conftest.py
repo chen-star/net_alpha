@@ -38,7 +38,7 @@ def repo(engine) -> Repository:
 def client(settings: Settings, engine) -> TestClient:
     """TestClient with the app pointed at the temp DB."""
     app = create_app(settings)
-    return TestClient(app)
+    return TestClient(app, raise_server_exceptions=False)
 
 
 # --- Trade builders ---------------------------------------------------------
