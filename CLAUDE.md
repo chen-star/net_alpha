@@ -57,6 +57,7 @@ net-alpha sim <ticker> <qty> --price P [--account <l>]    # pre-trade what-if pl
 net-alpha imports                                          # list past imports
 net-alpha imports rm <id> [--yes]                          # remove an import
 net-alpha migrate-from-v1 [--yes]                          # v1 → v2 helper (v2.0.x only)
+net-alpha ui [--port N] [--no-browser] [--reload]          # launch local web UI in browser
 ```
 
 ### Data Flow
@@ -93,6 +94,14 @@ Bundled in `etf_pairs.yaml` (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, et
 - Single SQLite DB at `~/.net_alpha/net_alpha.db` (all years, cross-year window detection works)
 - Schema versioning via `meta` table (`schema_version` integer); hand-written `ALTER TABLE` migrations — no migration framework
 - Wash sale recompute is incremental: only the ±30-day window around affected trade dates is recalculated on import or import removal
+
+### Web UI (optional, v2.1+)
+
+`src/net_alpha/web/` is an optional FastAPI subpackage providing a local browser UI. It only calls existing public seams (`Repository`, engine functions, `csv_loader`, `BrokerParser`) — **no business logic in `web/`**. Templates use Jinja with HTMX for fragment swaps and Alpine for tiny client state. Static assets (htmx, alpine, built `app.css`) are vendored under `web/static/` — no CDN at runtime, no node, no npm.
+
+Launch with `net-alpha ui`. Binds to loopback only, dies on Ctrl-C. UI deps are in the `[ui]` optional group; install with `uv sync --extra ui`.
+
+Tailwind CSS rebuild: `make build-css` (uses `pytailwindcss` from dev extras).
 
 ### Disclaimer Policy
 
