@@ -1,103 +1,95 @@
-<div class="text-xs text-slate-500 uppercase mb-1">Equity curve · {{ year }}<span class="text-[9px] normal-case text-slate-400 ml-1">(realized · YTD)</span></div>
+{# Inputs: points: list[EquityPoint] (one row per realized event + Jan-1 zero seed),
+           year: int #}
+
+<div class="panel-head">
+  <h4>Equity curve</h4>
+  <span class="meta">Realized cumulative · {{ year }}</span>
+</div>
+
 {% if points|length <= 1 %}
-  <div class="text-sm text-slate-400">No realized activity in {{ year }}.</div>
+  <div class="text-label-2 text-[13px] py-4">No realized activity in {{ year }}.</div>
 {% else %}
-  {% set max_v = points|map(attribute='cumulative_realized')|map('float')|max %}
-  {% set min_v = points|map(attribute='cumulative_realized')|map('float')|min %}
-  {# Include the present-day unrealized in the y-extent so the dot fits on screen. #}
-  {% if points[-1].unrealized is not none %}
-    {% set with_unr = (points[-1].cumulative_realized|float + points[-1].unrealized|float) %}
-    {% if with_unr > max_v %}{% set max_v = with_unr %}{% endif %}
-    {% if with_unr < min_v %}{% set min_v = with_unr %}{% endif %}
-  {% endif %}
-  {# Pad the y-extent by 8% so the line/dot don't kiss the edge. Always include zero. #}
-  {% if min_v > 0 %}{% set min_v = 0 %}{% endif %}
-  {% if max_v < 0 %}{% set max_v = 0 %}{% endif %}
-  {% set raw_span = max_v - min_v %}
-  {% if raw_span <= 0 %}{% set raw_span = 1.0 %}{% endif %}
-  {% set pad = raw_span * 0.08 %}
-  {% set y_min = min_v - pad %}
-  {% set y_max = max_v + pad %}
-  {% set y_span = y_max - y_min %}
-  {# SVG geometry. Padding leaves room for axis labels. #}
-  {% set vw = 320 %}
-  {% set vh = 160 %}
-  {% set pl = 44 %}{# left axis label gutter #}
-  {% set pr = 8 %}
-  {% set pt = 8 %}
-  {% set pb = 18 %}{# bottom month-axis gutter #}
-  {% set iw = vw - pl - pr %}
-  {% set ih = vh - pt - pb %}
-  {% set y_ticks = [0, 0.25, 0.5, 0.75, 1.0] %}
-  <svg viewBox="0 0 {{ vw }} {{ vh }}" preserveAspectRatio="none" class="w-full h-40 text-slate-400">
-    {# Y gridlines + labels #}
-    {% for t in y_ticks %}
-      {% set yval = y_max - t * y_span %}
-      {% set yp = pt + t * ih %}
-      <line x1="{{ pl }}" y1="{{ '%.2f'|format(yp) }}" x2="{{ pl + iw }}" y2="{{ '%.2f'|format(yp) }}"
-            stroke="currentColor" stroke-width="0.4" stroke-dasharray="2 3" opacity="0.5"/>
-      <text x="{{ pl - 4 }}" y="{{ '%.2f'|format(yp + 3) }}" text-anchor="end"
-            font-size="9" fill="currentColor"
-            font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
-        {% if yval >= 0 %}+{% else %}−{% endif %}${{ "{:,.0f}".format(yval|abs) }}
-      </text>
-    {% endfor %}
-    {# X-axis month ticks: position by day-of-year so partial year is honored. #}
-    {% set last_doy = (points[-1].on - points[-1].on.replace(month=1, day=1)).days %}
-    {% if last_doy < 1 %}{% set last_doy = 1 %}{% endif %}
-    {% set months = [(1, 'Jan'), (2, 'Feb'), (3, 'Mar'), (4, 'Apr'), (5, 'May'), (6, 'Jun'),
-                     (7, 'Jul'), (8, 'Aug'), (9, 'Sep'), (10, 'Oct'), (11, 'Nov'), (12, 'Dec')] %}
-    {% for m, lbl in months %}
-      {% set m_doy = ((m - 1) * 30.4)|round(0, 'floor')|int %}
-      {% if m_doy <= last_doy %}
-        {% set xp = pl + (m_doy / last_doy) * iw %}
-        <line x1="{{ '%.2f'|format(xp) }}" y1="{{ pt + ih }}" x2="{{ '%.2f'|format(xp) }}" y2="{{ pt + ih + 3 }}"
-              stroke="currentColor" stroke-width="0.4" opacity="0.6"/>
-        <text x="{{ '%.2f'|format(xp) }}" y="{{ pt + ih + 13 }}" text-anchor="middle"
-              font-size="8.5" fill="currentColor">{{ lbl }}</text>
-      {% endif %}
-    {% endfor %}
-    {# Axis baselines #}
-    <line x1="{{ pl }}" y1="{{ pt + ih }}" x2="{{ pl + iw }}" y2="{{ pt + ih }}" stroke="currentColor" stroke-width="0.6" opacity="0.5"/>
-    <line x1="{{ pl }}" y1="{{ pt }}" x2="{{ pl }}" y2="{{ pt + ih }}" stroke="currentColor" stroke-width="0.6" opacity="0.5"/>
-    {# Polyline of cumulative realized #}
-    <polyline fill="none" stroke="#16a34a" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"
-      points="
-      {% for p in points %}
-        {% set p_doy = (p.on - p.on.replace(month=1, day=1)).days %}
-        {% set x = pl + (p_doy / last_doy) * iw %}
-        {% set y = pt + ((y_max - p.cumulative_realized|float) / y_span) * ih %}
-        {{ '%.2f'|format(x) }},{{ '%.2f'|format(y) }}
-      {% endfor %}
-      "/>
-    {# Sell event dots (skip first synthetic Jan-1 zero point) #}
-    {% for p in points %}
-      {% if loop.index0 > 0 and (loop.last == false or points[-1].unrealized is none) %}
-        {% set p_doy = (p.on - p.on.replace(month=1, day=1)).days %}
-        {% set x = pl + (p_doy / last_doy) * iw %}
-        {% set y = pt + ((y_max - p.cumulative_realized|float) / y_span) * ih %}
-        <circle cx="{{ '%.2f'|format(x) }}" cy="{{ '%.2f'|format(y) }}" r="2.2" fill="#16a34a">
-          <title>{{ p.on.isoformat() }} · cumulative {% if p.cumulative_realized|float >= 0 %}+{% else %}−{% endif %}${{ "{:,.2f}".format(p.cumulative_realized|float|abs) }}</title>
-        </circle>
-      {% endif %}
-    {% endfor %}
-    {# Present-day "+ unrealized" dot #}
-    {% set last = points[-1] %}
-    {% if last.unrealized is not none %}
-      {% set last_doy = (last.on - last.on.replace(month=1, day=1)).days %}
-      {% set last_x = pl + (last_doy / last_doy) * iw %}
-      {% set last_total = last.cumulative_realized|float + last.unrealized|float %}
-      {% set last_y = pt + ((y_max - last_total) / y_span) * ih %}
-      {% set realized_y = pt + ((y_max - last.cumulative_realized|float) / y_span) * ih %}
-      {# Tether line from realized line to the +unrealized dot #}
-      <line x1="{{ '%.2f'|format(last_x) }}" y1="{{ '%.2f'|format(realized_y) }}"
-            x2="{{ '%.2f'|format(last_x) }}" y2="{{ '%.2f'|format(last_y) }}"
-            stroke="{% if last.unrealized > 0 %}#16a34a{% else %}#dc2626{% endif %}" stroke-width="1" stroke-dasharray="2 2"/>
-      <circle cx="{{ '%.2f'|format(last_x) }}" cy="{{ '%.2f'|format(last_y) }}" r="3"
-              fill="{% if last.unrealized > 0 %}#16a34a{% else %}#dc2626{% endif %}">
-        <title>Today · realized {% if last.cumulative_realized|float >= 0 %}+{% else %}−{% endif %}${{ "{:,.2f}".format(last.cumulative_realized|float|abs) }} + unrealized {% if last.unrealized|float >= 0 %}+{% else %}−{% endif %}${{ "{:,.2f}".format(last.unrealized|float|abs) }} = {% if last_total >= 0 %}+{% else %}−{% endif %}${{ "{:,.2f}".format(last_total|abs) }}</title>
-      </circle>
-    {% endif %}
-  </svg>
-  <div class="text-[10px] text-slate-400 mt-1">Line: cumulative realized · Dot: + present-day unrealized · hover any point</div>
+  {% set unrealized_today = points[-1].unrealized %}
+  <div id="equity-chart-{{ year }}" style="height: 218px;"></div>
+
+  <script>
+  (function () {
+    const opts = window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
+      chart: { type: "area", height: 218 },
+      colors: [window.netAlphaChartTheme.colors.pos],
+      stroke: { width: 2, curve: "smooth", lineCap: "round" },
+      fill: {
+        type: "gradient",
+        gradient: { shade: "dark", type: "vertical", opacityFrom: 0.30, opacityTo: 0, stops: [0, 100] },
+      },
+      xaxis: {
+        type: "datetime",
+        labels: { format: "MMM" },
+      },
+      yaxis: {
+        labels: {
+          formatter: (v) => {
+            const n = Math.round(v);
+            const sign = n >= 0 ? "+" : "−";
+            const abs = Math.abs(n);
+            if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(0) + "k";
+            return sign + "$" + abs;
+          },
+        },
+      },
+      tooltip: {
+        x: { format: "yyyy-MM-dd" },
+        y: { formatter: (v) => "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
+      },
+      series: [{
+        name: "Realized cumulative",
+        data: [
+          {% for p in points %}
+            { x: "{{ p.on.isoformat() }}", y: {{ p.cumulative_realized|float }} }{% if not loop.last %},{% endif %}
+          {% endfor %}
+        ],
+      }],
+      annotations: {
+        {% if unrealized_today is not none %}
+        points: [{
+          x: new Date("{{ points[-1].on.isoformat() }}").getTime(),
+          y: {{ (points[-1].cumulative_realized|float + unrealized_today|float) }},
+          marker: {
+            size: 4,
+            fillColor: window.netAlphaChartTheme.colors.violet,
+            strokeColor: window.netAlphaChartTheme.colors.violet,
+            strokeWidth: 0,
+          },
+          label: {
+            text: "+ unrealized today",
+            offsetY: -6,
+            style: {
+              color: "#fff",
+              background: window.netAlphaChartTheme.colors.violet,
+              fontSize: "10px",
+              fontFamily: "Inter, sans-serif",
+            },
+          },
+        }],
+        {% endif %}
+      },
+    });
+
+    function render() {
+      const el = document.querySelector("#equity-chart-{{ year }}");
+      if (!el) return;
+      el.innerHTML = "";
+      const chart = new ApexCharts(el, opts);
+      chart.render();
+    }
+
+    if (window.ApexCharts) {
+      render();
+    } else {
+      const iv = setInterval(() => {
+        if (window.ApexCharts) { clearInterval(iv); render(); }
+      }, 50);
+    }
+  })();
+  </script>
 {% endif %}
