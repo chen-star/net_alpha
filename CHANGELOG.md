@@ -2,6 +2,136 @@
 
 
 
+## v0.11.0 (2026-04-26)
+
+### Build
+
+* build(web): tailwind config, source css, and built app.css; add make build-css ([`9ebd80d`](https://github.com/chen-star/net_alpha/commit/9ebd80d5c421dfb885ce228a0feb30b9ae89ce0d))
+
+### Documentation
+
+* docs(plan): local UI implementation plan (20 tasks, TDD)
+
+20-task subagent-ready plan covering Phase A foundation (deps, app
+factory, conftest, Tailwind, static, base.html), Phase B repository
+extensions, Phase C read-only views (dashboard, imports, detail, sim),
+Phase D drag-drop import (drop zone, preview, upload), Phase E
+visualizations (calendar ribbon + focus, ticker drilldown), Phase F
+polish (errors, CLI ui command, docs). Each task carries the failing
+test, exact code, run command, expected output, and commit step.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`55df40d`](https://github.com/chen-star/net_alpha/commit/55df40dcb5d2479cb21187c81383e32532c4ac74))
+
+* docs(spec): local UI design — net-alpha ui (v2.1.0)
+
+Adds the design spec for an optional, ephemeral, local-only web UI that
+wraps the existing v2 engine. Drag-drop CSV import, wash-sale calendar
+(annual ribbon + ±30-day focus strip), ticker drilldown, and CLI parity
+views (sim, imports management, detail). Stack: FastAPI + Jinja + HTMX +
+Alpine + Tailwind, vendored static assets, no node/npm/Docker. Optional
+dependency group keeps CLI-only installs lean.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7373ea7`](https://github.com/chen-star/net_alpha/commit/7373ea79c8274242ba9320954a5ee5bff01c0a6e))
+
+* docs: document net-alpha ui command + web subsystem in README and CLAUDE.md ([`2b3e56e`](https://github.com/chen-star/net_alpha/commit/2b3e56eb63976f524324c0392803d0cd517e9dc7))
+
+* docs(plan): local UI implementation plan (20 tasks, TDD)
+
+20-task subagent-ready plan covering Phase A foundation (deps, app
+factory, conftest, Tailwind, static, base.html), Phase B repository
+extensions, Phase C read-only views (dashboard, imports, detail, sim),
+Phase D drag-drop import (drop zone, preview, upload), Phase E
+visualizations (calendar ribbon + focus, ticker drilldown), Phase F
+polish (errors, CLI ui command, docs). Each task carries the failing
+test, exact code, run command, expected output, and commit step.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9792dfb`](https://github.com/chen-star/net_alpha/commit/9792dfb10670b1e90c4e977169abec08ee7c75c7))
+
+* docs(spec): local UI design — net-alpha ui (v2.1.0)
+
+Adds the design spec for an optional, ephemeral, local-only web UI that
+wraps the existing v2 engine. Drag-drop CSV import, wash-sale calendar
+(annual ribbon + ±30-day focus strip), ticker drilldown, and CLI parity
+views (sim, imports management, detail). Stack: FastAPI + Jinja + HTMX +
+Alpine + Tailwind, vendored static assets, no node/npm/Docker. Optional
+dependency group keeps CLI-only installs lean.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c558b2a`](https://github.com/chen-star/net_alpha/commit/c558b2a6c13bfb707da68f8534dea7b0ae67ec0b))
+
+### Feature
+
+* feat(cli): net-alpha ui command (port picker, uvicorn boot, browser open) ([`b050e0d`](https://github.com/chen-star/net_alpha/commit/b050e0d50c5f8880a1fd6cf51e4d69edfbfed5cd))
+
+* feat(web): 404/500 handlers render error.html with traceback toggle ([`a27cfeb`](https://github.com/chen-star/net_alpha/commit/a27cfeb1808bd838a1c9374483f5bf39475494a9))
+
+* feat(web): GET /ticker/{symbol} drilldown with KPIs, timeline, lots, violations ([`56c5330`](https://github.com/chen-star/net_alpha/commit/56c5330639cb16372c2ea14988d019e5cb988651))
+
+* feat(web): GET /calendar/focus/{id} renders ±30-day strip + violation card ([`367c201`](https://github.com/chen-star/net_alpha/commit/367c2010680d135a8337c66dfb0478e534da46fe))
+
+* feat(web): GET /calendar with annual ribbon (per-year violation markers) ([`4fb8f69`](https://github.com/chen-star/net_alpha/commit/4fb8f69cc303bac3c0cfe40c860d574eccb55b40))
+
+* feat(web): POST /imports/preview + POST /imports for drag-drop upload flow ([`e16f065`](https://github.com/chen-star/net_alpha/commit/e16f0658f8e383ad77f3a122ee53cb4e470be3c5))
+
+* feat(web): drag-drop zone partial on dashboard with Alpine drag-over highlight ([`d6ca656`](https://github.com/chen-star/net_alpha/commit/d6ca656734a9c5ad6a7a19d78502680a6c36b887))
+
+* feat(web): GET/POST /sim with HTMX-driven per-account result cards ([`9e9e94d`](https://github.com/chen-star/net_alpha/commit/9e9e94dd9a66092914df349c971628154a76b7c3))
+
+* feat(web): GET /detail page with ticker/account/year/confidence filters ([`51f397f`](https://github.com/chen-star/net_alpha/commit/51f397f6615816b096d43582bc65b2cca3b1d900))
+
+* feat(web): DELETE /imports/{id} removes import + recomputes wash sales ([`74086fd`](https://github.com/chen-star/net_alpha/commit/74086fdb732ea71af4f01e656e5f4d105babc92e))
+
+* feat(web): GET /imports management page with HTMX-ready remove button ([`9ad18b0`](https://github.com/chen-star/net_alpha/commit/9ad18b08c442326eb5708d39758f629dab2e7fb5))
+
+* feat(web): dashboard route with watch list + YTD KPI cards ([`76b6ae2`](https://github.com/chen-star/net_alpha/commit/76b6ae25680ad8f435ebb2ce2cd17635268a77fe))
+
+* feat(db): repository read methods for UI (list_distinct_tickers, get_*_for_ticker) ([`cfa6357`](https://github.com/chen-star/net_alpha/commit/cfa6357ce04d9b36f169fbc9e53cba5ba78ef3eb))
+
+* feat(web): base.html with nav and disclaimer footer; jinja env + etf pairs in app state ([`27fbbb3`](https://github.com/chen-star/net_alpha/commit/27fbbb377a0c868dbb0c279402391f469779a69d))
+
+* feat(web): vendor htmx + alpine static assets, mount /static via StaticFiles ([`4d19694`](https://github.com/chen-star/net_alpha/commit/4d19694265b77d099f798601542a081b15aed3ec))
+
+* feat(web): create web package skeleton with FastAPI app factory ([`c533b7d`](https://github.com/chen-star/net_alpha/commit/c533b7d9ddc5c0bb164ec02371c23d00e47ec40e))
+
+### Fix
+
+* fix(web): correct tailwind palette to match design spec (primary, secondary, accent, bg) ([`ce14d2a`](https://github.com/chen-star/net_alpha/commit/ce14d2a8db0bd2be10ff51aaca3bc7af34d59611))
+
+* fix(build): pin pytailwindcss to v3, restore @apply with custom color tokens
+
+Downgrade pytailwindcss to v3.4.1 and restore v3-style CSS with @apply
+directives using custom color tokens (primary, secondary, confirmed,
+probable, unclear). Manually installed v3 via pytailwindcss.install(),
+added safelist for utility classes and component classes to ensure all
+needed styles are generated despite no templates yet.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b7ad2ff`](https://github.com/chen-star/net_alpha/commit/b7ad2ffdc87d6005ce929c446cce2d8c87f3698a))
+
+### Style
+
+* style: ruff format + import sort across web subsystem ([`f171a16`](https://github.com/chen-star/net_alpha/commit/f171a1627e8f92a165dfb03ee797f852980e991c))
+
+### Test
+
+* test(web): add conftest with settings/engine/repo/client fixtures + trade builders ([`a20976f`](https://github.com/chen-star/net_alpha/commit/a20976f597486b940311cb5915a0e26ed10db759))
+
+### Unknown
+
+* Merge feature/local-ui — local web UI (v2.1)
+
+20-task subagent-driven implementation of the local web UI:
+FastAPI + Jinja + HTMX + Alpine + Tailwind v3 (vendored, no node/npm).
+Drag-drop CSV import, watch list, YTD KPIs, sim, imports management,
+detail, wash-sale calendar (annual ribbon + ±30-day focus), ticker
+drilldown, error pages, and the `net-alpha ui` CLI command (port picker,
+uvicorn boot, browser open, --port/--no-browser/--reload flags).
+
+187 tests passing, ruff clean.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cd2486c`](https://github.com/chen-star/net_alpha/commit/cd2486c246c2bd4e7543ac486943c0ed96a81e94))
+
+* deps(ui): add optional ui group (fastapi, jinja, uvicorn, multipart) + pytailwindcss/httpx for dev ([`0af0d14`](https://github.com/chen-star/net_alpha/commit/0af0d143505a0152bdbdcd7dfca74a9c408357ef))
+
+
 ## v0.10.0 (2026-04-25)
 
 ### Chore
