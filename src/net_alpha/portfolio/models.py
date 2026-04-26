@@ -16,12 +16,12 @@ class PositionRow:
     symbol: str
     accounts: tuple[str, ...]
     qty: Decimal
-    market_value: Decimal | None       # None when no price is available
-    open_cost: Decimal                  # sum of adjusted_basis across open lots
-    avg_basis: Decimal                  # open_cost / qty (formula C)
-    cash_sunk_per_share: Decimal        # (buys − sells − option_premium) / qty (formula A)
-    realized_pl: Decimal                # period-scoped
-    unrealized_pl: Decimal | None       # None when no price
+    market_value: Decimal | None  # None when no price is available
+    open_cost: Decimal  # sum of adjusted_basis across open lots
+    avg_basis: Decimal  # open_cost / qty (formula C)
+    cash_sunk_per_share: Decimal  # (buys − sells − option_premium) / qty (formula A)
+    realized_pl: Decimal  # period-scoped
+    unrealized_pl: Decimal | None  # None when no price
 
 
 @dataclass(frozen=True)
@@ -36,10 +36,10 @@ class KpiSet:
 
 @dataclass(frozen=True)
 class TreemapTile:
-    symbol: str           # "OTHER" used for the long-tail aggregate tile
+    symbol: str  # "OTHER" used for the long-tail aggregate tile
     market_value: Decimal
     unrealized_pl: Decimal | None
-    x_pct: float          # 0–100, percent of container width
+    x_pct: float  # 0–100, percent of container width
     y_pct: float
     width_pct: float
     height_pct: float

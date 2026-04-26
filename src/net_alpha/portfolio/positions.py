@@ -70,16 +70,18 @@ def compute_open_positions(
         quote = prices.get(sym)
         market_value = (qty * quote.price) if quote else None
         unrealized = (market_value - open_cost) if market_value is not None else None
-        rows.append(PositionRow(
-            symbol=sym,
-            accounts=tuple(sorted(accounts_by_sym[sym])),
-            qty=qty,
-            market_value=market_value,
-            open_cost=open_cost,
-            avg_basis=avg_basis,
-            cash_sunk_per_share=cash_sunk,
-            realized_pl=realized_by_sym[sym],
-            unrealized_pl=unrealized,
-        ))
+        rows.append(
+            PositionRow(
+                symbol=sym,
+                accounts=tuple(sorted(accounts_by_sym[sym])),
+                qty=qty,
+                market_value=market_value,
+                open_cost=open_cost,
+                avg_basis=avg_basis,
+                cash_sunk_per_share=cash_sunk,
+                realized_pl=realized_by_sym[sym],
+                unrealized_pl=unrealized,
+            )
+        )
     rows.sort(key=lambda r: (r.market_value is None, -(r.market_value or Decimal("0"))))
     return rows

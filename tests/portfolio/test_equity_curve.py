@@ -7,9 +7,16 @@ from net_alpha.portfolio.equity_curve import build_equity_curve
 
 def _sell(d, gain):
     return Trade(
-        id="t", account="Tax", date=d, ticker="SPY", action="Sell",
-        quantity=10.0, proceeds=10_000 + gain, cost_basis=10_000.0,
-        basis_unknown=False, option_details=None,
+        id="t",
+        account="Tax",
+        date=d,
+        ticker="SPY",
+        action="Sell",
+        quantity=10.0,
+        proceeds=10_000 + gain,
+        cost_basis=10_000.0,
+        basis_unknown=False,
+        option_details=None,
     )
 
 

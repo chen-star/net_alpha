@@ -125,6 +125,6 @@ class PriceCacheRow(SQLModel, table=True):
 
     symbol: str = Field(primary_key=True)
     price: float
-    as_of: str        # ISO 8601 timestamp from provider
-    fetched_at: str   # ISO 8601 UTC timestamp; TTL check performed by cache.py
-    source: str       # e.g. "yahoo"
+    as_of: str  # ISO 8601 timestamp from provider
+    fetched_at: str  # ISO 8601 UTC timestamp; TTL check performed by cache.py
+    source: str  # e.g. "yahoo"

@@ -39,8 +39,7 @@ class PriceCache:
         with self._engine.connect() as conn:
             rows = conn.execute(
                 text(
-                    f"SELECT symbol, price, as_of, fetched_at, source "
-                    f"FROM price_cache WHERE symbol IN ({placeholders})"
+                    f"SELECT symbol, price, as_of, fetched_at, source FROM price_cache WHERE symbol IN ({placeholders})"
                 ),
                 params,
             ).all()

@@ -153,12 +153,17 @@ def portfolio_treemap(
     symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(symbols)
     rows = compute_open_positions(
-        trades=trades, lots=lots, prices=prices,
-        period=(today.year, today.year + 1), account=account or None,
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period=(today.year, today.year + 1),
+        account=account or None,
     )
     tiles = build_treemap(positions=rows, top_n=8)
     return request.app.state.templates.TemplateResponse(
-        request, "_portfolio_treemap.html", {"tiles": tiles},
+        request,
+        "_portfolio_treemap.html",
+        {"tiles": tiles},
     )
 
 
@@ -182,12 +187,18 @@ def portfolio_equity_curve(
     symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(symbols)
     kpis = compute_kpis(
-        trades=trades, lots=lots, prices=prices,
-        period_label=period_label, period=period_tuple, account=None,  # already filtered
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label=period_label,
+        period=period_tuple,
+        account=None,  # already filtered
     )
     points = build_equity_curve(trades=trades, year=year, present_unrealized=kpis.period_unrealized)
     return request.app.state.templates.TemplateResponse(
-        request, "_portfolio_equity_curve.html", {"points": points, "year": year},
+        request,
+        "_portfolio_equity_curve.html",
+        {"points": points, "year": year},
     )
 
 
@@ -202,10 +213,14 @@ def portfolio_wash_impact(
     period_tuple, period_label = _parse_period(period, today.year)
     impact = compute_wash_impact(
         violations=repo.all_violations(),
-        period_label=period_label, period=period_tuple, account=account or None,
+        period_label=period_label,
+        period=period_tuple,
+        account=account or None,
     )
     return request.app.state.templates.TemplateResponse(
-        request, "_portfolio_wash_impact.html", {"impact": impact},
+        request,
+        "_portfolio_wash_impact.html",
+        {"impact": impact},
     )
 
 
@@ -220,5 +235,7 @@ def portfolio_lot_aging(
         lots = [lot for lot in lots if lot.account == account]
     aging = top_lots_crossing_ltcg(lots=lots, horizon_days=90, top_n=5)
     return request.app.state.templates.TemplateResponse(
-        request, "_portfolio_lot_aging.html", {"aging": aging},
+        request,
+        "_portfolio_lot_aging.html",
+        {"aging": aging},
     )

@@ -26,9 +26,7 @@ def build_equity_curve(
         key=lambda t: t.date,
     )
 
-    points: list[EquityPoint] = [
-        EquityPoint(on=dt.date(year, 1, 1), cumulative_realized=Decimal("0"), unrealized=None)
-    ]
+    points: list[EquityPoint] = [EquityPoint(on=dt.date(year, 1, 1), cumulative_realized=Decimal("0"), unrealized=None)]
     cum = Decimal("0")
     for t in sells:
         cum += Decimal(str((t.proceeds or 0) - (t.cost_basis or 0)))

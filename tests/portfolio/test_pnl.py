@@ -85,10 +85,17 @@ def test_kpis_unrealized_none_when_prices_missing():
 
 def _violation(loss_date, *, disallowed=100.0, confidence="Confirmed", loss_account="Tax", buy_account="Tax"):
     return WashSaleViolation(
-        id="v", loss_trade_id="t1", replacement_trade_id="t2",
-        loss_account=loss_account, buy_account=buy_account,
-        loss_sale_date=loss_date, triggering_buy_date=loss_date, ticker="SPY",
-        confidence=confidence, disallowed_loss=disallowed, matched_quantity=10.0,
+        id="v",
+        loss_trade_id="t1",
+        replacement_trade_id="t2",
+        loss_account=loss_account,
+        buy_account=buy_account,
+        loss_sale_date=loss_date,
+        triggering_buy_date=loss_date,
+        ticker="SPY",
+        confidence=confidence,
+        disallowed_loss=disallowed,
+        matched_quantity=10.0,
         source="engine",
     )
 

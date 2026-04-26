@@ -24,10 +24,14 @@ def top_lots_crossing_ltcg(*, lots: Iterable[Lot], horizon_days: int = 90, top_n
         days = (ltcg_date - today).days
         if days < 1 or days > horizon_days:
             continue
-        candidates.append(AgingLot(
-            symbol=lot.ticker, account=lot.account,
-            qty=Decimal(str(lot.quantity)),
-            acquired_on=lot.date, days_to_ltcg=days,
-        ))
+        candidates.append(
+            AgingLot(
+                symbol=lot.ticker,
+                account=lot.account,
+                qty=Decimal(str(lot.quantity)),
+                acquired_on=lot.date,
+                days_to_ltcg=days,
+            )
+        )
     candidates.sort(key=lambda a: a.days_to_ltcg)
     return candidates[:top_n]

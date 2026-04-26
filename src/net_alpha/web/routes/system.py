@@ -24,7 +24,11 @@ async def _force_500() -> None:
     raise RuntimeError("forced for tests")
 
 
-@router.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"], include_in_schema=False)
+@router.api_route(
+    "/{path_name:path}",
+    methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+    include_in_schema=False,
+)
 async def catch_all_404(request: Request, path_name: str) -> HTMLResponse:
     """Catch-all route for 404s. Must be registered last."""
     return request.app.state.templates.TemplateResponse(
