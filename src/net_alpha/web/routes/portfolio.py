@@ -6,11 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
+from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.lot_aging import top_lots_crossing_ltcg
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import compute_open_positions
-from net_alpha.portfolio.allocation import build_allocation
+from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 
@@ -277,4 +278,24 @@ def portfolio_lot_aging(
         request,
         "_portfolio_lot_aging.html",
         {"aging": aging},
+    )
+
+
+@router.get("/portfolio/wash-watch", response_class=HTMLResponse)
+def portfolio_wash_watch_fragment(
+    request: Request,
+    account: str | None = None,
+    window_days: int = 30,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    rows = recent_loss_closes(
+        repo=repo,
+        today=date.today(),
+        window_days=window_days,
+        account=account,
+    )
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_portfolio_wash_watch.html",
+        {"rows": rows, "window_days": window_days},
     )
