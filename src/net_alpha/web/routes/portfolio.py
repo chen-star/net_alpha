@@ -10,7 +10,7 @@ from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.lot_aging import top_lots_crossing_ltcg
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import compute_open_positions
-from net_alpha.portfolio.treemap import build_treemap
+from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 
@@ -179,8 +179,8 @@ def portfolio_positions(
     )
 
 
-@router.get("/portfolio/treemap", response_class=HTMLResponse)
-def portfolio_treemap(
+@router.get("/portfolio/allocation", response_class=HTMLResponse)
+def portfolio_allocation_fragment(
     request: Request,
     account: str | None = None,
     repo: Repository = Depends(get_repository),
@@ -191,18 +191,18 @@ def portfolio_treemap(
     lots = repo.all_lots()
     symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(symbols)
-    rows = compute_open_positions(
+    positions = compute_open_positions(
         trades=trades,
         lots=lots,
         prices=prices,
         period=(today.year, today.year + 1),
         account=account or None,
     )
-    tiles = build_treemap(positions=rows, top_n=8)
+    allocation = build_allocation(positions=positions, top_n=10)
     return request.app.state.templates.TemplateResponse(
         request,
-        "_portfolio_treemap.html",
-        {"tiles": tiles},
+        "_portfolio_allocation.html",
+        {"allocation": allocation},
     )
 
 

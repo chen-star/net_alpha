@@ -54,13 +54,6 @@ def test_positions_fragment_empty_state(tmp_path):
     assert "No open positions" in response.text
 
 
-def test_treemap_fragment_empty(tmp_path):
-    client = _client(tmp_path)
-    r = client.get("/portfolio/treemap")
-    assert r.status_code == 200
-    assert "No priced positions" in r.text
-
-
 def test_equity_curve_fragment_no_data(tmp_path):
     client = _client(tmp_path)
     r = client.get("/portfolio/equity-curve?period=ytd")
