@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
+from net_alpha.portfolio.calendar_pnl import monthly_realized_pl
 from net_alpha.web.dependencies import get_repository
 
 router = APIRouter()
@@ -52,6 +53,15 @@ def calendar_page(
         for v in violations
     ]
     years = sorted({v.loss_sale_date.year for v in all_v if v.loss_sale_date}) or [today.year]
+    pl_trades = repo.all_trades()
+    if ticker:
+        pl_trades = [t for t in pl_trades if t.ticker == ticker.upper()]
+    monthly_pl = monthly_realized_pl(
+        trades=pl_trades,
+        year=selected_year,
+        ticker=ticker.upper() if ticker else None,
+        account=account or None,
+    )
     return request.app.state.templates.TemplateResponse(
         request,
         "calendar.html",
@@ -64,6 +74,7 @@ def calendar_page(
             "filter_confidence": confidence or "",
             "tickers": repo.list_distinct_tickers(),
             "accounts": [a.display() for a in repo.list_accounts()],
+            "monthly_pl": monthly_pl,
         },
     )
 
