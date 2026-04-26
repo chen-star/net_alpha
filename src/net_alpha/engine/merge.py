@@ -54,7 +54,10 @@ def merge_violations(
       2. For each engine violation:
          a. If same-account exact-ticker matches a Schwab lot:
               - Schwab said Yes → drop engine's (already covered by rule 1)
-              - Schwab said No → engine downgraded to Unclear (likely engine bug, surface)
+              - Schwab said No  → drop engine's UNLESS the engine's original
+                confidence was "Unclear" (which signals the trigger was a
+                substantially-identical security Schwab can't model — keep
+                those for review).
          b. If cross-account (loss_account != buy_account) → keep with source='engine'
          c. If same-account but not exact-ticker (substantially-identical/ETF pair),
             Schwab can't model this → surface as Unclear/engine
@@ -94,10 +97,16 @@ def merge_violations(
         if same_account and matching_lots:
             schwab_yes = any(lot.wash_sale for lot in matching_lots)
             if schwab_yes:
-                # 2a-yes: Schwab already covered this; drop engine's duplicate.
+                # 2a-yes: already emitted by rule 1.
                 continue
-            # 2a-no: engine flagged but Schwab cleared — likely engine bug, surface as Unclear.
-            out.append(_engine_v_with_overrides(v, confidence="Unclear", source="engine"))
+            if v.confidence == "Unclear":
+                # 2a-no with Unclear: the engine's trigger was a substitute
+                # security (e.g. SPY loss + VOO buy) that Schwab can't model.
+                # Keep for manual review.
+                out.append(_engine_v_with_overrides(v, source="engine"))
+                continue
+            # 2a-no with Confirmed/Probable: same-ticker trigger, Schwab is
+            # authoritative — drop the engine's contradiction.
             continue
 
         if not same_account:

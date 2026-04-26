@@ -67,7 +67,8 @@ def test_schwab_yes_creates_confirmed_violation():
 
 def test_schwab_no_suppresses_engine_same_account_exact_ticker():
     """Engine flags a same-account exact-ticker wash sale that Schwab
-    explicitly cleared. Engine's verdict is downgraded to Unclear."""
+    explicitly cleared. Schwab is authoritative for lots it reports, so
+    the engine's contradicting verdict is dropped entirely."""
     schwab_lots = [_gl(wash=False)]
     engine_violations = [
         _v(ticker="WRD", loss_date=(2026, 4, 20), account="schwab/personal", buy_account="schwab/personal"),
@@ -76,9 +77,7 @@ def test_schwab_no_suppresses_engine_same_account_exact_ticker():
         engine_violations=engine_violations,
         gl_lots_by_account={1: schwab_lots},
     )
-    assert len(merged) == 1
-    assert merged[0].source == "engine"
-    assert merged[0].confidence == "Unclear"
+    assert merged == []
 
 
 def test_engine_flag_dedupes_with_matching_schwab_yes():
@@ -133,12 +132,38 @@ def test_no_gl_for_account_keeps_engine_violations_unchanged():
 
 def test_substantially_identical_engine_detection_marked_unclear():
     """Engine flags an ETF-pair (e.g. SPY loss + VOO buy) within the Schwab
-    account. Schwab's G/L doesn't have a 'wash sale' row for the SPY ticker.
-    Surface as Unclear since Schwab doesn't model substitutes."""
+    account. The matcher already labels ETF-pair triggers Unclear, and the
+    merge keeps them for review since Schwab's same-ticker WS=No row only
+    addresses the literal SPY-with-SPY scenario."""
     schwab_lots = [_gl(symbol="SPY", wash=False)]
     engine_violations = [
         _v(
             ticker="SPY",
+            loss_date=(2026, 4, 20),
+            account="schwab/personal",
+            buy_account="schwab/personal",
+            confidence="Unclear",
+        ),
+    ]
+    merged = merge_violations(
+        engine_violations=engine_violations,
+        gl_lots_by_account={1: schwab_lots},
+        substitute_tickers={"SPY": ["VOO", "IVV"]},
+        replacement_tickers={"v1": "VOO"},
+    )
+    assert len(merged) == 1
+    assert merged[0].source == "engine"
+    assert merged[0].confidence == "Unclear"
+
+
+def test_schwab_no_drops_engine_unclear_only_when_substitute_was_trigger():
+    """Regression: a same-ticker engine violation that originally was Probable
+    (e.g. options on different strikes) gets dropped when Schwab clears the
+    matching G/L lot. Only Unclear (substitute) survives."""
+    schwab_lots = [_gl(symbol="SPXW", wash=False)]
+    engine_violations = [
+        _v(
+            ticker="SPXW",
             loss_date=(2026, 4, 20),
             account="schwab/personal",
             buy_account="schwab/personal",
@@ -148,15 +173,8 @@ def test_substantially_identical_engine_detection_marked_unclear():
     merged = merge_violations(
         engine_violations=engine_violations,
         gl_lots_by_account={1: schwab_lots},
-        substitute_tickers={"SPY": ["VOO", "IVV"]},
-        replacement_tickers={"v1": "VOO"},
     )
-    # The engine's loss is on SPY but the replacement was VOO (different ticker)
-    # — Schwab sees the SPY row as not-wash-sale, but our engine knows VOO is
-    # substantially identical. Mark as Unclear to surface for review.
-    assert len(merged) == 1
-    assert merged[0].source == "engine"
-    assert merged[0].confidence == "Unclear"
+    assert merged == []
 
 
 def test_schwab_violation_persists_via_repository(tmp_path):
