@@ -107,8 +107,12 @@ def seed_import(
 @pytest.fixture
 def builders():
     """Expose builder functions to tests via a single fixture."""
-    return type("B", (), {
-        "make_buy": staticmethod(make_buy),
-        "make_sell": staticmethod(make_sell),
-        "seed_import": staticmethod(seed_import),
-    })
+    return type(
+        "B",
+        (),
+        {
+            "make_buy": staticmethod(make_buy),
+            "make_sell": staticmethod(make_sell),
+            "seed_import": staticmethod(seed_import),
+        },
+    )

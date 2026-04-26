@@ -43,7 +43,9 @@ def remove_import(
         win_start, win_end = result.recompute_window
         det = detect_in_window(
             repo.trades_in_window(win_start, win_end),
-            win_start, win_end, etf_pairs=etf_pairs,
+            win_start,
+            win_end,
+            etf_pairs=etf_pairs,
         )
         repo.replace_violations_in_window(win_start, win_end, det.violations)
         repo.replace_lots_in_window(win_start, win_end, det.lots)

@@ -251,17 +251,13 @@ class Repository:
     def get_trades_for_ticker(self, ticker: str) -> list[Trade]:
         """All trades for a ticker, sorted by trade_date ascending."""
         with Session(self.engine) as s:
-            rows = s.exec(
-                select(TradeRow).where(TradeRow.ticker == ticker).order_by(TradeRow.trade_date)
-            ).all()
+            rows = s.exec(select(TradeRow).where(TradeRow.ticker == ticker).order_by(TradeRow.trade_date)).all()
             return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
 
     def get_lots_for_ticker(self, ticker: str) -> list[Lot]:
         """Open lots for a ticker, sorted by trade_date ascending."""
         with Session(self.engine) as s:
-            rows = s.exec(
-                select(LotRow).where(LotRow.ticker == ticker).order_by(LotRow.trade_date)
-            ).all()
+            rows = s.exec(select(LotRow).where(LotRow.ticker == ticker).order_by(LotRow.trade_date)).all()
             return [self._row_to_lot(r, self._account_display_for_id(s, r.account_id)) for r in rows]
 
     def get_violations_for_ticker(self, ticker: str) -> list[WashSaleViolation]:

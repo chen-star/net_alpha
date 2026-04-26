@@ -22,7 +22,9 @@ def test_calendar_with_violation_renders_marker(client, repo, builders):
     win_end = date(2024, 10, 15)
     result = detect_in_window(
         repo.trades_in_window(win_start - timedelta(days=30), win_end + timedelta(days=30)),
-        win_start, win_end, etf_pairs={},
+        win_start,
+        win_end,
+        etf_pairs={},
     )
     repo.replace_violations_in_window(win_start, win_end, result.violations)
 
@@ -35,6 +37,7 @@ def test_calendar_with_violation_renders_marker(client, repo, builders):
 
 def test_calendar_focus_strip_returns_fragment(client, repo, builders):
     from datetime import timedelta
+
     from net_alpha.engine.detector import detect_in_window
 
     trades = [
@@ -48,7 +51,9 @@ def test_calendar_focus_strip_returns_fragment(client, repo, builders):
     win_end = date(2024, 10, 15)
     res = detect_in_window(
         repo.trades_in_window(win_start - timedelta(days=30), win_end + timedelta(days=30)),
-        win_start, win_end, etf_pairs={},
+        win_start,
+        win_end,
+        etf_pairs={},
     )
     repo.replace_violations_in_window(win_start, win_end, res.violations)
     repo.replace_lots_in_window(win_start, win_end, res.lots)

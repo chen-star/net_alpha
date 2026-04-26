@@ -10,12 +10,17 @@ def test_ticker_drilldown_renders_for_unknown_ticker(client):
 
 def test_ticker_drilldown_renders_kpis_and_sections(client, repo, builders):
     from net_alpha.engine.detector import detect_in_window
-    builders.seed_import(repo, "schwab", "personal", [
-        builders.make_buy("schwab/personal", "TSLA", date(2024, 8, 1), qty=10, cost=1800),
-    ])
+
+    builders.seed_import(
+        repo,
+        "schwab",
+        "personal",
+        [
+            builders.make_buy("schwab/personal", "TSLA", date(2024, 8, 1), qty=10, cost=1800),
+        ],
+    )
     win_start, win_end = date(2024, 7, 1), date(2024, 9, 1)
-    res = detect_in_window(repo.trades_in_window(win_start, win_end),
-                           win_start, win_end, etf_pairs={})
+    res = detect_in_window(repo.trades_in_window(win_start, win_end), win_start, win_end, etf_pairs={})
     repo.replace_lots_in_window(win_start, win_end, res.lots)
 
     resp = client.get("/ticker/TSLA")

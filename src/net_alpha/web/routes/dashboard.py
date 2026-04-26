@@ -17,19 +17,12 @@ def dashboard(request: Request, repo: Repository = Depends(get_repository)) -> H
     violations = repo.all_violations()
     today = date.today()
 
-    open_violations = [
-        v for v in violations
-        if v.loss_sale_date and (today - v.loss_sale_date).days <= 30
-    ]
+    open_violations = [v for v in violations if v.loss_sale_date and (today - v.loss_sale_date).days <= 30]
     ytd_disallowed = sum(
-        (v.disallowed_loss for v in violations
-         if v.loss_sale_date and v.loss_sale_date.year == today.year),
+        (v.disallowed_loss for v in violations if v.loss_sale_date and v.loss_sale_date.year == today.year),
         start=0.0,
     )
-    ytd_count = sum(
-        1 for v in violations
-        if v.loss_sale_date and v.loss_sale_date.year == today.year
-    )
+    ytd_count = sum(1 for v in violations if v.loss_sale_date and v.loss_sale_date.year == today.year)
     return request.app.state.templates.TemplateResponse(
         request,
         "dashboard.html",

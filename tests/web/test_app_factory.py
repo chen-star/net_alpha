@@ -31,6 +31,7 @@ def test_root_renders_base_html_with_disclaimer(tmp_path):
 def test_etf_pairs_loaded_in_app_state(tmp_path):
     from net_alpha.config import Settings
     from net_alpha.web.app import create_app
+
     settings = Settings(data_dir=tmp_path)
     app = create_app(settings)
     # ETF pairs should be loaded once at app creation; bundled defaults present.

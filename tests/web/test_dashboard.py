@@ -22,7 +22,9 @@ def test_dashboard_shows_watch_list_after_import(client, repo, builders):
     win_end = date(2024, 10, 15)
     result = detect_in_window(
         repo.trades_in_window(win_start - timedelta(days=30), win_end + timedelta(days=30)),
-        win_start, win_end, etf_pairs={},
+        win_start,
+        win_end,
+        etf_pairs={},
     )
     repo.replace_violations_in_window(win_start, win_end, result.violations)
     repo.replace_lots_in_window(win_start, win_end, result.lots)

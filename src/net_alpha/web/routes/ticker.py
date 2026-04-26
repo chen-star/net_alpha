@@ -24,13 +24,11 @@ def ticker_drilldown(
 
     today = date.today()
     realized_ytd = sum(
-        ((t.proceeds or 0.0) - (t.cost_basis or 0.0)
-         for t in trades if t.date.year == today.year and t.is_sell()),
+        ((t.proceeds or 0.0) - (t.cost_basis or 0.0) for t in trades if t.date.year == today.year and t.is_sell()),
         start=0.0,
     )
     disallowed_ytd = sum(
-        (v.disallowed_loss for v in violations
-         if v.loss_sale_date and v.loss_sale_date.year == today.year),
+        (v.disallowed_loss for v in violations if v.loss_sale_date and v.loss_sale_date.year == today.year),
         start=0.0,
     )
     accounts = sorted({lot.account for lot in lots})

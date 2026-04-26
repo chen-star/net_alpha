@@ -19,7 +19,9 @@ def test_imports_page_lists_imports(client, repo, builders):
 
 def test_delete_import_removes_it_and_returns_table_fragment(client, repo, builders):
     _, import_id = builders.seed_import(
-        repo, "schwab", "personal",
+        repo,
+        "schwab",
+        "personal",
         [builders.make_buy("schwab/personal", "AAPL", date(2024, 5, 1))],
         csv_filename="aapl.csv",
     )
@@ -27,8 +29,8 @@ def test_delete_import_removes_it_and_returns_table_fragment(client, repo, build
 
     resp = client.delete(f"/imports/{import_id}")
     assert resp.status_code == 200
-    assert "No imports yet" in resp.text   # fragment shows empty state
-    assert "DOCTYPE" not in resp.text       # raw fragment, not full page
+    assert "No imports yet" in resp.text  # fragment shows empty state
+    assert "DOCTYPE" not in resp.text  # raw fragment, not full page
     assert len(repo.list_imports()) == 0
 
 

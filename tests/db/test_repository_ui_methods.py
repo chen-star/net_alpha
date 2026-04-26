@@ -17,8 +17,15 @@ def repo(tmp_path):
     return Repository(engine)
 
 
-def _make_trade(account_display: str, ticker: str, day: date, action: str = "Buy",
-                qty: float = 10.0, cost: float = 1800.0, proceeds: float | None = None) -> Trade:
+def _make_trade(
+    account_display: str,
+    ticker: str,
+    day: date,
+    action: str = "Buy",
+    qty: float = 10.0,
+    cost: float = 1800.0,
+    proceeds: float | None = None,
+) -> Trade:
     return Trade(
         account=account_display,
         date=day,
@@ -43,20 +50,30 @@ def _seed(repo: Repository, broker: str, label: str, trades: list[Trade]):
 
 
 def test_list_distinct_tickers_returns_unique_sorted(repo):
-    _seed(repo, "schwab", "personal", [
-        _make_trade("schwab/personal", "TSLA", date(2024, 1, 1)),
-        _make_trade("schwab/personal", "AAPL", date(2024, 1, 2)),
-        _make_trade("schwab/personal", "TSLA", date(2024, 2, 1)),
-    ])
+    _seed(
+        repo,
+        "schwab",
+        "personal",
+        [
+            _make_trade("schwab/personal", "TSLA", date(2024, 1, 1)),
+            _make_trade("schwab/personal", "AAPL", date(2024, 1, 2)),
+            _make_trade("schwab/personal", "TSLA", date(2024, 2, 1)),
+        ],
+    )
     assert repo.list_distinct_tickers() == ["AAPL", "TSLA"]
 
 
 def test_get_trades_for_ticker_filters_by_ticker(repo):
-    _seed(repo, "schwab", "personal", [
-        _make_trade("schwab/personal", "TSLA", date(2024, 1, 1)),
-        _make_trade("schwab/personal", "AAPL", date(2024, 1, 2)),
-        _make_trade("schwab/personal", "TSLA", date(2024, 2, 1)),
-    ])
+    _seed(
+        repo,
+        "schwab",
+        "personal",
+        [
+            _make_trade("schwab/personal", "TSLA", date(2024, 1, 1)),
+            _make_trade("schwab/personal", "AAPL", date(2024, 1, 2)),
+            _make_trade("schwab/personal", "TSLA", date(2024, 2, 1)),
+        ],
+    )
     trades = repo.get_trades_for_ticker("TSLA")
     assert len(trades) == 2
     assert all(t.ticker == "TSLA" for t in trades)

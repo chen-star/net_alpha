@@ -80,10 +80,7 @@ def calendar_focus(
 
     window_start = target.loss_sale_date - timedelta(days=30)
     window_end = target.loss_sale_date + timedelta(days=30)
-    related_trades = [
-        t for t in repo.get_trades_for_ticker(target.ticker)
-        if window_start <= t.date <= window_end
-    ]
+    related_trades = [t for t in repo.get_trades_for_ticker(target.ticker) if window_start <= t.date <= window_end]
 
     markers = []
     for t in related_trades:
@@ -91,13 +88,15 @@ def calendar_focus(
         left_pct = ((offset_days + 30) / 60) * 100
         is_loss_sale = t.date == target.loss_sale_date
         is_triggering = t.date == target.triggering_buy_date
-        markers.append({
-            "trade": t,
-            "left_pct": left_pct,
-            "is_loss_sale": is_loss_sale,
-            "is_triggering": is_triggering,
-            "offset_label": f"day {offset_days:+d}",
-        })
+        markers.append(
+            {
+                "trade": t,
+                "left_pct": left_pct,
+                "is_loss_sale": is_loss_sale,
+                "is_triggering": is_triggering,
+                "offset_label": f"day {offset_days:+d}",
+            }
+        )
 
     return request.app.state.templates.TemplateResponse(
         request,
