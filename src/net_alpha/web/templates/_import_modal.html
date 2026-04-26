@@ -1,23 +1,40 @@
 <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6"
      onclick="event.stopPropagation()">
   <div class="flex justify-between items-center mb-4">
-    <h2 class="text-xl">Import {{ filename }}</h2>
+    <h2 class="text-xl">Import {{ detections|length }} file{{ "s" if detections|length != 1 else "" }}</h2>
     <button onclick="document.getElementById('import-modal').classList.add('hidden')"
             class="text-slate-500 hover:text-slate-800 text-2xl leading-none">&times;</button>
   </div>
 
-  {% if error %}
-    <div class="bg-red-50 border border-red-300 text-red-800 rounded p-3 mb-4 text-sm">{{ error }}</div>
-  {% else %}
-    <div class="mb-3 text-sm">
-      <span class="text-emerald-800 bg-emerald-100 text-xs font-medium px-2 py-0.5 rounded">{{ broker_name }} CSV detected</span>
-    </div>
+  <div class="space-y-2 mb-4">
+    {% for d in detections %}
+      {% if d.parser_name == "schwab" %}
+        <div class="border border-emerald-200 bg-emerald-50 rounded p-2 text-sm">
+          <span class="font-medium">&#10003; Transaction History</span>
+          <span class="text-slate-600"> &mdash; {{ d.row_count }} rows</span>
+          <div class="text-xs text-slate-500 mt-1">{{ d.filename }}</div>
+        </div>
+      {% elif d.parser_name == "schwab_realized_gl" %}
+        <div class="border border-emerald-200 bg-emerald-50 rounded p-2 text-sm">
+          <span class="font-medium">&#10003; Realized G/L (Schwab)</span>
+          <span class="text-slate-600"> &mdash; {{ d.row_count }} lot rows</span>
+          <div class="text-xs text-slate-500 mt-1">{{ d.filename }}</div>
+        </div>
+      {% else %}
+        <div class="border border-amber-300 bg-amber-50 rounded p-2 text-sm">
+          <span class="font-medium">&#9888; Unrecognized format</span>
+          <div class="text-xs text-slate-500 mt-1">{{ d.filename }} &mdash; no parser matched headers</div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
 
+  {% if any_recognized %}
     <form action="/imports" method="post" enctype="multipart/form-data" class="space-y-4">
       <div>
-        <label class="block text-xs text-slate-500 uppercase mb-1">File (re-attach to confirm)</label>
-        <input type="file" name="file" accept=".csv" required class="text-sm"/>
-        <p class="text-xs text-slate-500 mt-1">Browser security requires re-attaching the file at submit time.</p>
+        <label class="block text-xs text-slate-500 uppercase mb-1">Files (re-attach to confirm)</label>
+        <input type="file" name="files" accept=".csv" multiple required class="text-sm"/>
+        <p class="text-xs text-slate-500 mt-1">Browser security requires re-attaching the files at submit time.</p>
       </div>
 
       <div>
@@ -32,28 +49,7 @@
         </datalist>
       </div>
 
-      <div>
-        <div class="text-xs text-slate-500 uppercase mb-1">Preview ({{ preview_trades|length }} of {{ raw_size }} bytes)</div>
-        <table class="w-full text-xs border border-slate-200 rounded">
-          <thead class="bg-slate-50 text-left"><tr>
-            <th class="px-2 py-1">Date</th><th class="px-2 py-1">Action</th>
-            <th class="px-2 py-1">Ticker</th><th class="px-2 py-1">Qty</th><th class="px-2 py-1">$</th>
-          </tr></thead>
-          <tbody>
-            {% for t in preview_trades %}
-              <tr class="border-t border-slate-100">
-                <td class="px-2 py-1 font-mono">{{ t.date }}</td>
-                <td class="px-2 py-1">{{ t.action }}</td>
-                <td class="px-2 py-1 font-mono">{{ t.ticker }}</td>
-                <td class="px-2 py-1 font-mono">{{ t.quantity }}</td>
-                <td class="px-2 py-1 font-mono">{{ t.proceeds if t.proceeds is not none else t.cost_basis }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <p class="text-xs text-slate-500">{{ disclaimer }}</p>
+      <p class="text-xs text-slate-500">&#9888; This is informational only. Consult a tax professional before filing.</p>
 
       <div class="flex justify-end gap-2">
         <button type="button" class="btn-ghost"
@@ -61,5 +57,13 @@
         <button type="submit" class="btn">Import</button>
       </div>
     </form>
+  {% else %}
+    <div class="bg-red-50 border border-red-300 text-red-800 rounded p-3 text-sm">
+      None of the uploaded files matched a known broker format. Please drop a Schwab Transaction History or Realized G/L CSV.
+    </div>
+    <div class="flex justify-end mt-4">
+      <button type="button" class="btn-ghost"
+              onclick="document.getElementById('import-modal').classList.add('hidden')">Close</button>
+    </div>
   {% endif %}
 </div>

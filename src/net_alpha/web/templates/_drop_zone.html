@@ -1,26 +1,26 @@
-<div x-data="{
-        dragOver: false,
-        async openModal(file) {
-          const fd = new FormData();
-          fd.append('file', file);
-          const resp = await fetch('/imports/preview', { method: 'POST', body: fd });
-          const html = await resp.text();
-          const modal = document.getElementById('import-modal');
-          modal.innerHTML = html;
-          modal.classList.remove('hidden');
-        }
-     }"
-     @dragover.prevent="dragOver = true"
-     @dragleave.prevent="dragOver = false"
-     @drop.prevent="dragOver = false; if ($event.dataTransfer.files.length) openModal($event.dataTransfer.files[0])"
-     :class="dragOver ? 'border-primary bg-blue-50' : 'border-slate-300 bg-white'"
-     class="border-2 border-dashed rounded-lg p-8 text-center mb-6 transition-colors duration-200 cursor-pointer"
-     onclick="document.getElementById('file-input').click()">
-  <p class="text-slate-700 mb-1">Drop CSV here or <span class="text-primary underline">click to browse</span></p>
-  <p class="text-xs text-slate-500">Schwab CSV format · max 50 MB</p>
-  <input id="file-input" type="file" accept=".csv" class="hidden"
-         @change="if ($event.target.files.length) openModal($event.target.files[0])"/>
+<div class="border-2 border-dashed border-primary/40 rounded-lg p-8 text-center bg-white"
+     id="drop-zone"
+     hx-post="/imports/preview"
+     hx-encoding="multipart/form-data"
+     hx-trigger="change from:#csv-input"
+     hx-target="#import-modal-content"
+     hx-swap="innerHTML"
+     onclick="document.getElementById('csv-input').click()"
+     ondragover="event.preventDefault(); this.classList.add('bg-primary/5');"
+     ondragleave="this.classList.remove('bg-primary/5');"
+     ondrop="event.preventDefault(); this.classList.remove('bg-primary/5');
+             const dt = new DataTransfer();
+             for (const f of event.dataTransfer.files) dt.items.add(f);
+             const inp = document.getElementById('csv-input');
+             inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
+             document.getElementById('import-modal').classList.remove('hidden');">
+  <p>Drop one or more Schwab CSVs here or <a class="text-primary underline cursor-pointer">click to browse</a></p>
+  <p class="text-xs text-slate-500 mt-1">Transaction History &middot; Realized G/L &middot; max 50 MB each</p>
+  <input type="file" id="csv-input" name="files" accept=".csv" multiple class="hidden"
+         onchange="document.getElementById('import-modal').classList.remove('hidden');"/>
 </div>
 
-<div id="import-modal" class="hidden fixed inset-0 bg-black/40 z-40 flex items-center justify-center"
-     onclick="this.classList.add('hidden')"></div>
+<div id="import-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+     onclick="this.classList.add('hidden')">
+  <div id="import-modal-content"></div>
+</div>

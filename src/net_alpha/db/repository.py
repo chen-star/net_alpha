@@ -465,6 +465,12 @@ class Repository:
             account_display = self._account_display_for_id(s, account_id)
         return [self._row_to_gl_lot(r, account_display) for r in rows]
 
+    def get_gl_lots_for_account(self, account_id: int) -> list[RealizedGLLot]:
+        with Session(self.engine) as s:
+            rows = s.exec(select(RealizedGLLotRow).where(RealizedGLLotRow.account_id == account_id)).all()
+            account_display = self._account_display_for_id(s, account_id)
+        return [self._row_to_gl_lot(r, account_display) for r in rows]
+
     def _row_to_gl_lot(self, row: RealizedGLLotRow, account_display: str) -> RealizedGLLot:
         return RealizedGLLot(
             account_display=account_display,
