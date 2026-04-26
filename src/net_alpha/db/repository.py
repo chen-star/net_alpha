@@ -301,6 +301,8 @@ class Repository:
                     )
                 )
             s.exec(TradeRow.__table__.delete().where(TradeRow.import_id == import_id))
+            # Delete G/L lots tied to this import (added in schema v2)
+            s.exec(RealizedGLLotRow.__table__.delete().where(RealizedGLLotRow.import_id == import_id))
             s.exec(ImportRecordRow.__table__.delete().where(ImportRecordRow.id == import_id))
             s.commit()
 

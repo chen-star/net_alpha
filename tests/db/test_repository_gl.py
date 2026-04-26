@@ -202,3 +202,21 @@ def test_get_gl_lots_for_ticker_returns_all_lots(repo):
     )
     lots = repo.get_gl_lots_for_ticker(acct.id, "WRD")
     assert len(lots) == 2
+
+
+def test_remove_import_cascade_deletes_gl_lots(repo):
+    """Removing an import must delete its G/L lot rows to prevent orphans."""
+    acct = _make_account(repo)
+    rec = ImportRecord(
+        account_id=acct.id,
+        csv_filename="t.csv",
+        csv_sha256="abc",
+        imported_at=datetime(2026, 4, 25),
+        trade_count=0,
+    )
+    result = repo.add_import(acct, rec, [])
+    repo.add_gl_lots(acct, result.import_id, [_make_lot()])
+    assert len(repo.get_gl_lots_for_ticker(acct.id, "WRD")) == 1
+    repo.remove_import(result.import_id)
+    # G/L lots tied to that import must be gone
+    assert len(repo.get_gl_lots_for_ticker(acct.id, "WRD")) == 0

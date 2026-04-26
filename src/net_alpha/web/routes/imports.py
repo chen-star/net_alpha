@@ -45,18 +45,29 @@ def remove_import(
     repo: Repository = Depends(get_repository),
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
-    if repo.get_import(import_id) is None:
+    existing_record = repo.get_import(import_id)
+    if existing_record is None:
         raise HTTPException(status_code=404, detail=f"Import #{import_id} not found")
+    account_id = existing_record.account_id
     result = repo.remove_import(import_id)
     if result.recompute_window is not None:
         win_start, win_end = result.recompute_window
+        # Re-stitch first so sells previously hydrated from now-deleted G/L lots
+        # are demoted to FIFO/unknown before detect_in_window runs.
+        stitch_account(repo, account_id)
         det = detect_in_window(
             repo.trades_in_window(win_start, win_end),
             win_start,
             win_end,
             etf_pairs=etf_pairs,
         )
-        repo.replace_violations_in_window(win_start, win_end, det.violations)
+        # Include G/L data in merge for consistency with the upload route.
+        all_gl_lots = repo.get_gl_lots_for_account(account_id)
+        merged = merge_violations(
+            engine_violations=det.violations,
+            gl_lots_by_account={account_id: all_gl_lots},
+        )
+        repo.replace_violations_in_window(win_start, win_end, merged)
         repo.replace_lots_in_window(win_start, win_end, det.lots)
     return request.app.state.templates.TemplateResponse(
         request,

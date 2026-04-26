@@ -97,3 +97,24 @@ def test_upload_zero_recognized_files_returns_400(client, tmp_path):
             follow_redirects=False,
         )
     assert resp.status_code == 400
+
+
+def test_remove_import_with_gl_clears_orphan_lots(client, repo):
+    """Removing a G/L-only import via DELETE /imports/{id} must remove the
+    G/L lots and re-stitch so any previously hydrated sells are demoted."""
+    with GL_FIXTURE.open("rb") as gl:
+        client.post(
+            "/imports",
+            files=[("files", ("schwab_gl.csv", gl, "text/csv"))],
+            data={"account": "personal"},
+            follow_redirects=False,
+        )
+    acct = repo.get_account("schwab", "personal")
+    assert acct is not None
+    assert len(repo.get_gl_lots_for_ticker(acct.id, "WRD")) == 1
+    imports = repo.list_imports()
+    assert len(imports) == 1
+    import_id = imports[0].id
+    resp = client.delete(f"/imports/{import_id}")
+    assert resp.status_code == 200
+    assert len(repo.get_gl_lots_for_ticker(acct.id, "WRD")) == 0
