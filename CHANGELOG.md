@@ -2,6 +2,21 @@
 
 
 
+## v0.16.1 (2026-04-26)
+
+### Fix
+
+* fix(web): include current year and trade-activity years in Calendar YEAR dropdown
+
+The dropdown derived its options solely from violation loss_sale_date years,
+so a year with trade activity but no detected wash sales (e.g. the current
+year on a fresh slate) was missing — the page header still selected it via
+today.year, but the user couldn&#39;t pick it from the dropdown. Union trade
+years and the current year into the option set, sorted newest-first.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1facffc`](https://github.com/chen-star/net_alpha/commit/1facffc422a63dd9d11d0fcfef7d8a55bec573d4))
+
+
 ## v0.16.0 (2026-04-26)
 
 ### Chore
