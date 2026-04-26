@@ -2,7 +2,61 @@
 
 
 
+## v0.16.0 (2026-04-26)
+
+### Chore
+
+* chore: ruff format ([`1a75a54`](https://github.com/chen-star/net_alpha/commit/1a75a54c2cfc215b374e860f083c3e64967f8816))
+
+* chore: refresh gitnexus index stats and sync uv.lock to v0.15.1
+
+- AGENTS.md / CLAUDE.md: gitnexus symbol/relationship/flow counts
+  refreshed after the Phase 2 merge (1711 → 2436 symbols).
+- uv.lock: wash-alpha version pinned to 0.15.1 to match the
+  current pyproject.toml after the semantic-release bump (8d09649).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f0a3421`](https://github.com/chen-star/net_alpha/commit/f0a34219d1078dacc5b4c9d83d9ce70046301501))
+
+### Feature
+
+* feat(web): detail page totals bar + group-by-ticker + Lag/Source columns ([`1ced6b8`](https://github.com/chen-star/net_alpha/commit/1ced6b83eee82dca73e67fcdcc5b6a90ca01b812))
+
+* feat(web): wire detail summary, ticker grouping, and lag-sort into the route ([`26279a1`](https://github.com/chen-star/net_alpha/commit/26279a18fb19690a89b2803b14d75ea88bd12525))
+
+* feat(portfolio): add detail-page aggregations (summary, grouping, lag, source label) ([`3f92461`](https://github.com/chen-star/net_alpha/commit/3f92461b7b22aa16b191301a30a690fab88feef4))
+
+* feat(web): POST /sim dispatches BUY/SELL with date and renders new result partials ([`55dd5ca`](https://github.com/chen-star/net_alpha/commit/55dd5ca4b6914ea20c1a77d1741e8eecdb219d1d))
+
+* feat(web): unified sim form with BUY/SELL toggle and date picker ([`c71cfee`](https://github.com/chen-star/net_alpha/commit/c71cfeebc0c068c2bf33cf17678235d87a4e6d19))
+
+* feat(engine): add simulate_buy() pure function with per-account FIFO loss matching
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5a9f544`](https://github.com/chen-star/net_alpha/commit/5a9f5444fc2f8414145156f52c16a7ae8cb6670f))
+
+### Test
+
+* test(web): integration coverage for detail totals, grouping, lag sort, source ([`749e798`](https://github.com/chen-star/net_alpha/commit/749e798df8af50dc768253c5d629704fa3012364))
+
+* test(web): cover BUY/SELL dispatch on POST /sim with date and account ([`6fd7cc1`](https://github.com/chen-star/net_alpha/commit/6fd7cc179af282b1f82831e197d5545c8d6274a4))
+
+* test(engine): add ETF substantially-identical pair tests for simulate_buy ([`e830d6e`](https://github.com/chen-star/net_alpha/commit/e830d6e1e92d348be560dfdae8e2cd7ce7a6395c))
+
+* test(engine): add day-0/30/31 boundary tests for simulate_buy ([`d05dafb`](https://github.com/chen-star/net_alpha/commit/d05dafb9af7dd8625879fe2d9bd15f76d5f1472a))
+
+### Unknown
+
+* Merge branch &#39;feat/phase3-sim-and-detail&#39; — Phase 3 sim BUY support + detail enhancements ([`cedb4de`](https://github.com/chen-star/net_alpha/commit/cedb4de9ef35f846f2dd945c960f4af6fae7e99a))
+
+
 ## v0.15.1 (2026-04-26)
+
+### Documentation
+
+* docs(plan): add Phase 3 implementation plan — sim BUY support + detail enhancements ([`eedc08c`](https://github.com/chen-star/net_alpha/commit/eedc08cf4bea9a7991a55584ff37ef96d2acb364))
+
+### Feature
+
+* feat(domain): add SimBuyMatch and SimulationBuyOption models ([`5020ec1`](https://github.com/chen-star/net_alpha/commit/5020ec1d88e60d8f798b10b81b5649c5be2e9eea))
 
 ### Fix
 
