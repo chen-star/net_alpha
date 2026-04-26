@@ -1,8 +1,8 @@
-# src/net_alpha/db/migrations.py
-"""Hand-written migrations. v2 starts at schema_version=1.
+"""Hand-written migrations.
 
-v1 → v2 is a clean break. Users either re-import their CSVs or run
-`net-alpha migrate-from-v1`. There is no in-place upgrade.
+Schema versions:
+  v1 — Initial v2.x schema (TradeRow, LotRow, WashSaleViolationRow, etc.)
+  v2 — Adds RealizedGLLotRow table; adds Trade.basis_source, WashSaleViolation.source columns.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 
 def get_schema_version(session: Session) -> int:
@@ -26,15 +26,42 @@ def set_schema_version(session: Session, version: int) -> None:
     session.commit()
 
 
+def _column_exists(session: Session, table: str, column: str) -> bool:
+    rows = session.exec(text(f"PRAGMA table_info({table})")).all()
+    return any(r[1] == column for r in rows)
+
+
+def _table_exists(session: Session, table: str) -> bool:
+    row = session.exec(
+        text("SELECT name FROM sqlite_master WHERE type='table' AND name=:n"),
+        params={"n": table},
+    ).first()
+    return row is not None
+
+
+def _migrate_v1_to_v2(session: Session) -> None:
+    if _table_exists(session, "trades") and not _column_exists(session, "trades", "basis_source"):
+        session.exec(text("ALTER TABLE trades ADD COLUMN basis_source TEXT NOT NULL DEFAULT 'unknown'"))
+    if _table_exists(session, "wash_sale_violations") and not _column_exists(session, "wash_sale_violations", "source"):
+        session.exec(text("ALTER TABLE wash_sale_violations ADD COLUMN source TEXT NOT NULL DEFAULT 'engine'"))
+    # realized_gl_lots is created by SQLModel.metadata.create_all in init_db.
+    session.commit()
+
+
 def migrate(session: Session) -> None:
-    """Apply pending migrations. v2.0.0 is schema_version=1 — no upgrades exist yet."""
+    """Apply pending migrations idempotently."""
     current = get_schema_version(session)
     if current == 0:
+        # Fresh DB or v1 DB without meta row: SQLModel.metadata.create_all has
+        # already produced v2-shape tables. Just stamp the version.
         set_schema_version(session, CURRENT_SCHEMA_VERSION)
+        return
+    if current == 1:
+        _migrate_v1_to_v2(session)
+        set_schema_version(session, 2)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "
             f"(supports {CURRENT_SCHEMA_VERSION}). Upgrade net-alpha."
         )
-    # Add upgrade branches here when adding schema_version=2, 3, ...
