@@ -3,6 +3,7 @@
 Schema versions:
   v1 — Initial v2.x schema (TradeRow, LotRow, WashSaleViolationRow, etc.)
   v2 — Adds RealizedGLLotRow table; adds Trade.basis_source, WashSaleViolation.source columns.
+  v3 — Adds PriceCacheRow table for the pricing subsystem.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 def get_schema_version(session: Session) -> int:
@@ -48,17 +49,38 @@ def _migrate_v1_to_v2(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v2_to_v3(session: Session) -> None:
+    # On a fresh DB, SQLModel.metadata.create_all already created price_cache.
+    # On an upgrade from v2, create_all was not re-run, so we create it here.
+    if not _table_exists(session, "price_cache"):
+        session.exec(
+            text(
+                "CREATE TABLE price_cache ("
+                "symbol TEXT PRIMARY KEY, "
+                "price REAL NOT NULL, "
+                "as_of TEXT NOT NULL, "
+                "fetched_at TEXT NOT NULL, "
+                "source TEXT NOT NULL)"
+            )
+        )
+        session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     current = get_schema_version(session)
     if current == 0:
         # Fresh DB or v1 DB without meta row: SQLModel.metadata.create_all has
-        # already produced v2-shape tables. Just stamp the version.
+        # already produced v3-shape tables. Just stamp the version.
         set_schema_version(session, CURRENT_SCHEMA_VERSION)
         return
     if current == 1:
         _migrate_v1_to_v2(session)
         set_schema_version(session, 2)
+        current = 2
+    if current == 2:
+        _migrate_v2_to_v3(session)
+        set_schema_version(session, 3)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
