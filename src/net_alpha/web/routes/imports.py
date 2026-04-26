@@ -15,6 +15,7 @@ from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
 from net_alpha.db.repository import Repository
 from net_alpha.engine.recompute import recompute_all_violations
 from net_alpha.engine.stitch import stitch_account
+from net_alpha.import_.aggregations import compute_import_aggregates
 from net_alpha.ingest.csv_loader import load_csv
 from net_alpha.ingest.dedup import filter_new
 from net_alpha.models.domain import ImportRecord
@@ -153,12 +154,19 @@ async def upload(
             trades = parser.parse(rows, account_display=acct.display())
             existing = repo.existing_natural_keys(acct.id)
             new_trades = filter_new(trades, existing)
+            agg = compute_import_aggregates(trades=new_trades, parse_warnings=[])
             record = ImportRecord(
                 account_id=acct.id,
                 csv_filename=filename,
                 csv_sha256=sha,
                 imported_at=datetime.now(),
                 trade_count=len(new_trades),
+                min_trade_date=agg.min_trade_date,
+                max_trade_date=agg.max_trade_date,
+                equity_count=agg.equity_count,
+                option_count=agg.option_count,
+                option_expiry_count=agg.option_expiry_count,
+                parse_warnings=agg.parse_warnings,
             )
             result = repo.add_import(acct, record, new_trades)
             new_trade_count += result.new_trades
@@ -167,12 +175,23 @@ async def upload(
                 affected_dates.append(t.date)
         elif isinstance(parser, SchwabRealizedGLParser):
             lots = parser.parse(rows, account_display=acct.display())
+            gl_dates = [lot.closed_date for lot in lots] if lots else []
+            min_d = min(gl_dates) if gl_dates else None
+            max_d = max(gl_dates) if gl_dates else None
+            equity_n = sum(1 for lot in lots if lot.option_strike is None)
+            option_n = sum(1 for lot in lots if lot.option_strike is not None)
             record = ImportRecord(
                 account_id=acct.id,
                 csv_filename=filename,
                 csv_sha256=sha,
                 imported_at=datetime.now(),
                 trade_count=0,
+                min_trade_date=min_d,
+                max_trade_date=max_d,
+                equity_count=equity_n,
+                option_count=option_n,
+                option_expiry_count=0,
+                parse_warnings=[],
             )
             empty_result = repo.add_import(acct, record, [])
             inserted = repo.add_gl_lots(acct, empty_result.import_id, lots)
