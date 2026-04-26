@@ -1,5 +1,5 @@
 {% if not violations %}
-  <div class="kpi-card text-slate-500 text-sm">No violations match these filters.</div>
+  <div class="panel text-label-2 text-sm">No violations match these filters.</div>
 {% else %}
   {# Build the lag-sort URL preserving current filters #}
   {% set lag_qs = [] %}
@@ -11,54 +11,56 @@
   {% set _ = lag_qs.append('order=' ~ next_lag_order) %}
   {% set lag_url = '/detail?' ~ lag_qs|join('&') %}
 
-  <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+  <div class="panel" style="padding:0; overflow:hidden;">
     {% for g in groups %}
-      <div x-data="{ open: {{ 'true' if expand_default else 'false' }} }" class="border-b border-slate-200 last:border-b-0">
+      <div x-data="{ open: {{ 'true' if expand_default else 'false' }} }"
+           class="last:border-b-0"
+           style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
         <button type="button" @click="open = !open"
-                class="w-full flex justify-between items-center px-3 py-2 text-left hover:bg-slate-50">
+                class="w-full flex justify-between items-center px-3 py-2 text-left hover:bg-surface-2">
           <div class="flex items-center gap-2">
-            <span x-text="open ? '▾' : '▸'" class="text-slate-400 font-mono"></span>
+            <span x-text="open ? '▾' : '▸'" class="text-label-3 font-mono"></span>
             <a href="/ticker/{{ g.ticker }}" class="font-mono text-primary underline">{{ g.ticker }}</a>
-            <span class="text-xs text-slate-500">{{ g.violation_count }} violation{{ '' if g.violation_count == 1 else 's' }}</span>
+            <span class="text-xs text-label-2">{{ g.violation_count }} violation{{ '' if g.violation_count == 1 else 's' }}</span>
           </div>
-          <div class="text-sm font-mono text-confirmed">${{ "%.2f"|format(g.disallowed_total|float) }}</div>
+          <div class="text-sm font-mono text-confirmed num">${{ "%.2f"|format(g.disallowed_total|float) }}</div>
         </button>
 
         <div x-show="open" x-cloak>
-          <table class="w-full text-sm">
-            <thead class="text-left text-xs text-slate-500 uppercase border-t border-slate-200">
+          <table class="net-table text-sm">
+            <thead>
               <tr>
-                <th class="px-3 py-2 w-28">Loss date</th>
-                <th class="px-3 py-2">Loss → Buy</th>
-                <th class="px-3 py-2 w-28">Trigger date</th>
-                <th class="px-3 py-2 w-20">
+                <th class="w-28">Loss date</th>
+                <th>Loss → Buy</th>
+                <th class="w-28">Trigger date</th>
+                <th class="w-20">
                   <a href="{{ lag_url }}" class="hover:underline">Lag {% if sort == 'lag' %}{{ '▼' if order == 'desc' else '▲' }}{% endif %}</a>
                 </th>
-                <th class="px-3 py-2 w-28 text-right">Disallowed</th>
-                <th class="px-3 py-2 w-20 text-right">Matched qty</th>
-                <th class="px-3 py-2 w-28">Confidence</th>
-                <th class="px-3 py-2 w-32">Source</th>
+                <th class="r w-28">Disallowed</th>
+                <th class="r w-20">Matched qty</th>
+                <th class="w-28">Confidence</th>
+                <th class="w-32">Source</th>
               </tr>
             </thead>
             <tbody>
               {% for v in g.violations %}
                 {% set lag = lag_days(v) %}
                 {% set src = source_label(v) %}
-                <tr class="border-t border-slate-100 hover:bg-slate-50">
+                <tr class="hover:bg-surface-2">
                   <td class="px-3 py-2 font-mono">{{ v.loss_sale_date or "—" }}</td>
                   <td class="px-3 py-2">{{ v.loss_account or "—" }} → {{ v.buy_account or "—" }}</td>
                   <td class="px-3 py-2 font-mono">{{ v.triggering_buy_date or "—" }}</td>
-                  <td class="px-3 py-2 font-mono">{% if lag is not none %}{{ lag }}d{% else %}—{% endif %}</td>
-                  <td class="px-3 py-2 font-mono text-right text-confirmed">${{ "%.2f"|format(v.disallowed_loss) }}</td>
-                  <td class="px-3 py-2 font-mono text-right">{{ v.matched_quantity }}</td>
-                  <td class="px-3 py-2"><span class="badge-{{ v.confidence|lower }}">{{ v.confidence }}</span></td>
+                  <td class="px-3 py-2 font-mono num">{% if lag is not none %}{{ lag }}d{% else %}—{% endif %}</td>
+                  <td class="r num text-confirmed">${{ "%.2f"|format(v.disallowed_loss) }}</td>
+                  <td class="r num">{{ v.matched_quantity }}</td>
+                  <td class="px-3 py-2"><span class="chip-{{ v.confidence|lower }}">{{ v.confidence }}</span></td>
                   <td class="px-3 py-2">
                     {% if src == "Schwab" %}
-                      <span class="text-slate-700 bg-slate-200 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
+                      <span class="text-label-2 bg-surface-2 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
                     {% elif src == "Cross-account" %}
-                      <span class="text-amber-800 bg-amber-100 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
+                      <span class="text-warn bg-warn/10 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
                     {% else %}
-                      <span class="text-blue-800 bg-blue-100 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
+                      <span class="text-info bg-info/10 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
                     {% endif %}
                   </td>
                 </tr>

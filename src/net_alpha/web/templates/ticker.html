@@ -7,65 +7,65 @@
   </div>
 
   <div class="grid grid-cols-5 gap-4 mb-6">
-    <div class="kpi-card">
-      <div class="text-xs text-slate-500 uppercase">Open lots</div>
-      <div class="text-2xl font-mono">{{ kpi_open_lots }}</div>
-      <div class="text-xs text-slate-500 mt-1">Basis: ${{ "%.2f"|format(kpi_open_basis) }}</div>
+    <div class="panel">
+      <div class="label-uc">Open lots</div>
+      <div class="text-2xl font-mono num">{{ kpi_open_lots }}</div>
+      <div class="text-xs text-label-2 mt-1">Basis: ${{ "%.2f"|format(kpi_open_basis) }}</div>
     </div>
-    <div class="kpi-card">
-      <div class="text-xs text-slate-500 uppercase">YTD realized P&amp;L</div>
-      <div class="text-2xl font-mono {% if kpi_realized_ytd >= 0 %}text-emerald-600{% else %}text-confirmed{% endif %}">
+    <div class="panel">
+      <div class="label-uc">YTD realized P&amp;L</div>
+      <div class="text-2xl font-mono num {% if kpi_realized_ytd >= 0 %}text-pos{% else %}text-confirmed{% endif %}">
         ${{ "%.2f"|format(kpi_realized_ytd) }}
       </div>
     </div>
-    <div class="kpi-card">
-      <div class="text-xs text-slate-500 uppercase">YTD disallowed</div>
-      <div class="text-2xl font-mono text-confirmed">${{ "%.2f"|format(kpi_disallowed_ytd) }}</div>
+    <div class="panel">
+      <div class="label-uc">YTD disallowed</div>
+      <div class="text-2xl font-mono text-confirmed num">${{ "%.2f"|format(kpi_disallowed_ytd) }}</div>
     </div>
-    <div class="kpi-card">
-      <div class="text-xs text-slate-500 uppercase">Accounts</div>
+    <div class="panel">
+      <div class="label-uc">Accounts</div>
       <div class="text-sm font-mono mt-1">
         {% for a in kpi_accounts %}{{ a }}{% if not loop.last %}, {% endif %}{% endfor %}
         {% if not kpi_accounts %}-{% endif %}
       </div>
     </div>
-    <div class="kpi-card">
-      <div class="text-xs text-slate-500 uppercase">Last trade</div>
+    <div class="panel">
+      <div class="label-uc">Last trade</div>
       {% if kpi_last_trade %}
         <div class="text-sm font-mono mt-1">{{ kpi_last_trade.action }} {{ kpi_last_trade.quantity }}</div>
-        <div class="text-xs text-slate-500">{{ kpi_last_trade.date }}</div>
+        <div class="text-xs text-label-2">{{ kpi_last_trade.date }}</div>
       {% else %}
-        <div class="text-sm text-slate-500 mt-1">No trades</div>
+        <div class="text-sm text-label-2 mt-1">No trades</div>
       {% endif %}
     </div>
   </div>
 
   <h2 class="text-xl mb-2">Timeline</h2>
-  <div class="kpi-card mb-6">
-    <table class="w-full text-sm">
-      <thead class="text-xs text-slate-500 uppercase border-b border-slate-200 text-left">
+  <div class="panel mb-6" style="padding:0;">
+    <table class="net-table text-sm">
+      <thead>
         <tr>
-          <th class="px-2 py-1">Date</th>
-          <th class="px-2 py-1">Account</th>
-          <th class="px-2 py-1">Action</th>
-          <th class="px-2 py-1">Qty</th>
-          <th class="px-2 py-1">Basis</th>
-          <th class="px-2 py-1">Proceeds</th>
+          <th>Date</th>
+          <th>Account</th>
+          <th>Action</th>
+          <th>Qty</th>
+          <th>Basis</th>
+          <th>Proceeds</th>
         </tr>
       </thead>
       <tbody>
         {% for t in trades %}
-          <tr class="border-b border-slate-100 last:border-b-0">
+          <tr>
             <td class="px-2 py-1 font-mono">{{ t.date }}</td>
             <td class="px-2 py-1">{{ t.account }}</td>
             <td class="px-2 py-1">{{ t.action }}</td>
-            <td class="px-2 py-1 font-mono">{{ t.quantity }}</td>
-            <td class="px-2 py-1 font-mono">{{ t.cost_basis if t.cost_basis is not none else "-" }}</td>
-            <td class="px-2 py-1 font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
+            <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
+            <td class="px-2 py-1 num font-mono">{{ t.cost_basis if t.cost_basis is not none else "-" }}</td>
+            <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
           </tr>
         {% endfor %}
         {% if not trades %}
-          <tr><td colspan="6" class="px-2 py-4 text-center text-slate-500">No trades for {{ symbol }} yet.</td></tr>
+          <tr><td colspan="6" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
         {% endif %}
       </tbody>
     </table>
@@ -77,7 +77,7 @@
   {% if violations %}
     <h2 class="text-xl mt-6 mb-2">Violations involving {{ symbol }}</h2>
     {% for violation in violations %}
-      <div class="kpi-card mb-2">
+      <div class="panel mb-2">
         {% include "_violation_card.html" %}
       </div>
     {% endfor %}

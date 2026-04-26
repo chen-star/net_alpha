@@ -1,31 +1,31 @@
-<div class="kpi-card mb-6">
-  <table class="w-full text-sm">
-    <thead class="text-xs text-slate-500 uppercase border-b border-slate-200 text-left">
+<div class="panel mb-6" style="padding:0;">
+  <table class="net-table text-sm">
+    <thead>
       <tr>
-        <th class="px-2 py-1">Account</th>
-        <th class="px-2 py-1">Acquired</th>
-        <th class="px-2 py-1">Qty</th>
-        <th class="px-2 py-1">Original basis</th>
-        <th class="px-2 py-1">Adjusted basis</th>
-        <th class="px-2 py-1">&#916; (wash adj)</th>
+        <th>Account</th>
+        <th>Acquired</th>
+        <th>Qty</th>
+        <th>Original basis</th>
+        <th>Adjusted basis</th>
+        <th>&#916; (wash adj)</th>
       </tr>
     </thead>
     <tbody>
       {% for lot in lots %}
         {% set delta = (lot.adjusted_basis - lot.cost_basis) %}
-        <tr class="border-b border-slate-100 last:border-b-0 {% if delta > 0 %}bg-amber-50{% endif %}">
+        <tr {% if delta > 0 %}class="bg-warn/5"{% endif %}>
           <td class="px-2 py-1 font-mono">{{ lot.account }}</td>
           <td class="px-2 py-1 font-mono">{{ lot.date }}</td>
-          <td class="px-2 py-1 font-mono">{{ lot.quantity }}</td>
-          <td class="px-2 py-1 font-mono">${{ "%.2f"|format(lot.cost_basis) }}</td>
-          <td class="px-2 py-1 font-mono">${{ "%.2f"|format(lot.adjusted_basis) }}</td>
-          <td class="px-2 py-1 font-mono {% if delta > 0 %}text-accent{% endif %}">
+          <td class="px-2 py-1 num font-mono">{{ lot.quantity }}</td>
+          <td class="px-2 py-1 num font-mono">${{ "%.2f"|format(lot.cost_basis) }}</td>
+          <td class="px-2 py-1 num font-mono">${{ "%.2f"|format(lot.adjusted_basis) }}</td>
+          <td class="px-2 py-1 num font-mono {% if delta > 0 %}text-accent{% endif %}">
             {% if delta > 0 %}+${{ "%.2f"|format(delta) }}{% else %}-{% endif %}
           </td>
         </tr>
       {% endfor %}
       {% if not lots %}
-        <tr><td colspan="6" class="px-2 py-4 text-center text-slate-500">No open lots.</td></tr>
+        <tr><td colspan="6" class="px-2 py-4 text-center text-label-2">No open lots.</td></tr>
       {% endif %}
     </tbody>
   </table>

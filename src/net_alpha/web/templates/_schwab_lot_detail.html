@@ -1,32 +1,34 @@
 {% if gl_lots %}
-  <section class="bg-white border border-slate-200 rounded-lg p-4 mt-4">
-    <h2 class="text-lg mb-2">Schwab Lot Detail (from G/L)</h2>
-    <table class="w-full text-sm">
-      <thead class="text-left text-xs text-slate-500 uppercase">
+  <section class="panel mt-4" style="padding:0;">
+    <div class="px-4 py-3" style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+      <h2 class="text-lg">Schwab Lot Detail (from G/L)</h2>
+    </div>
+    <table class="net-table text-sm">
+      <thead>
         <tr>
-          <th class="px-2 py-1">Closed</th>
-          <th class="px-2 py-1">Opened</th>
-          <th class="px-2 py-1 text-right">Qty</th>
-          <th class="px-2 py-1 text-right">Cost basis</th>
-          <th class="px-2 py-1">Wash sale?</th>
-          <th class="px-2 py-1 text-right">Disallowed</th>
+          <th>Closed</th>
+          <th>Opened</th>
+          <th class="r">Qty</th>
+          <th class="r">Cost basis</th>
+          <th>Wash sale?</th>
+          <th class="r">Disallowed</th>
         </tr>
       </thead>
       <tbody>
         {% for lot in gl_lots %}
-          <tr class="border-t border-slate-100">
+          <tr>
             <td class="px-2 py-1 font-mono">{{ lot.closed_date.isoformat() }}</td>
             <td class="px-2 py-1 font-mono">{{ lot.opened_date.isoformat() }}</td>
-            <td class="px-2 py-1 text-right font-mono">{{ "%.4f"|format(lot.quantity) }}</td>
-            <td class="px-2 py-1 text-right font-mono">${{ "%.2f"|format(lot.cost_basis) }}</td>
+            <td class="r num font-mono">{{ "%.4f"|format(lot.quantity) }}</td>
+            <td class="r num font-mono">${{ "%.2f"|format(lot.cost_basis) }}</td>
             <td class="px-2 py-1">
               {% if lot.wash_sale %}
-                <span class="text-red-700 font-medium">Yes</span>
+                <span class="text-neg font-medium">Yes</span>
               {% else %}
-                <span class="text-slate-500">No</span>
+                <span class="text-label-3">No</span>
               {% endif %}
             </td>
-            <td class="px-2 py-1 text-right font-mono">
+            <td class="r num font-mono">
               {% if lot.disallowed_loss %}${{ "%.2f"|format(lot.disallowed_loss) }}{% endif %}
             </td>
           </tr>

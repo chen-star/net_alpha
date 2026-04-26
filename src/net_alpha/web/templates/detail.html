@@ -1,30 +1,38 @@
+{% set active_page = 'detail' %}
 {% extends "base.html" %}
 {% block title %}Detail · net-alpha{% endblock %}
 {% block content %}
   <h1 class="text-2xl mb-4">Violation detail</h1>
 
-  <form method="get" class="kpi-card mb-4 flex gap-3 flex-wrap items-end">
+  <form method="get" class="panel mb-4 flex gap-3 flex-wrap items-end">
     <div>
-      <label class="block text-xs text-slate-500 uppercase">Ticker</label>
-      <input type="text" name="ticker" value="{{ filter_ticker }}" list="ticker-list" class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-32"/>
+      <label class="block label-uc">Ticker</label>
+      <input type="text" name="ticker" value="{{ filter_ticker }}" list="ticker-list"
+             class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-32"
+             style="border:0.5px solid rgba(255,255,255,0.08);"/>
       <datalist id="ticker-list">
         {% for t in tickers %}<option value="{{ t }}">{% endfor %}
       </datalist>
     </div>
     <div>
-      <label class="block text-xs text-slate-500 uppercase">Account</label>
-      <input type="text" name="account" value="{{ filter_account }}" list="account-list" class="border border-slate-300 rounded px-2 py-1 text-sm w-40"/>
+      <label class="block label-uc">Account</label>
+      <input type="text" name="account" value="{{ filter_account }}" list="account-list"
+             class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-40"
+             style="border:0.5px solid rgba(255,255,255,0.08);"/>
       <datalist id="account-list">
         {% for a in accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
       </datalist>
     </div>
     <div>
-      <label class="block text-xs text-slate-500 uppercase">Year</label>
-      <input type="number" name="year" value="{{ filter_year }}" class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-24"/>
+      <label class="block label-uc">Year</label>
+      <input type="number" name="year" value="{{ filter_year }}"
+             class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-24"
+             style="border:0.5px solid rgba(255,255,255,0.08);"/>
     </div>
     <div>
-      <label class="block text-xs text-slate-500 uppercase">Confidence</label>
-      <select name="confidence" class="border border-slate-300 rounded px-2 py-1 text-sm">
+      <label class="block label-uc">Confidence</label>
+      <select name="confidence" class="bg-surface text-text rounded-md px-2 py-1 text-[13px]"
+              style="border:0.5px solid rgba(255,255,255,0.08);">
         <option value="">All</option>
         <option value="confirmed" {% if filter_confidence=='confirmed' %}selected{% endif %}>Confirmed</option>
         <option value="probable" {% if filter_confidence=='probable' %}selected{% endif %}>Probable</option>
@@ -40,12 +48,12 @@
 
   {# Totals bar #}
   {% if summary.violation_count > 0 %}
-    <div class="kpi-card mb-4 text-sm flex gap-4 items-baseline">
+    <div class="panel mb-4 text-sm flex gap-4 items-baseline">
       <div><span class="font-medium">{{ summary.violation_count }}</span> violations</div>
-      <div><span class="font-medium text-confirmed">${{ "%.2f"|format(summary.disallowed_total|float) }}</span> disallowed</div>
-      <div><span class="badge-confirmed">{{ summary.confirmed_count }} confirmed</span></div>
-      <div><span class="badge-probable">{{ summary.probable_count }} probable</span></div>
-      <div><span class="badge-unclear">{{ summary.unclear_count }} unclear</span></div>
+      <div><span class="font-medium text-confirmed num">${{ "%.2f"|format(summary.disallowed_total|float) }}</span> disallowed</div>
+      <div><span class="chip-confirm">{{ summary.confirmed_count }} confirmed</span></div>
+      <div><span class="chip-probable">{{ summary.probable_count }} probable</span></div>
+      <div><span class="chip-unclear">{{ summary.unclear_count }} unclear</span></div>
     </div>
   {% endif %}
 

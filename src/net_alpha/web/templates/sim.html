@@ -1,3 +1,4 @@
+{% set active_page = 'sim' %}
 {% extends "base.html" %}
 {% block title %}Sim · net-alpha{% endblock %}
 {% block content %}
@@ -5,51 +6,56 @@
 
   <form hx-post="/sim" hx-target="#sim-result" hx-swap="innerHTML"
         x-data="{ action: 'sell' }"
-        class="kpi-card mb-6">
+        class="panel mb-6">
     <div class="grid grid-cols-6 gap-3 items-end">
       <div class="col-span-1">
-        <label class="block text-xs text-slate-500 uppercase mb-1">Action</label>
-        <div class="inline-flex rounded-md shadow-sm border border-slate-300 overflow-hidden text-sm">
+        <label class="block label-uc mb-1">Action</label>
+        <div class="inline-flex rounded-md overflow-hidden text-sm seg">
           <button type="button"
                   @click="action='buy'"
-                  :class="action==='buy' ? 'bg-primary text-white' : 'bg-white text-slate-700 hover:bg-slate-50'"
-                  class="px-3 py-1.5 font-medium">Buy</button>
+                  :class="action==='buy' ? 'seg-active' : ''"
+                  class="px-3 py-1.5 font-medium seg">Buy</button>
           <button type="button"
                   @click="action='sell'"
-                  :class="action==='sell' ? 'bg-primary text-white' : 'bg-white text-slate-700 hover:bg-slate-50'"
-                  class="px-3 py-1.5 font-medium border-l border-slate-300">Sell</button>
+                  :class="action==='sell' ? 'seg-active' : ''"
+                  class="px-3 py-1.5 font-medium seg">Sell</button>
         </div>
         <input type="hidden" name="action" :value="action"/>
       </div>
       <div>
-        <label class="block text-xs text-slate-500 uppercase">Ticker</label>
+        <label class="block label-uc">Ticker</label>
         <input type="text" name="ticker" value="{{ ticker }}" list="ticker-list" required
-               class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
+               style="border:0.5px solid rgba(255,255,255,0.08);"/>
         <datalist id="ticker-list">
           {% for t in tickers %}<option value="{{ t }}">{% endfor %}
         </datalist>
       </div>
       <div>
-        <label class="block text-xs text-slate-500 uppercase">Quantity</label>
+        <label class="block label-uc">Quantity</label>
         <input type="number" name="qty" step="0.01" required
-               class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
+               style="border:0.5px solid rgba(255,255,255,0.08);"/>
       </div>
       <div>
-        <label class="block text-xs text-slate-500 uppercase">Price</label>
+        <label class="block label-uc">Price</label>
         <input type="number" name="price" step="0.01" required
-               class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
+               style="border:0.5px solid rgba(255,255,255,0.08);"/>
       </div>
       <div>
-        <label class="block text-xs text-slate-500 uppercase">Account (optional)</label>
-        <select name="account" class="border border-slate-300 rounded px-2 py-1 text-sm w-full">
+        <label class="block label-uc">Account (optional)</label>
+        <select name="account" class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
+                style="border:0.5px solid rgba(255,255,255,0.08);">
           <option value="">All</option>
           {% for a in accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
         </select>
       </div>
       <div>
-        <label class="block text-xs text-slate-500 uppercase">Date</label>
+        <label class="block label-uc">Date</label>
         <input type="date" name="trade_date" value="{{ today_iso }}" required
-               class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
+               style="border:0.5px solid rgba(255,255,255,0.08);"/>
       </div>
     </div>
     <div class="mt-4 text-right">
