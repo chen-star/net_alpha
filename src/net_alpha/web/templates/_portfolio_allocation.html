@@ -1,0 +1,92 @@
+{# Inputs: allocation: AllocationView from portfolio.allocation.build_allocation() #}
+{% set rank_palette = [
+  '#0A84FF', '#FFD60A', '#30D158', '#FF375F', '#5E5CE6',
+  '#64D2FF', '#5AC8FA', '#BF5AF2', 'rgba(181,181,255,0.65)', 'rgba(255,255,255,0.40)'
+] %}
+{% set rest_color = 'rgba(255,255,255,0.14)' %}
+
+{% if allocation.symbol_count == 0 %}
+  <div class="text-label-3 text-[12px] py-4 text-center">
+    No priced open positions in scope.
+  </div>
+{% else %}
+  <div class="flex gap-5 items-center">
+    {# Donut #}
+    <div class="relative shrink-0">
+      <svg viewBox="0 0 100 100" width="148" height="148"
+           style="filter: drop-shadow(0 0 18px rgba(10,132,255,0.14));">
+        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="11"/>
+        {% set ns = namespace(offset=0) %}
+        {% set circumference = 251.327 %}
+        {% for s in allocation.slices %}
+          {% set seg_len = circumference * (s.pct|float) / 100.0 %}
+          {% if s.is_rest %}
+            {% set color = rest_color %}
+          {% else %}
+            {% set color = rank_palette[s.rank - 1] %}
+          {% endif %}
+          <circle cx="50" cy="50" r="40" fill="none" stroke="{{ color }}" stroke-width="11"
+                  stroke-dasharray="{{ '%.3f'|format(seg_len) }} {{ '%.3f'|format(circumference) }}"
+                  stroke-dashoffset="{{ '%.3f'|format(-ns.offset) }}"
+                  transform="rotate(-90 50 50)"/>
+          {% set ns.offset = ns.offset + seg_len %}
+        {% endfor %}
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <div class="text-[10px] text-label-2 font-medium">Total</div>
+        <div class="num text-[19px] font-bold tracking-tight mt-[2px]">
+          ${{ "%.1f"|format(allocation.total_market_value|float / 1000) }}k
+        </div>
+        <div class="text-[10px] text-label-3 mt-[2px]">{{ allocation.symbol_count }} symbol{% if allocation.symbol_count != 1 %}s{% endif %}</div>
+      </div>
+    </div>
+
+    {# Concentration stats #}
+    <div class="flex-1 flex flex-col">
+      <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+        <span class="text-label-2">Top holding</span>
+        <span class="text-text num font-medium">
+          {% set top = allocation.slices[0] %}{{ top.symbol }} · {{ "%.1f"|format(top.pct|float) }}%
+        </span>
+      </div>
+      <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+        <span class="text-label-2">Top 3 share</span>
+        <span class="text-text num font-medium">{{ "%.1f"|format(allocation.top3_pct|float) }}%</span>
+      </div>
+      <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+        <span class="text-label-2">Top 5 share</span>
+        <span class="text-text num font-medium">{{ "%.1f"|format(allocation.top5_pct|float) }}%</span>
+      </div>
+      <div class="flex justify-between py-[6px] text-[12px]">
+        <span class="text-label-2">Top 10 share</span>
+        <span class="text-text num font-medium">{{ "%.1f"|format(allocation.top10_pct|float) }}%</span>
+      </div>
+    </div>
+  </div>
+
+  {# Chip leaderboard #}
+  <div class="mt-[14px]">
+    <div class="label-uc mb-2">Top {{ allocation.slices|selectattr('is_rest','equalto',false)|list|length }} holdings</div>
+    <div class="flex flex-wrap gap-x-[7px] gap-y-[5px]">
+      {% for s in allocation.slices %}
+        {% if s.is_rest %}
+          <span class="inline-flex items-center gap-[6px] py-1 pl-1 pr-1 text-[11px] text-label-3">
+            <span class="text-label-3">+{{ allocation.symbol_count - allocation.slices|rejectattr('is_rest')|list|length }} more</span>
+            <span class="num">${{ "%.1f"|format(s.market_value|float / 1000) }}k</span>
+            <span class="num">{{ "%.1f"|format(s.pct|float) }}%</span>
+          </span>
+        {% else %}
+          {% set color = rank_palette[s.rank - 1] %}
+          {% set glow = s.rank <= 6 %}
+          <span class="inline-flex items-center gap-[7px] py-[4px] pl-2 pr-[10px] rounded-full text-[11px]"
+                style="background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.08);">
+            <span style="width:6px; height:6px; border-radius:50%; background:{{ color }};{% if glow %} box-shadow: 0 0 5px {{ color }};{% endif %}"></span>
+            <span class="font-semibold tracking-tightish text-text">{{ s.symbol }}</span>
+            <span class="num text-label-2">${{ "%.1f"|format(s.market_value|float / 1000) }}k</span>
+            <span class="num font-semibold">{{ "%.1f"|format(s.pct|float) }}%</span>
+          </span>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
