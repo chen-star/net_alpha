@@ -4,6 +4,7 @@ Schema versions:
   v1 — Initial v2.x schema (TradeRow, LotRow, WashSaleViolationRow, etc.)
   v2 — Adds RealizedGLLotRow table; adds Trade.basis_source, WashSaleViolation.source columns.
   v3 — Adds PriceCacheRow table for the pricing subsystem.
+  v4 — Adds aggregate columns to imports (date range, type counts, parse warnings).
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
 
 def get_schema_version(session: Session) -> int:
@@ -66,12 +67,29 @@ def _migrate_v2_to_v3(session: Session) -> None:
         session.commit()
 
 
+def _migrate_v3_to_v4(session: Session) -> None:
+    """Add 6 nullable aggregate columns to imports. Backfill happens later via
+    `import_.backfill.backfill_import_aggregates`, called from init_db."""
+    additions = [
+        ("min_trade_date", "TEXT"),
+        ("max_trade_date", "TEXT"),
+        ("equity_count", "INTEGER"),
+        ("option_count", "INTEGER"),
+        ("option_expiry_count", "INTEGER"),
+        ("parse_warnings_json", "TEXT"),
+    ]
+    for col, sqltype in additions:
+        if not _column_exists(session, "imports", col):
+            session.exec(text(f"ALTER TABLE imports ADD COLUMN {col} {sqltype}"))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     current = get_schema_version(session)
     if current == 0:
-        # Fresh DB or v1 DB without meta row: SQLModel.metadata.create_all has
-        # already produced v3-shape tables. Just stamp the version.
+        # Fresh DB: SQLModel.metadata.create_all has already produced the
+        # current-shape tables. Just stamp the version.
         set_schema_version(session, CURRENT_SCHEMA_VERSION)
         return
     if current == 1:
@@ -81,6 +99,10 @@ def migrate(session: Session) -> None:
     if current == 2:
         _migrate_v2_to_v3(session)
         set_schema_version(session, 3)
+        current = 3
+    if current == 3:
+        _migrate_v3_to_v4(session)
+        set_schema_version(session, 4)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(

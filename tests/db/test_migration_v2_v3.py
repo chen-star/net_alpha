@@ -14,7 +14,7 @@ from net_alpha.db.migrations import (
 
 
 def test_migration_creates_price_cache_table(tmp_path):
-    """Fresh DB → init_db creates price_cache, version stamped to 3."""
+    """Fresh DB → init_db creates price_cache, version stamped to current."""
     import net_alpha.db.tables as _tables  # noqa: F401 — registers tables
 
     engine = create_engine(f"sqlite:///{tmp_path / 'x.db'}")
@@ -22,8 +22,7 @@ def test_migration_creates_price_cache_table(tmp_path):
     with Session(engine) as s:
         migrate(s)
         assert _table_exists(s, "price_cache")
-        assert get_schema_version(s) == 3
-        assert CURRENT_SCHEMA_VERSION == 3
+        assert get_schema_version(s) == CURRENT_SCHEMA_VERSION
 
 
 def test_v2_db_migrates_to_v3(tmp_path):
@@ -33,7 +32,7 @@ def test_v2_db_migrates_to_v3(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'y.db'}")
     SQLModel.metadata.create_all(engine)
 
-    # Seed the meta row by running migrate once (stamps v3).
+    # Seed the meta row by running migrate once (stamps current version).
     with Session(engine) as s:
         migrate(s)
 
@@ -47,7 +46,7 @@ def test_v2_db_migrates_to_v3(tmp_path):
     with Session(engine) as s:
         migrate(s)
         assert _table_exists(s, "price_cache")
-        assert get_schema_version(s) == 3
+        assert get_schema_version(s) == CURRENT_SCHEMA_VERSION
 
 
 def test_price_cache_roundtrip(tmp_path):
