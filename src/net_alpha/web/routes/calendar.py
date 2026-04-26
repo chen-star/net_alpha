@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
@@ -64,5 +64,48 @@ def calendar_page(
             "filter_confidence": confidence or "",
             "tickers": repo.list_distinct_tickers(),
             "accounts": [a.display() for a in repo.list_accounts()],
+        },
+    )
+
+
+@router.get("/calendar/focus/{violation_id}", response_class=HTMLResponse)
+def calendar_focus(
+    violation_id: str,
+    request: Request,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    target = next((v for v in repo.all_violations() if v.id == violation_id), None)
+    if target is None or not target.loss_sale_date:
+        raise HTTPException(status_code=404, detail=f"Violation {violation_id} not found")
+
+    window_start = target.loss_sale_date - timedelta(days=30)
+    window_end = target.loss_sale_date + timedelta(days=30)
+    related_trades = [
+        t for t in repo.get_trades_for_ticker(target.ticker)
+        if window_start <= t.date <= window_end
+    ]
+
+    markers = []
+    for t in related_trades:
+        offset_days = (t.date - target.loss_sale_date).days
+        left_pct = ((offset_days + 30) / 60) * 100
+        is_loss_sale = t.date == target.loss_sale_date
+        is_triggering = t.date == target.triggering_buy_date
+        markers.append({
+            "trade": t,
+            "left_pct": left_pct,
+            "is_loss_sale": is_loss_sale,
+            "is_triggering": is_triggering,
+            "offset_label": f"day {offset_days:+d}",
+        })
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_calendar_focus.html",
+        {
+            "violation": target,
+            "markers": markers,
+            "window_start": window_start,
+            "window_end": window_end,
         },
     )
