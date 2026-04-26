@@ -11,6 +11,7 @@ from net_alpha.cli import default as default_cmd
 from net_alpha.cli import imports as imports_cmd
 from net_alpha.cli import migrate as migrate_cmd
 from net_alpha.cli import sim as sim_cmd
+from net_alpha.cli import ui as ui_cmd
 
 
 class _FileFirstGroup(TyperGroup):
@@ -73,6 +74,15 @@ def sim(
     account: str | None = typer.Option(None, "--account", help="Restrict to one account label"),
 ):
     raise typer.Exit(sim_cmd.run(ticker, Decimal(str(qty)), Decimal(str(price)), account))
+
+
+@app.command(name="ui", help="Launch the local web UI in your browser.")
+def ui(
+    port: int | None = typer.Option(None, "--port", help="Override port (default: pick free in 8765-8775)."),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Don't auto-open browser."),
+    reload: bool = typer.Option(False, "--reload", help="Enable uvicorn auto-reload (dev)."),
+):
+    raise typer.Exit(ui_cmd.run(port=port, no_browser=no_browser, reload=reload))
 
 
 # ---------------------------------------------------------------------------
