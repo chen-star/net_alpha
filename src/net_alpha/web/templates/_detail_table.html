@@ -1,0 +1,30 @@
+{% if not violations %}
+  <div class="kpi-card text-slate-500 text-sm">No violations match these filters.</div>
+{% else %}
+  <table class="w-full text-sm bg-white rounded-lg shadow-sm border border-slate-200">
+    <thead class="text-left text-xs text-slate-500 uppercase border-b border-slate-200">
+      <tr>
+        <th class="px-3 py-2">Loss date</th>
+        <th class="px-3 py-2">Ticker</th>
+        <th class="px-3 py-2">Loss → Buy</th>
+        <th class="px-3 py-2">Triggering buy</th>
+        <th class="px-3 py-2">Disallowed</th>
+        <th class="px-3 py-2">Matched qty</th>
+        <th class="px-3 py-2">Confidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in violations %}
+        <tr class="border-b border-slate-100 last:border-b-0 hover:bg-slate-50">
+          <td class="px-3 py-2 font-mono">{{ v.loss_sale_date }}</td>
+          <td class="px-3 py-2 font-mono"><a href="/ticker/{{ v.ticker }}" class="text-primary underline">{{ v.ticker }}</a></td>
+          <td class="px-3 py-2">{{ v.loss_account or "-" }} → {{ v.buy_account or "-" }}</td>
+          <td class="px-3 py-2 font-mono">{{ v.triggering_buy_date or "-" }}</td>
+          <td class="px-3 py-2 font-mono text-confirmed">${{ "%.2f"|format(v.disallowed_loss) }}</td>
+          <td class="px-3 py-2 font-mono">{{ v.matched_quantity }}</td>
+          <td class="px-3 py-2"><span class="badge-{{ v.confidence|lower }}">{{ v.confidence }}</span></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
