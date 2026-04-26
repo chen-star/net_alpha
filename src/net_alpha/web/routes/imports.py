@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
 
@@ -13,8 +13,7 @@ from net_alpha.brokers.registry import detect_broker
 from net_alpha.brokers.schwab import SchwabParser
 from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
 from net_alpha.db.repository import Repository
-from net_alpha.engine.detector import detect_in_window
-from net_alpha.engine.merge import merge_violations
+from net_alpha.engine.recompute import recompute_all_violations
 from net_alpha.engine.stitch import stitch_account
 from net_alpha.ingest.csv_loader import load_csv
 from net_alpha.ingest.dedup import filter_new
@@ -51,24 +50,10 @@ def remove_import(
     account_id = existing_record.account_id
     result = repo.remove_import(import_id)
     if result.recompute_window is not None:
-        win_start, win_end = result.recompute_window
         # Re-stitch first so sells previously hydrated from now-deleted G/L lots
-        # are demoted to FIFO/unknown before detect_in_window runs.
+        # are demoted to FIFO/unknown before detection runs.
         stitch_account(repo, account_id)
-        det = detect_in_window(
-            repo.trades_in_window(win_start, win_end),
-            win_start,
-            win_end,
-            etf_pairs=etf_pairs,
-        )
-        # Include G/L data in merge for consistency with the upload route.
-        all_gl_lots = repo.get_gl_lots_for_account(account_id)
-        merged = merge_violations(
-            engine_violations=det.violations,
-            gl_lots_by_account={account_id: all_gl_lots},
-        )
-        repo.replace_violations_in_window(win_start, win_end, merged)
-        repo.replace_lots_in_window(win_start, win_end, det.lots)
+        recompute_all_violations(repo, etf_pairs)
     return request.app.state.templates.TemplateResponse(
         request,
         "_imports_table.html",
@@ -198,21 +183,7 @@ async def upload(
     stitched = stitch_account(repo, acct.id)
 
     if affected_dates:
-        win_start = min(affected_dates) - timedelta(days=30)
-        win_end = max(affected_dates) + timedelta(days=30)
-        det = detect_in_window(
-            repo.trades_in_window(win_start, win_end),
-            win_start,
-            win_end,
-            etf_pairs=etf_pairs,
-        )
-        all_gl_lots = repo.get_gl_lots_for_account(acct.id)
-        merged = merge_violations(
-            engine_violations=det.violations,
-            gl_lots_by_account={acct.id: all_gl_lots},
-        )
-        repo.replace_violations_in_window(win_start, win_end, merged)
-        repo.replace_lots_in_window(win_start, win_end, det.lots)
+        recompute_all_violations(repo, etf_pairs)
 
     msg_parts: list[str] = []
     if new_trade_count:

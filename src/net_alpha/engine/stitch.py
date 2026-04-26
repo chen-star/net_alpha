@@ -6,6 +6,7 @@ from net_alpha.db.repository import Repository
 from net_alpha.models.domain import Trade
 
 _QUANTITY_TOLERANCE = 0.005  # 0.5% allowed delta between G/L sum and sell qty
+_PROCEEDS_TOLERANCE = 0.01  # $0.01 — Schwab proceeds match exactly to the cent
 
 
 @dataclass
@@ -57,6 +58,16 @@ def _try_gl(repo: Repository, sell: Trade, account_id: int) -> StitchOutcome | N
     )
     if not gl_rows:
         return None
+
+    # When multiple sells share (account, symbol, date), the broad query returns
+    # G/L lots belonging to all of them. Narrow to lots whose proceeds match
+    # this specific sell so each sell gets its own cost basis instead of the
+    # summed total. If no individual lot matches (i.e. Schwab split one sell
+    # across multiple cost-basis lots), fall back to the full set.
+    matched = [r for r in gl_rows if abs(r.proceeds - (sell.proceeds or 0.0)) <= _PROCEEDS_TOLERANCE]
+    if matched and abs(sum(r.proceeds for r in matched) - (sell.proceeds or 0.0)) <= _PROCEEDS_TOLERANCE:
+        gl_rows = matched
+
     agg_qty = sum(r.quantity for r in gl_rows)
     agg_cb = sum(r.cost_basis for r in gl_rows)
     warning = None
