@@ -2,20 +2,20 @@
 {% set qs %}period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}{% endset %}
 <div class="flex items-center justify-between mb-2 text-sm">
   <div class="flex items-center gap-2">
-    <span class="text-xs text-slate-500 uppercase">Show:</span>
-    <div class="inline-flex rounded border border-slate-300 overflow-hidden">
+    <span class="label-uc">Show:</span>
+    <div class="seg">
       <button type="button"
               hx-get="/portfolio/positions?{{ qs }}&show=open&page=1"
               hx-target="#portfolio-positions" hx-swap="innerHTML"
-              class="px-3 py-1 {% if show == 'open' %}bg-primary text-white{% else %}bg-white text-slate-700 hover:bg-slate-50{% endif %}"
+              class="{% if show == 'open' %}seg-active{% endif %}"
               title="Symbols with open quantity right now.">Open</button>
       <button type="button"
               hx-get="/portfolio/positions?{{ qs }}&show=all&page=1"
               hx-target="#portfolio-positions" hx-swap="innerHTML"
-              class="px-3 py-1 border-l border-slate-300 {% if show == 'all' %}bg-primary text-white{% else %}bg-white text-slate-700 hover:bg-slate-50{% endif %}"
+              class="{% if show == 'all' %}seg-active{% endif %}"
               title="Open positions plus symbols you've fully closed in the selected period (showing realized P/L only).">All</button>
     </div>
-    <span class="text-xs text-slate-500 ml-2">
+    <span class="text-[11px] text-label-2 ml-2">
       {{ total_rows }} {% if show == 'all' %}total{% else %}open{% endif %} ·
       account: {% if selected_account %}{{ selected_account }}{% else %}all{% endif %}
     </span>
@@ -27,67 +27,75 @@
       <button type="button"
               {% if not prev_disabled %}hx-get="/portfolio/positions?{{ qs }}&show={{ show }}&page={{ page - 1 }}"
               hx-target="#portfolio-positions" hx-swap="innerHTML"{% endif %}
-              class="px-2 py-1 text-xs rounded border border-slate-300 {% if prev_disabled %}text-slate-300 bg-slate-50 cursor-not-allowed{% else %}bg-white hover:bg-slate-50{% endif %}"
+              class="px-2 py-1 text-[11px] rounded-md {% if prev_disabled %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
+              style="border:0.5px solid rgba(255,255,255,0.08); background: var(--color-surface);"
               {% if prev_disabled %}disabled{% endif %}>← Prev</button>
-      <span class="text-xs text-slate-500 px-2">page {{ page }} / {{ total_pages }}</span>
+      <span class="text-[11px] text-label-2 px-2">page {{ page }} / {{ total_pages }}</span>
       <button type="button"
               {% if not next_disabled %}hx-get="/portfolio/positions?{{ qs }}&show={{ show }}&page={{ page + 1 }}"
               hx-target="#portfolio-positions" hx-swap="innerHTML"{% endif %}
-              class="px-2 py-1 text-xs rounded border border-slate-300 {% if next_disabled %}text-slate-300 bg-slate-50 cursor-not-allowed{% else %}bg-white hover:bg-slate-50{% endif %}"
+              class="px-2 py-1 text-[11px] rounded-md {% if next_disabled %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
+              style="border:0.5px solid rgba(255,255,255,0.08); background: var(--color-surface);"
               {% if next_disabled %}disabled{% endif %}>Next →</button>
     </div>
   {% endif %}
 </div>
 
 {% if not rows %}
-  <div class="kpi-card text-slate-500 text-sm">{% if show == 'all' %}No positions in scope.{% else %}No open positions.{% endif %}</div>
+  <div class="panel text-label-2 text-[13px]">{% if show == 'all' %}No positions in scope.{% else %}No open positions.{% endif %}</div>
 {% else %}
-  <table class="w-full text-sm bg-white rounded-lg shadow-sm border border-slate-200">
-    <thead class="text-left text-xs text-slate-500 uppercase border-b border-slate-200">
-      <tr>
-        <th class="px-3 py-2" title="Underlying ticker. Options are merged into their underlying for quantity/market value (cash flows still tracked).">Symbol</th>
-        <th class="px-3 py-2" title="All accounts that hold (or held) this symbol within the selected scope.">Accounts</th>
-        <th class="px-3 py-2 text-right" title="Sum of remaining quantity across all open lots (equity only; options excluded).">Qty</th>
-        <th class="px-3 py-2 text-right" title="Qty × latest fetched price. — when no price is available.">Mkt $</th>
-        <th class="px-3 py-2 text-right" title="Sum of adjusted basis across open lots — i.e., cost basis after any wash-sale adjustments have been rolled into the replacement lot.">Open Cost</th>
-        <th class="px-3 py-2 text-right" title="Open Cost ÷ Qty. The per-share book basis after wash-sale adjustments.">Avg Basis</th>
-        <th class="px-3 py-2 text-right" title="(Total Buys − Total Sells, including option premium) ÷ current Qty. Your true per-share cash exposure on the position right now (independent of basis).">Cash Sunk/sh</th>
-        <th class="px-3 py-2 text-right" title="Sum of (proceeds − cost basis) on Sell trades within the selected period. Wash-sale-disallowed losses are excluded (they roll into the replacement lot).">{{ period_label }} Realized</th>
-        <th class="px-3 py-2 text-right" title="Mkt $ − Open Cost on currently open lots. — when no price is available.">Unrealized</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in rows %}
-        <tr class="row-hover border-b border-slate-100 last:border-b-0 cursor-pointer"
-            onclick="window.location='/ticker/{{ r.symbol }}'">
-          <td class="px-3 py-2 font-mono">
-            {{ r.symbol }}
-            {% if r.qty == 0 %}<span class="ml-1 text-[10px] uppercase text-slate-400">closed</span>{% endif %}
-          </td>
-          <td class="px-3 py-2 text-xs text-slate-500">
-            {% if r.accounts|length <= 3 %}
-              {{ r.accounts|join(' · ') }}
-            {% else %}
-              {{ r.accounts[0] }} +{{ r.accounts|length - 1 }} more
-            {% endif %}
-          </td>
-          <td class="px-3 py-2 font-mono text-right">{{ "%.4f"|format(r.qty|float) }}</td>
-          <td class="px-3 py-2 font-mono text-right">
-            {% if r.market_value is none %}<span class="text-slate-400">—</span>
-            {% else %}${{ "%.2f"|format(r.market_value|float) }}{% endif %}
-          </td>
-          <td class="px-3 py-2 font-mono text-right">${{ "%.2f"|format(r.open_cost|float) }}</td>
-          <td class="px-3 py-2 font-mono text-right">${{ "%.2f"|format(r.avg_basis|float) }}</td>
-          <td class="px-3 py-2 font-mono text-right">${{ "%.2f"|format(r.cash_sunk_per_share|float) }}</td>
-          <td class="px-3 py-2 font-mono text-right {% if r.realized_pl < 0 %}text-confirmed{% elif r.realized_pl > 0 %}text-emerald-600{% endif %}">
-            {% if r.realized_pl != 0 %}{% if r.realized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.realized_pl|float|abs) }}{% else %}—{% endif %}
-          </td>
-          <td class="px-3 py-2 font-mono text-right {% if r.unrealized_pl is not none and r.unrealized_pl < 0 %}text-confirmed{% elif r.unrealized_pl is not none and r.unrealized_pl > 0 %}text-emerald-600{% endif %}">
-            {% if r.unrealized_pl is none %}<span class="text-slate-400">—</span>
-            {% else %}{% if r.unrealized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.unrealized_pl|float|abs) }}{% endif %}
-          </td>
+  <div class="panel" style="padding:0;">
+    <table class="net-table">
+      <thead>
+        <tr>
+          <th title="Underlying ticker. Options are merged into their underlying for quantity/market value (cash flows still tracked).">Symbol</th>
+          <th title="All accounts that hold (or held) this symbol within the selected scope.">Accounts</th>
+          <th class="r" title="Sum of remaining quantity across all open lots (equity only; options excluded).">Qty</th>
+          <th class="r" title="Qty × latest fetched price. — when no price is available.">Mkt $</th>
+          <th class="r" title="Sum of adjusted basis across open lots — i.e., cost basis after any wash-sale adjustments have been rolled into the replacement lot.">Open Cost</th>
+          <th class="r" title="Open Cost ÷ Qty. The per-share book basis after wash-sale adjustments.">Avg Basis</th>
+          <th class="r" title="(Total Buys − Total Sells, including option premium) ÷ current Qty. Your true per-share cash exposure on the position right now (independent of basis).">Cash Sunk/sh</th>
+          <th class="r" title="Sum of (proceeds − cost basis) on Sell trades within the selected period. Wash-sale-disallowed losses are excluded (they roll into the replacement lot).">{{ period_label }} Realized</th>
+          <th class="r" title="Mkt $ − Open Cost on currently open lots. — when no price is available.">Unrealized</th>
         </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr class="cursor-pointer"
+              onclick="window.location='/ticker/{{ r.symbol }}'">
+            <td>
+              <div class="flex items-center gap-2 font-semibold tracking-tightish">
+                <span class="w-5 h-5 rounded-md bg-surface-3 grid place-items-center text-[9px] font-bold text-label-1 shrink-0">{{ r.symbol[0] }}</span>
+                {{ r.symbol }}
+                {% if r.qty == 0 %}<span class="ml-1 text-[10px] uppercase text-label-3">closed</span>{% endif %}
+              </div>
+            </td>
+            <td class="text-[11px] text-label-2">
+              {% if r.accounts|length <= 3 %}
+                {{ r.accounts|join(' · ') }}
+              {% else %}
+                {{ r.accounts[0] }} +{{ r.accounts|length - 1 }} more
+              {% endif %}
+            </td>
+            <td class="r num">{{ "%.4f"|format(r.qty|float) }}</td>
+            <td class="r num">
+              {% if r.market_value is none %}<span class="text-label-3">—</span>
+              {% else %}${{ "%.2f"|format(r.market_value|float) }}{% endif %}
+            </td>
+            <td class="r num">${{ "%.2f"|format(r.open_cost|float) }}</td>
+            <td class="r num">${{ "%.2f"|format(r.avg_basis|float) }}</td>
+            <td class="r num">${{ "%.2f"|format(r.cash_sunk_per_share|float) }}</td>
+            <td class="r num {% if r.realized_pl < 0 %}text-neg{% elif r.realized_pl > 0 %}text-pos{% endif %}">
+              {% if r.realized_pl != 0 %}{% if r.realized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.realized_pl|float|abs) }}{% else %}—{% endif %}
+            </td>
+            <td class="r num {% if r.unrealized_pl is not none and r.unrealized_pl < 0 %}text-neg{% elif r.unrealized_pl is not none and r.unrealized_pl > 0 %}text-pos{% endif %}">
+              {% if r.unrealized_pl is none %}<span class="text-label-3">—</span>
+              {% else %}{% if r.unrealized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.unrealized_pl|float|abs) }}{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="text-label-3 text-[11px] mt-1">Click row to drill down</p>
 {% endif %}

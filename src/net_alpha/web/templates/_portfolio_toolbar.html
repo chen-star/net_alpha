@@ -1,7 +1,9 @@
 <form method="get" action="/" class="kpi-card flex gap-3 flex-wrap items-end text-sm">
   <div>
-    <label class="block text-xs text-slate-500 uppercase">Period:</label>
-    <select name="period" onchange="this.form.submit()" class="border border-slate-300 rounded px-2 py-1 bg-white">
+    <label class="label-uc">Period:</label>
+    <select name="period" onchange="this.form.submit()"
+            class="bg-surface text-text rounded-md px-2 py-1 text-[12px]"
+            style="border:0.5px solid rgba(255,255,255,0.08);">
       <option value="ytd" {% if selected_period == 'ytd' %}selected{% endif %}>YTD ({{ current_year }})</option>
       {% for y in available_years %}
         {% if y != current_year %}
@@ -12,8 +14,10 @@
     </select>
   </div>
   <div>
-    <label class="block text-xs text-slate-500 uppercase">Account:</label>
-    <select name="account" onchange="this.form.submit()" class="border border-slate-300 rounded px-2 py-1 bg-white">
+    <label class="label-uc">Account:</label>
+    <select name="account" onchange="this.form.submit()"
+            class="bg-surface text-text rounded-md px-2 py-1 text-[12px]"
+            style="border:0.5px solid rgba(255,255,255,0.08);">
       <option value="" {% if not selected_account %}selected{% endif %}>All accounts</option>
       {% for a in accounts %}
         <option value="{{ a }}" {% if selected_account == a %}selected{% endif %}>{{ a }}</option>
@@ -21,7 +25,7 @@
     </select>
   </div>
   <div class="ml-auto flex items-center gap-2">
-    <span class="text-xs text-slate-500">Prices via Yahoo (~15 min delay)</span>
+    <span class="text-[11px] text-label-2">Prices via Yahoo (~15 min delay)</span>
     <button type="button"
             hx-post="/prices/refresh?symbols=ALL"
             hx-target="body" hx-swap="none"
