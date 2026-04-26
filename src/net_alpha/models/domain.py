@@ -151,6 +151,13 @@ class ImportRecord(BaseModel):
     csv_sha256: str
     imported_at: datetime
     trade_count: int
+    # v4 additions — optional; populated by import path or backfill.
+    min_trade_date: date | None = None
+    max_trade_date: date | None = None
+    equity_count: int | None = None
+    option_count: int | None = None
+    option_expiry_count: int | None = None
+    parse_warnings: list[str] = Field(default_factory=list)
 
 
 class AddImportResult(BaseModel):
@@ -173,6 +180,13 @@ class ImportSummary(BaseModel):
     trade_count: int
     imported_at: datetime
     gl_lot_count: int = 0
+    # v4 additions; None means "not yet aggregated" (rendered as em-dash).
+    min_trade_date: date | None = None
+    max_trade_date: date | None = None
+    equity_count: int | None = None
+    option_count: int | None = None
+    option_expiry_count: int | None = None
+    parse_warnings: list[str] = Field(default_factory=list)
 
 
 class LotConsumption(BaseModel):

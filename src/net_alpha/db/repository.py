@@ -1,6 +1,7 @@
 # src/net_alpha/db/repository.py
 from __future__ import annotations
 
+import json
 from datetime import date
 
 from sqlalchemy import func
@@ -80,6 +81,12 @@ class Repository:
                         trade_count=ir.trade_count,
                         imported_at=ir.imported_at,
                         gl_lot_count=int(gl_count or 0),
+                        min_trade_date=date.fromisoformat(ir.min_trade_date) if ir.min_trade_date else None,
+                        max_trade_date=date.fromisoformat(ir.max_trade_date) if ir.max_trade_date else None,
+                        equity_count=ir.equity_count,
+                        option_count=ir.option_count,
+                        option_expiry_count=ir.option_expiry_count,
+                        parse_warnings=json.loads(ir.parse_warnings_json) if ir.parse_warnings_json else [],
                     )
                 )
             return out
@@ -115,6 +122,12 @@ class Repository:
                 csv_sha256=record.csv_sha256,
                 imported_at=record.imported_at,
                 trade_count=len(trades),
+                min_trade_date=record.min_trade_date.isoformat() if record.min_trade_date else None,
+                max_trade_date=record.max_trade_date.isoformat() if record.max_trade_date else None,
+                equity_count=record.equity_count,
+                option_count=record.option_count,
+                option_expiry_count=record.option_expiry_count,
+                parse_warnings_json=json.dumps(record.parse_warnings) if record.parse_warnings else None,
             )
             s.add(ir)
             s.flush()  # populate ir.id
@@ -314,6 +327,71 @@ class Repository:
                 max(removed_dates) + timedelta(days=30),
             )
             return RemoveImportResult(removed_trade_count=len(trade_ids), recompute_window=window)
+
+    def update_import_aggregates(
+        self,
+        *,
+        import_id: int,
+        min_trade_date: date | None,
+        max_trade_date: date | None,
+        equity_count: int,
+        option_count: int,
+        option_expiry_count: int,
+        parse_warnings: list[str],
+    ) -> None:
+        """Persist aggregate columns. Used by the backfill helper."""
+        with Session(self.engine) as s:
+            row = s.get(ImportRecordRow, import_id)
+            if row is None:
+                raise LookupError(f"Import #{import_id} not found")
+            row.min_trade_date = min_trade_date.isoformat() if min_trade_date else None
+            row.max_trade_date = max_trade_date.isoformat() if max_trade_date else None
+            row.equity_count = equity_count
+            row.option_count = option_count
+            row.option_expiry_count = option_expiry_count
+            row.parse_warnings_json = json.dumps(parse_warnings) if parse_warnings else None
+            s.add(row)
+            s.commit()
+
+    def get_import_detail(self, import_id: int) -> dict | None:
+        """Return a dict of detail-panel fields for the imports detail fragment.
+
+        Includes: aggregate columns, plus an account hint (the first ticker count),
+        plus distinct-ticker info pulled live from the joined trade rows.
+        Returns None if the import does not exist.
+        """
+        rec = self.get_import(import_id)
+        if rec is None:
+            return None
+        trades = self.trades_for_import(import_id)
+        distinct_tickers = sorted({t.ticker for t in trades})
+        with Session(self.engine) as s:
+            ir = s.get(ImportRecordRow, import_id)
+            account_row = s.exec(select(AccountRow).where(AccountRow.id == ir.account_id)).first()
+            broker = account_row.broker if account_row else "unknown"
+            label = account_row.label if account_row else "unknown"
+            warnings = []
+            if ir.parse_warnings_json:
+                warnings = json.loads(ir.parse_warnings_json)
+            min_td = date.fromisoformat(ir.min_trade_date) if ir.min_trade_date else None
+            max_td = date.fromisoformat(ir.max_trade_date) if ir.max_trade_date else None
+            equity_count = ir.equity_count or 0
+            option_count = ir.option_count or 0
+            option_expiry_count = ir.option_expiry_count or 0
+        return {
+            "id": import_id,
+            "broker": broker,
+            "account_label": label,
+            "csv_filename": rec.csv_filename,
+            "min_trade_date": min_td,
+            "max_trade_date": max_td,
+            "equity_count": equity_count,
+            "option_count": option_count,
+            "option_expiry_count": option_expiry_count,
+            "distinct_ticker_count": len(distinct_tickers),
+            "tickers_preview": distinct_tickers[:5],
+            "parse_warnings": warnings,
+        }
 
     def replace_violations_in_window(self, start: date, end: date, new_violations: list[WashSaleViolation]) -> None:
         with Session(self.engine) as s:

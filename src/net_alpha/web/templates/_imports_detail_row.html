@@ -1,0 +1,40 @@
+<td colspan="7" class="px-6 py-3 text-xs text-slate-700">
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <div>
+      <div class="text-slate-400 uppercase text-[10px]">Detected</div>
+      <div class="font-mono">{{ detail.broker }} / {{ detail.account_label }}</div>
+    </div>
+    <div>
+      <div class="text-slate-400 uppercase text-[10px]">Filename</div>
+      <div class="font-mono break-all">{{ detail.csv_filename }}</div>
+    </div>
+    <div>
+      <div class="text-slate-400 uppercase text-[10px]">Date range</div>
+      <div class="font-mono">
+        {% if detail.min_trade_date and detail.max_trade_date %}
+          {{ detail.min_trade_date }} → {{ detail.max_trade_date }}
+        {% else %}
+          —
+        {% endif %}
+      </div>
+    </div>
+    <div>
+      <div class="text-slate-400 uppercase text-[10px]">Equity / Option / Expiry</div>
+      <div class="font-mono">{{ detail.equity_count }} · {{ detail.option_count }} · {{ detail.option_expiry_count }}</div>
+    </div>
+    <div>
+      <div class="text-slate-400 uppercase text-[10px]">Distinct tickers</div>
+      <div class="font-mono">
+        {{ detail.distinct_ticker_count }}{% if detail.tickers_preview %}: {{ detail.tickers_preview|join(", ") }}{% if detail.distinct_ticker_count > detail.tickers_preview|length %} …{% endif %}{% endif %}
+      </div>
+    </div>
+    {% if detail.parse_warnings %}
+      <div class="md:col-span-3">
+        <div class="text-slate-400 uppercase text-[10px]">Parse warnings</div>
+        <ul class="list-disc list-inside text-confirmed">
+          {% for w in detail.parse_warnings %}<li>{{ w }}</li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+</td>

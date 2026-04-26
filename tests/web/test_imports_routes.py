@@ -37,3 +37,12 @@ def test_delete_import_removes_it_and_returns_table_fragment(client, repo, build
 def test_delete_nonexistent_import_returns_404(client):
     resp = client.delete("/imports/999")
     assert resp.status_code == 404
+
+
+def test_imports_page_embeds_drop_zone(client):
+    resp = client.get("/imports")
+    assert resp.status_code == 200
+    body = resp.text
+    # Drop-zone is embedded directly on the page (not behind a "+ New import" link).
+    assert "drop-zone" in body
+    assert "+ New import" not in body

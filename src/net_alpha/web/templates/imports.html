@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Imports · net-alpha{% endblock %}
 {% block content %}
-  <div class="flex justify-between items-center mb-4">
-    <h1 class="text-2xl">Imports</h1>
-    <a href="/" class="btn">+ New import</a>
+  <h1 class="text-2xl mb-4">Imports</h1>
+
+  <div class="mb-4">
+    {% include "_drop_zone.html" %}
   </div>
 
   <div id="imports-table">

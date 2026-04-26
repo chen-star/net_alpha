@@ -26,6 +26,14 @@ class ImportRecordRow(SQLModel, table=True):
     imported_at: datetime
     trade_count: int
 
+    # v4 additions — populated on import or backfilled at startup.
+    min_trade_date: str | None = None
+    max_trade_date: str | None = None
+    equity_count: int | None = None
+    option_count: int | None = None
+    option_expiry_count: int | None = None
+    parse_warnings_json: str | None = None  # JSON-encoded list[str]; "[]" = no warnings
+
 
 class TradeRow(SQLModel, table=True):
     __tablename__ = "trades"
