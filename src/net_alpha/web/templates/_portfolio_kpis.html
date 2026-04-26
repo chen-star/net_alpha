@@ -1,0 +1,51 @@
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+  <div class="kpi-card">
+    <div class="text-xs text-slate-500 uppercase">{{ kpis.period_label }} Realized</div>
+    <div class="text-2xl font-mono mt-1 {% if kpis.period_realized < 0 %}text-confirmed{% else %}text-emerald-600{% endif %}">
+      {% if kpis.period_realized < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized|float|abs) }}
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="text-xs text-slate-500 uppercase">{{ kpis.period_label }} Unrealized</div>
+    <div class="text-2xl font-mono mt-1">
+      {% if kpis.period_unrealized is none %}
+        <span class="text-slate-400">—</span>
+      {% elif kpis.period_unrealized < 0 %}
+        <span class="text-confirmed">-${{ "%.2f"|format(kpis.period_unrealized|float|abs) }}</span>
+      {% else %}
+        <span class="text-emerald-600">+${{ "%.2f"|format(kpis.period_unrealized|float) }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="text-xs text-slate-500 uppercase">Lifetime Realized</div>
+    <div class="text-2xl font-mono mt-1 {% if kpis.lifetime_realized < 0 %}text-confirmed{% else %}text-emerald-600{% endif %}">
+      {% if kpis.lifetime_realized < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(kpis.lifetime_realized|float|abs) }}
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="text-xs text-slate-500 uppercase">Lifetime Unrealized</div>
+    <div class="text-2xl font-mono mt-1">
+      {% if kpis.lifetime_unrealized is none %}
+        <span class="text-slate-400">—</span>
+      {% elif kpis.lifetime_unrealized < 0 %}
+        <span class="text-confirmed">-${{ "%.2f"|format(kpis.lifetime_unrealized|float|abs) }}</span>
+      {% else %}
+        <span class="text-emerald-600">+${{ "%.2f"|format(kpis.lifetime_unrealized|float) }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="text-xs text-slate-500 uppercase">Open Position $</div>
+    <div class="text-2xl font-mono mt-1">
+      {% if kpis.open_position_value is none %}
+        <span class="text-slate-400">—</span>
+      {% else %}
+        ${{ "%.2f"|format(kpis.open_position_value|float) }}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% if snapshot.degraded %}
+  <div class="text-xs text-amber-600 mt-2">Showing stale prices (provider unavailable).</div>
+{% endif %}

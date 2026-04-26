@@ -6,10 +6,24 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
+from net_alpha.portfolio.pnl import compute_kpis
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 
 router = APIRouter()
+
+
+def _parse_period(period: str | None, current_year: int) -> tuple[tuple[int, int] | None, str]:
+    """Return ((start, end_exclusive) | None, label)."""
+    if not period or period == "ytd":
+        return ((current_year, current_year + 1), f"YTD {current_year}")
+    if period == "lifetime":
+        return (None, "Lifetime")
+    try:
+        y = int(period)
+        return ((y, y + 1), str(y))
+    except ValueError:
+        return ((current_year, current_year + 1), f"YTD {current_year}")
 
 
 @router.post("/prices/refresh")
@@ -60,4 +74,34 @@ def portfolio_page(
             "selected_account": account or "",
             "group_options": group_options,
         },
+    )
+
+
+@router.get("/portfolio/kpis", response_class=HTMLResponse)
+def portfolio_kpis(
+    request: Request,
+    period: str | None = None,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    today = date.today()
+    period_tuple, period_label = _parse_period(period, today.year)
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
+    prices = svc.get_prices(symbols)
+    kpis = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label=period_label,
+        period=period_tuple,
+        account=account or None,
+    )
+    snap = svc.last_snapshot()
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_portfolio_kpis.html",
+        {"kpis": kpis, "snapshot": snap},
     )
