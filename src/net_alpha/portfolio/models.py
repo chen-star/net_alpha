@@ -82,3 +82,25 @@ class MonthlyPnl:
     gross_gain: Decimal  # sum of positive sell P&L
     gross_loss: Decimal  # sum of |negative sell P&L| (positive number)
     trade_count: int  # number of sell trades contributing
+
+
+@dataclass(frozen=True)
+class AllocationSlice:
+    """One ranked holding for the donut + leaderboard module."""
+
+    rank: int  # 1-based; 0 reserved for "rest" aggregate
+    symbol: str  # "OTHER" for the rest aggregate
+    market_value: Decimal
+    pct: Decimal  # 0..100, of total market value
+    is_rest: bool
+
+
+@dataclass(frozen=True)
+class AllocationView:
+    total_market_value: Decimal
+    symbol_count: int
+    slices: tuple[AllocationSlice, ...]  # length = top_n + (1 if rest else 0)
+    top1_pct: Decimal
+    top3_pct: Decimal
+    top5_pct: Decimal
+    top10_pct: Decimal
