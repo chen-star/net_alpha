@@ -101,3 +101,14 @@ def test_trades_with_missing_proceeds_or_cost_skipped():
     jul = next(m for m in out if m.month == 7)
     assert jul.trade_count == 1
     assert jul.net_pl == Decimal("500")
+
+
+def test_year_boundary_dec31_jan1():
+    trades = [
+        _sell(dt.date(2026, 12, 31), proceeds=1500, cost=1000),  # last day — included
+        _sell(dt.date(2027, 1, 1), proceeds=1500, cost=1000),    # next year — excluded
+    ]
+    out = monthly_realized_pl(trades=trades, year=2026, ticker=None, account=None)
+    dec = next(m for m in out if m.month == 12)
+    assert dec.trade_count == 1
+    assert dec.net_pl == Decimal("500")
