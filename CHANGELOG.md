@@ -2,6 +2,167 @@
 
 
 
+## v0.14.0 (2026-04-26)
+
+### Chore
+
+* chore: sync uv.lock wash-alpha version to 0.13.1 ([`6162d66`](https://github.com/chen-star/net_alpha/commit/6162d6632e20779687d1a9f2957411166451dee3))
+
+* chore: apply ruff format to phase 1 files
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0b63a93`](https://github.com/chen-star/net_alpha/commit/0b63a93d00241c8d07488b75dabb97a792de21ac))
+
+* chore(web): remove obsolete dashboard route, templates, and tests ([`1de3ee7`](https://github.com/chen-star/net_alpha/commit/1de3ee74acb6d107a71f31c6d3bd503532682729))
+
+* chore(deps): add yfinance to [ui] extras for portfolio pricing
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9e1111d`](https://github.com/chen-star/net_alpha/commit/9e1111d0249aa1bf34fe9e629caaafd0eefabe6b))
+
+### Documentation
+
+* docs(plan): add Phase 1 implementation plan — pricing foundation + portfolio
+
+25 bite-sized TDD tasks covering: yfinance dependency, ~/.net_alpha/config.yaml
+loader, schema v3 migration for price_cache, Pricing subsystem (Quote, ABC, cache,
+Yahoo provider, service), Portfolio modules (positions, P&amp;L/KPIs/wash-impact,
+treemap, equity curve, lot aging), Portfolio page shell + 5 HTMX fragments,
+disclaimer footer, dashboard removal, CLAUDE.md updates, and an end-to-end test.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c969619`](https://github.com/chen-star/net_alpha/commit/c969619ff4f6cef5cd5ad12c5152ddda13d4dd1d))
+
+* docs(spec): add UI/UX redesign design (portfolio + calendar + imports + sim + detail)
+
+Three-phase plan: pricing foundation + portfolio rebuild, calendar dual-ribbon
++ imports relocation/notes, sim buy support + detail enhancements. Documents
+the no-remote-prices policy relaxation (symbols only, configurable).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b799929`](https://github.com/chen-star/net_alpha/commit/b7999294fda0f7d63498e400592416d586c03b24))
+
+* docs(claude.md): document price-data privacy + portfolio modules + UI conventions ([`b402bf0`](https://github.com/chen-star/net_alpha/commit/b402bf075c1581cb6b6f716ac593c11c35925669))
+
+* docs(plan): add Phase 1 implementation plan — pricing foundation + portfolio
+
+25 bite-sized TDD tasks covering: yfinance dependency, ~/.net_alpha/config.yaml
+loader, schema v3 migration for price_cache, Pricing subsystem (Quote, ABC, cache,
+Yahoo provider, service), Portfolio modules (positions, P&amp;L/KPIs/wash-impact,
+treemap, equity curve, lot aging), Portfolio page shell + 5 HTMX fragments,
+disclaimer footer, dashboard removal, CLAUDE.md updates, and an end-to-end test.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5bfe284`](https://github.com/chen-star/net_alpha/commit/5bfe28497d8d36cde6070a1b7b3276da5018418d))
+
+* docs(spec): add UI/UX redesign design (portfolio + calendar + imports + sim + detail)
+
+Three-phase plan: pricing foundation + portfolio rebuild, calendar dual-ribbon
++ imports relocation/notes, sim buy support + detail enhancements. Documents
+the no-remote-prices policy relaxation (symbols only, configurable).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b5fcf92`](https://github.com/chen-star/net_alpha/commit/b5fcf92928a454c74315658143bbaaa77ccab8ba))
+
+### Feature
+
+* feat(web): add &#39;Prices via Yahoo Finance&#39; footer line when remote prices enabled
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f37b4d2`](https://github.com/chen-star/net_alpha/commit/f37b4d2fa2e5f87520bc64ca1d73ac450f8e523e))
+
+* feat(web): treemap, equity curve, wash-impact, lot-aging fragments ([`5778838`](https://github.com/chen-star/net_alpha/commit/5778838522e7ec65f5d6e347bf3d232395c4b07e))
+
+* feat(web): /portfolio/positions fragment + per-symbol table
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4f7b111`](https://github.com/chen-star/net_alpha/commit/4f7b11102af4c1c7a95ffb12369aca01147c6c5c))
+
+* feat(web): /portfolio/kpis fragment + KPI partial
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c620f5d`](https://github.com/chen-star/net_alpha/commit/c620f5da874dd30003cfa568fb87a1218558753b))
+
+* feat(web): portfolio page shell with HTMX-loaded fragments + empty state
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`98b8dd6`](https://github.com/chen-star/net_alpha/commit/98b8dd657d259932af20dfaafa827359180dbea8))
+
+* feat(portfolio): compute_wash_impact for portfolio mini-grid
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f478ef4`](https://github.com/chen-star/net_alpha/commit/f478ef49cec45b22ecd79dbb9cedb325e65e3b17))
+
+* feat(portfolio): lot_aging — top-N lots crossing LTCG threshold ([`08fd319`](https://github.com/chen-star/net_alpha/commit/08fd319fcd7653a16d3000589975273a3765d363))
+
+* feat(portfolio): equity curve — realized cumulative + present-day point
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b2ef8d0`](https://github.com/chen-star/net_alpha/commit/b2ef8d0a0be1130f7e050a27d9111649ae47efb8))
+
+* feat(portfolio): slice-and-dice treemap layout
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0f03adf`](https://github.com/chen-star/net_alpha/commit/0f03adfac8c4f30e9ad73536fffc6560aa433370))
+
+* feat(portfolio): compute_kpis (period + lifetime, account-scoped)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`76c4614`](https://github.com/chen-star/net_alpha/commit/76c4614ab50dc3a882e907538fdb268fc50b8f34))
+
+* feat(portfolio): compute_open_positions with account/period scoping
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f040f04`](https://github.com/chen-star/net_alpha/commit/f040f0487cc296115b1586f7738b9db750f7896f))
+
+* feat(portfolio): view-model dataclasses for positions/KPIs/charts ([`7ae3fef`](https://github.com/chen-star/net_alpha/commit/7ae3fefdaa83d678c80de6a34420462e5f545b38))
+
+* feat(web): POST /prices/refresh — invalidate + refetch quotes
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8c0746c`](https://github.com/chen-star/net_alpha/commit/8c0746cb31d897fb77e07dd55765b84da141af5a))
+
+* feat(web): wire PricingService into FastAPI app state and DI
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`39bfff0`](https://github.com/chen-star/net_alpha/commit/39bfff03a62061df2457b0f92880eb5f1048d3bc))
+
+* feat(pricing): PricingService orchestrating provider + cache
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`598acfe`](https://github.com/chen-star/net_alpha/commit/598acfe5648b34227908bab6f2ac4119ee2e34da))
+
+* feat(pricing): YahooPriceProvider via yfinance + network test marker
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`310479d`](https://github.com/chen-star/net_alpha/commit/310479db6bf52397d25a451c4b22b558f60e3d78))
+
+* feat(pricing): SQLite-backed PriceCache with TTL + stale detection
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ee90fbb`](https://github.com/chen-star/net_alpha/commit/ee90fbb030bc0e0a87becf2ed17520aaf723ecce))
+
+* feat(pricing): Quote model and PriceProvider ABC
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3b812a3`](https://github.com/chen-star/net_alpha/commit/3b812a36d5c9bdd50d12b7660d53721c4bfb1c82))
+
+* feat(db): schema v3 — add price_cache table for pricing subsystem
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`93baf24`](https://github.com/chen-star/net_alpha/commit/93baf24f15d46fa3bed748fb7d58bde44679198d))
+
+* feat(config): PricingConfig + YAML loader from ~/.net_alpha/config.yaml
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2d80b15`](https://github.com/chen-star/net_alpha/commit/2d80b1563c894ad30265e78fce1dca46f7882bd6))
+
+### Fix
+
+* fix(web): pre-merge polish — refresh ALL, dead dropdown, status text, equity curve scope
+
+- /prices/refresh?symbols=ALL now resolves open-position tickers from the
+  repository instead of passing the literal string to Yahoo (which returned
+  Allstate); empty-lot edge case returns early with no error
+- Remove the non-functional &#34;Show separately&#34; Options dropdown from the
+  toolbar; group_options route param stays as a no-op default
+- Replace the stuck &#34;Prices: loading…&#34; span with a static accurate label
+  (&#34;Prices via Yahoo (~15 min delay)&#34;); id attribute dropped since nothing
+  targets it
+- Equity curve title changed to &#34;Equity curve · YEAR (YTD only)&#34; to make
+  it visually clear the chart is year-scoped regardless of toolbar period
+- Update test assertion to match new title-case heading text
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5de5ca0`](https://github.com/chen-star/net_alpha/commit/5de5ca05c3af771fe0ec58693125c81f7517a763))
+
+### Test
+
+* test(integration): end-to-end portfolio page render with mocked prices
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`094b30c`](https://github.com/chen-star/net_alpha/commit/094b30c73a5c6a1faeb8947a50eaff2ea7e268a1))
+
+### Unknown
+
+* Merge branch &#39;feat/portfolio-phase1&#39; — Phase 1 portfolio + pricing subsystem ([`1f481cf`](https://github.com/chen-star/net_alpha/commit/1f481cf84391dadc32c1a24994422c9afd2ebe9a))
+
+
 ## v0.13.1 (2026-04-26)
 
 ### Fix
