@@ -11,3 +11,4 @@ htmlcov/
 .gitnexus
 coverage.xml
 private/
+.superpowers/
