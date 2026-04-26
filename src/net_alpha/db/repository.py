@@ -230,6 +230,7 @@ class Repository:
             buy_account=self._account_display_for_id(s, row.buy_account_id),
             loss_sale_date=date.fromisoformat(row.loss_sale_date),
             triggering_buy_date=date.fromisoformat(row.triggering_buy_date),
+            source=row.source,
         )
 
     def all_violations(self) -> list[WashSaleViolation]:
@@ -332,6 +333,7 @@ class Repository:
             confidence=v.confidence,
             disallowed_loss=v.disallowed_loss,
             matched_quantity=v.matched_quantity,
+            source=getattr(v, "source", "engine"),
         )
 
     def replace_lots_in_window(self, start: date, end: date, new_lots: list[Lot]) -> None:

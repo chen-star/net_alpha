@@ -117,6 +117,7 @@ class WashSaleViolation(BaseModel):
     loss_sale_date: date | None = None
     triggering_buy_date: date | None = None
     ticker: str = ""
+    source: str = "engine"  # "schwab_g_l" | "engine"
 
 
 class DetectionResult(BaseModel):
