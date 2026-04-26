@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from net_alpha.config import Settings, load_pricing_config
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.engine.etf_pairs import load_etf_pairs
+from net_alpha.output.disclaimer import price_source_line
 from net_alpha.output.disclaimer import render as disclaimer_render
 from net_alpha.pricing.cache import PriceCache
 from net_alpha.pricing.yahoo import YahooPriceProvider
@@ -37,6 +38,9 @@ def create_app(settings: Settings) -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     templates = Jinja2Templates(directory=str(templates_dir))
     templates.env.globals["disclaimer"] = disclaimer_render()
+    templates.env.globals["price_disclosure"] = (
+        price_source_line("Yahoo Finance") if pricing_config.enable_remote else ""
+    )
     app.state.templates = templates
 
     @app.get("/healthz")

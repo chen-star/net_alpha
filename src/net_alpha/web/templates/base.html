@@ -28,6 +28,9 @@
     <div class="max-w-7xl mx-auto px-6 text-xs text-slate-500">
       {{ disclaimer }}
     </div>
+    {% if price_disclosure %}
+      <div class="text-xs text-slate-400 text-center mt-1">{{ price_disclosure }}</div>
+    {% endif %}
   </footer>
 </body>
 </html>
