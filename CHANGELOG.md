@@ -2,6 +2,29 @@
 
 
 
+## v0.13.1 (2026-04-26)
+
+### Fix
+
+* fix(engine): trust Schwab when it explicitly clears a same-ticker lot
+
+Previously, when the engine flagged a same-account exact-ticker wash sale
+candidate that Schwab had already evaluated and cleared (Wash Sale=No),
+we surfaced the engine&#39;s verdict as &#34;Unclear&#34;. This inflated the watch list
+with cases the IRS would not disallow (e.g. a CRCL 06/18 150C loss whose
+nearby buy was a different-strike CRCL contract that Schwab correctly does
+not consider substantially identical), and counted them in YTD Disallowed
+Loss totals.
+
+Per the original brainstorm decision (&#34;trust Schwab for closed Schwab
+positions&#34;), drop these contradictions instead of surfacing them. The one
+exception preserved is when the engine&#39;s original confidence was already
+&#34;Unclear&#34; — that label only comes from the substantially-identical/ETF-pair
+matcher branch, which Schwab cannot model and which still needs human review.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b997555`](https://github.com/chen-star/net_alpha/commit/b9975554ee67e1d5aab6d7144e23d3b497500b5e))
+
+
 ## v0.13.0 (2026-04-26)
 
 ### Feature
