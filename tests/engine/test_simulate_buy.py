@@ -159,3 +159,68 @@ def test_loss_in_other_account_still_matches_cross_account():
     )
     assert options[0].clean is False
     assert options[0].matches[0].loss_account == "schwab/roth"
+
+
+def test_loss_on_day_zero_same_day_as_proposed_buy_matches():
+    loss = _sell("schwab/personal", date(2025, 6, 1), "TSLA", qty=10, proceeds=1500, cost=2000)
+    options = simulate_buy(
+        ticker="TSLA",
+        qty=Decimal("10"),
+        price=Decimal("180"),
+        account="schwab/personal",
+        on_date=date(2025, 6, 1),
+        accounts=[P],
+        recent_trades=[loss],
+        existing_violations=[],
+        etf_pairs={},
+    )
+    assert options[0].clean is False
+
+
+def test_loss_on_day_30_before_buy_still_matches():
+    loss = _sell("schwab/personal", date(2025, 5, 2), "TSLA", qty=10, proceeds=1500, cost=2000)
+    options = simulate_buy(
+        ticker="TSLA",
+        qty=Decimal("10"),
+        price=Decimal("180"),
+        account="schwab/personal",
+        on_date=date(2025, 6, 1),  # exactly 30 days after
+        accounts=[P],
+        recent_trades=[loss],
+        existing_violations=[],
+        etf_pairs={},
+    )
+    assert options[0].clean is False
+
+
+def test_loss_on_day_31_before_buy_does_not_match():
+    loss = _sell("schwab/personal", date(2025, 5, 1), "TSLA", qty=10, proceeds=1500, cost=2000)
+    options = simulate_buy(
+        ticker="TSLA",
+        qty=Decimal("10"),
+        price=Decimal("180"),
+        account="schwab/personal",
+        on_date=date(2025, 6, 1),  # 31 days after
+        accounts=[P],
+        recent_trades=[loss],
+        existing_violations=[],
+        etf_pairs={},
+    )
+    assert options[0].clean is True
+
+
+def test_loss_after_proposed_buy_does_not_match():
+    """Future loss is simulate_sell's concern, not simulate_buy."""
+    loss = _sell("schwab/personal", date(2025, 6, 5), "TSLA", qty=10, proceeds=1500, cost=2000)
+    options = simulate_buy(
+        ticker="TSLA",
+        qty=Decimal("10"),
+        price=Decimal("180"),
+        account="schwab/personal",
+        on_date=date(2025, 6, 1),
+        accounts=[P],
+        recent_trades=[loss],
+        existing_violations=[],
+        etf_pairs={},
+    )
+    assert options[0].clean is True
