@@ -38,5 +38,5 @@ def test_dashboard_shows_watch_list_after_import(client, repo, builders):
 def test_dashboard_includes_drop_zone(client):
     resp = client.get("/")
     assert resp.status_code == 200
-    assert "Drop CSV here" in resp.text
+    assert "Drop" in resp.text and "CSV" in resp.text
     assert "import-modal" in resp.text

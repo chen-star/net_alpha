@@ -1,16 +1,22 @@
 from __future__ import annotations
 
+import hashlib
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.brokers.registry import detect_broker
+from net_alpha.brokers.schwab import SchwabParser
+from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
 from net_alpha.db.repository import Repository
 from net_alpha.engine.detector import detect_in_window
-from net_alpha.ingest.csv_loader import compute_csv_sha256, load_csv
+from net_alpha.engine.merge import merge_violations
+from net_alpha.engine.stitch import stitch_account
+from net_alpha.ingest.csv_loader import load_csv
 from net_alpha.ingest.dedup import filter_new
 from net_alpha.models.domain import ImportRecord
 from net_alpha.web.dependencies import get_etf_pairs, get_repository
@@ -19,12 +25,16 @@ router = APIRouter()
 
 
 @router.get("/imports", response_class=HTMLResponse)
-def imports_page(request: Request, repo: Repository = Depends(get_repository)) -> HTMLResponse:
+def imports_page(
+    request: Request,
+    flash: str | None = None,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
     records = repo.list_imports()
     return request.app.state.templates.TemplateResponse(
         request,
         "imports.html",
-        {"imports": records},
+        {"imports": records, "flash": flash},
     )
 
 
@@ -35,21 +45,30 @@ def remove_import(
     repo: Repository = Depends(get_repository),
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
-    if repo.get_import(import_id) is None:
+    existing_record = repo.get_import(import_id)
+    if existing_record is None:
         raise HTTPException(status_code=404, detail=f"Import #{import_id} not found")
-
+    account_id = existing_record.account_id
     result = repo.remove_import(import_id)
     if result.recompute_window is not None:
         win_start, win_end = result.recompute_window
+        # Re-stitch first so sells previously hydrated from now-deleted G/L lots
+        # are demoted to FIFO/unknown before detect_in_window runs.
+        stitch_account(repo, account_id)
         det = detect_in_window(
             repo.trades_in_window(win_start, win_end),
             win_start,
             win_end,
             etf_pairs=etf_pairs,
         )
-        repo.replace_violations_in_window(win_start, win_end, det.violations)
+        # Include G/L data in merge for consistency with the upload route.
+        all_gl_lots = repo.get_gl_lots_for_account(account_id)
+        merged = merge_violations(
+            engine_violations=det.violations,
+            gl_lots_by_account={account_id: all_gl_lots},
+        )
+        repo.replace_violations_in_window(win_start, win_end, merged)
         repo.replace_lots_in_window(win_start, win_end, det.lots)
-
     return request.app.state.templates.TemplateResponse(
         request,
         "_imports_table.html",
@@ -65,43 +84,46 @@ def _save_to_temp(raw: bytes, filename: str) -> Path:
     return Path(fd.name)
 
 
+def _sha256_bytes(raw: bytes) -> str:
+    h = hashlib.sha256()
+    h.update(raw)
+    return h.hexdigest()
+
+
 @router.post("/imports/preview", response_class=HTMLResponse)
 async def preview_upload(
     request: Request,
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
-    raw = await file.read()
-    tmp_path = _save_to_temp(raw, file.filename or "uploaded.csv")
-    try:
-        headers, rows = load_csv(str(tmp_path))
-    finally:
+    detections = []
+    for f in files:
+        raw = await f.read()
+        tmp = _save_to_temp(raw, f.filename or "uploaded.csv")
         try:
-            tmp_path.unlink()
-        except OSError:
-            pass
-
-    parser = detect_broker(headers)
+            headers, rows = load_csv(str(tmp))
+        finally:
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+        parser = detect_broker(headers)
+        detections.append(
+            {
+                "filename": f.filename or "uploaded.csv",
+                "size": len(raw),
+                "parser_name": parser.name if parser else None,
+                "row_count": len(rows),
+            }
+        )
     accounts = [a.display() for a in repo.list_accounts()]
-    preview_trades: list = []
-    error: str | None = None
-    if parser is None:
-        error = "We couldn't detect a known broker format. Currently supported: Schwab."
-    else:
-        try:
-            preview_trades = parser.parse(rows, account_display="schwab/preview")[:5]
-        except Exception as exc:
-            error = f"Parse error: {exc}"
     return request.app.state.templates.TemplateResponse(
         request,
         "_import_modal.html",
         {
-            "broker_name": parser.name if parser else None,
-            "filename": file.filename or "uploaded.csv",
+            "detections": detections,
             "accounts": accounts,
-            "preview_trades": preview_trades,
-            "error": error,
-            "raw_size": len(raw),
+            "any_recognized": any(d["parser_name"] for d in detections),
         },
     )
 
@@ -109,61 +131,103 @@ async def preview_upload(
 @router.post("/imports", response_class=HTMLResponse)
 async def upload(
     request: Request,
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
     account: str = Form(...),
     repo: Repository = Depends(get_repository),
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
-    raw = await file.read()
-    tmp_path = _save_to_temp(raw, file.filename or "uploaded.csv")
-    try:
-        headers, rows = load_csv(str(tmp_path))
-        sha = compute_csv_sha256(str(tmp_path))
-    finally:
+    materialized = []
+    for f in files:
+        raw = await f.read()
+        tmp = _save_to_temp(raw, f.filename or "uploaded.csv")
         try:
-            tmp_path.unlink()
-        except OSError:
-            pass
+            headers, rows = load_csv(str(tmp))
+        finally:
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+        parser = detect_broker(headers)
+        materialized.append((f.filename or "uploaded.csv", raw, headers, rows, parser))
 
-    parser = detect_broker(headers)
-    if parser is None:
-        raise HTTPException(status_code=400, detail="Unknown broker format")
+    if not any(p for *_, p in materialized):
+        raise HTTPException(status_code=400, detail="No recognized broker formats among uploaded files")
 
-    acct = repo.get_or_create_account(parser.name, account)
-    trades = parser.parse(rows, account_display=acct.display())
+    acct = repo.get_or_create_account("schwab", account)
 
-    existing = repo.existing_natural_keys(acct.id)
-    new_trades = filter_new(trades, existing)
+    new_trade_count = 0
+    dup_trade_count = 0
+    new_gl_count = 0
+    affected_dates: list = []
 
-    record = ImportRecord(
-        account_id=acct.id,
-        csv_filename=file.filename or "uploaded.csv",
-        csv_sha256=sha,
-        imported_at=datetime.now(),
-        trade_count=len(new_trades),
-    )
-    result = repo.add_import(acct, record, new_trades)
+    for filename, raw, _headers, rows, parser in materialized:
+        if parser is None:
+            continue
+        sha = _sha256_bytes(raw)
+        if isinstance(parser, SchwabParser):
+            trades = parser.parse(rows, account_display=acct.display())
+            existing = repo.existing_natural_keys(acct.id)
+            new_trades = filter_new(trades, existing)
+            record = ImportRecord(
+                account_id=acct.id,
+                csv_filename=filename,
+                csv_sha256=sha,
+                imported_at=datetime.now(),
+                trade_count=len(new_trades),
+            )
+            result = repo.add_import(acct, record, new_trades)
+            new_trade_count += result.new_trades
+            dup_trade_count += len(trades) - len(new_trades)
+            for t in new_trades:
+                affected_dates.append(t.date)
+        elif isinstance(parser, SchwabRealizedGLParser):
+            lots = parser.parse(rows, account_display=acct.display())
+            record = ImportRecord(
+                account_id=acct.id,
+                csv_filename=filename,
+                csv_sha256=sha,
+                imported_at=datetime.now(),
+                trade_count=0,
+            )
+            empty_result = repo.add_import(acct, record, [])
+            inserted = repo.add_gl_lots(acct, empty_result.import_id, lots)
+            new_gl_count += inserted
+            for lot in lots:
+                affected_dates.append(lot.closed_date)
 
-    if new_trades:
-        from datetime import timedelta
+    stitched = stitch_account(repo, acct.id)
 
-        win_start = min(t.date for t in new_trades) - timedelta(days=30)
-        win_end = max(t.date for t in new_trades) + timedelta(days=30)
+    if affected_dates:
+        win_start = min(affected_dates) - timedelta(days=30)
+        win_end = max(affected_dates) + timedelta(days=30)
         det = detect_in_window(
             repo.trades_in_window(win_start, win_end),
             win_start,
             win_end,
             etf_pairs=etf_pairs,
         )
-        repo.replace_violations_in_window(win_start, win_end, det.violations)
+        all_gl_lots = repo.get_gl_lots_for_account(acct.id)
+        merged = merge_violations(
+            engine_violations=det.violations,
+            gl_lots_by_account={acct.id: all_gl_lots},
+        )
+        repo.replace_violations_in_window(win_start, win_end, merged)
         repo.replace_lots_in_window(win_start, win_end, det.lots)
 
-    dup_count = len(trades) - len(new_trades)
-    return request.app.state.templates.TemplateResponse(
-        request,
-        "_toast.html",
-        {
-            "message": f"Imported {result.new_trades} new trades · skipped {dup_count} duplicates",
-            "redirect_to": "/",
-        },
-    )
+    msg_parts: list[str] = []
+    if new_trade_count:
+        msg_parts.append(f"Imported {new_trade_count} new trades")
+    if dup_trade_count:
+        msg_parts.append(f"skipped {dup_trade_count} duplicate trades")
+    if new_gl_count:
+        msg_parts.append(f"imported {new_gl_count} G/L lot rows")
+    if stitched.from_gl:
+        msg_parts.append(f"hydrated {stitched.from_gl} sells from G/L")
+    if stitched.from_fifo:
+        msg_parts.append(f"hydrated {stitched.from_fifo} sells via FIFO")
+    if stitched.warnings:
+        msg_parts.append(f"{len(stitched.warnings)} warning(s)")
+    if not msg_parts:
+        msg_parts.append("No changes")
+    msg = " · ".join(msg_parts)
+    return RedirectResponse(url=f"/imports?flash={quote(msg)}", status_code=303)

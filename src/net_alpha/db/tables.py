@@ -47,6 +47,8 @@ class TradeRow(SQLModel, table=True):
     option_strike: float | None = None
     option_expiry: str | None = None
     option_call_put: str | None = None
+    basis_source: str = Field(default="unknown")
+    # values: "broker_csv" | "g_l" | "fifo" | "unknown"
 
 
 class LotRow(SQLModel, table=True):
@@ -81,6 +83,8 @@ class WashSaleViolationRow(SQLModel, table=True):
     confidence: str
     disallowed_loss: float
     matched_quantity: float
+    source: str = Field(default="engine")
+    # values: "schwab_g_l" | "engine"
 
 
 class MetaRow(SQLModel, table=True):
@@ -88,3 +92,29 @@ class MetaRow(SQLModel, table=True):
 
     key: str = Field(primary_key=True)
     value: str
+
+
+class RealizedGLLotRow(SQLModel, table=True):
+    __tablename__ = "realized_gl_lots"
+
+    id: int | None = Field(default=None, primary_key=True)
+    import_id: int = Field(foreign_key="imports.id", index=True)
+    account_id: int = Field(foreign_key="accounts.id", index=True)
+
+    symbol_raw: str = Field(index=True)
+    ticker: str = Field(index=True)
+    closed_date: str = Field(index=True)
+    opened_date: str
+    quantity: float
+    proceeds: float
+    cost_basis: float
+    unadjusted_cost_basis: float
+    wash_sale: bool
+    disallowed_loss: float
+    term: str
+
+    option_strike: float | None = None
+    option_expiry: str | None = None
+    option_call_put: str | None = None
+
+    natural_key: str = Field(unique=True, index=True)

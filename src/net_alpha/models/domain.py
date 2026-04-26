@@ -27,6 +27,7 @@ class Trade(BaseModel):
     proceeds: float | None = None
     cost_basis: float | None = None
     basis_unknown: bool = False
+    basis_source: str = "unknown"
     option_details: OptionDetails | None = None
     raw_row_hash: str | None = None
     schema_cache_id: str | None = None
@@ -116,6 +117,7 @@ class WashSaleViolation(BaseModel):
     loss_sale_date: date | None = None
     triggering_buy_date: date | None = None
     ticker: str = ""
+    source: str = "engine"  # "schwab_g_l" | "engine"
 
 
 class DetectionResult(BaseModel):
@@ -170,6 +172,7 @@ class ImportSummary(BaseModel):
     csv_filename: str
     trade_count: int
     imported_at: datetime
+    gl_lot_count: int = 0
 
 
 class LotConsumption(BaseModel):

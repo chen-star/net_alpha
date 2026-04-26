@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
+from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.web.dependencies import get_repository
 
 router = APIRouter()
@@ -34,6 +35,11 @@ def ticker_drilldown(
     accounts = sorted({lot.account for lot in lots})
     last_trade = trades[-1] if trades else None
 
+    # Load G/L lots for this ticker across all accounts that have any
+    gl_lots: list[RealizedGLLot] = []
+    for account in repo.list_accounts():
+        gl_lots.extend(repo.get_gl_lots_for_ticker(account.id, symbol))
+
     return request.app.state.templates.TemplateResponse(
         request,
         "ticker.html",
@@ -42,6 +48,7 @@ def ticker_drilldown(
             "trades": trades,
             "lots": lots,
             "violations": violations,
+            "gl_lots": gl_lots,
             "kpi_open_lots": len(lots),
             "kpi_open_basis": sum((lot.adjusted_basis for lot in lots), start=0.0),
             "kpi_realized_ytd": realized_ytd,

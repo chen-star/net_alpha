@@ -1,12 +1,11 @@
-# src/net_alpha/db/connection.py
 from __future__ import annotations
 
 from pathlib import Path
 
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine
 
-from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION
-from net_alpha.db.tables import MetaRow
+import net_alpha.db.tables as _tables  # noqa: F401 — registers all SQLModel table classes
+from net_alpha.db.migrations import migrate
 
 
 def get_engine(db_path: Path):
@@ -16,11 +15,7 @@ def get_engine(db_path: Path):
 
 
 def init_db(engine) -> None:
-    """Create all tables and set initial schema version if needed."""
+    """Create all tables (idempotent) and run pending migrations."""
     SQLModel.metadata.create_all(engine)
-
     with Session(engine) as session:
-        existing = session.exec(select(MetaRow).where(MetaRow.key == "schema_version")).first()
-        if existing is None:
-            session.add(MetaRow(key="schema_version", value=str(CURRENT_SCHEMA_VERSION)))
-            session.commit()
+        migrate(session)
