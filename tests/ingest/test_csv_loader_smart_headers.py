@@ -14,8 +14,7 @@ def test_load_csv_no_preamble_works_unchanged(tmp_path):
     path = _write(
         tmp_path,
         "tx.csv",
-        "Date,Action,Symbol,Quantity,Amount\n"
-        "01/02/2026,Buy,AAPL,1,$100.00\n",
+        "Date,Action,Symbol,Quantity,Amount\n01/02/2026,Buy,AAPL,1,$100.00\n",
     )
     headers, rows = load_csv(path)
     assert headers == ["Date", "Action", "Symbol", "Quantity", "Amount"]
@@ -59,9 +58,7 @@ def test_load_csv_rejects_when_no_header_row_found(tmp_path):
     path = _write(
         tmp_path,
         "bad.csv",
-        "$1,$2,$3\n"
-        "01/02/2026,03/04/2026,05/06/2026\n"
-        "$4,$5,$6\n",
+        "$1,$2,$3\n01/02/2026,03/04/2026,05/06/2026\n$4,$5,$6\n",
     )
     headers, rows = load_csv(path)
     # Falls back to the FIRST row as headers (legacy behavior, no exception).

@@ -32,8 +32,10 @@ def _find_header_index(rows: list[list[str]]) -> int:
 def load_csv(path: str) -> tuple[list[str], list[dict[str, str]]]:
     """Read a CSV from disk. Returns (headers, rows).
 
-    Skips up to 5 leading preamble rows (title rows, blank rows) before the
-    real header row. Falls back to row 0 if no plausible header row is found.
+    Scans up to ``_HEADER_SCAN_LIMIT`` leading rows to find the real header
+    row (first row with 4+ non-empty cells, none starting with ``$`` or
+    matching a date pattern). Falls back to row 0 if no plausible header
+    row is found.
     """
     with open(path, newline="", encoding="utf-8-sig") as f:
         all_rows = list(csv.reader(f))
