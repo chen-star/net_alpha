@@ -62,6 +62,22 @@ def remove_import(
     )
 
 
+@router.get("/imports/{import_id}/detail", response_class=HTMLResponse)
+def import_detail(
+    import_id: int,
+    request: Request,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    detail = repo.get_import_detail(import_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail=f"Import #{import_id} not found")
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_imports_detail_row.html",
+        {"detail": detail},
+    )
+
+
 def _save_to_temp(raw: bytes, filename: str) -> Path:
     suffix = Path(filename or "uploaded.csv").suffix or ".csv"
     fd = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
