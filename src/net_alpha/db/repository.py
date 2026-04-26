@@ -315,16 +315,44 @@ class Repository:
                 )
             )
             for v in new_violations:
-                s.add(self._violation_to_row(s, v))
+                try:
+                    s.add(self._violation_to_row(s, v))
+                except LookupError:
+                    # Schwab G/L violation has no matching Sell trade in the DB
+                    # (e.g. G/L imported without Transaction History) — skip silently.
+                    pass
             s.commit()
 
     def _violation_to_row(self, s: Session, v: WashSaleViolation) -> WashSaleViolationRow:
         # account_id resolution by display string ("schwab/personal")
         la = self._account_id_for_display(s, v.loss_account)
         ba = self._account_id_for_display(s, v.buy_account)
+
+        if getattr(v, "source", "engine") == "schwab_g_l":
+            # Synthetic IDs like "schwab_gl_<hash>" can't be int()-cast.
+            # Resolve to the real TradeRow by matching the Sell trade for this
+            # account+ticker+date.  Raise LookupError when none found so the
+            # caller can skip this violation cleanly.
+            sell_row = s.exec(
+                select(TradeRow).where(
+                    TradeRow.account_id == la,
+                    TradeRow.ticker == v.ticker,
+                    TradeRow.action == "Sell",
+                    TradeRow.trade_date == v.loss_sale_date.isoformat(),
+                )
+            ).first()
+            if sell_row is None:
+                raise LookupError(f"No Sell trade found for Schwab G/L violation on {v.ticker} {v.loss_sale_date}")
+            trade_id = sell_row.id
+            loss_trade_id = trade_id
+            replacement_trade_id = trade_id
+        else:
+            loss_trade_id = int(v.loss_trade_id)
+            replacement_trade_id = int(v.replacement_trade_id)
+
         return WashSaleViolationRow(
-            loss_trade_id=int(v.loss_trade_id),
-            replacement_trade_id=int(v.replacement_trade_id),
+            loss_trade_id=loss_trade_id,
+            replacement_trade_id=replacement_trade_id,
             loss_account_id=la,
             buy_account_id=ba,
             loss_sale_date=v.loss_sale_date.isoformat(),
