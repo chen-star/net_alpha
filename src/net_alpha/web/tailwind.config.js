@@ -24,14 +24,14 @@ module.exports = {
         sans: ["Fira Sans", "ui-sans-serif", "system-ui"],
       },
       colors: {
-        primary: "#1e3a8a",     // dark blue
-        secondary: "#1e40af",   // lighter blue (hover state)
-        accent: "#0ea5e9",      // cyan
-        bg: "#f1f5f9",          // slate-100
-        ink: "#0f172a",         // slate-900
-        confirmed: "#dc2626",   // red-600
-        probable: "#f59e0b",    // amber-500
-        unclear: "#3b82f6",     // blue-500
+        primary: "#1E40AF",
+        secondary: "#3B82F6",
+        accent: "#F59E0B",
+        bg: "#F8FAFC",
+        ink: "#0F172A",
+        confirmed: "#DC2626",
+        probable: "#F59E0B",
+        unclear: "#3B82F6",
       },
     },
   },
