@@ -9,8 +9,11 @@ from net_alpha.engine.matcher import get_match_confidence, is_within_wash_sale_w
 from net_alpha.models.domain import (
     Account,
     LotConsumption,
+    SimBuyMatch,
+    SimulationBuyOption,
     SimulationOption,
     Trade,
+    WashSaleViolation,
 )
 
 
@@ -100,6 +103,98 @@ def simulate_sell(
                 confidence=confidence,
                 insufficient_shares=qty_f > available,
                 available_shares=Decimal(str(available)),
+            )
+        )
+
+    return options
+
+
+def simulate_buy(
+    ticker: str,
+    qty: Decimal,
+    price: Decimal,
+    account: str | None,
+    on_date: _date,
+    accounts: list[Account],
+    recent_trades: list[Trade],
+    existing_violations: list[WashSaleViolation],
+    etf_pairs: dict[str, list[str]],
+) -> list[SimulationBuyOption]:
+    """One option per candidate buy account. Cross-account loss scan."""
+    candidate_accounts = accounts if account is None else [a for a in accounts if a.display() == account]
+    matched_loss_ids = {v.loss_trade_id for v in existing_violations}
+
+    # Hypothetical buy used as the right-hand side of get_match_confidence(loss, hypo_buy).
+    # get_match_confidence works off ticker / action / option_details, so the float-coerced
+    # numerics here are inert; precision math runs in Decimal below.
+    hypo_buy_template = Trade(
+        account="",  # filled per-option
+        date=on_date,
+        ticker=ticker,
+        action="Buy",
+        quantity=float(qty),
+        proceeds=None,
+        cost_basis=float(qty * price),
+    )
+
+    # Pre-filter recent_trades to candidate loss sales in the look-back window.
+    eligible_losses: list[Trade] = []
+    for t in recent_trades:
+        if not t.is_sell() or not t.is_loss():
+            continue
+        if t.id in matched_loss_ids:
+            continue
+        delta = (on_date - t.date).days
+        if not (0 <= delta <= 30):
+            continue
+        eligible_losses.append(t)
+
+    # Stable order: oldest loss first (FIFO consumption of the proposed buy quantity).
+    eligible_losses.sort(key=lambda x: (x.date, x.id))
+
+    options: list[SimulationBuyOption] = []
+    proposed_basis = (qty * price).quantize(Decimal("0.01"))
+
+    for acct in candidate_accounts:
+        hypo_buy = hypo_buy_template.model_copy(update={"account": acct.display()})
+        matches: list[SimBuyMatch] = []
+        remaining = qty
+        total_disallowed = Decimal("0")
+
+        for loss in eligible_losses:
+            if remaining <= 0:
+                break
+            confidence = get_match_confidence(loss, hypo_buy, etf_pairs)
+            if confidence is None:
+                continue
+            loss_qty = Decimal(str(loss.quantity))
+            if loss_qty <= 0:
+                continue
+            matched_qty = min(remaining, loss_qty)
+            loss_amount = Decimal(str(loss.loss_amount()))
+            disallowed_dec = (loss_amount * matched_qty / loss_qty).quantize(Decimal("0.01"))
+            total_disallowed += disallowed_dec
+            matches.append(
+                SimBuyMatch(
+                    loss_trade_id=loss.id,
+                    loss_sale_date=loss.date,
+                    loss_account=loss.account,
+                    loss_ticker=loss.ticker,
+                    matched_quantity=matched_qty,
+                    disallowed_loss=disallowed_dec,
+                    confidence=confidence,
+                )
+            )
+            remaining -= matched_qty
+
+        options.append(
+            SimulationBuyOption(
+                account=acct,
+                matches=matches,
+                total_disallowed=total_disallowed,
+                proposed_basis=proposed_basis,
+                adjusted_basis=proposed_basis + total_disallowed,
+                clean=(not matches),
             )
         )
 

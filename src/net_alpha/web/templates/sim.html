@@ -1,36 +1,60 @@
 {% extends "base.html" %}
 {% block title %}Sim · net-alpha{% endblock %}
 {% block content %}
-  <h1 class="text-2xl mb-4">Simulate a sell</h1>
+  <h1 class="text-2xl mb-4">Simulate a trade</h1>
 
   <form hx-post="/sim" hx-target="#sim-result" hx-swap="innerHTML"
-        class="kpi-card grid grid-cols-5 gap-3 items-end mb-6">
-    <div>
-      <label class="block text-xs text-slate-500 uppercase">Ticker</label>
-      <input type="text" name="ticker" value="{{ ticker }}" list="ticker-list" required
-             class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
-      <datalist id="ticker-list">
-        {% for t in tickers %}<option value="{{ t }}">{% endfor %}
-      </datalist>
+        x-data="{ action: 'sell' }"
+        class="kpi-card mb-6">
+    <div class="grid grid-cols-6 gap-3 items-end">
+      <div class="col-span-1">
+        <label class="block text-xs text-slate-500 uppercase mb-1">Action</label>
+        <div class="inline-flex rounded-md shadow-sm border border-slate-300 overflow-hidden text-sm">
+          <button type="button"
+                  @click="action='buy'"
+                  :class="action==='buy' ? 'bg-primary text-white' : 'bg-white text-slate-700 hover:bg-slate-50'"
+                  class="px-3 py-1.5 font-medium">Buy</button>
+          <button type="button"
+                  @click="action='sell'"
+                  :class="action==='sell' ? 'bg-primary text-white' : 'bg-white text-slate-700 hover:bg-slate-50'"
+                  class="px-3 py-1.5 font-medium border-l border-slate-300">Sell</button>
+        </div>
+        <input type="hidden" name="action" :value="action"/>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 uppercase">Ticker</label>
+        <input type="text" name="ticker" value="{{ ticker }}" list="ticker-list" required
+               class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+        <datalist id="ticker-list">
+          {% for t in tickers %}<option value="{{ t }}">{% endfor %}
+        </datalist>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 uppercase">Quantity</label>
+        <input type="number" name="qty" step="0.01" required
+               class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 uppercase">Price</label>
+        <input type="number" name="price" step="0.01" required
+               class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 uppercase">Account (optional)</label>
+        <select name="account" class="border border-slate-300 rounded px-2 py-1 text-sm w-full">
+          <option value="">All</option>
+          {% for a in accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 uppercase">Date</label>
+        <input type="date" name="trade_date" value="{{ today_iso }}" required
+               class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+      </div>
     </div>
-    <div>
-      <label class="block text-xs text-slate-500 uppercase">Quantity</label>
-      <input type="number" name="qty" step="0.01" required
-             class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
+    <div class="mt-4 text-right">
+      <button type="submit" class="btn">Run sim</button>
     </div>
-    <div>
-      <label class="block text-xs text-slate-500 uppercase">Price</label>
-      <input type="number" name="price" step="0.01" required
-             class="border border-slate-300 rounded px-2 py-1 font-mono text-sm w-full"/>
-    </div>
-    <div>
-      <label class="block text-xs text-slate-500 uppercase">Account (optional)</label>
-      <select name="account" class="border border-slate-300 rounded px-2 py-1 text-sm w-full">
-        <option value="">All</option>
-        {% for a in accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
-      </select>
-    </div>
-    <button type="submit" class="btn">Run sim</button>
   </form>
 
   <div id="sim-result"></div>
