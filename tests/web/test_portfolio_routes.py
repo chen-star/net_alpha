@@ -65,7 +65,7 @@ def test_equity_curve_fragment_no_data(tmp_path):
     client = _client(tmp_path)
     r = client.get("/portfolio/equity-curve?period=ytd")
     assert r.status_code == 200
-    assert "equity curve" in r.text
+    assert "Equity curve" in r.text
 
 
 def test_wash_impact_fragment_zero(tmp_path):

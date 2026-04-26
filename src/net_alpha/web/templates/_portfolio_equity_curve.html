@@ -1,4 +1,4 @@
-<div class="text-xs text-slate-500 uppercase mb-1">{{ year }} equity curve</div>
+<div class="text-xs text-slate-500 uppercase mb-1">Equity curve · {{ year }}<span class="text-[9px] normal-case text-slate-400 ml-1">(YTD only)</span></div>
 {% if points|length <= 1 %}
   <div class="text-sm text-slate-400">No realized activity in {{ year }}.</div>
 {% else %}

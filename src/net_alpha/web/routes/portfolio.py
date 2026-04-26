@@ -34,12 +34,17 @@ def _parse_period(period: str | None, current_year: int) -> tuple[tuple[int, int
 def refresh_prices(
     symbols: str | None = Query(default=None),
     svc: PricingService = Depends(get_pricing_service),
+    repo: Repository = Depends(get_repository),
 ) -> dict[str, object]:
     if not symbols:
         raise HTTPException(status_code=400, detail="symbols query param required")
-    sym_list = [s.strip() for s in symbols.split(",") if s.strip()]
+    if symbols.strip().upper() == "ALL":
+        sym_list = sorted({lot.ticker for lot in repo.all_lots() if lot.option_details is None})
+    else:
+        sym_list = [s.strip() for s in symbols.split(",") if s.strip()]
     if not sym_list:
-        raise HTTPException(status_code=400, detail="symbols query param required")
+        # Nothing to refresh (no open lots, or empty list)
+        return {"fetched": [], "missing": [], "degraded": False}
     quotes = svc.refresh(sym_list)
     snap = svc.last_snapshot()
     return {
