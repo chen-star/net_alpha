@@ -1,61 +1,63 @@
 {% if not imports %}
-  <div class="kpi-card text-slate-500 text-sm">No imports yet.</div>
+  <div class="panel text-label-2 text-sm">No imports yet.</div>
 {% else %}
-  <table class="w-full text-sm bg-white rounded-lg shadow-sm border border-slate-200">
-    <thead class="text-left text-xs text-slate-500 uppercase border-b border-slate-200">
-      <tr>
-        <th class="px-3 py-2"></th>
-        <th class="px-3 py-2">ID</th>
-        <th class="px-3 py-2">Imported at</th>
-        <th class="px-3 py-2">Account</th>
-        <th class="px-3 py-2">Filename</th>
-        <th class="px-3 py-2">Summary</th>
-        <th class="px-3 py-2">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for imp in imports %}
-        {% set has_dates = imp.min_trade_date and imp.max_trade_date %}
-        {% set total_units = (imp.trade_count or 0) + (imp.gl_lot_count or 0) %}
-        <tr id="import-row-{{ imp.id }}" class="border-b border-slate-100 last:border-b-0 align-top">
-          <td class="px-3 py-2">
-            <button class="text-slate-400 hover:text-primary text-xs"
-                    hx-get="/imports/{{ imp.id }}/detail"
-                    hx-target="#import-detail-{{ imp.id }}"
-                    hx-swap="innerHTML"
-                    onclick="this.classList.toggle('rotate-90')">▸</button>
-          </td>
-          <td class="px-3 py-2 font-mono">#{{ imp.id }}</td>
-          <td class="px-3 py-2 font-mono text-xs">{{ imp.imported_at.strftime("%Y-%m-%d %H:%M") }}</td>
-          <td class="px-3 py-2">{{ imp.account_display }}</td>
-          <td class="px-3 py-2">{{ imp.csv_filename }}</td>
-          <td class="px-3 py-2 text-xs text-slate-600">
-            {%- if has_dates -%}
-              {{ imp.min_trade_date }} → {{ imp.max_trade_date }} ·
-            {%- endif -%}
-            {%- if imp.trade_count -%}
-              {{ imp.trade_count }} trade{{ "s" if imp.trade_count != 1 else "" }}
-            {%- endif -%}
-            {%- if imp.gl_lot_count -%}
-              {%- if imp.trade_count %} · {% endif -%}
-              {{ imp.gl_lot_count }} G/L lot{{ "s" if imp.gl_lot_count != 1 else "" }}
-            {%- endif -%}
-            {%- if not total_units -%}<span class="text-slate-400">no records</span>{%- endif -%}
-          </td>
-          <td class="px-3 py-2">
-            <button class="btn-ghost text-confirmed border-confirmed/30"
-                    hx-delete="/imports/{{ imp.id }}"
-                    hx-confirm="Remove import #{{ imp.id }} ({{ imp.trade_count }} trades, {{ imp.gl_lot_count }} G/L lots)? Wash sales will be recomputed."
-                    hx-target="#imports-table"
-                    hx-swap="innerHTML">
-              Remove
-            </button>
-          </td>
+  <div class="panel" style="padding:0;">
+    <table class="net-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>ID</th>
+          <th>Imported at</th>
+          <th>Account</th>
+          <th>Filename</th>
+          <th>Summary</th>
+          <th>Actions</th>
         </tr>
-        <tr id="import-detail-{{ imp.id }}" class="border-b border-slate-100 last:border-b-0 bg-slate-50">
-          <!-- Empty initially; HTMX swaps in _imports_detail_row.html on first expand. -->
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {% for imp in imports %}
+          {% set has_dates = imp.min_trade_date and imp.max_trade_date %}
+          {% set total_units = (imp.trade_count or 0) + (imp.gl_lot_count or 0) %}
+          <tr id="import-row-{{ imp.id }}" class="align-top">
+            <td class="px-3 py-2">
+              <button class="text-label-3 hover:text-primary text-xs"
+                      hx-get="/imports/{{ imp.id }}/detail"
+                      hx-target="#import-detail-{{ imp.id }}"
+                      hx-swap="innerHTML"
+                      onclick="this.classList.toggle('rotate-90')">▸</button>
+            </td>
+            <td class="px-3 py-2 font-mono">#{{ imp.id }}</td>
+            <td class="px-3 py-2 font-mono text-xs">{{ imp.imported_at.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td class="px-3 py-2">{{ imp.account_display }}</td>
+            <td class="px-3 py-2">{{ imp.csv_filename }}</td>
+            <td class="px-3 py-2 text-xs text-label-2">
+              {%- if has_dates -%}
+                {{ imp.min_trade_date }} → {{ imp.max_trade_date }} ·
+              {%- endif -%}
+              {%- if imp.trade_count -%}
+                {{ imp.trade_count }} trade{{ "s" if imp.trade_count != 1 else "" }}
+              {%- endif -%}
+              {%- if imp.gl_lot_count -%}
+                {%- if imp.trade_count %} · {% endif -%}
+                {{ imp.gl_lot_count }} G/L lot{{ "s" if imp.gl_lot_count != 1 else "" }}
+              {%- endif -%}
+              {%- if not total_units -%}<span class="text-label-3">no records</span>{%- endif -%}
+            </td>
+            <td class="px-3 py-2">
+              <button class="btn-ghost text-confirmed border-confirmed/30"
+                      hx-delete="/imports/{{ imp.id }}"
+                      hx-confirm="Remove import #{{ imp.id }} ({{ imp.trade_count }} trades, {{ imp.gl_lot_count }} G/L lots)? Wash sales will be recomputed."
+                      hx-target="#imports-table"
+                      hx-swap="innerHTML">
+                Remove
+              </button>
+            </td>
+          </tr>
+          <tr id="import-detail-{{ imp.id }}" class="bg-surface-2">
+            <!-- Empty initially; HTMX swaps in _imports_detail_row.html on first expand. -->
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endif %}
