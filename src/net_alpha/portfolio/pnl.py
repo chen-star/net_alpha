@@ -9,8 +9,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from decimal import Decimal
 
-from net_alpha.models.domain import Lot, Trade
-from net_alpha.portfolio.models import KpiSet
+from net_alpha.models.domain import Lot, Trade, WashSaleViolation
+from net_alpha.portfolio.models import KpiSet, WashImpact
 from net_alpha.pricing.provider import Quote
 
 
@@ -82,4 +82,27 @@ def compute_kpis(
         lifetime_realized=lifetime_realized,
         lifetime_unrealized=lifetime_unrealized,
         open_position_value=open_value,
+    )
+
+
+def compute_wash_impact(
+    *,
+    violations: Iterable[WashSaleViolation],
+    period_label: str,
+    period: tuple[int, int] | None,
+    account: str | None,
+) -> WashImpact:
+    rows = list(violations)
+    if account:
+        rows = [v for v in rows if v.loss_account == account or v.buy_account == account]
+    if period is not None:
+        rows = [v for v in rows if v.loss_sale_date and period[0] <= v.loss_sale_date.year < period[1]]
+    disallowed = sum((Decimal(str(v.disallowed_loss)) for v in rows), start=Decimal("0"))
+    return WashImpact(
+        period_label=period_label,
+        disallowed_total=disallowed,
+        violation_count=len(rows),
+        confirmed_count=sum(1 for v in rows if v.confidence == "Confirmed"),
+        probable_count=sum(1 for v in rows if v.confidence == "Probable"),
+        unclear_count=sum(1 for v in rows if v.confidence == "Unclear"),
     )
