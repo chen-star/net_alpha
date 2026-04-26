@@ -2,6 +2,7 @@ from datetime import date
 from uuid import uuid4
 
 import factory
+import pytest
 
 from net_alpha.models.domain import Lot, OptionDetails, Trade
 
@@ -44,3 +45,16 @@ class LotFactory(factory.Factory):
     quantity = 10.0
     cost_basis = 2400.0
     adjusted_basis = 2400.0
+
+
+def pytest_addoption(parser):
+    parser.addoption("--run-network", action="store_true", default=False, help="Run network-gated tests")
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--run-network"):
+        return
+    skip_net = pytest.mark.skip(reason="network-gated; pass --run-network")
+    for item in items:
+        if "network" in item.keywords:
+            item.add_marker(skip_net)

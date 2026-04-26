@@ -49,6 +49,9 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "network: tests that hit external services; run only with --run-network",
+]
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
