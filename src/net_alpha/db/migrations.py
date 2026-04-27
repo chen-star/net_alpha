@@ -7,6 +7,8 @@ Schema versions:
   v4 — Adds aggregate columns to imports (date range, type counts, parse warnings).
   v5 — Adds imports.duplicate_trades count so re-imports show "X dupes" instead of "no records".
   v6 — Adds trades.is_manual and trades.transfer_basis_user_set; relaxes trades.import_id NOT NULL.
+  v7 — Adds splits and lot_overrides tables for stock-split handling and
+       manual lot edits.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 6
+CURRENT_SCHEMA_VERSION = 7
 
 
 def get_schema_version(session: Session) -> int:
@@ -148,6 +150,36 @@ def _migrate_v5_to_v6(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v6_to_v7(session: Session) -> None:
+    if not _table_exists(session, "splits"):
+        session.exec(text(
+            "CREATE TABLE splits ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "symbol TEXT NOT NULL, "
+            "split_date TEXT NOT NULL, "
+            "ratio REAL NOT NULL, "
+            "source TEXT NOT NULL, "
+            "fetched_at TEXT NOT NULL, "
+            "CONSTRAINT uq_splits_symbol_date UNIQUE (symbol, split_date))"
+        ))
+        session.exec(text("CREATE INDEX ix_splits_symbol ON splits(symbol)"))
+    if not _table_exists(session, "lot_overrides"):
+        session.exec(text(
+            "CREATE TABLE lot_overrides ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "trade_id INTEGER NOT NULL REFERENCES trades(id), "
+            "field TEXT NOT NULL, "
+            "old_value REAL NOT NULL, "
+            "new_value REAL NOT NULL, "
+            "reason TEXT NOT NULL, "
+            "edited_at TEXT NOT NULL, "
+            "split_id INTEGER NULL REFERENCES splits(id))"
+        ))
+        session.exec(text("CREATE INDEX ix_lot_overrides_trade_id ON lot_overrides(trade_id)"))
+        session.exec(text("CREATE INDEX ix_lot_overrides_split_id ON lot_overrides(split_id)"))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     current = get_schema_version(session)
@@ -175,6 +207,10 @@ def migrate(session: Session) -> None:
     if current < 6:
         _migrate_v5_to_v6(session)
         set_schema_version(session, 6)
+        current = 6
+    if current < 7:
+        _migrate_v6_to_v7(session)
+        set_schema_version(session, 7)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(

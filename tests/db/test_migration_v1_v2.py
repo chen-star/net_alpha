@@ -184,12 +184,12 @@ def test_init_db_bumps_schema_version_to_2(tmp_path):
     init_db(engine)
     with engine.connect() as conn:
         v = conn.execute(sqlalchemy.text("SELECT value FROM meta WHERE key='schema_version'")).scalar()
-    # v1 DBs are migrated through v2 → v3 → v4 → v5 → v6; final version is 6.
-    assert v == "6"
+    # v1 DBs are migrated through v2 → v3 → v4 → v5 → v6 → v7; final version is 7.
+    assert v == "7"
 
 
 def test_init_db_on_fresh_db_creates_v2_directly(tmp_path):
-    """Fresh DB (no tables) should create current schema and set schema_version=6."""
+    """Fresh DB (no tables) should create current schema and set schema_version=7."""
     db_path = tmp_path / "fresh.db"
     engine = create_engine(f"sqlite:///{db_path}", echo=False)
     init_db(engine)
@@ -199,6 +199,6 @@ def test_init_db_on_fresh_db_creates_v2_directly(tmp_path):
         tables = [
             r[0] for r in conn.execute(sqlalchemy.text("SELECT name FROM sqlite_master WHERE type='table'")).all()
         ]
-    assert v == "6"
+    assert v == "7"
     assert "basis_source" in cols
     assert "realized_gl_lots" in tables
