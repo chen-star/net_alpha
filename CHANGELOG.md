@@ -2,6 +2,102 @@
 
 
 
+## v0.20.0 (2026-04-27)
+
+### Chore
+
+* chore: ruff format + lift in-function imports to module top ([`06ceb80`](https://github.com/chen-star/net_alpha/commit/06ceb80ac672ab7f542012f2e8b07e8ed2fbd2dc))
+
+### Documentation
+
+* docs(plan): cash flow &amp; balance tracking implementation plan
+
+23 tasks, TDD-ordered, covering: CashEvent domain model, cash_events
+table + v8 migration, gross_cash_impact column on trades, Schwab
+parser cash-event extraction (13 action types), repository methods,
+pure-function computation layer (build_cash_balance_series,
+compute_cash_kpis, cash_allocation_slice), Portfolio web layout
+update, fixture-based integration tests using both ST and LT CSVs.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e16caa1`](https://github.com/chen-star/net_alpha/commit/e16caa14ad8e8e925de100f3ef6b455b9520d123))
+
+### Feature
+
+* feat(web): show cash_event_count on imports list summary and detail row ([`1ecf0ab`](https://github.com/chen-star/net_alpha/commit/1ecf0ab8906f8b970fac652b4e744c1eae32acec))
+
+* feat(web): portfolio body — equity + cash side by side, allocation full width ([`3253a2e`](https://github.com/chen-star/net_alpha/commit/3253a2e345c3ea1b9399a524ea3e90db23025aa1))
+
+* feat(portfolio): allocation donut shows Cash slice
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e588ac9`](https://github.com/chen-star/net_alpha/commit/e588ac9eb73d58027bd06bcff02a9ef0271016d8))
+
+* feat(web): add Cash / Net contributed / Growth KPI tiles ([`596a458`](https://github.com/chen-star/net_alpha/commit/596a458de50f8c85aca4fc740666868e4e0b3acf))
+
+* feat(web): add _portfolio_cash_curve.html — ApexCharts balance + contributions ([`2f806af`](https://github.com/chen-star/net_alpha/commit/2f806affdd73c4f75450b1480a7f807ea14a98b9))
+
+* feat(web): wire cash KPIs/points/slice into /portfolio/body context
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2dc909e`](https://github.com/chen-star/net_alpha/commit/2dc909eba9ee8dd687f6051cebd460121ae538e1))
+
+* feat(portfolio): cash_allocation_slice for donut integration ([`f7a4dfe`](https://github.com/chen-star/net_alpha/commit/f7a4dfebd3a7d3e781a654d73f654fb6b532e395))
+
+* feat(portfolio): compute_cash_kpis ([`c490b09`](https://github.com/chen-star/net_alpha/commit/c490b09c884ef0d04badb4dfd1cf647b40e28739))
+
+* feat(portfolio): add CashFlowKPIs dataclass alongside CashBalancePoint ([`cba5218`](https://github.com/chen-star/net_alpha/commit/cba5218630abd576ac0b8e000ead09be53979e90))
+
+* feat(portfolio): build_cash_balance_series with period and account scoping
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`55b6058`](https://github.com/chen-star/net_alpha/commit/55b60584688cb0f8571f79f5df49557b287da04f))
+
+* feat(import): wire cash_events through add_import and Schwab callers ([`3fca8fd`](https://github.com/chen-star/net_alpha/commit/3fca8fd98b85d822455b6c2adae1e9d84a426235))
+
+* feat(schwab): emit CashEvent for transfers, dividends, interest, fees, sweeps ([`e5690f4`](https://github.com/chen-star/net_alpha/commit/e5690f436abf35b07a42375c6014c72a7d9d7c1d))
+
+* feat(schwab): populate gross_cash_impact from CSV Amount on every trade ([`6933d1d`](https://github.com/chen-star/net_alpha/commit/6933d1dcbf63068dbda7e7ed22b309480061b09e))
+
+* feat(models): add ImportResult for parser return value ([`348c6e4`](https://github.com/chen-star/net_alpha/commit/348c6e483e5688aa4adca38b2fa9d51a1c86a848))
+
+* feat(repo): list_cash_events with account/date scoping ([`b7e52f0`](https://github.com/chen-star/net_alpha/commit/b7e52f06e9effa6a0b07b6595a4b564b63a5a0cd))
+
+* feat(repo): add_cash_events with dedup on (account_id, natural_key) ([`25494d6`](https://github.com/chen-star/net_alpha/commit/25494d68b97b4392076ef7e4d0f6e722aa89742d))
+
+* feat(db): v7→v8 migration for cash_events + gross_cash_impact + cash_event_count ([`0ebbc94`](https://github.com/chen-star/net_alpha/commit/0ebbc94009854e2545c48ccdcf269bcf06a31ec7))
+
+* feat(db): add cash_events table; add gross_cash_impact and cash_event_count columns ([`35b5159`](https://github.com/chen-star/net_alpha/commit/35b51590d29e726134fc10534dcdaaee6dcab428))
+
+* feat(models): add CashEvent domain model with natural_key dedup ([`25a9c5f`](https://github.com/chen-star/net_alpha/commit/25a9c5f4a0a6dd5ca7cbf76b87a8b4a79b9a941e))
+
+### Fix
+
+* fix: review-found correctness bugs in cash-flow
+
+1. (Critical) add_import pre-filters cash events by natural key in-session
+   instead of relying on UNIQUE-constraint rollback, which was unwinding
+   trades flushed earlier in the same session and silently dropping data.
+2. (Important) _trade_cash_delta returns 0 for Security Transfer /
+   Journaled Shares rows (basis_source=transfer_in/out). The legacy
+   fallback to ±cost_basis was fabricating phantom cash debits/credits
+   for share-only transfers.
+3. (Important) Schwab parser maps Reinvest Dividend, Long Term Cap Gain,
+   Short Term Cap Gain to dividend cash events (DRIP and capital-gain
+   distributions are widely used; the previous mapping silently lost them
+   as &#34;Unknown action&#34; warnings).
+
+Adds regression tests for each. ([`7d6ce33`](https://github.com/chen-star/net_alpha/commit/7d6ce334a1b5022735ce0b1c56da59c8b6574bac))
+
+* fix: skip option-side actions in parse_full; clarify add_import commit ordering ([`fccd8c3`](https://github.com/chen-star/net_alpha/commit/fccd8c3cf063dca8c2664874b471952628b8b241))
+
+* fix(repo): cascade-delete cash_events on remove_import ([`73704ad`](https://github.com/chen-star/net_alpha/commit/73704ad6f3a7f33971c198f3ebed99de5f360fa7))
+
+### Test
+
+* test(integration): cash events round-trip through both Schwab CSV fixtures
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9f0b6f7`](https://github.com/chen-star/net_alpha/commit/9f0b6f7fd454c6d8b3345f3a9cbede0648cf92b0))
+
+* test(fixtures): add anonymized Schwab Short/Long Term Transactions CSVs ([`ce173d3`](https://github.com/chen-star/net_alpha/commit/ce173d33363690f89219c1bb561e2ae0be1cb1c9))
+
+
 ## v0.19.0 (2026-04-27)
 
 ### Documentation
