@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import date, datetime
 
 from net_alpha.ingest.option_parser import parse_option_symbol
-from net_alpha.models.domain import Trade
+from net_alpha.models.domain import CashEvent, ImportResult, Trade
 
 # Schwab buy actions (v1 KNOWN_BROKER_SCHEMAS: "Buy", "Reinvest"; also options: "Buy to Open")
 _BUY_ACTIONS = {"Buy", "Reinvest Shares", "Reinvest", "Buy to Open"}
@@ -24,29 +24,32 @@ _TRANSFER_ACTIONS = {"Security Transfer", "Journaled Shares"}
 # sign_source = "always_negative" → kind is fixed (fee); amount stored as |Amount|.
 _CASH_EVENT_ACTIONS: dict[str, tuple[str, str]] = {
     "MoneyLink Transfer": ("transfer", "amount"),
-    "Wire Received":      ("transfer", "amount"),
-    "Wire Sent":          ("transfer", "amount"),
-    "Journal":            ("transfer", "amount"),
-    "Futures MM Sweep":   ("sweep",    "amount"),
-    "Qualified Dividend":   ("dividend", "always_positive"),
-    "Non-Qualified Div":    ("dividend", "always_positive"),
-    "Pr Yr Non-Qual Div":   ("dividend", "always_positive"),
-    "Cash Dividend":        ("dividend", "always_positive"),
-    "Cash In Lieu":         ("dividend", "always_positive"),
-    "Credit Interest":      ("interest", "always_positive"),
-    "Bank Interest":        ("interest", "always_positive"),
-    "Margin Interest":      ("fee", "always_negative"),
-    "ADR Mgmt Fee":         ("fee", "always_negative"),
-    "Foreign Tax Paid":     ("fee", "always_negative"),
-    "Service Fee":          ("fee", "always_negative"),
+    "Wire Received": ("transfer", "amount"),
+    "Wire Sent": ("transfer", "amount"),
+    "Journal": ("transfer", "amount"),
+    "Futures MM Sweep": ("sweep", "amount"),
+    "Qualified Dividend": ("dividend", "always_positive"),
+    "Non-Qualified Div": ("dividend", "always_positive"),
+    "Pr Yr Non-Qual Div": ("dividend", "always_positive"),
+    "Cash Dividend": ("dividend", "always_positive"),
+    "Cash In Lieu": ("dividend", "always_positive"),
+    "Credit Interest": ("interest", "always_positive"),
+    "Bank Interest": ("interest", "always_positive"),
+    "Margin Interest": ("fee", "always_negative"),
+    "ADR Mgmt Fee": ("fee", "always_negative"),
+    "Foreign Tax Paid": ("fee", "always_negative"),
+    "Service Fee": ("fee", "always_negative"),
 }
 
 # Non-trade actions handled by trade-side logic (existing) — never cash events.
 # Includes option-side actions (Sell to Open, Buy to Close) consumed by
 # _put_assignment_basis_offsets but not emitted as Trade rows.
 _TRADE_SIDE_NON_TRADE_ACTIONS = {
-    "Reverse Split", "Assigned", "Expired",
-    "Sell to Open", "Buy to Close",
+    "Reverse Split",
+    "Assigned",
+    "Expired",
+    "Sell to Open",
+    "Buy to Close",
 }
 
 
@@ -135,7 +138,7 @@ def _put_assignment_basis_offsets(rows: list[dict[str, str]]) -> dict[tuple[str,
 def _to_cash_event(
     row: dict[str, str],
     account_display: str,
-) -> "tuple[object | None, str | None]":
+) -> tuple[object | None, str | None]:
     """Try to convert a non-trade row to a CashEvent.
 
     Returns (event, warning):
@@ -143,8 +146,6 @@ def _to_cash_event(
       - (None, None) if the row is a known non-cash-event action (e.g. Security Transfer)
       - (None, warning_text) on an unknown non-trade action
     """
-    from net_alpha.models.domain import CashEvent
-
     action = row.get("Action", "").strip()
     if action in _CASH_EVENT_ACTIONS:
         kind_root, sign_source = _CASH_EVENT_ACTIONS[action]
@@ -295,17 +296,13 @@ class SchwabParser:
             trades.append(Trade(**kwargs))
         return trades
 
-    def parse_full(self, rows: list[dict[str, str]], account_display: str) -> "ImportResult":
-        from net_alpha.models.domain import ImportResult
-
+    def parse_full(self, rows: list[dict[str, str]], account_display: str) -> ImportResult:
         trades = self.parse(rows, account_display)
         cash_events: list = []
         warnings: list[str] = []
         # Set of action strings handled by the trade-side branch, OR as cash events;
         # anything else is unknown.
-        known_trade_actions = (
-            _BUY_ACTIONS | _SELL_ACTIONS | _TRANSFER_ACTIONS | _TRADE_SIDE_NON_TRADE_ACTIONS
-        )
+        known_trade_actions = _BUY_ACTIONS | _SELL_ACTIONS | _TRANSFER_ACTIONS | _TRADE_SIDE_NON_TRADE_ACTIONS
         for row in rows:
             action = row.get("Action", "").strip()
             if action in known_trade_actions:
@@ -318,7 +315,5 @@ class SchwabParser:
                     warnings.append(warn)
             else:
                 # Unknown non-trade action — warn but don't crash.
-                warnings.append(
-                    f"Unknown action {action!r} on {row.get('Date', '')!r} (row skipped)"
-                )
+                warnings.append(f"Unknown action {action!r} on {row.get('Date', '')!r} (row skipped)")
         return ImportResult(trades=trades, cash_events=cash_events, parse_warnings=warnings)

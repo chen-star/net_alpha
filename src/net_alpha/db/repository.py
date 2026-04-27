@@ -229,9 +229,7 @@ class Repository:
                 if display in account_id_cache:
                     return account_id_cache[display]
                 broker, label = display.split("/", 1)
-                row = s.exec(
-                    select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)
-                ).first()
+                row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
                 if row is None:
                     raise LookupError(f"Account {display!r} not found")
                 account_id_cache[display] = row.id

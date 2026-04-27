@@ -19,15 +19,22 @@ class _StubProvider:
 
 
 def test_sync_splits_inserts_new_splits_and_applies_them(repo, builders, tmp_path):
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "AAPL", date(2020, 1, 5), qty=10, cost=1500),
-    ])
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2020, 1, 5), qty=10, cost=1500),
+        ],
+    )
     from net_alpha.engine.etf_pairs import load_etf_pairs
     from net_alpha.engine.recompute import recompute_all_violations
+
     recompute_all_violations(repo, load_etf_pairs())
 
     provider = _StubProvider({"AAPL": [SplitEvent(symbol="AAPL", split_date=date(2020, 8, 31), ratio=2.0)]})
     from net_alpha.pricing.cache import PriceCache
+
     cache = PriceCache(repo.engine, ttl_seconds=300)
     svc = PricingService(provider=provider, cache=cache, enabled=True)
 
@@ -42,16 +49,23 @@ def test_sync_splits_inserts_new_splits_and_applies_them(repo, builders, tmp_pat
 
 
 def test_sync_splits_returns_skipped_for_already_known(repo, builders):
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "AAPL", date(2020, 1, 5), qty=10, cost=1500),
-    ])
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2020, 1, 5), qty=10, cost=1500),
+        ],
+    )
     from net_alpha.engine.etf_pairs import load_etf_pairs
     from net_alpha.engine.recompute import recompute_all_violations
+
     recompute_all_violations(repo, load_etf_pairs())
     repo.add_split("AAPL", date(2020, 8, 31), 2.0, "yahoo")  # pre-existing
 
     provider = _StubProvider({"AAPL": [SplitEvent(symbol="AAPL", split_date=date(2020, 8, 31), ratio=2.0)]})
     from net_alpha.pricing.cache import PriceCache
+
     cache = PriceCache(repo.engine, ttl_seconds=300)
     svc = PricingService(provider=provider, cache=cache, enabled=True)
 
@@ -61,6 +75,7 @@ def test_sync_splits_returns_skipped_for_already_known(repo, builders):
 
 def test_sync_splits_disabled_returns_immediately(repo):
     from net_alpha.pricing.cache import PriceCache
+
     cache = PriceCache(repo.engine, ttl_seconds=300)
     svc = PricingService(
         provider=_StubProvider({"AAPL": [SplitEvent(symbol="AAPL", split_date=date(2020, 8, 31), ratio=2.0)]}),

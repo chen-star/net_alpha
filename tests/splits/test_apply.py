@@ -143,17 +143,26 @@ def test_apply_splits_is_idempotent(repo, builders):
 def test_apply_manual_overrides_replays_latest_edit(repo, builders):
     from datetime import date
 
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5), qty=10, cost=1500),
-    ])
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5), qty=10, cost=1500),
+        ],
+    )
     from net_alpha.engine.etf_pairs import load_etf_pairs
     from net_alpha.engine.recompute import recompute_all_violations
+
     recompute_all_violations(repo, load_etf_pairs())
 
     trade_id = int(repo.get_trades_for_ticker("AAPL")[0].id)
     repo.add_lot_override(
-        trade_id=trade_id, field="quantity",
-        old_value=10.0, new_value=2.0, reason="manual",
+        trade_id=trade_id,
+        field="quantity",
+        old_value=10.0,
+        new_value=2.0,
+        reason="manual",
     )
 
     # A subsequent recompute would otherwise blow away the qty=2 edit; the
@@ -169,9 +178,15 @@ def test_apply_manual_overrides_latest_edit_wins(repo, builders):
     """When two manual overrides exist for the same (trade_id, field),
     apply_manual_overrides applies the LATEST one (by edited_at)."""
     import time
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5), qty=10, cost=1500),
-    ])
+
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5), qty=10, cost=1500),
+        ],
+    )
     from net_alpha.engine.etf_pairs import load_etf_pairs
     from net_alpha.engine.recompute import recompute_all_violations
 
@@ -179,14 +194,20 @@ def test_apply_manual_overrides_latest_edit_wins(repo, builders):
 
     trade_id = int(repo.get_trades_for_ticker("AAPL")[0].id)
     repo.add_lot_override(
-        trade_id=trade_id, field="quantity",
-        old_value=10.0, new_value=2.0, reason="manual",
+        trade_id=trade_id,
+        field="quantity",
+        old_value=10.0,
+        new_value=2.0,
+        reason="manual",
     )
     # Sleep briefly so the second override's edited_at is strictly later.
     time.sleep(0.01)
     repo.add_lot_override(
-        trade_id=trade_id, field="quantity",
-        old_value=2.0, new_value=5.0, reason="manual",
+        trade_id=trade_id,
+        field="quantity",
+        old_value=2.0,
+        new_value=5.0,
+        reason="manual",
     )
 
     recompute_all_violations(repo, load_etf_pairs())
@@ -238,9 +259,14 @@ def test_split_survives_repeated_recompute(repo, builders):
     cumulative_ratio and applies it whenever the lot's current qty differs,
     making apply_splits unconditionally correct across any number of
     recomputes."""
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "SQQQ", date(2024, 1, 5), qty=100, cost=2000),
-    ])
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "SQQQ", date(2024, 1, 5), qty=100, cost=2000),
+        ],
+    )
     repo.add_split("SQQQ", date(2025, 1, 13), 0.1, "yahoo")
 
     from net_alpha.engine.etf_pairs import load_etf_pairs

@@ -8,11 +8,17 @@ from fastapi.testclient import TestClient
 
 
 def test_post_lot_edit_updates_qty_and_basis(client: TestClient, builders, repo):
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5), qty=10, cost=1500),
-    ])
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5), qty=10, cost=1500),
+        ],
+    )
     from net_alpha.engine.etf_pairs import load_etf_pairs
     from net_alpha.engine.recompute import recompute_all_violations
+
     recompute_all_violations(repo, load_etf_pairs())
 
     lot = repo.get_lots_for_ticker("AAPL")[0]

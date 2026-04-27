@@ -1,15 +1,14 @@
 """v7 → v8: adds cash_events table; trades.gross_cash_impact; imports.cash_event_count."""
 
-from sqlalchemy import text, create_engine
+from sqlalchemy import create_engine, text
 from sqlmodel import Session, SQLModel
 
 import net_alpha.db.tables as _tables  # noqa: F401 — registers all SQLModel table classes
 from net_alpha.db.migrations import (
     CURRENT_SCHEMA_VERSION,
-    _table_exists,
     _column_exists,
+    _table_exists,
     migrate,
-    set_schema_version,
 )
 
 
@@ -18,8 +17,9 @@ def test_v7_to_v8_creates_cash_events_table_and_new_columns():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as s:
         # Pretend the DB is at v7 (skip the fresh-DB short-circuit).
-        s.exec(text("INSERT INTO meta(key, value) VALUES ('schema_version', '7') "
-                    "ON CONFLICT(key) DO UPDATE SET value='7'"))
+        s.exec(
+            text("INSERT INTO meta(key, value) VALUES ('schema_version', '7') ON CONFLICT(key) DO UPDATE SET value='7'")
+        )
         s.commit()
         migrate(s)
         s.commit()

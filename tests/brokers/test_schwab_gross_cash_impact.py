@@ -5,9 +5,14 @@ from net_alpha.brokers.schwab import SchwabParser
 
 def _row(**kw):
     base = {
-        "Date": "04/24/2026", "Action": "Buy", "Symbol": "SPIR",
-        "Description": "SPIRE GLOBAL", "Quantity": "10", "Price": "$15.88",
-        "Fees & Comm": "", "Amount": "-$158.80",
+        "Date": "04/24/2026",
+        "Action": "Buy",
+        "Symbol": "SPIR",
+        "Description": "SPIRE GLOBAL",
+        "Quantity": "10",
+        "Price": "$15.88",
+        "Fees & Comm": "",
+        "Amount": "-$158.80",
     }
     base.update(kw)
     return base
@@ -31,22 +36,33 @@ def test_put_assignment_buy_gross_is_strike_not_basis_adjusted():
     """
     rows = [
         {
-            "Date": "03/19/2026", "Action": "Sell to Open",
+            "Date": "03/19/2026",
+            "Action": "Sell to Open",
             "Symbol": "RR 04/17/2026 3.00 P",
             "Description": "PUT RICHTECH ROBOTICS IN$3 EXP 04/17/26",
-            "Quantity": "1", "Price": "$0.88", "Fees & Comm": "$0.66",
+            "Quantity": "1",
+            "Price": "$0.88",
+            "Fees & Comm": "$0.66",
             "Amount": "$87.34",
         },
         {
-            "Date": "04/20/2026 as of 04/17/2026", "Action": "Assigned",
+            "Date": "04/20/2026 as of 04/17/2026",
+            "Action": "Assigned",
             "Symbol": "RR 04/17/2026 3.00 P",
             "Description": "PUT RICHTECH ROBOTICS IN$3 EXP 04/17/26",
-            "Quantity": "1", "Price": "", "Fees & Comm": "", "Amount": "",
+            "Quantity": "1",
+            "Price": "",
+            "Fees & Comm": "",
+            "Amount": "",
         },
         {
-            "Date": "04/20/2026 as of 04/17/2026", "Action": "Buy",
-            "Symbol": "RR", "Description": "RICHTECH ROBOTICS",
-            "Quantity": "100", "Price": "$3.00", "Fees & Comm": "",
+            "Date": "04/20/2026 as of 04/17/2026",
+            "Action": "Buy",
+            "Symbol": "RR",
+            "Description": "RICHTECH ROBOTICS",
+            "Quantity": "100",
+            "Price": "$3.00",
+            "Fees & Comm": "",
             "Amount": "-$300.00",
         },
     ]

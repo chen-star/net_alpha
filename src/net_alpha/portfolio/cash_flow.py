@@ -14,7 +14,6 @@ from decimal import Decimal
 from net_alpha.models.domain import CashEvent, Trade
 from net_alpha.portfolio.models import CashBalancePoint, CashFlowKPIs
 
-
 # Sign rules — positive amount means cash inflow.
 _INFLOW_KINDS = {"transfer_in", "dividend", "interest", "sweep_in"}
 _OUTFLOW_KINDS = {"transfer_out", "fee", "sweep_out"}
@@ -116,7 +115,10 @@ def compute_cash_kpis(
 ) -> CashFlowKPIs:
     """Single-shot summary used by the KPI strip."""
     series = build_cash_balance_series(
-        events=events, trades=trades, account=account, period=period,
+        events=events,
+        trades=trades,
+        account=account,
+        period=period,
     )
     if series:
         cash = series[-1].cash_balance
@@ -151,6 +153,9 @@ def cash_allocation_slice(
     Used by the allocation donut to render cash as one extra slice.
     """
     series = build_cash_balance_series(
-        events=events, trades=trades, account=account, period=None,
+        events=events,
+        trades=trades,
+        account=account,
+        period=None,
     )
     return series[-1].cash_balance if series else Decimal("0")

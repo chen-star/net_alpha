@@ -2,18 +2,25 @@ import datetime as dt
 from decimal import Decimal
 
 from net_alpha.models.domain import CashEvent, Trade
-from net_alpha.portfolio.cash_flow import build_cash_balance_series
+from net_alpha.portfolio.cash_flow import (
+    build_cash_balance_series,
+    cash_allocation_slice,
+    compute_cash_kpis,
+)
 
 
 def _ev(d, kind, amount, account="Schwab/x", description="x"):
-    return CashEvent(account=account, event_date=d, kind=kind,
-                     amount=amount, ticker=None, description=description)
+    return CashEvent(account=account, event_date=d, kind=kind, amount=amount, ticker=None, description=description)
 
 
 def _trade(d, action, gross, account="Schwab/x", ticker="SPIR"):
     return Trade(
-        id="t", account=account, date=d, ticker=ticker,
-        action=action, quantity=10.0,
+        id="t",
+        account=account,
+        date=d,
+        ticker=ticker,
+        action=action,
+        quantity=10.0,
         proceeds=gross if action == "Sell" else None,
         cost_basis=abs(gross) if action == "Buy" else None,
         gross_cash_impact=gross,
@@ -45,7 +52,7 @@ def test_buy_decreases_balance_but_not_contributions():
 def test_sweep_out_then_in_dips_and_recovers():
     events = [
         _ev(dt.date(2026, 4, 22), "sweep_out", 4460.97, description="Sweep to Futures"),
-        _ev(dt.date(2026, 4, 24), "sweep_in",  307.00, description="Sweep from Futures"),
+        _ev(dt.date(2026, 4, 24), "sweep_in", 307.00, description="Sweep from Futures"),
     ]
     pts = build_cash_balance_series(events=events, trades=[], account=None, period=None)
     assert pts[0].cash_balance == Decimal("-4460.97")
@@ -74,7 +81,7 @@ def test_account_filter_excludes_other_accounts():
 def test_period_clip_excludes_events_after_window():
     events = [
         _ev(dt.date(2025, 12, 31), "transfer_in", 1000.0),
-        _ev(dt.date(2026, 6, 1),  "transfer_in", 200.0),
+        _ev(dt.date(2026, 6, 1), "transfer_in", 200.0),
     ]
     # period = (2026, 2027) means YTD 2026
     pts = build_cash_balance_series(events=events, trades=[], account=None, period=(2026, 2027))
@@ -102,13 +109,15 @@ def test_legacy_trade_without_gross_falls_back_to_proceeds_or_cost_basis():
 
 
 # Tests for compute_cash_kpis
-from net_alpha.portfolio.cash_flow import compute_cash_kpis
 
 
 def test_kpis_zero_inputs():
     kpi = compute_cash_kpis(
-        events=[], trades=[], holdings_value=Decimal("0"),
-        account=None, period=None,
+        events=[],
+        trades=[],
+        holdings_value=Decimal("0"),
+        account=None,
+        period=None,
     )
     assert kpi.cash_balance == Decimal("0")
     assert kpi.account_value == Decimal("0")
@@ -120,8 +129,11 @@ def test_kpis_zero_inputs():
 def test_kpis_simple_deposit_and_holdings():
     events = [_ev(dt.date(2026, 3, 4), "transfer_in", 1000.0)]
     kpi = compute_cash_kpis(
-        events=events, trades=[], holdings_value=Decimal("250"),
-        account=None, period=None,
+        events=events,
+        trades=[],
+        holdings_value=Decimal("250"),
+        account=None,
+        period=None,
     )
     # cash 1000 + holdings 250 = 1250 account_value, contrib 1000 → growth 250
     assert kpi.cash_balance == Decimal("1000")
@@ -136,15 +148,17 @@ def test_kpis_simple_deposit_and_holdings():
 def test_kpis_growth_pct_none_when_no_contributions():
     events = [_ev(dt.date(2026, 3, 4), "dividend", 4.47)]
     kpi = compute_cash_kpis(
-        events=events, trades=[], holdings_value=Decimal("0"),
-        account=None, period=None,
+        events=events,
+        trades=[],
+        holdings_value=Decimal("0"),
+        account=None,
+        period=None,
     )
     assert kpi.net_contributions == Decimal("0")
     assert kpi.growth_pct is None
 
 
 # Tests for cash_allocation_slice
-from net_alpha.portfolio.cash_flow import cash_allocation_slice
 
 
 def test_cash_allocation_slice_returns_current_balance():

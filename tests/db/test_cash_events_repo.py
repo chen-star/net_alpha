@@ -61,8 +61,12 @@ def test_list_cash_events_filters_by_account_id():
     repo, account, import_id = _setup()
     other = repo.get_or_create_account("Schwab", "long_term")
     other_rec = ImportRecord(
-        id=None, account_id=other.id, csv_filename="y.csv", csv_sha256="def",
-        imported_at=datetime(2026, 4, 26, 12, 0, 0), trade_count=0,
+        id=None,
+        account_id=other.id,
+        csv_filename="y.csv",
+        csv_sha256="def",
+        imported_at=datetime(2026, 4, 26, 12, 0, 0),
+        trade_count=0,
     )
     other_import = repo.add_import(other, other_rec, trades=[]).import_id
     repo.add_cash_events(

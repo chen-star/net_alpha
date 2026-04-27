@@ -7,11 +7,8 @@ import csv
 from datetime import datetime
 from pathlib import Path
 
-import pytest
-
 from net_alpha.brokers.schwab import SchwabParser
 from net_alpha.models.domain import ImportRecord
-
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
@@ -34,7 +31,8 @@ def _import(repo, label: str, rows: list[dict[str, str]]) -> int:
         trade_count=0,
     )
     return repo.add_import(
-        account, rec,
+        account,
+        rec,
         trades=result.trades,
         cash_events=result.cash_events,
     ).import_id
@@ -65,8 +63,8 @@ def test_imports_cover_all_expected_cash_event_kinds(repo):
     kinds = {e.kind for e in repo.list_cash_events()}
     # ST has these (from inspection of the CSV):
     assert "transfer_in" in kinds  # MoneyLink Transfer
-    assert "dividend" in kinds     # Cash Dividend / Qualified / Non-Qualified
-    assert "interest" in kinds     # Credit Interest
+    assert "dividend" in kinds  # Cash Dividend / Qualified / Non-Qualified
+    assert "interest" in kinds  # Credit Interest
     # ST also has Futures MM Sweep (both directions)
     assert "sweep_out" in kinds or "sweep_in" in kinds
     # LT has Foreign Tax Paid + ADR Mgmt Fee
