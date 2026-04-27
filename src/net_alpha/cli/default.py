@@ -20,6 +20,7 @@ from net_alpha.ingest.csv_loader import compute_csv_sha256, load_csv
 from net_alpha.ingest.dedup import filter_new
 from net_alpha.models.domain import ImportRecord
 from net_alpha.output import disclaimer, watch_list, ytd_impact
+from net_alpha.splits.sync import _post_import_autosync_splits
 
 ETF_PAIRS = load_etf_pairs(user_path=str(Path.home() / ".net_alpha" / "etf_pairs.yaml"))
 
@@ -40,6 +41,8 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
     new_trade_total = 0
     dup_trade_total = 0
     new_gl_total = 0
+    existing_symbols = {lot.ticker for lot in repo.all_lots() if lot.option_details is None}
+    new_symbols: set[str] = set()
 
     for csv_path in csv_paths:
         headers, rows = load_csv(csv_path)
@@ -78,6 +81,8 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
             dup_trade_total += dup_count
             for t in new:
                 affected_dates.append(t.date)
+                if t.option_details is None:
+                    new_symbols.add(t.ticker)
             typer.echo(
                 f"Detected: {parser.name} — imported {result.new_trades} new trades, "
                 f"skipped {dup_count} duplicates ({Path(csv_path).name})"
@@ -130,6 +135,8 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
             )
             repo.replace_violations_in_window(win_start, win_end, merged)
             repo.replace_lots_in_window(win_start, win_end, det.lots)
+
+    _post_import_autosync_splits(repo, new_symbols=new_symbols, existing_symbols=existing_symbols)
 
     today = date.today()
     typer.echo("")

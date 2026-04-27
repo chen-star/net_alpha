@@ -19,6 +19,7 @@ from net_alpha.import_.aggregations import compute_import_aggregates
 from net_alpha.ingest.csv_loader import load_csv
 from net_alpha.ingest.dedup import filter_new
 from net_alpha.models.domain import ImportRecord
+from net_alpha.splits.sync import _post_import_autosync_splits
 from net_alpha.web.dependencies import get_etf_pairs, get_repository
 
 router = APIRouter()
@@ -157,10 +158,12 @@ async def upload(
 
     acct = repo.get_or_create_account("schwab", account)
 
+    existing_symbols = {lot.ticker for lot in repo.all_lots() if lot.option_details is None}
     new_trade_count = 0
     dup_trade_count = 0
     new_gl_count = 0
     affected_dates: list = []
+    new_symbols: set[str] = set()
 
     for filename, raw, _headers, rows, parser in materialized:
         if parser is None:
@@ -195,6 +198,8 @@ async def upload(
             dup_trade_count += pre_filtered_dups
             for t in new_trades:
                 affected_dates.append(t.date)
+                if t.option_details is None:
+                    new_symbols.add(t.ticker)
         elif isinstance(parser, SchwabRealizedGLParser):
             lots = parser.parse(rows, account_display=acct.display())
             gl_dates = [lot.closed_date for lot in lots] if lots else []
@@ -225,6 +230,8 @@ async def upload(
 
     if affected_dates:
         recompute_all_violations(repo, etf_pairs)
+
+    _post_import_autosync_splits(repo, new_symbols=new_symbols, existing_symbols=existing_symbols)
 
     msg_parts: list[str] = []
     if new_trade_count:
