@@ -698,6 +698,41 @@ class Repository:
         recompute_all_violations(self, etf_pairs)
         return saved
 
+    def update_manual_trade(self, trade: Trade, etf_pairs: dict[str, list[str]]) -> Trade:
+        """Update a manual trade. Verifies is_manual=True. Preserves natural_key."""
+        from net_alpha.engine.recompute import recompute_all_violations
+
+        if trade.id is None:
+            raise ValueError("update_manual_trade requires Trade.id")
+        with Session(self.engine) as s:
+            row = s.exec(select(TradeRow).where(TradeRow.id == int(trade.id))).first()
+            if row is None:
+                raise LookupError(f"Trade id {trade.id} not found")
+            if not row.is_manual:
+                raise ValueError("update_manual_trade requires is_manual=True row")
+            account = self._resolve_account(s, trade.account)
+            row.account_id = account.id
+            row.ticker = trade.ticker
+            row.trade_date = trade.date.isoformat()
+            row.action = trade.action
+            row.quantity = trade.quantity
+            row.proceeds = trade.proceeds
+            row.cost_basis = trade.cost_basis
+            row.basis_unknown = trade.basis_unknown
+            row.basis_source = trade.basis_source
+            row.option_strike = trade.option_details.strike if trade.option_details else None
+            row.option_expiry = (
+                trade.option_details.expiry.isoformat() if trade.option_details else None
+            )
+            row.option_call_put = trade.option_details.call_put if trade.option_details else None
+            # is_manual stays True; natural_key untouched.
+            s.add(row)
+            s.commit()
+            s.refresh(row)
+            saved = self._row_to_trade(row, self._account_display_for_id(s, row.account_id))
+        recompute_all_violations(self, etf_pairs)
+        return saved
+
     def update_imported_transfer(
         self,
         trade_id: str,
