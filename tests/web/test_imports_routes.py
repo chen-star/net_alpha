@@ -46,3 +46,21 @@ def test_imports_page_embeds_drop_zone(client):
     # Drop-zone is embedded directly on the page (not behind a "+ New import" link).
     assert "drop-zone" in body
     assert "+ New import" not in body
+
+
+def test_import_modal_uses_styled_choose_files_button(client):
+    """The modal should hide the native file input and expose a styled button."""
+    csv_bytes = b"Date,Action,Symbol,Quantity,Price,Amount\n"
+    response = client.post(
+        "/imports/preview",
+        files={"files": ("x.csv", csv_bytes, "text/csv")},
+    )
+    assert response.status_code == 200
+    html = response.text
+    # Native input is hidden, not naked.
+    assert 'type="file"' in html
+    assert 'class="hidden"' in html
+    # Styled button is present and labeled.
+    assert ">Choose files<" in html
+    # File-count chip is present.
+    assert "file-chip" in html
