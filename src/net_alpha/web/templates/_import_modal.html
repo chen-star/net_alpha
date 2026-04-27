@@ -31,25 +31,7 @@
   </div>
 
   {% if any_recognized %}
-    <form action="/imports" method="post" enctype="multipart/form-data" class="space-y-4">
-      <div>
-        <label class="block label-uc mb-1">Files (re-attach to confirm)</label>
-        <div class="flex items-center gap-3">
-          <button type="button" class="btn-ghost"
-                  onclick="this.nextElementSibling.click()">Choose files</button>
-          <input type="file" name="files" accept=".csv" multiple required class="hidden"
-                 onchange="(function(el){
-                   const c = el.files.length;
-                   const span = el.parentElement.querySelector('.file-chip');
-                   if (c === 0) { span.textContent = 'No files selected'; return; }
-                   const names = Array.from(el.files).slice(0, 2).map(f => f.name).join(', ');
-                   span.textContent = c + ' file' + (c === 1 ? '' : 's') + ': ' + names + (c > 2 ? ' +' + (c - 2) : '');
-                 })(this)"/>
-          <span class="file-chip text-[12px] text-label-2">No files selected</span>
-        </div>
-        <p class="text-xs text-label-3 mt-1">Browser security requires re-attaching the files at submit time.</p>
-      </div>
-
+    <form id="import-form" action="/imports" method="post" enctype="multipart/form-data" class="space-y-4">
       <div>
         <label class="block label-uc mb-1">Account label</label>
         <input type="text" name="account" required list="modal-account-list"

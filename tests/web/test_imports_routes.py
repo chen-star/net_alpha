@@ -48,8 +48,10 @@ def test_imports_page_embeds_drop_zone(client):
     assert "+ New import" not in body
 
 
-def test_import_modal_uses_styled_choose_files_button(client):
-    """The modal should hide the native file input and expose a styled button."""
+def test_import_modal_reuses_drop_zone_file_input(client):
+    """The modal must not contain its own file input — the drop-zone's
+    `#csv-input` is associated with the modal form via the `form` attribute,
+    so the originally-dropped files submit without a re-pick."""
     csv_bytes = b"Date,Action,Symbol,Quantity,Price,Amount\n"
     response = client.post(
         "/imports/preview",
@@ -57,10 +59,19 @@ def test_import_modal_uses_styled_choose_files_button(client):
     )
     assert response.status_code == 200
     html = response.text
-    # Native input is hidden, not naked.
-    assert 'type="file"' in html
-    assert 'class="hidden"' in html
-    # Styled button is present and labeled.
-    assert ">Choose files<" in html
-    # File-count chip is present.
-    assert "file-chip" in html
+    # Modal form has the id the drop-zone input points at.
+    assert 'id="import-form"' in html
+    # No second file input, no "Choose files" button, no re-attach hint.
+    assert 'type="file"' not in html
+    assert "Choose files" not in html
+    assert "re-attach" not in html.lower()
+
+
+def test_drop_zone_input_is_associated_with_import_form(client):
+    """The drop-zone file input declares `form=\"import-form\"` so its FileList
+    is submitted when the modal form is submitted."""
+    resp = client.get("/imports")
+    assert resp.status_code == 200
+    body = resp.text
+    assert 'id="csv-input"' in body
+    assert 'form="import-form"' in body

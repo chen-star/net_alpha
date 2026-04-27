@@ -18,7 +18,7 @@
              document.getElementById('import-modal').classList.remove('hidden');">
   <p>Drop one or more Schwab CSVs here or <a class="text-primary underline cursor-pointer">click to browse</a></p>
   <p class="text-xs text-label-2 mt-1">Transaction History &middot; Realized G/L &middot; max 50 MB each</p>
-  <input type="file" id="csv-input" name="files" accept=".csv" multiple class="hidden"
+  <input type="file" id="csv-input" name="files" accept=".csv" multiple required form="import-form" class="hidden"
          onchange="document.getElementById('import-modal').classList.remove('hidden');"/>
 </div>
 
