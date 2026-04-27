@@ -2,6 +2,34 @@
 
 
 
+## v0.20.1 (2026-04-27)
+
+### Chore
+
+* chore: update agent instructions and coverage ([`09436a9`](https://github.com/chen-star/net_alpha/commit/09436a98d268dbd9e1c2adc157226cf5bd39dd7a))
+
+### Ci
+
+* ci: fix tests by installing all extras ([`e75da23`](https://github.com/chen-star/net_alpha/commit/e75da23913fa563783844667b722aa96252ca7d9))
+
+### Fix
+
+* fix(web): single-pick import — reuse drop-zone file input via form attribute
+
+The import flow forced users to select files twice: once into the drop
+zone for preview, then again in the modal because a separate file input
+required re-attachment (&#34;Browser security requires re-attaching the
+files at submit time.&#34;). That second pick wasn&#39;t actually required —
+HTML&#39;s `form=&#34;...&#34;` attribute lets a control submit with a form that&#39;s
+elsewhere in the DOM.
+
+The drop-zone&#39;s `#csv-input` now declares `form=&#34;import-form&#34;` and the
+modal form carries that id. The modal&#39;s redundant file picker, &#34;Choose
+files&#34; button, file-chip, and re-attach hint are removed.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0d31044`](https://github.com/chen-star/net_alpha/commit/0d31044fadc473f21097e483272e81a43a886e79))
+
+
 ## v0.20.0 (2026-04-27)
 
 ### Chore
