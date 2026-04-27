@@ -176,6 +176,17 @@ def portfolio_positions(
     page = max(1, min(page, total_pages))
     start = (page - 1) * page_size
     page_rows = rows[start : start + page_size]
+    symbol_filter_config = {
+        "selected": sorted(selected_symbols),
+        "all": sorted({r.symbol for r in rows} | selected_symbols),
+        "qsTemplate": (
+            f"period={period or 'ytd'}&account={account or ''}"
+            f"&group_options={group_options}"
+            f"&symbols={'%2C'.join(sorted(selected_symbols))}"
+        ),
+        "show": show,
+        "pageSize": page_size,
+    }
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_table.html",
@@ -189,7 +200,7 @@ def portfolio_positions(
             "page_size": page_size,
             "page_size_options": PAGE_SIZE_OPTIONS,
             "selected_symbols": sorted(selected_symbols),
-            "all_in_scope_symbols": sorted({r.symbol for r in rows} | selected_symbols),
+            "symbol_filter_config": symbol_filter_config,
             "selected_period": period or "ytd",
             "selected_account": account or "",
             "group_options": group_options,

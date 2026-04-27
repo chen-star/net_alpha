@@ -58,8 +58,9 @@ def test_holdings_renders_symbol_multiselect_trigger(tmp_path):
     r = client.get("/portfolio/positions?period=ytd")
     assert r.status_code == 200
     html = r.text
-    # Trigger button is present.
-    assert "Symbols:" in html
+    # Trigger button is wired to the named Alpine component; label() is evaluated
+    # client-side so "Symbols:" text is not in the server-rendered HTML.
+    assert "symbolFilter(" in html
     # Alpine state hook for the popover.
     assert "x-data" in html
     # No native search input.

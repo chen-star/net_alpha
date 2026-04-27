@@ -18,33 +18,7 @@
               title="Open positions plus symbols you've fully closed in the selected period (showing realized P/L only).">All</button>
     </div>
 
-    <div x-data="{
-           open: false,
-           query: '',
-           selected: {{ selected_symbols|tojson }},
-           all: {{ all_in_scope_symbols|tojson }},
-           toggle(s) {
-             const i = this.selected.indexOf(s);
-             if (i === -1) this.selected.push(s); else this.selected.splice(i, 1);
-           },
-           filtered() {
-             const q = this.query.trim().toUpperCase();
-             return q ? this.all.filter(s => s.toUpperCase().includes(q)) : this.all;
-           },
-           label() {
-             if (this.selected.length === 0) return 'Symbols: All';
-             if (this.selected.length <= 2) return 'Symbols: ' + this.selected.join(', ');
-             return 'Symbols: ' + this.selected.slice(0,2).join(', ') + ' +' + (this.selected.length - 2);
-           },
-           apply() {
-             this.open = false;
-             const url = '/portfolio/positions?{{ qs|safe }}'.replace(
-               /symbols=[^&]*/, 'symbols=' + encodeURIComponent(this.selected.join(','))
-             ) + '&show={{ show }}&page=1&page_size={{ page_size }}';
-             htmx.ajax('GET', url, { target: '#holdings-positions', swap: 'innerHTML' });
-           },
-           clear() { this.selected = []; this.apply(); },
-         }"
+    <div x-data='symbolFilter({{ symbol_filter_config|tojson }})'
          class="relative inline-block">
       <button type="button"
               @click="open = !open"
