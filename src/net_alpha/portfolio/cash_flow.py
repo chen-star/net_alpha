@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from decimal import Decimal
 
 from net_alpha.models.domain import CashEvent, Trade
-from net_alpha.portfolio.models import CashBalancePoint
+from net_alpha.portfolio.models import CashBalancePoint, CashFlowKPIs
 
 
 # Sign rules — positive amount means cash inflow.
@@ -104,3 +104,37 @@ def build_cash_balance_series(
             # Same-day events — fold into the last point.
             pts[-1] = CashBalancePoint(on=d, cash_balance=bal, cumulative_contributions=contrib)
     return pts
+
+
+def compute_cash_kpis(
+    *,
+    events: Iterable[CashEvent],
+    trades: Iterable[Trade],
+    holdings_value: Decimal,
+    account: str | None,
+    period: tuple[int, int] | None,
+) -> CashFlowKPIs:
+    """Single-shot summary used by the KPI strip."""
+    series = build_cash_balance_series(
+        events=events, trades=trades, account=account, period=period,
+    )
+    if series:
+        cash = series[-1].cash_balance
+        contrib = series[-1].cumulative_contributions
+    else:
+        cash = Decimal("0")
+        contrib = Decimal("0")
+
+    account_value = cash + holdings_value
+    growth = account_value - contrib
+    growth_pct: Decimal | None = (growth / contrib) if contrib != 0 else None
+    cash_share_pct = (cash / account_value) if account_value != 0 else Decimal("0")
+    return CashFlowKPIs(
+        cash_balance=cash,
+        net_contributions=contrib,
+        holdings_value=holdings_value,
+        account_value=account_value,
+        growth=growth,
+        growth_pct=growth_pct,
+        cash_share_pct=cash_share_pct,
+    )

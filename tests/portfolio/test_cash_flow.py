@@ -99,3 +99,45 @@ def test_legacy_trade_without_gross_falls_back_to_proceeds_or_cost_basis():
     trades[0].gross_cash_impact = None  # simulate pre-migration row
     pts = build_cash_balance_series(events=[], trades=trades, account=None, period=None)
     assert pts[-1].cash_balance == Decimal("824.96")
+
+
+# Tests for compute_cash_kpis
+from net_alpha.portfolio.cash_flow import compute_cash_kpis
+
+
+def test_kpis_zero_inputs():
+    kpi = compute_cash_kpis(
+        events=[], trades=[], holdings_value=Decimal("0"),
+        account=None, period=None,
+    )
+    assert kpi.cash_balance == Decimal("0")
+    assert kpi.account_value == Decimal("0")
+    assert kpi.growth == Decimal("0")
+    assert kpi.growth_pct is None
+    assert kpi.cash_share_pct == Decimal("0")
+
+
+def test_kpis_simple_deposit_and_holdings():
+    events = [_ev(dt.date(2026, 3, 4), "transfer_in", 1000.0)]
+    kpi = compute_cash_kpis(
+        events=events, trades=[], holdings_value=Decimal("250"),
+        account=None, period=None,
+    )
+    # cash 1000 + holdings 250 = 1250 account_value, contrib 1000 → growth 250
+    assert kpi.cash_balance == Decimal("1000")
+    assert kpi.holdings_value == Decimal("250")
+    assert kpi.account_value == Decimal("1250")
+    assert kpi.net_contributions == Decimal("1000")
+    assert kpi.growth == Decimal("250")
+    assert kpi.growth_pct == Decimal("0.25")
+    assert kpi.cash_share_pct == Decimal("0.8")  # 1000/1250
+
+
+def test_kpis_growth_pct_none_when_no_contributions():
+    events = [_ev(dt.date(2026, 3, 4), "dividend", 4.47)]
+    kpi = compute_cash_kpis(
+        events=events, trades=[], holdings_value=Decimal("0"),
+        account=None, period=None,
+    )
+    assert kpi.net_contributions == Decimal("0")
+    assert kpi.growth_pct is None
