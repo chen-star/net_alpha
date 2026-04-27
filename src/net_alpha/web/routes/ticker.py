@@ -67,7 +67,7 @@ def trade_add_form(
     symbol: str,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
-    accounts = sorted({imp.account_display for imp in repo.list_imports()})
+    accounts = sorted({f"{a.broker}/{a.label}" for a in repo.list_accounts()})
     return request.app.state.templates.TemplateResponse(
         request,
         "_trade_form.html",
@@ -96,7 +96,7 @@ def trade_edit_manual_form(
     t = _find_trade(repo, trade_id)
     if t is None or not t.is_manual:
         raise HTTPException(status_code=404, detail="manual trade not found")
-    accounts = sorted({imp.account_display for imp in repo.list_imports()})
+    accounts = sorted({f"{a.broker}/{a.label}" for a in repo.list_accounts()})
     return request.app.state.templates.TemplateResponse(
         request,
         "_trade_form.html",

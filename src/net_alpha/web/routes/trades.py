@@ -23,7 +23,7 @@ _ACTION_MAP = {
 
 def _validate_account(repo: Repository, account: str) -> None:
     """Reject accounts that don't already exist."""
-    accounts = {imp.account_display for imp in repo.list_imports()}
+    accounts = {f"{a.broker}/{a.label}" for a in repo.list_accounts()}
     if account not in accounts:
         raise HTTPException(status_code=400, detail=f"unknown account: {account!r}")
 

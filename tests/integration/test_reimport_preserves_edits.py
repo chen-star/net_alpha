@@ -67,6 +67,17 @@ def test_reimport_preserves_user_edits_to_transfer_row(tmp_path):
         files={"files": ("schwab.csv", BytesIO(_CSV), "text/csv")},
     )
     assert r.status_code in (200, 303)
+
+    # The re-import should record the row as a duplicate, not a new trade.
+    with engine.begin() as conn:
+        imp_rows = conn.execute(text(
+            "SELECT trade_count, duplicate_trades FROM imports ORDER BY id"
+        )).all()
+    assert len(imp_rows) == 2
+    assert imp_rows[0][0] == 1  # first import: 1 new trade
+    assert imp_rows[1][0] == 0  # second import: 0 new trades
+    assert imp_rows[1][1] >= 1  # second import: at least 1 dup
+
     with engine.begin() as conn:
         rows = conn.execute(text(
             "SELECT trade_date, cost_basis, natural_key FROM trades"

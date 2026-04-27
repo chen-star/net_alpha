@@ -265,3 +265,51 @@ def test_delete_manual_trade_rejects_imported_row(tmp_path):
     import pytest
     with pytest.raises(ValueError):
         repo.delete_manual_trade(trade_id, etf_pairs={})
+
+
+def test_delete_manual_trade_removes_associated_violation(tmp_path):
+    """A wash-sale violation triggered by a manual buy should disappear when that buy is deleted."""
+    repo = _setup(tmp_path)
+    # Step 1: insert a loss sale (imported) so deleting the manual buy later removes the violation.
+    with repo.engine.begin() as conn:
+        conn.execute(text(
+            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
+        ))
+        # Loss sale on Jan 5 — sold for less than basis.
+        conn.execute(text(
+            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+            "quantity, proceeds, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+            "VALUES (1, 1, 'csv:loss', 'AAPL', '2026-01-05', 'Sell', 10, 800, 1000, 'broker_csv', 0, 0, 0)"
+        ))
+        # Original buy lot — far enough back (>30 days) to be outside the wash window.
+        conn.execute(text(
+            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+            "quantity, proceeds, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+            "VALUES (1, 1, 'csv:original', 'AAPL', '2025-12-01', 'Buy', 10, NULL, 1000, 'broker_csv', 0, 0, 0)"
+        ))
+
+    # Step 2: add a manual replacement buy WITHIN the wash window — triggers a violation.
+    saved = repo.create_manual_trade(
+        Trade(
+            account="Schwab/Tax",
+            date=date(2026, 1, 15),  # within 30 days of 2026-01-05 loss
+            ticker="AAPL",
+            action="Buy",
+            quantity=10,
+            cost_basis=900,
+            basis_source="user",
+            is_manual=True,
+        ),
+        etf_pairs={},
+    )
+    # Confirm a violation exists.
+    with repo.engine.begin() as conn:
+        n_viol = conn.execute(text("SELECT COUNT(*) FROM wash_sale_violations")).first()[0]
+    assert n_viol >= 1, "expected manual buy within wash window to trigger a violation"
+
+    # Step 3: delete the manual buy → violation should disappear after recompute.
+    repo.delete_manual_trade(saved.id, etf_pairs={})
+    with repo.engine.begin() as conn:
+        n_viol_after = conn.execute(text("SELECT COUNT(*) FROM wash_sale_violations")).first()[0]
+    assert n_viol_after == 0, f"expected violation removed after manual delete, found {n_viol_after}"
