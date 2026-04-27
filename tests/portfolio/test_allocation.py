@@ -90,3 +90,29 @@ def test_zero_total_yields_zero_pct_no_division_error():
     view = build_allocation(positions=rows, top_n=10)
     assert view.total_market_value == Decimal("0")
     assert view.slices == ()
+
+
+def test_allocation_includes_cash_slice_when_provided():
+    pos = _row("SPY", 750)
+    alloc = build_allocation(positions=[pos], top_n=10, cash=Decimal("250"))
+    cash_slices = [s for s in alloc.slices if s.is_cash]
+    assert len(cash_slices) == 1
+    assert cash_slices[0].symbol == "Cash"
+    assert cash_slices[0].market_value == Decimal("250")
+    # 250 / (750 + 250) = 25%
+    assert cash_slices[0].pct == Decimal("25.00")
+    # SPY is now 75% of total
+    spy_slice = next(s for s in alloc.slices if s.symbol == "SPY")
+    assert spy_slice.pct == Decimal("75.00")
+
+
+def test_allocation_omits_cash_slice_when_zero():
+    alloc = build_allocation(positions=[], top_n=10, cash=Decimal("0"))
+    assert all(not s.is_cash for s in alloc.slices)
+
+
+def test_allocation_omits_cash_slice_when_none():
+    pos = _row("SPY", 100)
+    alloc = build_allocation(positions=[pos], top_n=10)  # no cash kwarg
+    assert all(not s.is_cash for s in alloc.slices)
+    assert alloc.total_market_value == Decimal("100")  # unchanged behavior

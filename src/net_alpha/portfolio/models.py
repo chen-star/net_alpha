@@ -81,11 +81,12 @@ class MonthlyPnl:
 class AllocationSlice:
     """One ranked holding for the donut + leaderboard module."""
 
-    rank: int  # 1-based; 0 reserved for "rest" aggregate
-    symbol: str  # "OTHER" for the rest aggregate
+    rank: int  # 1-based; 0 reserved for "rest" or "cash" aggregate
+    symbol: str  # "OTHER" for the rest aggregate, "Cash" for the cash slice
     market_value: Decimal
-    pct: Decimal  # 0..100, of total market value
+    pct: Decimal  # 0..100, of total market value (or account value when cash present)
     is_rest: bool
+    is_cash: bool = False
 
 
 @dataclass(frozen=True)

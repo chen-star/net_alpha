@@ -369,7 +369,6 @@ def portfolio_body(
         period=(today.year, today.year + 1),
         account=None,
     )
-    allocation = build_allocation(positions=positions_for_alloc, top_n=10)
 
     # --- Cash flow ---
     cash_events = repo.list_cash_events(account_id=None)
@@ -397,6 +396,8 @@ def portfolio_body(
         trades=scoped_trades,
         account=None,
     )
+
+    allocation = build_allocation(positions=positions_for_alloc, top_n=10, cash=cash_slice)
     wash_rows = recent_loss_closes(
         repo=repo,
         today=today,

@@ -17,12 +17,21 @@ from decimal import Decimal
 from net_alpha.portfolio.models import AllocationSlice, AllocationView, PositionRow
 
 
-def build_allocation(*, positions: Iterable[PositionRow], top_n: int = 10) -> AllocationView:
+def build_allocation(
+    *,
+    positions: Iterable[PositionRow],
+    top_n: int = 10,
+    cash: Decimal | None = None,
+) -> AllocationView:
     valued = [p for p in positions if p.market_value is not None and p.market_value > 0]
     valued.sort(key=lambda p: p.market_value or Decimal("0"), reverse=True)
 
     total = sum((p.market_value for p in valued), start=Decimal("0"))
-    if total <= 0:
+
+    has_cash = cash is not None and cash > 0
+    grand_total = total + (cash if has_cash else Decimal("0"))
+
+    if total <= 0 and not has_cash:
         return AllocationView(
             total_market_value=Decimal("0"),
             symbol_count=0,
@@ -38,7 +47,7 @@ def build_allocation(*, positions: Iterable[PositionRow], top_n: int = 10) -> Al
 
     slices: list[AllocationSlice] = []
     for i, pos in enumerate(head, start=1):
-        pct = (pos.market_value / total * 100).quantize(Decimal("0.01"))
+        pct = (pos.market_value / grand_total * 100).quantize(Decimal("0.01"))
         slices.append(
             AllocationSlice(
                 rank=i,
@@ -51,7 +60,7 @@ def build_allocation(*, positions: Iterable[PositionRow], top_n: int = 10) -> Al
 
     if tail:
         rest_value = sum((p.market_value for p in tail), start=Decimal("0"))
-        rest_pct = (rest_value / total * 100).quantize(Decimal("0.01"))
+        rest_pct = (rest_value / grand_total * 100).quantize(Decimal("0.01"))
         slices.append(
             AllocationSlice(
                 rank=0,
@@ -62,12 +71,25 @@ def build_allocation(*, positions: Iterable[PositionRow], top_n: int = 10) -> Al
             )
         )
 
+    if has_cash:
+        cash_pct = (cash / grand_total * 100).quantize(Decimal("0.01"))
+        slices.append(
+            AllocationSlice(
+                rank=0,
+                symbol="Cash",
+                market_value=cash,
+                pct=cash_pct,
+                is_rest=False,
+                is_cash=True,
+            )
+        )
+
     def _share(n: int) -> Decimal:
         s = sum((p.market_value for p in valued[:n]), start=Decimal("0"))
-        return (s / total * 100).quantize(Decimal("0.01"))
+        return (s / grand_total * 100).quantize(Decimal("0.01"))
 
     return AllocationView(
-        total_market_value=total,
+        total_market_value=grand_total,
         symbol_count=len(valued),
         slices=tuple(slices),
         top1_pct=_share(1),
