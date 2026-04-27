@@ -118,6 +118,7 @@
   .num {
     @apply font-mono;
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "ss01";
     letter-spacing: -0.01em;
   }
 }

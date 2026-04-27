@@ -61,15 +61,3 @@ def test_equity_curve_fragment_no_data(tmp_path):
     assert "Equity curve" in r.text
 
 
-def test_wash_impact_fragment_zero(tmp_path):
-    client = _client(tmp_path)
-    r = client.get("/portfolio/wash-impact?period=ytd")
-    assert r.status_code == 200
-    assert "disallowed" in r.text
-
-
-def test_lot_aging_fragment_empty(tmp_path):
-    client = _client(tmp_path)
-    r = client.get("/portfolio/lot-aging")
-    assert r.status_code == 200
-    assert "No lots crossing" in r.text

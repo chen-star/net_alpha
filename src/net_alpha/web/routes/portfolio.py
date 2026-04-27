@@ -8,7 +8,6 @@ from fastapi.responses import HTMLResponse
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.portfolio.equity_curve import build_equity_curve
-from net_alpha.portfolio.lot_aging import top_lots_crossing_ltcg
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import compute_open_positions
 from net_alpha.portfolio.wash_watch import recent_loss_closes
@@ -239,45 +238,6 @@ def portfolio_equity_curve(
         request,
         "_portfolio_equity_curve.html",
         {"points": points, "year": year},
-    )
-
-
-@router.get("/portfolio/wash-impact", response_class=HTMLResponse)
-def portfolio_wash_impact(
-    request: Request,
-    period: str | None = None,
-    account: str | None = None,
-    repo: Repository = Depends(get_repository),
-) -> HTMLResponse:
-    today = date.today()
-    period_tuple, period_label = _parse_period(period, today.year)
-    impact = compute_wash_impact(
-        violations=repo.all_violations(),
-        period_label=period_label,
-        period=period_tuple,
-        account=account or None,
-    )
-    return request.app.state.templates.TemplateResponse(
-        request,
-        "_portfolio_wash_impact.html",
-        {"impact": impact},
-    )
-
-
-@router.get("/portfolio/lot-aging", response_class=HTMLResponse)
-def portfolio_lot_aging(
-    request: Request,
-    account: str | None = None,
-    repo: Repository = Depends(get_repository),
-) -> HTMLResponse:
-    lots = repo.all_lots()
-    if account:
-        lots = [lot for lot in lots if lot.account == account]
-    aging = top_lots_crossing_ltcg(lots=lots, horizon_days=90, top_n=5)
-    return request.app.state.templates.TemplateResponse(
-        request,
-        "_portfolio_lot_aging.html",
-        {"aging": aging},
     )
 
 

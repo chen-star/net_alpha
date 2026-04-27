@@ -9,6 +9,7 @@
     indigo:   "#5E5CE6",
     violet:   "#BF5AF2",
     info:     "#64D2FF",
+    warn:     "#FF9F0A",
     label2:   "rgba(235,235,245,0.6)",
     label3:   "rgba(235,235,245,0.35)",
     hairline: "rgba(255,255,255,0.08)",

@@ -63,8 +63,7 @@ def test_portfolio_page_full_render(tmp_path):
             "/portfolio/positions?period=ytd",
             "/portfolio/allocation",
             "/portfolio/equity-curve?period=ytd",
-            "/portfolio/wash-impact?period=ytd",
-            "/portfolio/lot-aging",
+            "/portfolio/wash-watch",
         ]:
             r = client.get(path)
             assert r.status_code == 200, f"{path} returned {r.status_code}"
