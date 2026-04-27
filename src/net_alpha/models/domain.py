@@ -106,6 +106,14 @@ class Trade(BaseModel):
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+class ImportResult(BaseModel):
+    """Result of parsing one broker CSV: trades + cash events + warnings."""
+
+    trades: list[Trade] = Field(default_factory=list)
+    cash_events: list[CashEvent] = Field(default_factory=list)
+    parse_warnings: list[str] = Field(default_factory=list)
+
+
 class Lot(BaseModel):
     """A buy lot with adjustable cost basis for wash sale tracking."""
 
