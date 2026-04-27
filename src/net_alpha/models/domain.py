@@ -28,6 +28,8 @@ class Trade(BaseModel):
     cost_basis: float | None = None
     basis_unknown: bool = False
     basis_source: str = "unknown"
+    is_manual: bool = False
+    transfer_basis_user_set: bool = False
     option_details: OptionDetails | None = None
     raw_row_hash: str | None = None
     schema_cache_id: str | None = None

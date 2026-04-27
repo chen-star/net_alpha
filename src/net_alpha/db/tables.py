@@ -45,7 +45,7 @@ class TradeRow(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("account_id", "natural_key", name="uq_trade_account_natkey"),)
 
     id: int | None = Field(default=None, primary_key=True)
-    import_id: int = Field(foreign_key="imports.id", index=True)
+    import_id: int | None = Field(default=None, foreign_key="imports.id", index=True)
     account_id: int = Field(foreign_key="accounts.id", index=True)
     natural_key: str = Field(index=True)
 
@@ -61,7 +61,9 @@ class TradeRow(SQLModel, table=True):
     option_expiry: str | None = None
     option_call_put: str | None = None
     basis_source: str = Field(default="unknown")
-    # values: "broker_csv" | "g_l" | "fifo" | "unknown"
+    # values: "broker_csv" | "g_l" | "fifo" | "unknown" | "user"
+    is_manual: bool = Field(default=False)
+    transfer_basis_user_set: bool = Field(default=False)
 
 
 class LotRow(SQLModel, table=True):

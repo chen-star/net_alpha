@@ -196,6 +196,8 @@ class Repository:
             cost_basis=row.cost_basis,
             basis_unknown=row.basis_unknown,
             basis_source=row.basis_source,
+            is_manual=row.is_manual,
+            transfer_basis_user_set=row.transfer_basis_user_set,
             option_details=opt,
         )
 
