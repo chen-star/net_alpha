@@ -38,6 +38,7 @@ class ImportRecordRow(SQLModel, table=True):
     # that omit the column don't fail; the migration also stamps a DB DEFAULT 0
     # so existing v4 rows read back as 0 not NULL.
     duplicate_trades: int | None = Field(default=0)
+    cash_event_count: int | None = Field(default=0)
 
 
 class TradeRow(SQLModel, table=True):
@@ -64,6 +65,7 @@ class TradeRow(SQLModel, table=True):
     # values: "broker_csv" | "g_l" | "fifo" | "unknown" | "user"
     is_manual: bool = Field(default=False)
     transfer_basis_user_set: bool = Field(default=False)
+    gross_cash_impact: float | None = Field(default=None)
 
 
 class LotRow(SQLModel, table=True):
@@ -169,3 +171,19 @@ class LotOverrideRow(SQLModel, table=True):
     edited_at: str  # ISO 8601 UTC timestamp
     split_id: int | None = Field(default=None, foreign_key="splits.id", index=True)
     # split_id is set when reason='split'; lets apply_split check idempotency.
+
+
+class CashEventRow(SQLModel, table=True):
+    __tablename__ = "cash_events"
+    __table_args__ = (UniqueConstraint("account_id", "natural_key", name="uq_cash_event_account_natkey"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    import_id: int = Field(foreign_key="imports.id", index=True)
+    account_id: int = Field(foreign_key="accounts.id", index=True)
+    natural_key: str = Field(index=True)
+
+    event_date: str = Field(index=True)  # YYYY-MM-DD as-is from broker
+    kind: str  # transfer_in | transfer_out | dividend | interest | fee | sweep_in | sweep_out
+    amount: float  # always positive; sign comes from `kind`
+    ticker: str | None = Field(default=None, index=True)
+    description: str = ""
