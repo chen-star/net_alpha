@@ -2,6 +2,153 @@
 
 
 
+## v0.17.0 (2026-04-27)
+
+### Chore
+
+* chore: post-review cleanup — drop dead routes, add static-asset tests, polish
+
+Following the cross-cutting code review, addresses five gaps:
+
+- Delete `_portfolio_wash_impact.html` + `_portfolio_lot_aging.html` and the
+  two now-unreachable route handlers `/portfolio/wash-impact` and
+  `/portfolio/lot-aging`. Wash impact info is in the KPI strip; lot-aging
+  detail lives on the ticker page. Drop the corresponding tests.
+- `static/charts.js`: expose `warn` (#FF9F0A) in the theme `colors` table.
+- `app.src.css`: add `font-feature-settings: &#34;tnum&#34;, &#34;ss01&#34;` on `.num`.
+- `tests/web/test_static.py`: add file-existence smoke tests for the
+  ApexCharts vendor JS+CSS and `charts.js`.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`42f7c54`](https://github.com/chen-star/net_alpha/commit/42f7c547b124e6232a3e1ea9bf5aa770f8724367))
+
+* chore: remove treemap module, template, tests, and TreemapTile model ([`df70598`](https://github.com/chen-star/net_alpha/commit/df70598d623516d0800bcea09e9c62bf0d568a61))
+
+### Documentation
+
+* docs: UI visual theme design spec + implementation plan ([`937eda8`](https://github.com/chen-star/net_alpha/commit/937eda842f0af6d23b80d5bbff332424333ce98a))
+
+* docs: update CLAUDE.md — treemap → allocation + add wash_watch in portfolio module list ([`8f0a69c`](https://github.com/chen-star/net_alpha/commit/8f0a69c0a2f0c994d63ca3d7f2346f16cd82f2b2))
+
+### Feature
+
+* feat(web): restyle sim + detail + ticker + error pages
+
+Apply Apple-dark design tokens across all remaining web pages:
+- sim.html: seg/seg-active action picker, surface inputs, panel form
+- _sim_buy_result / _sim_sell_result: panel cards, num cells, pos/warn labels
+- detail.html: panel totals bar with chip-confirm/probable/unclear, surface inputs;
+  adds {% set active_page = &#39;detail&#39; %}
+- _detail_table.html: panel+net-table, chip-* confidence, info/warn source badges,
+  hover:bg-surface-2 rows
+- ticker.html: panel KPI grid, net-table timeline; adds panel wrappers
+- _lots_table.html: net-table, text-label-2 empty state, bg-warn/5 wash-adj rows
+- _schwab_lot_detail.html: panel+net-table, text-neg wash-sale Yes, text-label-3 No
+- error.html: panel centered card, text-label-2 detail, bg-surface-2 traceback,
+  btn-ghost &#34;← Back&#34; link
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c83ac70`](https://github.com/chen-star/net_alpha/commit/c83ac707e17b93000942235bfa19ee914d9ab8e3))
+
+* feat(web): restyle imports + drop zone + modal + toast
+
+Apply Apple-dark design tokens to the full imports stack: panel/net-table
+wrappers, dashed drop zone with rgba border, surface-variant modal,
+pos/warn colours in detection cards, label-uc labels, and bg-pos toast.
+Adds {% set active_page = &#39;imports&#39; %} for topbar highlight.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`93ac3f5`](https://github.com/chen-star/net_alpha/commit/93ac3f56634d84092824588d2e7a6c1b5a63ad19))
+
+* feat(web): restyle calendar pages — Apple-system colors for ribbons + dots
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5717400`](https://github.com/chen-star/net_alpha/commit/571740003c17ce74151c8edd783e8c3283c2a6de))
+
+* feat(web): restyle positions table, toolbar, empty state under new tokens
+
+Replaces all slate/white/emerald Tailwind classes in the three portfolio
+fragments with the new design-token components (net-table, panel, seg,
+seg-active, label-uc, btn, text-pos/neg, text-label-*, bg-surface-*).
+Adds ticker-initial icon block to the Symbol cell and hairline borders
+on select and pagination controls via CSS variable.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7502a6d`](https://github.com/chen-star/net_alpha/commit/7502a6d3dcf601a9eb4afe5b88b1ae6bb310d896))
+
+* feat(web): equity curve via ApexCharts area chart with violet &#39;+ unrealized&#39; marker ([`632df82`](https://github.com/chen-star/net_alpha/commit/632df82ddffce85e92e5bfc8f3aaf39112f8b1a5))
+
+* feat(web): shared ApexCharts dark theme + merge helper at /static/charts.js ([`b69d2ad`](https://github.com/chen-star/net_alpha/commit/b69d2adb62fc626382d573b688bdeca91b7a1679))
+
+* feat(web): /portfolio/wash-watch fragment route
+
+Wire recent_loss_closes() into a GET handler that renders the
+_portfolio_wash_watch.html partial; supports ?account= and ?window_days=
+query params.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`220926a`](https://github.com/chen-star/net_alpha/commit/220926ada0a45246b45f1376ef025eecba2153df))
+
+* feat(web): wash-watch partial — countdown rows w/ red→amber→green safe-bar
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4218b2c`](https://github.com/chen-star/net_alpha/commit/4218b2ccfe4b66c6ca411d5c195d602d12b1fb93))
+
+* feat(portfolio): recent_loss_closes — wash-sale watch aggregation
+
+Add LossCloseRow model and recent_loss_closes() pure function that
+aggregates sell trades with negative realized P/L in the last N days,
+collapsed per symbol (most recent close, summed loss), sorted by
+close_date desc.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5e7d58c`](https://github.com/chen-star/net_alpha/commit/5e7d58c0157a5d788f00cf3b6e348b4ded905c2b))
+
+* feat(web): portfolio.html — equity+allocation row, wash-watch slot, drop treemap ([`e511171`](https://github.com/chen-star/net_alpha/commit/e5111715583cbe13e136dd044b4858eec0c894d8))
+
+* feat(web): replace /portfolio/treemap route with /portfolio/allocation ([`83d2717`](https://github.com/chen-star/net_alpha/commit/83d2717f3d2e57c0a61919a40a8b4f3c7384f3be))
+
+* feat(web): allocation partial — donut + concentration stats + ranked chips ([`e8ee4ba`](https://github.com/chen-star/net_alpha/commit/e8ee4ba6eb54c89d734e217e9df63a05a541f166))
+
+* feat(portfolio): build_allocation — donut/leaderboard view + concentration stats
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9feac9d`](https://github.com/chen-star/net_alpha/commit/9feac9d0f267692808cb1ad3c07d7211d18e97c7))
+
+* feat(web): combined hero KPI cards (Realized/Unrealized) + Open$/Wash mini
+
+Collapse 6-card KPI partial into 4-card grid-cols-12 layout: Realized hero (4 cols, kpi-hero halo) with YTD+Lifetime side-by-side, Unrealized hero (4 cols), Open position $ mini (2 cols), Wash impact mini (2 cols). Route now calls compute_wash_impact and passes wash_impact_total + wash_violations into template context.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a90b19f`](https://github.com/chen-star/net_alpha/commit/a90b19f4375c70d58644c07959210897bee6996d))
+
+* feat(web): restyle base.html — vibrancy topbar, Inter+JBM, ApexCharts include
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`414984d`](https://github.com/chen-star/net_alpha/commit/414984dd94c1cdd036dc0dd3d6c444dd8ea06ef6))
+
+* feat(web): @font-face Inter+JBM, type scale, full component library
+
+Add 6 @font-face declarations for Inter (400/500/600/700) and JetBrains
+Mono (400/500), expand @layer base with dark color-scheme, Inter font
+features/antialiasing, h1-h3 type scale, and .num tabular-nums rule.
+Replace minimal @layer components with full design-system library:
+.panel, .panel-head, .label-uc, .kpi, .kpi-hero, .seg, .pill, .topbar,
+.nav-link, .chip-confirm/probable/unclear, .net-table, .brand-mark, plus
+back-compat aliases; var(--color-*) used directly where @apply text-*
+tokens conflict with Tailwind v4 reserved names.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9c93d2c`](https://github.com/chen-star/net_alpha/commit/9c93d2cfa53c603754fe81cbdf4b4e02e897f0a0))
+
+* feat(web): new Apple-dark color tokens, font stack, radii in tailwind config
+
+Replaces the old small v3-style palette with the full Apple-dark design
+system (canvas, hairline, label-tier text, P/L semantics, rank slots, brand
+cyber). Updates app.src.css from Tailwind v3 directives to v4 @import/@theme
+syntax required by pytailwindcss 0.1.4 (bundles Tailwind v4). Back-compat
+aliases (confirmed, probable, unclear, primary, secondary, accent, ink) keep
+existing templates rendering until they are restyled.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`51d6aa3`](https://github.com/chen-star/net_alpha/commit/51d6aa3d56ea9aed73149f40f9766bd125e34593))
+
+* feat(web): vendor ApexCharts 3.51 (no runtime npm)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7c73a80`](https://github.com/chen-star/net_alpha/commit/7c73a80acff31729d8f9b6d580eb0c762c007c09))
+
+* feat(web): vendor Inter and JetBrains Mono woff2 fonts
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0b98082`](https://github.com/chen-star/net_alpha/commit/0b980820b753017200db5c5ab352c7193a5d5916))
+
+
 ## v0.16.1 (2026-04-26)
 
 ### Fix
