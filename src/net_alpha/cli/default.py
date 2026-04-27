@@ -61,10 +61,11 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
 
         if isinstance(parser, SchwabParser):
             try:
-                trades = parser.parse(rows, account_display=account.display())
+                import_result = parser.parse_full(rows, account_display=account.display())
             except ValueError as e:
                 typer.echo(f"Error: {e}", err=True)
                 return 3
+            trades = import_result.trades
             existing = repo.existing_natural_keys(account.id)
             new = filter_new(trades, existing)
             rec = ImportRecord(
@@ -74,7 +75,7 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
                 imported_at=datetime.now(),
                 trade_count=len(new),
             )
-            result = repo.add_import(account, rec, new)
+            result = repo.add_import(account, rec, new, cash_events=import_result.cash_events)
             dup_count = len(trades) - len(new)
             new_trade_total += result.new_trades
             dup_trade_total += dup_count
@@ -84,6 +85,7 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
                     new_symbols.add(t.ticker)
             typer.echo(
                 f"Detected: {parser.name} — imported {result.new_trades} new trades, "
+                f"{result.new_cash_events} cash events, "
                 f"skipped {dup_count} duplicates ({Path(csv_path).name})"
             )
 

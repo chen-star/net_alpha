@@ -170,7 +170,8 @@ async def upload(
             continue
         sha = _sha256_bytes(raw)
         if isinstance(parser, SchwabParser):
-            trades = parser.parse(rows, account_display=acct.display())
+            import_result = parser.parse_full(rows, account_display=acct.display())
+            trades = import_result.trades
             existing = repo.existing_natural_keys(acct.id)
             new_trades = filter_new(trades, existing)
             pre_filtered_dups = len(trades) - len(new_trades)
@@ -178,7 +179,7 @@ async def upload(
             # filters everything still records the file's date range and counts
             # — the imports page can then show "skipped 7 dupes · 04/14 → 11/14"
             # rather than empty fields.
-            agg = compute_import_aggregates(trades=trades, parse_warnings=[])
+            agg = compute_import_aggregates(trades=trades, parse_warnings=import_result.parse_warnings)
             record = ImportRecord(
                 account_id=acct.id,
                 csv_filename=filename,
@@ -193,7 +194,7 @@ async def upload(
                 parse_warnings=agg.parse_warnings,
                 duplicate_trades=pre_filtered_dups,
             )
-            result = repo.add_import(acct, record, new_trades)
+            result = repo.add_import(acct, record, new_trades, cash_events=import_result.cash_events)
             new_trade_count += result.new_trades
             dup_trade_count += pre_filtered_dups
             for t in new_trades:

@@ -94,6 +94,7 @@ class Repository:
                         option_expiry_count=ir.option_expiry_count,
                         parse_warnings=json.loads(ir.parse_warnings_json) if ir.parse_warnings_json else [],
                         duplicate_trades=ir.duplicate_trades or 0,
+                        cash_event_count=ir.cash_event_count or 0,
                     )
                 )
             return out
@@ -117,7 +118,13 @@ class Repository:
             rows = s.exec(select(TradeRow.natural_key).where(TradeRow.account_id == account_id)).all()
             return set(rows)
 
-    def add_import(self, account: Account, record: ImportRecord, trades: list[Trade]) -> AddImportResult:
+    def add_import(
+        self,
+        account: Account,
+        record: ImportRecord,
+        trades: list[Trade],
+        cash_events: list[CashEvent] | None = None,
+    ) -> AddImportResult:
         """Insert trades for a new ImportRecord. Caller should pre-filter dups
         with existing_natural_keys; we still rely on the UNIQUE constraint as
         the safety net for anything the caller missed.
@@ -176,10 +183,36 @@ class Repository:
             # number matches what the user actually skipped.
             ir.duplicate_trades = (record.duplicate_trades or 0) + dup_count
             s.commit()
+
+            # Cash events use the same import_id; deduplicate via UNIQUE.
+            new_cash = 0
+            if cash_events:
+                for ev in cash_events:
+                    er = CashEventRow(
+                        import_id=ir.id,
+                        account_id=account.id,
+                        natural_key=ev.compute_natural_key(),
+                        event_date=ev.event_date.isoformat(),
+                        kind=ev.kind,
+                        amount=ev.amount,
+                        ticker=ev.ticker,
+                        description=ev.description or "",
+                    )
+                    try:
+                        s.add(er)
+                        s.flush()
+                        new_cash += 1
+                    except Exception:
+                        s.rollback()
+                        s.add(ir)  # re-attach after rollback
+                ir.cash_event_count = (ir.cash_event_count or 0) + new_cash
+                s.commit()
+
             return AddImportResult(
                 import_id=ir.id,
                 new_trades=new_count,
                 duplicate_trades=ir.duplicate_trades,
+                new_cash_events=new_cash,
             )
 
     def add_cash_events(self, events: list[CashEvent], *, import_id: int) -> int:

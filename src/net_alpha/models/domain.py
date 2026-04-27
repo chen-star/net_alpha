@@ -207,6 +207,7 @@ class AddImportResult(BaseModel):
     import_id: int
     new_trades: int
     duplicate_trades: int
+    new_cash_events: int = 0
 
 
 class RemoveImportResult(BaseModel):
@@ -231,6 +232,7 @@ class ImportSummary(BaseModel):
     option_expiry_count: int | None = None
     parse_warnings: list[str] = Field(default_factory=list)
     duplicate_trades: int = 0
+    cash_event_count: int = 0
 
 
 class LotConsumption(BaseModel):
