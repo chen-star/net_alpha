@@ -38,5 +38,6 @@ def holdings_page(
             "selected_period": selected_period,
             "selected_account": account or "",
             "group_options": "merge",
+            "toolbar_action": "/holdings",
         },
     )

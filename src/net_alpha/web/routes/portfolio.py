@@ -82,6 +82,7 @@ def portfolio_page(
             "selected_period": selected_period,
             "selected_account": account or "",
             "group_options": group_options,
+            "toolbar_action": "/",
         },
     )
 
