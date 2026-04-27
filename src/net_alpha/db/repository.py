@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 
 from net_alpha.db.tables import (
     AccountRow,
+    CashEventRow,
     ImportRecordRow,
     LotOverrideRow,
     LotRow,
@@ -23,6 +24,7 @@ from net_alpha.db.tables import (
 from net_alpha.models.domain import (
     Account,
     AddImportResult,
+    CashEvent,
     ImportRecord,
     ImportSummary,
     Lot,
@@ -178,6 +180,48 @@ class Repository:
                 new_trades=new_count,
                 duplicate_trades=ir.duplicate_trades,
             )
+
+    def add_cash_events(self, events: list[CashEvent], *, import_id: int) -> int:
+        """Insert cash events; dedupe on (account_id, natural_key). Returns count of NEW rows."""
+        if not events:
+            return 0
+        with Session(self.engine) as s:
+            # Group inputs by account_id once so we can pre-fetch existing keys.
+            inserted = 0
+            account_id_cache: dict[str, int] = {}
+
+            def resolve_aid(display: str) -> int:
+                if display in account_id_cache:
+                    return account_id_cache[display]
+                broker, label = display.split("/", 1)
+                row = s.exec(
+                    select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)
+                ).first()
+                if row is None:
+                    raise LookupError(f"Account {display!r} not found")
+                account_id_cache[display] = row.id
+                return row.id
+
+            for ev in events:
+                aid = resolve_aid(ev.account)
+                row = CashEventRow(
+                    import_id=import_id,
+                    account_id=aid,
+                    natural_key=ev.compute_natural_key(),
+                    event_date=ev.event_date.isoformat(),
+                    kind=ev.kind,
+                    amount=ev.amount,
+                    ticker=ev.ticker,
+                    description=ev.description,
+                )
+                try:
+                    s.add(row)
+                    s.flush()
+                    inserted += 1
+                except Exception:
+                    s.rollback()
+            s.commit()
+            return inserted
 
     # --- Reads ---
 
