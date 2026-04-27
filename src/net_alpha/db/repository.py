@@ -733,6 +733,20 @@ class Repository:
         recompute_all_violations(self, etf_pairs)
         return saved
 
+    def delete_manual_trade(self, trade_id: str, etf_pairs: dict[str, list[str]]) -> None:
+        """Delete a manual trade. Verifies is_manual=True."""
+        from net_alpha.engine.recompute import recompute_all_violations
+
+        with Session(self.engine) as s:
+            row = s.exec(select(TradeRow).where(TradeRow.id == int(trade_id))).first()
+            if row is None:
+                raise LookupError(f"Trade id {trade_id} not found")
+            if not row.is_manual:
+                raise ValueError("delete_manual_trade requires is_manual=True row")
+            s.delete(row)
+            s.commit()
+        recompute_all_violations(self, etf_pairs)
+
     def update_imported_transfer(
         self,
         trade_id: str,
