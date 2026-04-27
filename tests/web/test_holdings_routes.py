@@ -75,3 +75,24 @@ def test_holdings_symbol_filter_with_selection_in_url(tmp_path):
     # The summary names the selected symbols.
     assert "AAPL" in html
     assert "MSFT" in html
+
+
+def test_holdings_table_targets_holdings_positions_wrapper(tmp_path):
+    """Show/Pagesize/Pagination buttons must swap into #holdings-positions, not the legacy #portfolio-positions."""
+    client = _client(tmp_path)
+    r = client.get("/portfolio/positions?period=ytd")
+    assert r.status_code == 200
+    html = r.text
+    # All hx-target attributes in the fragment should target #holdings-positions.
+    assert 'hx-target="#holdings-positions"' in html
+    assert 'hx-target="#portfolio-positions"' not in html
+
+
+def test_holdings_status_hint_uses_ascii_quotes(tmp_path):
+    """The status-hint span must not have Unicode smart quotes around its class attribute."""
+    client = _client(tmp_path)
+    r = client.get("/portfolio/positions?period=ytd")
+    assert r.status_code == 200
+    # Must not appear anywhere in the rendered HTML — those break the class parser.
+    assert "“" not in r.text
+    assert "”" not in r.text
