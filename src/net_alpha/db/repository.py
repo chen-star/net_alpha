@@ -118,6 +118,11 @@ class Repository:
             rows = s.exec(select(TradeRow.natural_key).where(TradeRow.account_id == account_id)).all()
             return set(rows)
 
+    def existing_cash_event_natural_keys(self, account_id: int) -> set[str]:
+        with Session(self.engine) as s:
+            rows = s.exec(select(CashEventRow.natural_key).where(CashEventRow.account_id == account_id)).all()
+            return set(rows)
+
     def add_import(
         self,
         account: Account,
@@ -176,27 +181,38 @@ class Repository:
                     s.add(ir)
                     dup_count += 1
 
-            # Cash events use the same import_id; deduplicate via UNIQUE.
+            # Cash events use the same import_id. Pre-filter against existing
+            # natural keys (and within-batch dups) BEFORE inserting, so we never
+            # rely on the UNIQUE-constraint rollback path. A rollback inside this
+            # session would unwind the trade rows flushed earlier in the same
+            # session — silently dropping just-imported trades. Pre-filtering
+            # avoids that risk entirely.
             new_cash = 0
             if cash_events:
+                # Pre-fetch existing natural keys WITHIN the same session to
+                # avoid a nested Session that would expire ir.
+                existing_cash_keys = set(
+                    s.exec(select(CashEventRow.natural_key).where(CashEventRow.account_id == account.id)).all()
+                )
+                seen_in_batch: set[str] = set()
                 for ev in cash_events:
+                    nk = ev.compute_natural_key()
+                    if nk in existing_cash_keys or nk in seen_in_batch:
+                        continue
+                    seen_in_batch.add(nk)
                     er = CashEventRow(
                         import_id=ir.id,
                         account_id=account.id,
-                        natural_key=ev.compute_natural_key(),
+                        natural_key=nk,
                         event_date=ev.event_date.isoformat(),
                         kind=ev.kind,
                         amount=ev.amount,
                         ticker=ev.ticker,
                         description=ev.description or "",
                     )
-                    try:
-                        s.add(er)
-                        s.flush()
-                        new_cash += 1
-                    except Exception:
-                        s.rollback()
-                        s.add(ir)  # re-attach after rollback
+                    s.add(er)
+                    s.flush()
+                    new_cash += 1
 
             # Update import record with final counts and commit everything atomically.
             ir.trade_count = new_count

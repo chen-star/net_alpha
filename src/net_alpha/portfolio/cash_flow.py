@@ -22,7 +22,14 @@ _CONTRIB_OUTFLOW = {"transfer_out"}
 
 
 def _trade_cash_delta(t: Trade) -> Decimal:
-    """Signed cash impact of a trade. Positive = cash in, negative = cash out."""
+    """Signed cash impact of a trade. Positive = cash in, negative = cash out.
+
+    Share-quantity-only transfers (Schwab Security Transfer / Journaled Shares)
+    move shares, not Schwab1 cash, so they contribute zero. The legacy fallback
+    below would otherwise fabricate a cash debit/credit from cost_basis/proceeds.
+    """
+    if t.basis_source in ("transfer_in", "transfer_out"):
+        return Decimal("0")
     if t.gross_cash_impact is not None:
         return Decimal(str(t.gross_cash_impact))
     # Legacy fallback for trades imported before gross_cash_impact existed.

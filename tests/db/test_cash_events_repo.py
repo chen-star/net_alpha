@@ -106,3 +106,49 @@ def test_remove_import_cascade_deletes_cash_events():
     assert len(repo.list_cash_events()) == 1
     repo.remove_import(import_id)
     assert len(repo.list_cash_events()) == 0
+
+
+def test_add_import_cash_event_collision_does_not_wipe_trades():
+    """Critical regression: a cash-event natural-key collision must NOT cause
+    an in-session rollback that drops the trade rows just inserted.
+    """
+    from net_alpha.models.domain import Trade
+
+    repo, account, _import_id = _setup()
+    # Pre-existing dividend so the natural key already exists.
+    pre_existing = [_ev(date(2026, 3, 31), "dividend", 4.47, description="SQQQ DIV")]
+    repo.add_cash_events(pre_existing, import_id=_import_id)
+
+    # Now run add_import with new trades AND a cash event whose key collides.
+    new_trade = Trade(
+        id="t",
+        account="Schwab/short_term",
+        date=date(2026, 4, 1),
+        ticker="ABC",
+        action="Buy",
+        quantity=10.0,
+        proceeds=None,
+        cost_basis=100.0,
+        option_details=None,
+    )
+    rec = ImportRecord(
+        id=None,
+        account_id=account.id,
+        csv_filename="x.csv",
+        csv_sha256="zzz",
+        imported_at=datetime(2026, 4, 26, 13, 0, 0),
+        trade_count=0,
+    )
+    result = repo.add_import(
+        account,
+        rec,
+        trades=[new_trade],
+        cash_events=pre_existing,  # natural-key already exists
+    )
+    # The trade MUST be persisted, regardless of cash-event collision.
+    assert result.new_trades == 1
+    # Cash event was a dup → 0 new
+    assert result.new_cash_events == 0
+    # And the trade is actually in the DB.
+    all_trades = repo.all_trades()
+    assert any(t.ticker == "ABC" and t.action == "Buy" for t in all_trades)

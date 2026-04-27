@@ -166,3 +166,43 @@ def test_cash_allocation_slice_returns_current_balance():
     trades = [_trade(dt.date(2026, 3, 5), "Buy", -25.0)]
     sl = cash_allocation_slice(events=events, trades=trades, account=None)
     assert sl == Decimal("75")
+
+
+# Regression: share-quantity transfers move shares, not cash. They must
+# contribute zero to the cash balance, NOT a phantom debit/credit derived from
+# cost_basis/proceeds.
+def test_security_transfer_in_contributes_zero_cash_delta():
+    transfer_trade = Trade(
+        id="t",
+        account="Schwab/x",
+        date=dt.date(2026, 1, 5),
+        ticker="ABC",
+        action="Buy",
+        quantity=100.0,
+        proceeds=None,
+        cost_basis=5000.0,  # would otherwise become a -5000 cash debit
+        gross_cash_impact=None,
+        basis_source="transfer_in",
+        option_details=None,
+    )
+    pts = build_cash_balance_series(events=[], trades=[transfer_trade], account=None, period=None)
+    # No cash events and only a share-quantity transfer → empty/zero series.
+    assert pts == [] or pts[-1].cash_balance == Decimal("0")
+
+
+def test_security_transfer_out_contributes_zero_cash_delta():
+    transfer_trade = Trade(
+        id="t",
+        account="Schwab/x",
+        date=dt.date(2026, 1, 5),
+        ticker="ABC",
+        action="Sell",
+        quantity=100.0,
+        proceeds=5000.0,  # would otherwise become a +5000 cash credit
+        cost_basis=None,
+        gross_cash_impact=None,
+        basis_source="transfer_out",
+        option_details=None,
+    )
+    pts = build_cash_balance_series(events=[], trades=[transfer_trade], account=None, period=None)
+    assert pts == [] or pts[-1].cash_balance == Decimal("0")

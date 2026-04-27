@@ -207,3 +207,35 @@ def test_sell_to_open_and_buy_to_close_emit_no_warnings_no_cash_events():
     res = _parse(rows)
     assert res.cash_events == []
     assert res.parse_warnings == []
+
+
+def test_reinvest_dividend_emits_dividend():
+    rows = [
+        _row(
+            Date="03/31/2026",
+            Action="Reinvest Dividend",
+            Symbol="VTI",
+            Description="REINVEST DIV",
+            Amount="$12.34",
+        )
+    ]
+    res = _parse(rows)
+    assert len(res.cash_events) == 1
+    assert res.cash_events[0].kind == "dividend"
+    assert res.cash_events[0].amount == 12.34
+    assert res.parse_warnings == []
+
+
+def test_long_term_cap_gain_emits_dividend():
+    rows = [
+        _row(
+            Date="12/15/2026",
+            Action="Long Term Cap Gain",
+            Symbol="VTI",
+            Description="LT CAP GAIN",
+            Amount="$45.67",
+        )
+    ]
+    res = _parse(rows)
+    assert res.cash_events[0].kind == "dividend"
+    assert res.parse_warnings == []
