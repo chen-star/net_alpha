@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from datetime import date
+from uuid import uuid4
 
 from sqlalchemy import func
 from sqlalchemy.engine import Engine
@@ -647,6 +648,55 @@ class Repository:
             row.basis_source = basis_source
             s.add(row)
             s.commit()
+
+    def _resolve_account(self, s: Session, display: str) -> "AccountRow":
+        if "/" in display:
+            broker, label = display.split("/", 1)
+        else:
+            broker, label = "Manual", display
+        row = s.exec(
+            select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)
+        ).first()
+        if row is None:
+            raise LookupError(f"Account {display!r} not found — create it via /imports first")
+        return row
+
+    def create_manual_trade(self, trade: Trade, etf_pairs: dict[str, list[str]]) -> Trade:
+        """Insert a user-entered trade.
+
+        import_id is NULL; natural_key uses the 'manual:' namespace so it
+        never collides with a CSV-derived key. Triggers a full wash-sale
+        recompute. Returns the persisted Trade with its database id populated.
+        """
+        from net_alpha.engine.recompute import recompute_all_violations
+
+        with Session(self.engine) as s:
+            account = self._resolve_account(s, trade.account)
+            nk = f"manual:{uuid4().hex}"
+            tr = TradeRow(
+                import_id=None,
+                account_id=account.id,
+                natural_key=nk,
+                ticker=trade.ticker,
+                trade_date=trade.date.isoformat(),
+                action=trade.action,
+                quantity=trade.quantity,
+                proceeds=trade.proceeds,
+                cost_basis=trade.cost_basis,
+                basis_unknown=trade.basis_unknown,
+                basis_source=trade.basis_source,
+                option_strike=(trade.option_details.strike if trade.option_details else None),
+                option_expiry=(trade.option_details.expiry.isoformat() if trade.option_details else None),
+                option_call_put=(trade.option_details.call_put if trade.option_details else None),
+                is_manual=True,
+                transfer_basis_user_set=False,
+            )
+            s.add(tr)
+            s.commit()
+            s.refresh(tr)
+            saved = self._row_to_trade(tr, self._account_display_for_id(s, tr.account_id))
+        recompute_all_violations(self, etf_pairs)
+        return saved
 
 
 # ---------------------------------------------------------------------------
