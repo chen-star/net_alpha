@@ -1,36 +1,28 @@
 {# Common HTMX query string for swapping pages/toggle. #}
-{% set qs %}period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}{% endset %}
-{% set qs_full %}{{ qs }}&show={{ show }}&page_size={{ page_size }}&q={{ search_q|urlencode }}{% endset %}
+{% set sym_qs %}{{ selected_symbols|join(',') }}{% endset %}
+{% set qs %}period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}&symbols={{ sym_qs|urlencode }}{% endset %}
+{% set qs_full %}{{ qs }}&show={{ show }}&page_size={{ page_size }}{% endset %}
 <div class="flex items-center justify-between flex-wrap gap-2 mb-2 text-sm">
   <div class="flex items-center gap-2 flex-wrap">
     <span class="label-uc">Show:</span>
     <div class="seg">
       <button type="button"
-              hx-get="/portfolio/positions?{{ qs }}&show=open&page=1&page_size={{ page_size }}&q={{ search_q|urlencode }}"
+              hx-get="/portfolio/positions?{{ qs }}&show=open&page=1&page_size={{ page_size }}"
               hx-target="#portfolio-positions" hx-swap="innerHTML"
               class="{% if show == 'open' %}seg-active{% endif %}"
               title="Symbols with open quantity right now.">Open</button>
       <button type="button"
-              hx-get="/portfolio/positions?{{ qs }}&show=all&page=1&page_size={{ page_size }}&q={{ search_q|urlencode }}"
+              hx-get="/portfolio/positions?{{ qs }}&show=all&page=1&page_size={{ page_size }}"
               hx-target="#portfolio-positions" hx-swap="innerHTML"
               class="{% if show == 'all' %}seg-active{% endif %}"
               title="Open positions plus symbols you've fully closed in the selected period (showing realized P/L only).">All</button>
     </div>
 
-    <input type="search"
-           name="q"
-           value="{{ search_q }}"
-           placeholder="Filter symbol…"
-           autocomplete="off"
-           hx-get="/portfolio/positions?{{ qs }}&show={{ show }}&page=1&page_size={{ page_size }}"
-           hx-trigger="input changed delay:200ms, search"
-           hx-target="#portfolio-positions" hx-swap="innerHTML"
-           class="ml-1 px-2 py-1 text-[12px] rounded-md w-[140px]"
-           style="background: var(--color-surface); color: var(--color-text); border: 0.5px solid var(--color-hairline);">
+    <span id="symbol-filter-slot"></span>
 
-    <span class="text-[11px] text-label-2 ml-1">
+    <span class=”text-[11px] text-label-2 ml-1”>
       {{ total_rows }} {% if show == 'all' %}total{% else %}open{% endif %}
-      {% if search_q %}· filter “{{ search_q }}”{% endif %}
+      {% if selected_symbols %}· {{ selected_symbols|length }} symbol{% if selected_symbols|length != 1 %}s{% endif %} filtered{% endif %}
       · account: {% if selected_account %}{{ selected_account }}{% else %}all{% endif %}
     </span>
   </div>
@@ -39,7 +31,7 @@
     <label class="flex items-center gap-1 text-[11px] text-label-2">
       <span>Per page:</span>
       <select name="page_size"
-              hx-get="/portfolio/positions?{{ qs }}&show={{ show }}&page=1&q={{ search_q|urlencode }}"
+              hx-get="/portfolio/positions?{{ qs }}&show={{ show }}&page=1"
               hx-trigger="change"
               hx-target="#portfolio-positions" hx-swap="innerHTML"
               hx-include="this"
@@ -75,7 +67,7 @@
 
 {% if not rows %}
   <div class="panel text-label-2 text-[13px]">
-    {% if search_q %}No symbols match “{{ search_q }}”.
+    {% if selected_symbols %}No symbols match the selected filter.
     {% elif show == 'all' %}No positions in scope.
     {% else %}No open positions.
     {% endif %}

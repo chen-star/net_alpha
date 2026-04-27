@@ -142,7 +142,7 @@ def portfolio_positions(
     show: str = "open",  # "open" | "all"
     page: int = 1,
     page_size: int = PAGE_SIZE,
-    q: str | None = None,
+    symbols: str | None = None,
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
@@ -163,10 +163,11 @@ def portfolio_positions(
         include_closed=include_closed,
         gl_closures=gl_closures,
     )
-    if q:
-        needle = q.strip().upper()
-        if needle:
-            rows = [r for r in rows if needle in r.symbol.upper()]
+    selected_symbols: set[str] = set()
+    if symbols:
+        selected_symbols = {s.strip().upper() for s in symbols.split(",") if s.strip()}
+    if selected_symbols:
+        rows = [r for r in rows if r.symbol.upper() in selected_symbols]
     if page_size not in PAGE_SIZE_OPTIONS:
         page_size = PAGE_SIZE
     total_rows = len(rows)
@@ -186,7 +187,8 @@ def portfolio_positions(
             "total_rows": total_rows,
             "page_size": page_size,
             "page_size_options": PAGE_SIZE_OPTIONS,
-            "search_q": q or "",
+            "selected_symbols": sorted(selected_symbols),
+            "all_in_scope_symbols": sorted({r.symbol for r in rows} | selected_symbols),
             "selected_period": period or "ytd",
             "selected_account": account or "",
             "group_options": group_options,

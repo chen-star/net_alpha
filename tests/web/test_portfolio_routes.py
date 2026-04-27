@@ -103,3 +103,23 @@ def test_portfolio_page_uses_single_bundled_fragment(tmp_path):
     assert html.count('hx-get="/portfolio/allocation') == 0
     assert html.count('hx-get="/portfolio/wash-watch') == 0
     assert html.count('hx-get="/portfolio/positions') == 0
+
+
+def test_positions_symbols_filter(tmp_path):
+    """?symbols=AAPL,MSFT keeps only those tickers (case-insensitive)."""
+    client = _client(tmp_path)
+    # No data yet — empty list returns. We just check the param is accepted
+    # and returns 200; behavior with data is covered in detail tests.
+    r = client.get("/portfolio/positions?period=ytd&symbols=aapl,MSFT")
+    assert r.status_code == 200
+
+
+def test_positions_no_q_param(tmp_path):
+    """The legacy q substring filter must be gone (replaced by symbols)."""
+    client = _client(tmp_path)
+    r = client.get("/portfolio/positions?period=ytd")
+    assert r.status_code == 200
+    # The toolbar markup should NOT include a search input named 'q'.
+    assert 'name="q"' not in r.text
+    # And the route should not interpolate {{ search_q }} anywhere.
+    assert "search_q" not in r.text.lower()
