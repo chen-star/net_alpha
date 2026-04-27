@@ -91,3 +91,14 @@ def test_list_cash_events_filters_by_date_range():
     )
     in_2026 = repo.list_cash_events(since=date(2026, 1, 1), until=date(2026, 12, 31))
     assert {e.amount for e in in_2026} == {2.0, 3.0}
+
+
+def test_remove_import_cascade_deletes_cash_events():
+    repo, _account, import_id = _setup()
+    repo.add_cash_events(
+        [_ev(date(2026, 3, 31), "dividend", 4.47, description="SQQQ DIV")],
+        import_id=import_id,
+    )
+    assert len(repo.list_cash_events()) == 1
+    repo.remove_import(import_id)
+    assert len(repo.list_cash_events()) == 0
