@@ -8,6 +8,7 @@
         <th>Original basis</th>
         <th>Adjusted basis</th>
         <th>&#916; (wash adj)</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -22,10 +23,26 @@
           <td class="px-2 py-1 num font-mono {% if delta > 0 %}text-accent{% endif %}">
             {% if delta > 0 %}+${{ "%.2f"|format(delta) }}{% else %}-{% endif %}
           </td>
+          <td class="px-2 py-1" x-data="{ editing: false }">
+            <button type="button" x-show="!editing" @click="editing = true"
+                    class="btn-ghost text-[11px]">Edit</button>
+            <form x-show="editing"
+                  method="post" action="/lots/{{ lot.id }}/edit"
+                  hx-post="/lots/{{ lot.id }}/edit"
+                  hx-target="body" hx-swap="none"
+                  @htmx:after-request="if (event.detail.successful) window.location.reload()">
+              <input type="number" name="quantity" step="0.0001" value="{{ lot.quantity }}"
+                     class="bg-surface text-text rounded-md px-1 py-[1px] text-[11px] w-20"/>
+              <input type="number" name="adjusted_basis" step="0.01" value="{{ lot.adjusted_basis }}"
+                     class="bg-surface text-text rounded-md px-1 py-[1px] text-[11px] w-24"/>
+              <button type="submit" class="btn-ghost text-[11px]">Save</button>
+              <button type="button" @click="editing = false" class="btn-ghost text-[11px]">Cancel</button>
+            </form>
+          </td>
         </tr>
       {% endfor %}
       {% if not lots %}
-        <tr><td colspan="6" class="px-2 py-4 text-center text-label-2">No open lots.</td></tr>
+        <tr><td colspan="7" class="px-2 py-4 text-center text-label-2">No open lots.</td></tr>
       {% endif %}
     </tbody>
   </table>

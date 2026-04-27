@@ -5,7 +5,7 @@ from datetime import timedelta
 from net_alpha.db.repository import Repository
 from net_alpha.engine.detector import detect_in_window
 from net_alpha.engine.merge import merge_violations
-from net_alpha.splits.apply import apply_splits
+from net_alpha.splits.apply import apply_manual_overrides, apply_splits
 
 
 def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) -> None:
@@ -43,5 +43,8 @@ def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) 
     repo.replace_violations_in_window(win_start, win_end, merged)
     repo.replace_lots_in_window(win_start, win_end, det.lots)
 
-    # Re-apply known splits to the freshly-regenerated lots. Idempotent.
+    # Re-apply known splits, then manual overrides, to the freshly-regenerated lots.
+    # Order matters: splits establish the split-adjusted baseline; manual overrides
+    # layer on top and take final precedence.
     apply_splits(repo)
+    apply_manual_overrides(repo)

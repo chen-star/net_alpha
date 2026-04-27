@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date
+from typing import TYPE_CHECKING
 
 from net_alpha.db.repository import Repository
+
+if TYPE_CHECKING:
+    from net_alpha.models.splits import LotOverride
 
 
 def apply_splits(repo: Repository) -> int:
@@ -45,5 +50,49 @@ def apply_splits(repo: Repository) -> int:
                 reason="split",
                 split_id=int(split.id),
             )
+            mutations += 1
+    return mutations
+
+
+def apply_manual_overrides(repo: Repository) -> int:
+    """Re-apply ANY 'manual' lot_overrides row to the corresponding lot,
+    keyed by trade_id. Idempotent — applies the LATEST manual override per
+    (trade_id, field). Returns count of mutations actually written."""
+    overrides = repo.all_lot_overrides()
+    if not overrides:
+        return 0
+
+    # Latest-wins per (trade_id, field) for reason='manual'.
+    latest: dict[tuple[int, str], LotOverride] = {}
+    for o in overrides:
+        if o.reason != "manual":
+            continue
+        key = (o.trade_id, o.field)
+        prev = latest.get(key)
+        if prev is None or o.edited_at > prev.edited_at:
+            latest[key] = o
+
+    if not latest:
+        return 0
+
+    # Group by trade_id so we read each lot once.
+    by_trade: dict[int, list] = defaultdict(list)
+    for (tid, _field), o in latest.items():
+        by_trade[tid].append(o)
+
+    mutations = 0
+    for tid, applicable in by_trade.items():
+        lot = repo.get_lot_row_dict_by_trade_id(tid)
+        if lot is None:
+            continue
+        new_qty = float(lot["quantity"])
+        new_basis = float(lot["adjusted_basis"])
+        for o in applicable:
+            if o.field == "quantity":
+                new_qty = o.new_value
+            elif o.field == "adjusted_basis":
+                new_basis = o.new_value
+        if new_qty != lot["quantity"] or new_basis != lot["adjusted_basis"]:
+            repo.update_lot_qty_and_basis(int(lot["id"]), quantity=new_qty, adjusted_basis=new_basis)
             mutations += 1
     return mutations

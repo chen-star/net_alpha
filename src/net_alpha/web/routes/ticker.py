@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
@@ -59,6 +59,49 @@ def ticker_drilldown(
             "display_action": display_action,
         },
     )
+
+
+@router.post("/lots/{lot_id}/edit", response_class=HTMLResponse)
+def edit_lot(
+    lot_id: int,
+    request: Request,
+    quantity: float = Form(...),
+    adjusted_basis: float = Form(...),
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    from net_alpha.engine.recompute import recompute_all_violations
+
+    lot = repo.get_lot_row_dict_by_id(lot_id)
+    if lot is None:
+        raise HTTPException(status_code=404, detail=f"Lot {lot_id} not found")
+    old_qty = lot["quantity"]
+    old_basis = lot["adjusted_basis"]
+    trade_id = lot["trade_id"]
+
+    # Persist the override audit BEFORE the lot mutation so the recompute
+    # below picks it up on the way back through.
+    if old_qty != quantity:
+        repo.add_lot_override(
+            trade_id=int(trade_id),
+            field="quantity",
+            old_value=old_qty,
+            new_value=quantity,
+            reason="manual",
+        )
+    if old_basis != adjusted_basis:
+        repo.add_lot_override(
+            trade_id=int(trade_id),
+            field="adjusted_basis",
+            old_value=old_basis,
+            new_value=adjusted_basis,
+            reason="manual",
+        )
+
+    # Trigger a full recompute. apply_manual_overrides will replay our edit.
+    recompute_all_violations(repo, request.app.state.etf_pairs)
+
+    # Return 204 No Content; client reloads via @htmx:after-request handler.
+    return HTMLResponse(status_code=204)
 
 
 @router.get("/ticker/{symbol}/add-form", response_class=HTMLResponse)

@@ -972,6 +972,46 @@ class Repository:
             s.add(row)
             s.commit()
 
+    def get_lot_row_dict_by_id(self, lot_id: int) -> dict | None:
+        """Return raw lot data for a single lot by id, as a detached dict.
+        Returns None if not found. Mirrors the dict shape used by
+        get_lot_rows_for_symbol so consumers can mutate via update_lot_qty_and_basis."""
+        from net_alpha.db.tables import LotRow
+        with Session(self.engine) as s:
+            r = s.get(LotRow, lot_id)
+            if r is None:
+                return None
+            return {
+                "id": r.id,
+                "trade_id": r.trade_id,
+                "ticker": r.ticker,
+                "trade_date": r.trade_date,
+                "quantity": r.quantity,
+                "adjusted_basis": r.adjusted_basis,
+                "cost_basis": r.cost_basis,
+            }
+
+    def get_lot_row_dict_by_trade_id(self, trade_id: int) -> dict | None:
+        """Return raw lot data for the lot belonging to a given trade_id.
+        Returns None if not found."""
+        from sqlmodel import select
+
+        from net_alpha.db.tables import LotRow
+
+        with Session(self.engine) as s:
+            r = s.exec(select(LotRow).where(LotRow.trade_id == trade_id)).first()
+            if r is None:
+                return None
+            return {
+                "id": r.id,
+                "trade_id": r.trade_id,
+                "ticker": r.ticker,
+                "trade_date": r.trade_date,
+                "quantity": r.quantity,
+                "adjusted_basis": r.adjusted_basis,
+                "cost_basis": r.cost_basis,
+            }
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility
