@@ -11,46 +11,80 @@ if TYPE_CHECKING:
 
 
 def apply_splits(repo: Repository) -> int:
-    """Mutate every persisted lot whose date < a known split's ex-date by
-    multiplying quantity by the split ratio. adjusted_basis is preserved
-    (basis is dollars, not per-share). Writes a lot_overrides row per
-    mutation, keyed by (trade_id, split_id), for idempotency.
+    """Set every lot's quantity to its trade's original quantity multiplied by
+    the cumulative product of all splits whose ex-date is after the trade's
+    date. Idempotent by construction: lot.quantity is always derived from
+    canonical inputs (the trade's original quantity + the splits table), so
+    calling apply_splits N times produces the same result as calling it once.
 
-    Returns the count of lot mutations applied (0 on a steady state).
+    The lot_overrides table is written as an AUDIT log (one row per (trade,
+    split) the first time a non-trivial multiplier is recorded), but is NOT
+    consulted to gate the mutation. This is the key fix: before, an existing
+    override row would short-circuit and leave a freshly-regenerated raw lot
+    un-adjusted (the bug: after Sync Splits + any subsequent import, SQQQ
+    would silently revert from 10 shares back to 100).
+
+    Returns the count of lot mutations actually applied (i.e., where the
+    target quantity differed from the lot's current quantity).
     """
-    splits = repo.get_splits()  # all symbols
+    splits = repo.get_splits()
     if not splits:
         return 0
 
+    by_symbol: dict[str, list] = defaultdict(list)
+    for s in splits:
+        by_symbol[s.symbol].append(s)
+
     mutations = 0
-    for split in splits:
-        lots = repo.get_lot_rows_for_symbol(split.symbol)
+    for symbol, sym_splits in by_symbol.items():
+        lots = repo.get_lot_rows_for_symbol(symbol)
         for lot in lots:
             lot_date = date.fromisoformat(lot["trade_date"])
-            if lot_date >= split.split_date:
-                continue  # lot is already post-split
-            existing = repo.get_split_overrides_for_trade(int(lot["trade_id"]), int(split.id))
-            if existing:
-                continue  # already applied
-            old_qty = float(lot["quantity"])
-            new_qty = old_qty * split.ratio
-            old_basis = float(lot["adjusted_basis"])
-            # Mutate the lot row.
+
+            cumulative = 1.0
+            applicable_splits: list = []
+            for sp in sym_splits:
+                if sp.split_date > lot_date:
+                    cumulative *= sp.ratio
+                    applicable_splits.append(sp)
+
+            if cumulative == 1.0:
+                continue  # no splits affect this lot
+
+            # Canonical formula: lot's target quantity is the ORIGINAL buy
+            # quantity (carried by the trade row, never mutated) times the
+            # cumulative ratio of all post-buy splits.
+            trade = repo.get_trade_by_id(int(lot["trade_id"]))
+            if trade is None:
+                continue
+            target_qty = float(trade.quantity) * cumulative
+            current_qty = float(lot["quantity"])
+            current_basis = float(lot["adjusted_basis"])
+
+            if target_qty == current_qty:
+                continue  # already split-adjusted; no mutation needed
+
             repo.update_lot_qty_and_basis(
                 int(lot["id"]),
-                quantity=new_qty,
-                adjusted_basis=old_basis,  # unchanged
-            )
-            # Audit row.
-            repo.add_lot_override(
-                trade_id=int(lot["trade_id"]),
-                field="quantity",
-                old_value=old_qty,
-                new_value=new_qty,
-                reason="split",
-                split_id=int(split.id),
+                quantity=target_qty,
+                adjusted_basis=current_basis,  # unchanged; basis is dollars
             )
             mutations += 1
+
+            # Write audit rows for splits we haven't recorded for this trade
+            # before. Idempotent: skips if an override row already exists for
+            # this (trade_id, split_id).
+            for sp in applicable_splits:
+                if not repo.get_split_overrides_for_trade(int(lot["trade_id"]), int(sp.id)):
+                    repo.add_lot_override(
+                        trade_id=int(lot["trade_id"]),
+                        field="quantity",
+                        old_value=current_qty,
+                        new_value=target_qty,
+                        reason="split",
+                        split_id=int(sp.id),
+                    )
+
     return mutations
 
 

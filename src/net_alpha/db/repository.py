@@ -992,6 +992,14 @@ class Repository:
                 "cost_basis": r.cost_basis,
             }
 
+    def get_trade_by_id(self, trade_id: int) -> Trade | None:
+        """Return the domain Trade for the given primary-key id, or None."""
+        with Session(self.engine) as s:
+            row = s.get(TradeRow, trade_id)
+            if row is None:
+                return None
+            return self._row_to_trade(row, self._account_display_for_id(s, row.account_id))
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility
