@@ -77,3 +77,44 @@ def decode_metric_ref(encoded: str) -> MetricRef:
         return _metric_ref_adapter.validate_python(data)
     except (ValueError, ValidationError, UnicodeDecodeError) as e:
         raise ValueError(f"invalid metric ref: {e}") from e
+
+
+class ContributingTrade(BaseModel):
+    trade_id: str
+    trade_date: date
+    account: str
+    action: str       # "Buy" | "Sell"
+    quantity: float
+    amount: float     # signed: positive for proceeds, negative for cost
+    symbol: str
+    import_id: int | None
+
+
+class AppliedAdjustment(BaseModel):
+    """A wash-sale basis transfer applied to one of the contributing trades."""
+
+    violation_id: str
+    loss_trade_id: str
+    replacement_trade_id: str
+    rolled_amount: float          # disallowed loss rolled into replacement basis
+    confidence: str               # "Confirmed" | "Probable" | "Unclear"
+    rule_citation: str = "IRS Pub 550 §1091 — 30-day window"
+
+
+class ContributingCashEvent(BaseModel):
+    event_id: str
+    event_date: date
+    account: str
+    kind: str                      # transfer_in | transfer_out | dividend | interest | fee | sweep_in | sweep_out
+    amount: float                  # signed
+    description: str = ""
+
+
+class ProvenanceTrace(BaseModel):
+    """The complete 'why is this number what it is' record for one MetricRef."""
+
+    metric_label: str              # human-readable, e.g. "YTD 2026 Realized P/L · AAPL"
+    total: float                   # the number the user sees on the page
+    trades: list[ContributingTrade] = Field(default_factory=list)
+    adjustments: list[AppliedAdjustment] = Field(default_factory=list)
+    cash_events: list[ContributingCashEvent] = Field(default_factory=list)
