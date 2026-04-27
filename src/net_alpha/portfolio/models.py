@@ -109,3 +109,12 @@ class LossCloseRow:
     days_since: int  # today - close_date, in days
     days_to_safe: int  # window_days - days_since, clamped to >= 0
     loss_amount: Decimal  # positive number, sum of |negative realized P/L| in window for this symbol
+
+
+@dataclass(frozen=True)
+class CashBalancePoint:
+    """One point in the cash balance series (one per distinct event date)."""
+
+    on: date
+    cash_balance: Decimal
+    cumulative_contributions: Decimal
