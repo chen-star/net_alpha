@@ -142,7 +142,6 @@
           <th class="r" title="Sum of adjusted basis across open lots — i.e., cost basis after any wash-sale adjustments have been rolled into the replacement lot.">Open Cost</th>
           <th class="r" title="Open Cost ÷ Qty. The per-share book basis after wash-sale adjustments.">Avg Basis</th>
           <th class="r" title="(Total Buys − Total Sells, including option premium) ÷ current Qty. Your true per-share cash exposure on the position right now (independent of basis).">Cash Sunk/sh</th>
-          <th class="r" title="Sum of (proceeds − cost basis) on Sell trades within the selected period. Wash-sale-disallowed losses are excluded (they roll into the replacement lot).">{{ period_label }} Realized</th>
           <th class="r" title="Mkt $ − Open Cost on currently open lots. — when no price is available.">Unrealized</th>
         </tr>
       </thead>
@@ -172,12 +171,18 @@
             <td class="r num">${{ "%.2f"|format(r.open_cost|float) }}</td>
             <td class="r num">${{ "%.2f"|format(r.avg_basis|float) }}</td>
             <td class="r num">${{ "%.2f"|format(r.cash_sunk_per_share|float) }}</td>
-            <td class="r num {% if r.realized_pl < 0 %}text-neg{% elif r.realized_pl > 0 %}text-pos{% endif %}">
-              {% if r.realized_pl != 0 %}{% if r.realized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.realized_pl|float|abs) }}{% else %}—{% endif %}
-            </td>
             <td class="r num {% if r.unrealized_pl is not none and r.unrealized_pl < 0 %}text-neg{% elif r.unrealized_pl is not none and r.unrealized_pl > 0 %}text-pos{% endif %}">
-              {% if r.unrealized_pl is none %}<span class="text-label-3">—</span>
-              {% else %}{% if r.unrealized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.unrealized_pl|float|abs) }}{% endif %}
+              {% if r.unrealized_pl is none %}
+                <span class="text-label-3">—</span>
+              {% else %}
+                <div>{% if r.unrealized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.unrealized_pl|float|abs) }}</div>
+                {% if r.open_cost and r.open_cost|float != 0 %}
+                  {% set pct = (r.unrealized_pl|float / r.open_cost|float) * 100 %}
+                  <div class="text-[11px] opacity-80">{% if pct < 0 %}-{% else %}+{% endif %}{{ "%.1f"|format(pct|abs) }}%</div>
+                {% else %}
+                  <div class="text-[11px] text-label-3">—</div>
+                {% endif %}
+              {% endif %}
             </td>
           </tr>
         {% endfor %}
