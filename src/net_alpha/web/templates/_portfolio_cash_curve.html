@@ -1,0 +1,94 @@
+{# Inputs: cash_points: list[CashBalancePoint] (each has .on: date, .cash_balance: Decimal,
+           .cumulative_contributions: Decimal),
+           year: int #}
+
+<div class="panel-head">
+  <h4>Cash &amp; Contributions</h4>
+  <span class="meta">Cash balance + net contributed · {{ year }}</span>
+</div>
+
+{% if cash_points|length == 0 %}
+  <div class="text-label-2 text-[13px] py-4">No cash events yet — import a Schwab Transactions CSV to populate this chart.</div>
+{% else %}
+  <div id="cash-chart-{{ year }}" style="height: 218px;"></div>
+
+  <script>
+  (function () {
+    const series = [
+      {
+        name: "Cash balance",
+        type: "line",
+        data: [
+          {% for p in cash_points %}
+            { x: "{{ p.on.isoformat() }}", y: {{ p.cash_balance|float }} }{% if not loop.last %},{% endif %}
+          {% endfor %}
+        ],
+      },
+      {
+        name: "Net contributed",
+        type: "line",
+        data: [
+          {% for p in cash_points %}
+            { x: "{{ p.on.isoformat() }}", y: {{ p.cumulative_contributions|float }} }{% if not loop.last %},{% endif %}
+          {% endfor %}
+        ],
+      },
+    ];
+
+    const opts = window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
+      chart: { type: "line", height: 218 },
+      colors: [
+        window.netAlphaChartTheme.colors.info,
+        window.netAlphaChartTheme.colors.warn,
+      ],
+      stroke: {
+        width: [2, 2],
+        curve: "smooth",
+        lineCap: "round",
+        dashArray: [0, 5],
+      },
+      fill: {
+        type: "solid",
+        opacity: 1,
+      },
+      legend: { show: true },
+      xaxis: {
+        type: "datetime",
+        labels: { format: "MMM" },
+      },
+      yaxis: {
+        labels: {
+          formatter: (v) => {
+            const n = Math.round(v);
+            const sign = n >= 0 ? "+" : "−";
+            const abs = Math.abs(n);
+            if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(0) + "k";
+            return sign + "$" + abs;
+          },
+        },
+      },
+      tooltip: {
+        x: { format: "yyyy-MM-dd" },
+        y: { formatter: (v) => v == null ? "—" : "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
+      },
+      series: series,
+    });
+
+    function render() {
+      const el = document.querySelector("#cash-chart-{{ year }}");
+      if (!el) return;
+      el.innerHTML = "";
+      const chart = new ApexCharts(el, opts);
+      chart.render();
+    }
+
+    if (window.ApexCharts) {
+      render();
+    } else {
+      const iv = setInterval(() => {
+        if (window.ApexCharts) { clearInterval(iv); render(); }
+      }, 50);
+    }
+  })();
+  </script>
+{% endif %}
