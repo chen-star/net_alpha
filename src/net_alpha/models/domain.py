@@ -62,6 +62,14 @@ class Trade(BaseModel):
     option_details: OptionDetails | None = None
     raw_row_hash: str | None = None
     schema_cache_id: str | None = None
+    # Within-CSV occurrence index for trades whose canonical fields are
+    # genuinely duplicated (Schwab can split a fill across two identical
+    # rows on the same day at the same price). Set by the parser based on
+    # how many prior identical trades it has seen in the same file. The
+    # natural-key formula folds this in only when > 0, so single-occurrence
+    # rows keep the legacy key and existing DB rows continue to dedup
+    # against re-imports.
+    occurrence_index: int = 0
 
     def is_buy(self) -> bool:
         return self.action.lower() == "buy"
@@ -104,6 +112,10 @@ class Trade(BaseModel):
                 opt,
             ]
         )
+        # Append the occurrence-index suffix only when > 0 so first-occurrence
+        # rows keep the legacy key (existing DB rows dedup correctly on re-import).
+        if self.occurrence_index > 0:
+            payload = payload + f"|occ{self.occurrence_index}"
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 

@@ -15,13 +15,26 @@ incomplete). The larger of the two sources wins per (account, ticker).
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Iterable
+from datetime import date
 from decimal import Decimal
 
 from net_alpha.models.domain import Lot, Trade
 from net_alpha.portfolio.models import PositionRow
 from net_alpha.pricing.provider import Quote
+
+# Schwab appends a numeric suffix to an option's underlying after a split or
+# special distribution ("GME" → "GME1"). The BTO may carry the original symbol
+# while the matching STC and GL closure carry the adjusted symbol — economically
+# the same position but two distinct tickers in the trade table. Strip the
+# trailing digits when matching option events so the pair nets out.
+_OPT_CORP_ACTION_SUFFIX = re.compile(r"\d+$")
+
+
+def _opt_ticker_base(ticker: str) -> str:
+    return _OPT_CORP_ACTION_SUFFIX.sub("", ticker)
 
 
 def consume_lots_fifo(
@@ -29,63 +42,212 @@ def consume_lots_fifo(
     lots: Iterable[Lot],
     trades: Iterable[Trade],
     gl_closures: dict[tuple[str, str], float] | None = None,
+    gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
 ) -> list[tuple[Lot, Decimal, Decimal]]:
-    """FIFO-consume equity lots by sells (trades) and GL closures.
+    """FIFO-consume equity AND long-option lots by their closing events.
 
     Returns a list of (original_lot, remaining_qty, remaining_adjusted_basis).
-    Option lots pass through with full quantity/basis. Lots fully consumed
-    have remaining_qty == 0 (still returned so callers can inspect).
+    Lots fully consumed have remaining_qty == 0 (still returned so callers can
+    inspect).
 
-    For each (account, ticker), closed_qty = max(sum_sells_in_trades, gl_closures).
-    GL is treated as canonical when it exceeds the trade-side sells, since the
+    Equity: closed_qty per (account, ticker) = max(sum_sells_in_trades, GL).
+    Options: closed_qty per (account, ticker, strike, expiry, call_put) =
+    max(sum_STC_trades, GL). STC = Sell with option_details whose basis_source
+    is not "option_short_open" (those Sells open short positions, not close
+    long ones, and have no lot to consume).
+
+    GL is treated as canonical when it exceeds trade-side closes, since the
     Realized G/L CSV captures every closed lot regardless of whether the
-    matching Sell trade was imported.
+    matching close trade was imported (in particular, Schwab does not log a
+    transaction row for options that expire worthless — only a GL entry).
     """
     gl_closures = gl_closures or {}
+    # Normalise the option-closure key: the repo helper returns expiry as an
+    # ISO string, but Trade.option_details.expiry / Lot.option_details.expiry
+    # are date objects. Coerce so all lookups in this function key the same
+    # way. (Doing it here means callers don't have to remember.)
+    raw_opt_closures = gl_option_closures or {}
+    norm_opt_closures: dict[tuple[str, str, float, object, str], float] = {}
+    for (acct, ticker, strike, expiry, cp), qty in raw_opt_closures.items():
+        if isinstance(expiry, str):
+            try:
+                expiry = date.fromisoformat(expiry)
+            except (TypeError, ValueError):
+                continue
+        nkey = (acct, _opt_ticker_base(ticker), strike, expiry, cp)
+        norm_opt_closures[nkey] = norm_opt_closures.get(nkey, 0.0) + qty
+    gl_option_closures = norm_opt_closures
     lots_list = list(lots)
 
-    # Total equity sells per (account, ticker) from the trade table.
+    # --- Equity side ---
     sells_qty: dict[tuple[str, str], float] = defaultdict(float)
     for t in trades:
         if t.option_details is not None:
             continue
         if t.action.lower() == "sell":
             sells_qty[(t.account, t.ticker)] += float(t.quantity)
-
-    # Combine with GL closures, taking the larger value per key.
-    keys = set(sells_qty.keys()) | set(gl_closures.keys())
-    closed_qty: dict[tuple[str, str], float] = {k: max(sells_qty.get(k, 0.0), gl_closures.get(k, 0.0)) for k in keys}
-
-    # Group equity lots by (account, ticker), oldest first; preserve original order
-    # so the returned list matches input order on lot identity.
-    grouped: dict[tuple[str, str], list[Lot]] = defaultdict(list)
+    eq_keys = set(sells_qty.keys()) | set(gl_closures.keys())
+    closed_qty: dict[tuple[str, str], float] = {
+        k: max(sells_qty.get(k, 0.0), gl_closures.get(k, 0.0)) for k in eq_keys
+    }
+    eq_grouped: dict[tuple[str, str], list[Lot]] = defaultdict(list)
     for lot in lots_list:
         if lot.option_details is not None:
             continue
-        grouped[(lot.account, lot.ticker)].append(lot)
-    for group in grouped.values():
+        eq_grouped[(lot.account, lot.ticker)].append(lot)
+    for group in eq_grouped.values():
         group.sort(key=lambda lt: lt.date)
 
-    remaining: dict[str, tuple[Decimal, Decimal]] = {}  # lot.id -> (qty, basis)
+    # --- Option side ---
+    # Keys use the digit-stripped ticker base so corp-action variants (GME vs
+    # GME1) match their pre-action counterparts.
+    OptKey = tuple[str, str, float, object, str]
+    opt_close_qty: dict[OptKey, float] = defaultdict(float)
+    _STO_KINDS = {"option_short_open", "option_short_open_assigned"}
+    for t in trades:
+        if t.option_details is None or t.action.lower() != "sell":
+            continue
+        if t.basis_source in _STO_KINDS:
+            continue  # STO opens a short, not a close of a long lot
+        opt = t.option_details
+        opt_close_qty[(t.account, _opt_ticker_base(t.ticker), opt.strike, opt.expiry, opt.call_put)] += float(
+            t.quantity
+        )
+    opt_keys = set(opt_close_qty.keys()) | set(gl_option_closures.keys())
+    opt_closed: dict[OptKey, float] = {
+        k: max(opt_close_qty.get(k, 0.0), gl_option_closures.get(k, 0.0)) for k in opt_keys
+    }
+    opt_grouped: dict[OptKey, list[Lot]] = defaultdict(list)
     for lot in lots_list:
-        remaining[lot.id] = (Decimal(str(lot.quantity)), Decimal(str(lot.adjusted_basis)))
+        if lot.option_details is None:
+            continue
+        opt = lot.option_details
+        opt_grouped[(lot.account, _opt_ticker_base(lot.ticker), opt.strike, opt.expiry, opt.call_put)].append(lot)
+    for group in opt_grouped.values():
+        group.sort(key=lambda lt: lt.date)
 
-    for key, group in grouped.items():
-        to_consume = Decimal(str(closed_qty.get(key, 0.0)))
+    # --- Apply consumption ---
+    remaining: dict[str, tuple[Decimal, Decimal]] = {
+        lot.id: (Decimal(str(lot.quantity)), Decimal(str(lot.adjusted_basis))) for lot in lots_list
+    }
+
+    def _consume(group: list[Lot], to_take: Decimal) -> None:
         for lot in group:
-            if to_consume <= 0:
+            if to_take <= 0:
                 break
             lot_qty, lot_basis = remaining[lot.id]
             if lot_qty <= 0:
                 continue
-            take = min(lot_qty, to_consume)
+            take = min(lot_qty, to_take)
             ratio = take / lot_qty
-            new_qty = lot_qty - take
-            new_basis = lot_basis - (lot_basis * ratio)
-            remaining[lot.id] = (new_qty, new_basis)
-            to_consume -= take
+            remaining[lot.id] = (lot_qty - take, lot_basis - (lot_basis * ratio))
+            to_take -= take
+
+    for key, group in eq_grouped.items():
+        _consume(group, Decimal(str(closed_qty.get(key, 0.0))))
+    for key, group in opt_grouped.items():
+        _consume(group, Decimal(str(opt_closed.get(key, 0.0))))
 
     return [(lot, *remaining[lot.id]) for lot in lots_list]
+
+
+def open_lots_view(
+    *,
+    lots: Iterable[Lot],
+    trades: Iterable[Trade],
+    gl_closures: dict[tuple[str, str], float] | None = None,
+    gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
+) -> list[Lot]:
+    """Return Lot view-objects representing only the still-open portion of
+    each lot, after FIFO consumption by sells and GL closures.
+
+    Use this for the lots table in the ticker drilldown, which used to query
+    all rows from the DB and so showed long-closed BTOs (e.g. NVDA 220C
+    12/19, TSLA option lots that expired or were sold-to-close) as if they
+    were still open.
+
+    Equity lots get their `quantity` reduced and their `cost_basis` /
+    `adjusted_basis` prorated by the consumed ratio. Fully-closed lots are
+    excluded.
+    """
+    consumed = consume_lots_fifo(
+        lots=lots,
+        trades=trades,
+        gl_closures=gl_closures,
+        gl_option_closures=gl_option_closures,
+    )
+    out: list[Lot] = []
+    for lot, rem_qty, rem_basis in consumed:
+        if rem_qty <= 0:
+            continue
+        if rem_qty == Decimal(str(lot.quantity)):
+            out.append(lot)  # untouched
+            continue
+        ratio = rem_qty / Decimal(str(lot.quantity)) if lot.quantity else Decimal("1")
+        out.append(
+            Lot(
+                id=lot.id,
+                trade_id=lot.trade_id,
+                account=lot.account,
+                date=lot.date,
+                ticker=lot.ticker,
+                quantity=float(rem_qty),
+                cost_basis=float(Decimal(str(lot.cost_basis)) * ratio),
+                adjusted_basis=float(rem_basis),
+                option_details=lot.option_details,
+            )
+        )
+    return out
+
+
+def compute_open_option_contracts(
+    trades: Iterable[Trade],
+    *,
+    gl_option_closures: dict[tuple[str, float, object, str], float] | None = None,
+) -> dict[str, Decimal]:
+    """Per-underlying sum of |net qty| across all open option contracts.
+
+    For each (ticker, strike, expiry, call_put) we compute signed net qty
+    from trades (Buys add, Sells subtract). A BTO/STC pair zeros the long
+    side; a STO/BTC pair zeros the short side.
+
+    Closes that aren't represented in the trades table — expired worthless,
+    assignment, or trade rows that simply weren't imported — show up in
+    Schwab's Realized G/L CSV. ``gl_option_closures`` (keyed by
+    (ticker, strike, expiry, call_put), value = total closed qty) shrinks
+    |net qty| toward zero so those phantom-open contracts don't surface as
+    "X opt open" badges on the holdings page.
+    """
+    net: dict[tuple[str, float, object, str], Decimal] = defaultdict(lambda: Decimal("0"))
+    for t in trades:
+        if t.option_details is None:
+            continue
+        opt = t.option_details
+        key = (_opt_ticker_base(t.ticker), opt.strike, opt.expiry, opt.call_put)
+        delta = Decimal(str(t.quantity))
+        if t.action.lower() == "buy":
+            net[key] += delta  # BTO long, BTC closes short (both add to net)
+        else:
+            net[key] -= delta  # STC closes long, STO opens short (both subtract)
+    # Normalize closure keys onto the same digit-stripped base.
+    raw_closures = gl_option_closures or {}
+    closures: dict[tuple[str, float, object, str], float] = {}
+    for (ticker, strike, expiry, cp), qty in raw_closures.items():
+        nkey = (_opt_ticker_base(ticker), strike, expiry, cp)
+        closures[nkey] = closures.get(nkey, 0.0) + qty
+    for key, gl_qty in closures.items():
+        if gl_qty <= 0:
+            continue
+        n = net.get(key, Decimal("0"))
+        if n > 0:
+            net[key] = max(n - Decimal(str(gl_qty)), Decimal("0"))
+        elif n < 0:
+            net[key] = min(n + Decimal(str(gl_qty)), Decimal("0"))
+    out: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    for (ticker, _s, _e, _cp), qty in net.items():
+        if qty != 0:
+            out[ticker] += abs(qty)
+    return dict(out)
 
 
 def compute_open_positions(
@@ -97,12 +259,17 @@ def compute_open_positions(
     account: str | None = None,
     include_closed: bool = False,
     gl_closures: dict[tuple[str, str], float] | None = None,
+    gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
 ) -> list[PositionRow]:
     """Return positions sorted by market value desc (None last).
 
     When ``include_closed`` is True, also include symbols that have no open
     quantity but had Sell activity in the period — useful for "All" table mode
     where the user wants to see realized P/L on positions they've fully exited.
+
+    Tickers with only open option exposure (e.g. an open sell-put on UUUU
+    with zero shares) are also surfaced as rows with qty=0 so the user can
+    drill into them.
     """
     trades = list(trades)
     lots = list(lots)
@@ -112,8 +279,33 @@ def compute_open_positions(
         trades = [t for t in trades if t.account == account]
         lots = [lot for lot in lots if lot.account == account]
         gl_closures = {k: v for k, v in (gl_closures or {}).items() if k[0] == account} if gl_closures else None
+        gl_option_closures = (
+            {k: v for k, v in (gl_option_closures or {}).items() if k[0] == account} if gl_option_closures else None
+        )
 
-    consumed = consume_lots_fifo(lots=lots, trades=trades, gl_closures=gl_closures)
+    # Normalise GL option closures: the repo returns expiry as an ISO string,
+    # but Trade.option_details.expiry is a date object — coerce so keys match.
+    normalised_opt_closures: dict[tuple[str, str, float, object, str], float] = {}
+    for (acct, ticker, strike, expiry_iso, cp), qty in (gl_option_closures or {}).items():
+        try:
+            expiry = date.fromisoformat(expiry_iso) if isinstance(expiry_iso, str) else expiry_iso
+        except (TypeError, ValueError):
+            continue
+        normalised_opt_closures[(acct, ticker, strike, expiry, cp)] = (
+            normalised_opt_closures.get((acct, ticker, strike, expiry, cp), 0.0) + qty
+        )
+    consumed = consume_lots_fifo(
+        lots=lots,
+        trades=trades,
+        gl_closures=gl_closures,
+        gl_option_closures=normalised_opt_closures,
+    )
+    # Same closures, sans the account key, for the per-underlying counter.
+    option_closures_by_key: dict[tuple[str, float, object, str], float] = {}
+    for (_acct, ticker, strike, expiry, cp), qty in normalised_opt_closures.items():
+        key = (ticker, strike, expiry, cp)
+        option_closures_by_key[key] = option_closures_by_key.get(key, 0.0) + qty
+    open_options_by_sym = compute_open_option_contracts(trades, gl_option_closures=option_closures_by_key)
 
     # Aggregate equity-only quantities and basis from FIFO-reduced lots.
     qty_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
@@ -129,12 +321,18 @@ def compute_open_positions(
         accounts_by_sym[lot.ticker].add(lot.account)
 
     # Cash flows include ALL trades on the underlying ticker (equity AND options).
+    # Exception: assigned-put STO/synthetic-close pairs — the premium has
+    # already been folded into the underlying stock's cost basis. Counting it
+    # again here would inflate proceeds and double-credit realized P/L.
+    _SKIP_AGG_SOURCES = {"option_short_open_assigned", "option_short_close_assigned"}
     buys_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     sells_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     realized_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     for t in trades:
         sym = t.ticker
         accounts_by_sym[sym].add(t.account)  # ensure account is captured even if no open lot
+        if t.basis_source in _SKIP_AGG_SOURCES:
+            continue
         if t.action.lower() == "buy":
             buys_by_sym[sym] += Decimal(str(t.cost_basis or 0))
         elif t.action.lower() == "sell":
@@ -164,6 +362,30 @@ def compute_open_positions(
                 cash_sunk_per_share=cash_sunk,
                 realized_pl=realized_by_sym[sym],
                 unrealized_pl=unrealized,
+                open_option_contracts=open_options_by_sym.get(sym, Decimal("0")),
+            )
+        )
+    # Tickers with only open option exposure (no equity lot): emit a qty=0 row
+    # so the user can still drill in. Skipped when account-scoped emits no
+    # accounts_by_sym entry, since the option trade itself populates that map.
+    seen_open = {r.symbol for r in rows}
+    for sym, opt_contracts in open_options_by_sym.items():
+        if sym in seen_open or opt_contracts == 0:
+            continue
+        if qty_by_sym.get(sym, Decimal("0")) != 0:
+            continue
+        rows.append(
+            PositionRow(
+                symbol=sym,
+                accounts=tuple(sorted(accounts_by_sym[sym])),
+                qty=Decimal("0"),
+                market_value=None,
+                open_cost=Decimal("0"),
+                avg_basis=Decimal("0"),
+                cash_sunk_per_share=Decimal("0"),
+                realized_pl=realized_by_sym.get(sym, Decimal("0")),
+                unrealized_pl=None,
+                open_option_contracts=opt_contracts,
             )
         )
     if include_closed:

@@ -2,8 +2,8 @@
 // Extracted from inline x-data so the multi-line JS doesn't leak as visible text
 // when Alpine fails to evaluate the expression.
 
-document.addEventListener('alpine:init', () => {
-  Alpine.data('symbolFilter', (config) => ({
+function registerSymbolFilter() {
+  window.Alpine.data('symbolFilter', (config) => ({
     open: false,
     query: '',
     selected: config.selected || [],
@@ -54,4 +54,13 @@ document.addEventListener('alpine:init', () => {
       this.apply();
     },
   }));
-});
+}
+
+// Alpine 3 starts via queueMicrotask before deferred scripts run, so listening
+// for `alpine:init` from a <script defer> can miss the event. Register now if
+// Alpine is already loaded, otherwise queue for `alpine:init`.
+if (window.Alpine) {
+  registerSymbolFilter();
+} else {
+  document.addEventListener('alpine:init', registerSymbolFilter);
+}

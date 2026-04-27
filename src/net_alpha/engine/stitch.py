@@ -119,6 +119,13 @@ def stitch_account(repo: Repository, account_id: int) -> StitchSummary:
     for sell in repo.get_sells_for_account(account_id):
         if sell.basis_source == "transfer_out":
             continue
+        # Sell-to-Open option trades are short-position openings, not closes —
+        # they have no prior buy lot to consume. Falling through to FIFO would
+        # mis-match them against unrelated equity buys (we have seen STO put
+        # premiums getting cost_basis hydrated from the user's stock lots),
+        # producing nonsense realized P/L.
+        if sell.basis_source in ("option_short_open", "option_short_open_assigned"):
+            continue
         outcome = _try_gl(repo, sell, account_id)
         if outcome is None:
             outcome = _try_fifo(repo, sell, account_id)

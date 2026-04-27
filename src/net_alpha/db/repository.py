@@ -151,13 +151,28 @@ class Repository:
             s.add(ir)
             s.flush()  # populate ir.id
 
+            # Pre-filter natural-key duplicates BEFORE inserting. The previous
+            # try/rollback path was unsafe: SQLAlchemy session rollback unwinds
+            # the entire session, silently undoing every trade flushed earlier
+            # in this same call. Two within-file collisions could cascade into
+            # hundreds of lost trades. Mirror the cash-event branch below
+            # (which already pre-filters for the same reason).
+            existing_keys = set(
+                s.exec(select(TradeRow.natural_key).where(TradeRow.account_id == account.id)).all()
+            )
             new_count = 0
             dup_count = 0
+            seen_in_batch: set[str] = set()
             for t in trades:
+                nk = t.compute_natural_key()
+                if nk in existing_keys or nk in seen_in_batch:
+                    dup_count += 1
+                    continue
+                seen_in_batch.add(nk)
                 tr = TradeRow(
                     import_id=ir.id,
                     account_id=account.id,
-                    natural_key=t.compute_natural_key(),
+                    natural_key=nk,
                     ticker=t.ticker,
                     trade_date=t.date.isoformat(),
                     action=t.action,
@@ -166,20 +181,14 @@ class Repository:
                     cost_basis=t.cost_basis,
                     basis_unknown=t.basis_unknown,
                     basis_source=t.basis_source,
-                    gross_cash_impact=t.gross_cash_impact,  # NEW
+                    gross_cash_impact=t.gross_cash_impact,
                     option_strike=(t.option_details.strike if t.option_details else None),
                     option_expiry=(t.option_details.expiry.isoformat() if t.option_details else None),
                     option_call_put=(t.option_details.call_put if t.option_details else None),
                 )
-                try:
-                    s.add(tr)
-                    s.flush()
-                    new_count += 1
-                except Exception:  # IntegrityError on UNIQUE
-                    s.rollback()
-                    # Reattach the ImportRecord row before retrying the next trade
-                    s.add(ir)
-                    dup_count += 1
+                s.add(tr)
+                s.flush()
+                new_count += 1
 
             # Cash events use the same import_id. Pre-filter against existing
             # natural keys (and within-batch dups) BEFORE inserting, so we never
@@ -711,6 +720,23 @@ class Repository:
             for r in rows:
                 display = self._account_display_for_id(s, r.account_id)
                 key = (display, r.ticker)
+                out[key] = out.get(key, 0.0) + float(r.quantity)
+        return out
+
+    def get_option_gl_closures(self) -> dict[tuple[str, str, float, str, str], float]:
+        """Sum of closed option-contract quantity per
+        (account_display, ticker, strike, expiry_iso, call_put) across all GL lots.
+
+        Used by the open-option counter so contracts that closed via expiry
+        worthless or assignment (events Schwab records in GL but not in the
+        transaction CSV) don't get double-counted as still open.
+        """
+        out: dict[tuple[str, str, float, str, str], float] = {}
+        with Session(self.engine) as s:
+            rows = s.exec(select(RealizedGLLotRow).where(RealizedGLLotRow.option_strike.is_not(None))).all()
+            for r in rows:
+                display = self._account_display_for_id(s, r.account_id)
+                key = (display, r.ticker, r.option_strike, r.option_expiry, r.option_call_put)
                 out[key] = out.get(key, 0.0) + float(r.quantity)
         return out
 

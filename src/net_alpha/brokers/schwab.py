@@ -11,6 +11,13 @@ from net_alpha.models.domain import CashEvent, ImportResult, Trade
 _BUY_ACTIONS = {"Buy", "Reinvest Shares", "Reinvest", "Buy to Open"}
 # Schwab sell actions (v1: "Sell"; also options: "Sell to Close")
 _SELL_ACTIONS = {"Sell", "Sell to Close"}
+# Short-option lifecycle actions. A "Sell to Open" opens a short option position
+# (you receive premium); a "Buy to Close" closes one (you pay to terminate the
+# obligation). v1 dropped these silently to keep the wash-sale engine simple,
+# but the portfolio view needs them so the user sees premium income, open short
+# positions, and round-trip cash flow on tickers like UUUU/HIMS.
+_SHORT_OPTION_OPEN_ACTIONS = {"Sell to Open"}
+_SHORT_OPTION_CLOSE_ACTIONS = {"Buy to Close"}
 # Account transfers: signed quantity (+ in / − out). Not real trades, but they
 # move shares in/out of an account, so they must adjust open lots. Mapped to
 # Buy/Sell with basis_source="transfer_in"/"transfer_out" so downstream code
@@ -44,15 +51,14 @@ _CASH_EVENT_ACTIONS: dict[str, tuple[str, str]] = {
     "Service Fee": ("fee", "always_negative"),
 }
 
-# Non-trade actions handled by trade-side logic (existing) — never cash events.
-# Includes option-side actions (Sell to Open, Buy to Close) consumed by
-# _put_assignment_basis_offsets but not emitted as Trade rows.
+# Non-trade actions handled by trade-side logic — never emitted as cash events.
+# `Assigned` and `Expired` are option-lifecycle markers consumed by the trade
+# branch (basis offsets / silent close); `Reverse Split` is logged by Schwab
+# but the actual share-quantity adjustment comes from the splits subsystem.
 _TRADE_SIDE_NON_TRADE_ACTIONS = {
     "Reverse Split",
     "Assigned",
     "Expired",
-    "Sell to Open",
-    "Buy to Close",
 }
 
 
@@ -81,6 +87,26 @@ def _parse_date(s: str) -> date | None:
         return datetime.strptime(s.strip()[:10], "%m/%d/%Y").date()
     except ValueError:
         return None
+
+
+def _assigned_put_symbols(rows: list[dict[str, str]]) -> set[str]:
+    """Raw option symbols of puts that have at least one Assigned row.
+
+    These chains are consumed by `_put_assignment_basis_offsets` to fold the
+    premium into the underlying-stock cost basis. Emitting STO/BTC trades for
+    the same symbols would double-count the premium (once as Sell proceeds,
+    once as basis reduction). Calls are not basis-adjusted by the helper, so
+    sold-call assignments still emit normally — premium becomes a Sell trade.
+    """
+    out: set[str] = set()
+    for row in rows:
+        if row.get("Action", "").strip() != "Assigned":
+            continue
+        symbol = row.get("Symbol", "").strip()
+        opt = parse_option_symbol(symbol)
+        if opt is not None and opt[1].call_put == "P":
+            out.add(symbol)
+    return out
 
 
 def _put_assignment_basis_offsets(rows: list[dict[str, str]]) -> dict[tuple[str, date], float]:
@@ -192,14 +218,49 @@ class SchwabParser:
     def parse(self, rows: list[dict[str, str]], account_display: str) -> list[Trade]:
         trades: list[Trade] = []
         basis_offsets = _put_assignment_basis_offsets(rows)
+        assigned_puts = _assigned_put_symbols(rows)
+        # Map (symbol → assignment_date) so we can pair the assigned-put STO
+        # with a synthetic close on the right date for the option counter.
+        assignment_dates: dict[str, date] = {}
+        for row in rows:
+            if row.get("Action", "").strip() != "Assigned":
+                continue
+            sym = row.get("Symbol", "").strip()
+            d = _parse_date(row.get("Date", ""))
+            if sym in assigned_puts and d is not None and sym not in assignment_dates:
+                assignment_dates[sym] = d
         for i, row in enumerate(rows, start=1):
             action_raw = row["Action"].strip()
 
             is_transfer = action_raw in _TRANSFER_ACTIONS
+            short_open = False
+            short_close = False
+            short_open_assigned = False
             if action_raw in _BUY_ACTIONS:
                 action = "Buy"
             elif action_raw in _SELL_ACTIONS:
                 action = "Sell"
+            elif action_raw in _SHORT_OPTION_OPEN_ACTIONS:
+                action = "Sell"
+                short_open = True
+                # An STO whose put eventually gets assigned must NOT be hidden
+                # — the user expects to see the premium event in the timeline.
+                # We mark it with a distinct basis_source so positions.py
+                # excludes it from realized-P/L aggregation (the premium is
+                # already captured via the underlying-stock basis offset, so
+                # counting it again here would double-count). Cash-flow uses
+                # gross_cash_impact, which still records the real premium
+                # credit — so emitting fixes the previously-missing inflow.
+                short_open_assigned = row["Symbol"].strip() in assigned_puts
+            elif action_raw in _SHORT_OPTION_CLOSE_ACTIONS:
+                # A real BTC of an assigned-put symbol shouldn't happen (the
+                # position closed via assignment, not market) — but if Schwab
+                # logs one, suppress it: the basis-offset helper has already
+                # consumed those amounts.
+                if row["Symbol"].strip() in assigned_puts:
+                    continue
+                action = "Buy"
+                short_close = True
             elif is_transfer:
                 action = None  # decided below from sign of quantity
             else:
@@ -282,6 +343,20 @@ class SchwabParser:
                 if offset > 0:
                     cost_basis = max(cost_basis - offset, 0.0)
                     basis_source = "put_assignment"
+            if short_open_assigned:
+                # Distinct marker so realized-P/L aggregation skips it (premium
+                # already folded into the underlying-stock basis); cash-flow
+                # still picks up the gross_cash_impact credit.
+                basis_source = "option_short_open_assigned"
+            elif short_open:
+                # STO: the "Sell" carries the premium received as proceeds.
+                # Marker lets the holdings/lots layer recognise short positions.
+                basis_source = "option_short_open"
+            elif short_close:
+                # BTC: the "Buy" carries the close cost as cost_basis. The
+                # marker lets the wash-sale engine skip lot creation — a BTC
+                # closes a short, it doesn't open a new long lot.
+                basis_source = "option_short_close"
 
             kwargs: dict[str, object] = {
                 "account": account_display,
@@ -297,6 +372,45 @@ class SchwabParser:
             if basis_source is not None:
                 kwargs["basis_source"] = basis_source
             trades.append(Trade(**kwargs))
+
+        # For every assigned-put STO we just emitted, append a synthetic
+        # closing trade ($0 cost, gross_cash_impact=0) on the assignment
+        # date. This lets the open-option counter / lots-view see the
+        # short put as closed even though it never had a real BTC.
+        for t in list(trades):
+            if t.basis_source != "option_short_open_assigned":
+                continue
+            opt = t.option_details
+            if opt is None:
+                continue
+            sym_raw = f"{t.ticker} {opt.expiry.strftime('%m/%d/%Y')} {opt.strike:.2f} {opt.call_put}"
+            close_date = assignment_dates.get(sym_raw, t.date)
+            trades.append(
+                Trade(
+                    account=t.account,
+                    date=close_date,
+                    ticker=t.ticker,
+                    action="Buy",
+                    quantity=t.quantity,
+                    proceeds=None,
+                    cost_basis=0.0,
+                    basis_source="option_short_close_assigned",
+                    gross_cash_impact=0.0,
+                    option_details=opt,
+                )
+            )
+
+        # Assign within-batch occurrence indices to trades whose canonical
+        # fields are byte-for-byte identical (Schwab can split a fill across
+        # two same-day same-price rows). Without this they collapse to the
+        # same natural key and the dedup pre-filter drops one as a "duplicate"
+        # (we have seen the user's GPRO 07/29 100sh sell get dropped this way).
+        seen: dict[str, int] = {}
+        for t in trades:
+            base = t.compute_natural_key()  # uses occurrence_index=0 → legacy formula
+            seen[base] = seen.get(base, -1) + 1
+            if seen[base] > 0:
+                t.occurrence_index = seen[base]
         return trades
 
     def parse_full(self, rows: list[dict[str, str]], account_display: str) -> ImportResult:
@@ -305,7 +419,14 @@ class SchwabParser:
         warnings: list[str] = []
         # Set of action strings handled by the trade-side branch, OR as cash events;
         # anything else is unknown.
-        known_trade_actions = _BUY_ACTIONS | _SELL_ACTIONS | _TRANSFER_ACTIONS | _TRADE_SIDE_NON_TRADE_ACTIONS
+        known_trade_actions = (
+            _BUY_ACTIONS
+            | _SELL_ACTIONS
+            | _TRANSFER_ACTIONS
+            | _TRADE_SIDE_NON_TRADE_ACTIONS
+            | _SHORT_OPTION_OPEN_ACTIONS
+            | _SHORT_OPTION_CLOSE_ACTIONS
+        )
         for row in rows:
             action = row.get("Action", "").strip()
             if action in known_trade_actions:

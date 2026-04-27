@@ -103,6 +103,12 @@ class PricingService:
             return result
 
         for sym in symbols:
+            # Defensive: a stock-split lookup against an option-shaped symbol
+            # ("TSLA 06/18/2026 400.00 C") would 404 noisily on Yahoo. Such
+            # strings can only enter sym_list via a parse_option_symbol miss.
+            if " " in sym or "/" in sym:
+                logger.debug("pricing: skipping non-stock symbol {!r} for split sync", sym)
+                continue
             try:
                 events = self._provider.fetch_splits(sym)
             except Exception as exc:

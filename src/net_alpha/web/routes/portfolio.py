@@ -180,10 +180,11 @@ def portfolio_positions(
     trades = repo.all_trades()
     lots = repo.all_lots()
     gl_closures = repo.get_equity_gl_closures()
+    gl_option_closures = repo.get_option_gl_closures()
     all_lot_tickers = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(all_lot_tickers)
     include_closed = show == "all"
-    rows = compute_open_positions(
+    all_rows = compute_open_positions(
         trades=trades,
         lots=lots,
         prices=prices,
@@ -191,12 +192,21 @@ def portfolio_positions(
         account=account or None,
         include_closed=include_closed,
         gl_closures=gl_closures,
+        gl_option_closures=gl_option_closures,
     )
     selected_symbols: set[str] = set()
     if symbols:
         selected_symbols = {s.strip().upper() for s in symbols.split(",") if s.strip()}
+    # Universe for the symbol-picker reflects the current Show mode (Open vs All)
+    # — independent of any active selection, so the user can pick a different
+    # symbol after applying a filter. Selected symbols outside that universe are
+    # not surfaced (e.g. you selected "GPRO" while in Show=All, then switched to
+    # Show=Open — GPRO is closed and shouldn't reappear in the picker).
+    universe = {r.symbol for r in all_rows}
     if selected_symbols:
-        rows = [r for r in rows if r.symbol.upper() in selected_symbols]
+        rows = [r for r in all_rows if r.symbol.upper() in selected_symbols]
+    else:
+        rows = all_rows
     if page_size not in PAGE_SIZE_OPTIONS:
         page_size = PAGE_SIZE
     total_rows = len(rows)
@@ -206,7 +216,7 @@ def portfolio_positions(
     page_rows = rows[start : start + page_size]
     symbol_filter_config = {
         "selected": sorted(selected_symbols),
-        "all": sorted({r.symbol for r in rows} | selected_symbols),
+        "all": sorted(universe),
         "qsTemplate": (
             f"period={period or 'ytd'}&account={account or ''}"
             f"&group_options={group_options}"
@@ -254,6 +264,8 @@ def portfolio_allocation_fragment(
         prices=prices,
         period=(today.year, today.year + 1),
         account=account or None,
+        gl_closures=repo.get_equity_gl_closures(),
+        gl_option_closures=repo.get_option_gl_closures(),
     )
     allocation = build_allocation(positions=positions, top_n=10)
     return request.app.state.templates.TemplateResponse(
@@ -368,6 +380,8 @@ def portfolio_body(
         prices=prices,
         period=(today.year, today.year + 1),
         account=None,
+        gl_closures=repo.get_equity_gl_closures(),
+        gl_option_closures=repo.get_option_gl_closures(),
     )
 
     # --- Cash flow ---

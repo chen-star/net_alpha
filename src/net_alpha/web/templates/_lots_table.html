@@ -3,6 +3,7 @@
     <thead>
       <tr>
         <th>Account</th>
+        <th>Instrument</th>
         <th>Acquired</th>
         <th>Qty</th>
         <th>Original basis</th>
@@ -16,6 +17,15 @@
         {% set delta = (lot.adjusted_basis - lot.cost_basis) %}
         <tr {% if delta > 0 %}class="bg-warn/5"{% endif %}>
           <td class="px-2 py-1 font-mono">{{ lot.account }}</td>
+          <td class="px-2 py-1 font-mono text-[12px]">
+            {% if lot.option_details %}
+              {% set o = lot.option_details %}
+              <span class="pill" style="color: var(--color-accent);">{% if o.call_put == 'C' %}CALL{% else %}PUT{% endif %}</span>
+              ${{ "%g"|format(o.strike) }} <span class="text-label-3">·</span> {{ o.expiry.strftime('%m/%d/%y') }}
+            {% else %}
+              <span class="text-label-3">Stock</span>
+            {% endif %}
+          </td>
           <td class="px-2 py-1 font-mono">{{ lot.date }}</td>
           <td class="px-2 py-1 num font-mono">{{ lot.quantity }}</td>
           <td class="px-2 py-1 num font-mono">${{ "%.2f"|format(lot.cost_basis) }}</td>
@@ -42,7 +52,7 @@
         </tr>
       {% endfor %}
       {% if not lots %}
-        <tr><td colspan="7" class="px-2 py-4 text-center text-label-2">No open lots.</td></tr>
+        <tr><td colspan="8" class="px-2 py-4 text-center text-label-2">No open lots.</td></tr>
       {% endif %}
     </tbody>
   </table>

@@ -490,3 +490,39 @@ def test_etf_no_match_different_group():
     )
     result = detect_wash_sales([sell, buy], ETF_PAIRS)
     assert len(result.violations) == 0
+
+
+def test_buy_to_close_does_not_seed_long_lot():
+    """A `Buy to Close` (basis_source='option_short_close') closes a short
+    option position — it must NOT create a long lot, otherwise the holdings
+    table would show a phantom +1 contract long position after a round-trip
+    sold-put close.
+    """
+    btc = TradeFactory(
+        date=date(2026, 1, 9),
+        ticker="UUUU",
+        action="Buy",
+        quantity=1.0,
+        cost_basis=140.66,
+        basis_source="option_short_close",
+        option_details=OptionDetails(strike=20.0, expiry=date(2026, 1, 16), call_put="P"),
+    )
+    result = detect_wash_sales([btc], {})
+    assert result.lots == []
+
+
+def test_buy_to_open_still_seeds_long_lot():
+    """Sanity: regular Buy / BTO (no `option_short_close` marker) still
+    creates a lot — only short-close BTCs are excluded.
+    """
+    bto = TradeFactory(
+        date=date(2026, 1, 9),
+        ticker="TSLA",
+        action="Buy",
+        quantity=1.0,
+        cost_basis=400.0,
+        option_details=OptionDetails(strike=400.0, expiry=date(2026, 6, 18), call_put="C"),
+    )
+    result = detect_wash_sales([bto], {})
+    assert len(result.lots) == 1
+    assert result.lots[0].ticker == "TSLA"

@@ -6,9 +6,10 @@ from datetime import date
 from net_alpha.models.domain import OptionDetails
 
 # OCC standard: TSLA241220C00250000
-# Ticker (1-6 chars) + YYMMDD + C/P + strike * 1000 (8 digits, zero-padded)
+# Ticker (1-6 chars; first char letter, may include trailing digits like
+# "GME1" after a corporate action) + YYMMDD + C/P + strike * 1000.
 _OCC_PATTERN = re.compile(
-    r"^(?P<ticker>[A-Z]{1,6})"
+    r"^(?P<ticker>[A-Z][A-Z0-9]{0,5})"
     r"(?P<yy>\d{2})(?P<mm>\d{2})(?P<dd>\d{2})"
     r"(?P<cp>[CP])"
     r"(?P<strike>\d{8})$"
@@ -16,7 +17,7 @@ _OCC_PATTERN = re.compile(
 
 # Schwab human-readable: TSLA 12/20/2024 250.00 C
 _SCHWAB_PATTERN = re.compile(
-    r"^(?P<ticker>[A-Z]{1,6})\s+"
+    r"^(?P<ticker>[A-Z][A-Z0-9]{0,5})\s+"
     r"(?P<mm>\d{1,2})/(?P<dd>\d{1,2})/(?P<yyyy>\d{4})\s+"
     r"(?P<strike>[\d.]+)\s+"
     r"(?P<cp>[CP])$"
@@ -24,7 +25,7 @@ _SCHWAB_PATTERN = re.compile(
 
 # Robinhood human-readable: TSLA $250 Call 12/20/2024
 _ROBINHOOD_PATTERN = re.compile(
-    r"^(?P<ticker>[A-Z]{1,6})\s+"
+    r"^(?P<ticker>[A-Z][A-Z0-9]{0,5})\s+"
     r"\$(?P<strike>[\d.]+)\s+"
     r"(?P<cp_word>Call|Put)\s+"
     r"(?P<mm>\d{1,2})/(?P<dd>\d{1,2})/(?P<yyyy>\d{4})$"

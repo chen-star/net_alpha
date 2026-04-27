@@ -180,10 +180,10 @@ def test_security_transfer_remains_a_trade_not_a_cash_event():
     assert res.cash_events == []
 
 
-def test_sell_to_open_and_buy_to_close_emit_no_warnings_no_cash_events():
-    """Option-side actions consumed by put-assignment basis-offset helper
-    should be silently ignored by parse_full — neither Trade nor CashEvent,
-    and crucially NO 'Unknown action' warning."""
+def test_sell_to_open_and_buy_to_close_emit_trades_not_cash_events_or_warnings():
+    """Short-option lifecycle actions are emitted as Trade rows (so the user
+    sees premium income / open shorts in the timeline) — never as CashEvents,
+    and never as 'Unknown action' warnings."""
     rows = [
         _row(
             Date="03/19/2026",
@@ -207,6 +207,12 @@ def test_sell_to_open_and_buy_to_close_emit_no_warnings_no_cash_events():
     res = _parse(rows)
     assert res.cash_events == []
     assert res.parse_warnings == []
+    assert len(res.trades) == 2
+    sto, btc = res.trades
+    assert sto.action == "Sell" and sto.ticker == "RR" and sto.proceeds == 87.34
+    assert sto.basis_source == "option_short_open"
+    assert btc.action == "Buy" and btc.ticker == "UUUU" and btc.cost_basis == 82.66
+    assert btc.basis_source == "option_short_close"
 
 
 def test_reinvest_dividend_emits_dividend():

@@ -71,3 +71,52 @@ def test_same_natural_key_in_different_account_is_independent(repo):
     repo.add_import(a, rec_a, [_trade(a.display(), "TSLA", 10)])
     result = repo.add_import(b, rec_b, [_trade(b.display(), "TSLA", 10)])
     assert result.new_trades == 1
+
+
+def test_within_batch_duplicates_do_not_silently_drop_neighbors(repo):
+    """Two trades sharing a natural key inside a single add_import batch must
+    NOT cascade into losing all preceding flushed trades. The pre-fix code
+    caught IntegrityError with `s.rollback()`, which unwinds the entire
+    SQLAlchemy session — so even one within-batch duplicate could silently
+    delete hundreds of valid trades imported moments earlier in the same call.
+    """
+    acct = repo.get_or_create_account("schwab", "personal")
+    rec = ImportRecord(
+        account_id=acct.id, csv_filename="q.csv", csv_sha256="h", imported_at=datetime(2026, 4, 25), trade_count=0
+    )
+    a = _trade(acct.display(), "TSLA", 10)
+    # Same canonical fields → same natural key → would trigger IntegrityError
+    # in the old loop and rollback every trade flushed before it.
+    a_dup = _trade(acct.display(), "TSLA", 10)
+    b = _trade(acct.display(), "AAPL", 5)
+    c = _trade(acct.display(), "MSFT", 3)
+
+    result = repo.add_import(acct, rec, [a, a_dup, b, c])
+    assert result.new_trades == 3
+    assert result.duplicate_trades == 1
+    # All three distinct trades are persisted under this import_id.
+    assert {row.ticker for row in repo.trades_for_import(result.import_id)} == {"TSLA", "AAPL", "MSFT"}
+
+
+def test_existing_db_dup_does_not_drop_neighbors(repo):
+    """Same protection when the duplicate hits an EXISTING DB row (not just
+    a within-batch sibling) — pre-fix code rollback-cascaded these too.
+    """
+    acct = repo.get_or_create_account("schwab", "personal")
+    rec1 = ImportRecord(
+        account_id=acct.id, csv_filename="a.csv", csv_sha256="h1", imported_at=datetime(2026, 4, 25), trade_count=0
+    )
+    seed = _trade(acct.display(), "TSLA", 10)
+    repo.add_import(acct, rec1, [seed])
+
+    rec2 = ImportRecord(
+        account_id=acct.id, csv_filename="b.csv", csv_sha256="h2", imported_at=datetime(2026, 4, 26), trade_count=0
+    )
+    fresh_a = _trade(acct.display(), "AAPL", 5)
+    seed_again = _trade(acct.display(), "TSLA", 10)  # natural-key collision with rec1
+    fresh_b = _trade(acct.display(), "MSFT", 3)
+
+    result = repo.add_import(acct, rec2, [fresh_a, seed_again, fresh_b])
+    assert result.new_trades == 2
+    assert result.duplicate_trades == 1
+    assert {row.ticker for row in repo.trades_for_import(result.import_id)} == {"AAPL", "MSFT"}

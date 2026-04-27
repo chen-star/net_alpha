@@ -22,6 +22,11 @@ class PositionRow:
     cash_sunk_per_share: Decimal  # (buys − sells − option_premium) / qty (formula A)
     realized_pl: Decimal  # period-scoped
     unrealized_pl: Decimal | None  # None when no price
+    # Sum of |net_qty| across all open option contracts on this underlying
+    # (long + short, all strikes/expiries). Drives the "X open opt" badge in
+    # the holdings table so a ticker with only short-option exposure (e.g.
+    # UUUU sell-puts) is visible even when equity qty is 0.
+    open_option_contracts: Decimal = Decimal("0")
 
 
 @dataclass(frozen=True)

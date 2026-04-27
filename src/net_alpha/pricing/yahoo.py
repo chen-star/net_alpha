@@ -35,7 +35,9 @@ class YahooPriceProvider(PriceProvider):
                     logger.warning("yahoo: fetch error for {}: {}", symbol, per_symbol_exc)
                     continue
                 if price is None:
-                    logger.warning("yahoo: no price for {}", symbol)
+                    # Common for delisted/illiquid tickers — UI already shows "—".
+                    # Keep at debug to avoid noisy logs on every refresh cycle.
+                    logger.debug("yahoo: no price for {}", symbol)
                     continue
                 out[symbol] = Quote(
                     symbol=symbol,

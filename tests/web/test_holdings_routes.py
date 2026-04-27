@@ -78,6 +78,43 @@ def test_holdings_symbol_filter_with_selection_in_url(tmp_path):
     assert "MSFT" in html
 
 
+def test_symbol_filter_universe_excludes_closed_when_show_open(client, builders, repo):
+    """The Symbols dropdown universe should reflect the current Show mode.
+    Show=Open must not list symbols whose lots have all been sold off."""
+    from datetime import date
+
+    from net_alpha.engine.recompute import recompute_all_violations
+    from net_alpha.engine.stitch import stitch_account
+
+    account, _ = builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
+            # GPRO bought and fully sold — closed.
+            builders.make_buy("schwab/lt", "GPRO", date(2026, 1, 5), qty=100, cost=300.0),
+            builders.make_sell("schwab/lt", "GPRO", date(2026, 1, 6), qty=100, proceeds=350.0, cost=300.0),
+        ],
+    )
+    stitch_account(repo, account.id)
+    recompute_all_violations(repo, {})
+
+    res_open = client.get("/portfolio/positions?period=ytd&show=open")
+    assert res_open.status_code == 200
+    # AAPL is open and must appear in the picker config; GPRO is closed and must not.
+    assert "AAPL" in res_open.text
+    # The picker config "all" list should not contain GPRO when showing only open.
+    # GPRO appearing only inside the picker config JSON would still match a naive
+    # substring check, so assert against the JSON shape directly.
+    assert '"GPRO"' not in res_open.text
+
+    res_all = client.get("/portfolio/positions?period=ytd&show=all")
+    assert res_all.status_code == 200
+    # In Show=All, GPRO is part of the universe (closed-in-period rows are included).
+    assert "GPRO" in res_all.text
+
+
 def test_holdings_table_targets_holdings_positions_wrapper(tmp_path):
     """Show/Pagesize/Pagination buttons must swap into #holdings-positions, not the legacy #portfolio-positions."""
     client = _client(tmp_path)

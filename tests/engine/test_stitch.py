@@ -258,3 +258,34 @@ def test_stitch_re_runs_idempotent(repo):
     s1 = stitch_account(repo, acct.id)
     s2 = stitch_account(repo, acct.id)
     assert s1.from_gl == s2.from_gl == 1
+
+
+def test_stitch_skips_sell_to_open_short_options(repo):
+    """A Sell-to-Open option carries premium proceeds and has NO prior buy
+    lot. Stitching's FIFO fallback would happily consume an unrelated equity
+    buy of the same ticker (we have seen HIMS 45P STO get cost_basis=$43.70
+    pulled from the user's HIMS shares), corrupting realized P/L. STO trades
+    must be left untouched.
+    """
+    acct = repo.get_or_create_account("schwab", "personal")
+    # Equity buys that would be FIFO-consumable by ticker.
+    eq_buy = _stock_trade(date(2025, 6, 23), "HIMS", "Buy", 1.0, cost_basis=43.7)
+    sto = Trade(
+        account=acct.display(),
+        date=date(2025, 6, 23),
+        ticker="HIMS",
+        action="Sell",
+        quantity=1.0,
+        proceeds=799.34,
+        cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=45.0, expiry=date(2025, 8, 15), call_put="P"),
+    )
+    _import(repo, acct, [eq_buy, sto])
+
+    stitch_account(repo, acct.id)
+
+    # The STO must remain marked option_short_open with no FIFO-pulled basis.
+    refreshed = next(t for t in repo.get_trades_for_ticker("HIMS") if t.option_details is not None)
+    assert refreshed.basis_source == "option_short_open"
+    assert refreshed.cost_basis is None

@@ -18,16 +18,26 @@ def detect_wash_sales(
     3. For each loss sale, match against candidates in FIFO order
     4. Allocate disallowed loss and adjust replacement lot basis
     """
+    # Skip the assigned-put synthetic STO/BTC pair from loss/candidate scans:
+    # they have synthetic proceeds/cost (premium and 0 respectively) used only
+    # to keep cash flow / open-option counts honest, not to represent
+    # independent realized events the wash-sale rule applies to.
+    _SYNTHETIC_SOURCES = {"option_short_open_assigned", "option_short_close_assigned"}
     loss_sales = sorted(
-        [t for t in trades if t.is_loss()],
+        [t for t in trades if t.is_loss() and t.basis_source not in _SYNTHETIC_SOURCES],
         key=lambda t: t.date,
     )
 
-    # Create lots from buys — track remaining allocable quantity per lot
+    # Create lots from buys — track remaining allocable quantity per lot.
+    # `option_short_close` (BTC) is a Buy that closes a short option position;
+    # it should NOT seed a new long lot, so it is excluded here. (It also
+    # naturally falls out of wash-sale candidacy below since `lot_remaining`
+    # never lists it.)
     lots: dict[str, Lot] = {}
     lot_remaining: dict[str, float] = {}
+    _NO_LOT_BUYS = {"option_short_close", "option_short_close_assigned"}
     for t in trades:
-        if t.is_buy():
+        if t.is_buy() and t.basis_source not in _NO_LOT_BUYS:
             lot = Lot.from_trade(t)
             lots[t.id] = lot
             lot_remaining[t.id] = t.quantity

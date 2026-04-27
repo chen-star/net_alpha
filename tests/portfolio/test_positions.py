@@ -220,3 +220,218 @@ def test_option_lots_excluded_from_qty_and_basis():
     # Only the equity lot contributes to qty
     assert rows[0].qty == Decimal("100")
     assert rows[0].open_cost == Decimal("40000")
+
+
+def test_open_short_put_only_surfaces_underlying_with_zero_qty():
+    """A ticker with no equity buys but an open Sell-to-Open put (e.g. UUUU)
+    must still appear as a row so the user can drill into it from /holdings.
+    """
+    from net_alpha.models.domain import OptionDetails
+
+    sto = _trade(
+        id="t-sto",
+        ticker="UUUU",
+        action="Sell",
+        quantity=1.0,
+        proceeds=486.34,
+        cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=20.0, expiry=dt.date(2026, 1, 16), call_put="P"),
+    )
+    rows = compute_open_positions(trades=[sto], lots=[], prices={}, period=None, account=None)
+    assert len(rows) == 1
+    r = rows[0]
+    assert r.symbol == "UUUU"
+    assert r.qty == 0
+    assert r.open_option_contracts == Decimal("1")
+
+
+def test_round_trip_short_put_does_not_surface_after_close():
+    """STO followed by BTC of the same option contract → net 0 → no row."""
+    from net_alpha.models.domain import OptionDetails
+
+    opt = OptionDetails(strike=20.0, expiry=dt.date(2026, 1, 16), call_put="P")
+    sto = _trade(
+        id="t-sto",
+        ticker="UUUU",
+        action="Sell",
+        quantity=1.0,
+        proceeds=486.34,
+        cost_basis=None,
+        basis_source="option_short_open",
+        option_details=opt,
+    )
+    btc = _trade(
+        id="t-btc",
+        ticker="UUUU",
+        action="Buy",
+        quantity=1.0,
+        proceeds=None,
+        cost_basis=140.66,
+        basis_source="option_short_close",
+        option_details=opt,
+        date=dt.date(2026, 1, 9),
+    )
+    rows = compute_open_positions(trades=[sto, btc], lots=[], prices={}, period=None, account=None)
+    assert rows == []
+
+
+def test_open_long_call_alongside_equity_shows_both_signals():
+    """Underlying with both an open equity lot AND an open BTO call: the
+    equity row should appear normally with `open_option_contracts` set so
+    the badge can render alongside qty."""
+    from net_alpha.models.domain import OptionDetails
+
+    eq_buy = _trade(id="t-eq", ticker="TSLA", action="Buy", quantity=1.0, cost_basis=300.0)
+    eq_lot = _lot(id="l-eq", trade_id="t-eq", ticker="TSLA", quantity=1.0, cost_basis=300.0, adjusted_basis=300.0)
+    bto = _trade(
+        id="t-bto",
+        ticker="TSLA",
+        action="Buy",
+        quantity=1.0,
+        cost_basis=4450.66,
+        option_details=OptionDetails(strike=400.0, expiry=dt.date(2026, 6, 18), call_put="C"),
+        date=dt.date(2025, 7, 14),
+    )
+    rows = compute_open_positions(
+        trades=[eq_buy, bto], lots=[eq_lot], prices={"TSLA": _quote("TSLA", 350)}, period=None, account=None
+    )
+    [tsla] = rows
+    assert tsla.qty == Decimal("1")
+    assert tsla.open_option_contracts == Decimal("1")
+
+
+def test_open_option_counter_subtracts_gl_closures():
+    """A BTO with no matching STC trade but a GL closure (e.g. expired
+    worthless, only Schwab's GL records the close) must not surface as an
+    open contract — otherwise tickers like AES/NVDA appear as 'open opt'
+    long after they've actually closed."""
+    from datetime import date as _d
+
+    from net_alpha.models.domain import OptionDetails
+    from net_alpha.portfolio.positions import compute_open_option_contracts
+
+    bto = _trade(
+        id="t-bto",
+        ticker="HIMS",
+        action="Buy",
+        quantity=1.0,
+        cost_basis=750.66,
+        option_details=OptionDetails(strike=70.0, expiry=_d(2026, 1, 16), call_put="C"),
+        date=_d(2025, 10, 2),
+    )
+    # Without GL augmentation, this BTO looks open.
+    no_gl = compute_open_option_contracts([bto])
+    assert no_gl == {"HIMS": Decimal("1")}
+
+    # GL records the same contract closing (expired worthless on 2026-01-16).
+    gl = {("HIMS", 70.0, _d(2026, 1, 16), "C"): 1.0}
+    with_gl = compute_open_option_contracts([bto], gl_option_closures=gl)
+    assert with_gl == {}
+
+
+def test_open_option_counter_subtracts_gl_for_short_too():
+    """Symmetric: a STO whose close is only in GL (e.g. assigned put closure
+    Schwab logged as a GL row) must zero out — not stay surfaced as a short."""
+    from datetime import date as _d
+
+    from net_alpha.models.domain import OptionDetails
+    from net_alpha.portfolio.positions import compute_open_option_contracts
+
+    sto = _trade(
+        id="t-sto",
+        ticker="UUUU",
+        action="Sell",
+        quantity=1.0,
+        proceeds=486.34,
+        cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=20.0, expiry=_d(2026, 1, 16), call_put="P"),
+    )
+    no_gl = compute_open_option_contracts([sto])
+    assert no_gl == {"UUUU": Decimal("1")}
+
+    gl = {("UUUU", 20.0, _d(2026, 1, 16), "P"): 1.0}
+    with_gl = compute_open_option_contracts([sto], gl_option_closures=gl)
+    assert with_gl == {}
+
+
+def test_open_lots_view_filters_closed_options_via_gl():
+    """Long-option BTO with no STC trade but a GL closure (expired worthless)
+    must NOT appear in the lots view. Without this, /ticker/NVDA showed the
+    NVDA 220C 12/19 BTO as still open even though GL records it closed."""
+    from datetime import date as _d
+
+    from net_alpha.models.domain import OptionDetails
+    from net_alpha.portfolio.positions import open_lots_view
+
+    bto = _trade(
+        id="t-bto",
+        ticker="NVDA",
+        action="Buy",
+        quantity=1.0,
+        cost_basis=180.66,
+        option_details=OptionDetails(strike=220.0, expiry=_d(2025, 12, 19), call_put="C"),
+        date=_d(2025, 11, 20),
+    )
+    lot = _lot(
+        id="l-bto",
+        trade_id="t-bto",
+        ticker="NVDA",
+        date=_d(2025, 11, 20),
+        quantity=1.0,
+        cost_basis=180.66,
+        adjusted_basis=180.66,
+        option_details=OptionDetails(strike=220.0, expiry=_d(2025, 12, 19), call_put="C"),
+    )
+    # Without GL → still appears open (FIFO has nothing to consume against).
+    assert len(open_lots_view(lots=[lot], trades=[bto])) == 1
+
+    gl = {("Schwab Tax", "NVDA", 220.0, _d(2025, 12, 19), "C"): 1.0}
+    out = open_lots_view(lots=[lot], trades=[bto], gl_option_closures=gl)
+    assert out == []
+
+
+def test_open_lots_view_handles_corporate_action_ticker_change():
+    """A BTO under ticker 'GME' followed by an STC trade (or GL closure) under
+    Schwab's post-corp-action symbol 'GME1' represents the same economic
+    position. The lot must be consumed even though the closing event has a
+    different ticker string.
+    """
+    from datetime import date as _d
+
+    from net_alpha.models.domain import OptionDetails
+    from net_alpha.portfolio.positions import open_lots_view
+
+    opt = OptionDetails(strike=30.0, expiry=_d(2026, 1, 16), call_put="C")
+    bto = _trade(
+        id="t-bto",
+        ticker="GME",  # original symbol
+        action="Buy",
+        quantity=1.0,
+        cost_basis=290.66,
+        option_details=opt,
+        date=_d(2025, 10, 2),
+    )
+    stc = _trade(
+        id="t-stc",
+        ticker="GME1",  # post-corp-action symbol
+        action="Sell",
+        quantity=1.0,
+        proceeds=164.34,
+        cost_basis=290.66,
+        option_details=opt,
+        date=_d(2025, 10, 7),
+    )
+    lot = _lot(
+        id="l-bto",
+        trade_id="t-bto",
+        ticker="GME",
+        date=_d(2025, 10, 2),
+        quantity=1.0,
+        cost_basis=290.66,
+        adjusted_basis=290.66,
+        option_details=opt,
+    )
+    out = open_lots_view(lots=[lot], trades=[bto, stc])
+    assert out == []

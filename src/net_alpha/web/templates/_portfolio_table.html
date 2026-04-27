@@ -127,7 +127,15 @@
               <div class="flex items-center gap-2 font-semibold tracking-tightish">
                 <span class="w-5 h-5 rounded-md bg-surface-3 grid place-items-center text-[9px] font-bold text-label-1 shrink-0">{{ r.symbol[0] }}</span>
                 {{ r.symbol }}
-                {% if r.qty == 0 %}<span class="ml-1 text-[10px] uppercase text-label-3">closed</span>{% endif %}
+                {% if r.open_option_contracts and r.open_option_contracts != 0 %}
+                  <span class="ml-1 text-[10px] uppercase pill"
+                        style="color: var(--color-accent);"
+                        title="Net |open contracts| across all option positions on this underlying.">
+                    {{ "%g"|format(r.open_option_contracts|float) }} opt
+                  </span>
+                {% elif r.qty == 0 %}
+                  <span class="ml-1 text-[10px] uppercase text-label-3">closed</span>
+                {% endif %}
               </div>
             </td>
             <td class="text-[11px] text-label-2">

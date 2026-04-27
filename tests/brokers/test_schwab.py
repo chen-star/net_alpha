@@ -323,3 +323,160 @@ def test_normal_buy_unaffected_by_assignment_logic():
     trades = SchwabParser().parse(rows, account_display="schwab/personal")
     assert trades[0].cost_basis == 2000.0
     assert trades[0].basis_source == "unknown"  # default — not adjusted
+
+
+def test_sell_to_open_put_round_trip_emits_two_trades():
+    """STO + BTC of an unassigned put becomes a Sell (premium) + Buy (close
+    cost) on the underlying ticker, so the user sees the position in the
+    ticker timeline and the cash flow in the Cash Balance chart."""
+    rows = [
+        {
+            "Date": "12/11/2025",
+            "Action": "Sell to Open",
+            "Symbol": "UUUU 01/16/2026 20.00 P",
+            "Quantity": "1",
+            "Price": "$4.87",
+            "Amount": "$486.34",
+        },
+        {
+            "Date": "01/09/2026",
+            "Action": "Buy to Close",
+            "Symbol": "UUUU 01/16/2026 20.00 P",
+            "Quantity": "1",
+            "Price": "$1.40",
+            "Amount": "-$140.66",
+        },
+    ]
+    trades = SchwabParser().parse(rows, account_display="schwab/st")
+    assert len(trades) == 2
+    sto, btc = trades
+    assert sto.action == "Sell"
+    assert sto.ticker == "UUUU"
+    assert sto.option_details is not None
+    assert sto.option_details.call_put == "P"
+    assert sto.proceeds == 486.34
+    assert sto.basis_source == "option_short_open"
+    assert sto.gross_cash_impact == 486.34  # premium received
+    assert btc.action == "Buy"
+    assert btc.ticker == "UUUU"
+    assert btc.option_details is not None
+    assert btc.cost_basis == 140.66
+    assert btc.basis_source == "option_short_close"
+    assert btc.gross_cash_impact == -140.66  # cash paid to close
+
+
+def test_sell_to_open_put_with_assignment_emits_visible_sto_plus_synthetic_close():
+    """When a sold put is assigned, the user wants to see the premium event
+    in the timeline. The parser emits the STO Sell (with premium proceeds +
+    gross_cash_impact, marked option_short_open_assigned) AND a synthetic
+    closing Buy (cost=$0, gross_cash_impact=0, option_short_close_assigned)
+    on the assignment date. Downstream aggregation skips both from realized
+    P/L because the premium is already folded into the underlying-stock
+    basis offset.
+    """
+    rows = [
+        {
+            "Date": "02/26/2026",
+            "Action": "Sell to Open",
+            "Symbol": "EOSE 04/17/2026 10.00 P",
+            "Quantity": "1",
+            "Price": "$2.99",
+            "Amount": "$298.34",
+        },
+        {
+            "Date": "03/25/2026",
+            "Action": "Assigned",
+            "Symbol": "EOSE 04/17/2026 10.00 P",
+            "Quantity": "1",
+            "Price": "",
+            "Amount": "",
+        },
+        {
+            "Date": "03/25/2026",
+            "Action": "Buy",
+            "Symbol": "EOSE",
+            "Quantity": "100",
+            "Price": "$10.00",
+            "Amount": "-$1000.00",
+        },
+    ]
+    trades = SchwabParser().parse(rows, account_display="schwab/st")
+    # Underlying stock buy with basis adjusted by premium (IRS Pub 550).
+    eq = next(t for t in trades if t.option_details is None)
+    assert eq.cost_basis == pytest.approx(701.66, abs=0.01)
+    assert eq.basis_source == "put_assignment"
+    # STO emitted with premium captured in proceeds + gross_cash_impact.
+    sto = next(t for t in trades if t.basis_source == "option_short_open_assigned")
+    assert sto.action == "Sell"
+    assert sto.proceeds == pytest.approx(298.34, abs=0.01)
+    assert sto.gross_cash_impact == pytest.approx(298.34, abs=0.01)
+    # Synthetic close on the assignment date so the option counter nets to zero.
+    close = next(t for t in trades if t.basis_source == "option_short_close_assigned")
+    assert close.action == "Buy"
+    assert close.cost_basis == 0.0
+    assert close.gross_cash_impact == 0.0
+    assert close.date == date(2026, 3, 25)
+    assert close.option_details is not None and close.option_details.strike == 10.0
+
+
+def test_sell_to_open_call_emits_trade_even_if_assigned():
+    """Call-assignment is not basis-adjusted by the parser (the underlying
+    Sell at strike captures the proceeds), so the STO premium is real
+    income and must be emitted as a Sell trade."""
+    rows = [
+        {
+            "Date": "01/15/2026",
+            "Action": "Sell to Open",
+            "Symbol": "HOOD 06/18/2026 130.00 C",
+            "Quantity": "1",
+            "Price": "$12.18",
+            "Amount": "$1217.34",
+        },
+        {
+            "Date": "06/18/2026",
+            "Action": "Assigned",
+            "Symbol": "HOOD 06/18/2026 130.00 C",
+            "Quantity": "1",
+            "Price": "",
+            "Amount": "",
+        },
+    ]
+    trades = SchwabParser().parse(rows, account_display="schwab/st")
+    sto = next(t for t in trades if t.option_details is not None)
+    assert sto.action == "Sell"
+    assert sto.ticker == "HOOD"
+    assert sto.proceeds == 1217.34
+    assert sto.basis_source == "option_short_open"
+
+
+def test_byte_identical_rows_get_distinct_natural_keys_via_occurrence_index():
+    """Schwab can split a fill across two truly-identical rows (same date,
+    same price, same quantity, same fees). The pre-fix natural_key collapsed
+    them to one key, so the import-time dedup pre-filter dropped one — and
+    the user's GPRO 07/29 100sh sell silently went missing. The parser now
+    assigns an occurrence_index so the second instance gets a distinct key.
+    """
+    rows = [
+        {
+            "Date": "07/29/2025",
+            "Action": "Sell",
+            "Symbol": "GPRO",
+            "Quantity": "100",
+            "Price": "$1.29",
+            "Amount": "$128.98",
+        },
+        {
+            "Date": "07/29/2025",
+            "Action": "Sell",
+            "Symbol": "GPRO",
+            "Quantity": "100",
+            "Price": "$1.29",
+            "Amount": "$128.98",
+        },
+    ]
+    trades = SchwabParser().parse(rows, account_display="schwab/st")
+    assert len(trades) == 2
+    assert trades[0].occurrence_index == 0
+    assert trades[1].occurrence_index == 1
+    # Distinct natural keys → both survive the import dedup pre-filter.
+    assert trades[0].compute_natural_key() != trades[1].compute_natural_key()

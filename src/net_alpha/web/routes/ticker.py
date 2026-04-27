@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
 from net_alpha.models.realized_gl import RealizedGLLot
+from net_alpha.portfolio.positions import open_lots_view
 from net_alpha.web.dependencies import get_repository
 from net_alpha.web.format import display_action
 
@@ -21,7 +22,16 @@ def ticker_drilldown(
 ) -> HTMLResponse:
     symbol = symbol.upper()
     trades = repo.get_trades_for_ticker(symbol)
-    lots = repo.get_lots_for_ticker(symbol)
+    raw_lots = repo.get_lots_for_ticker(symbol)
+    # Filter to lots that are still open after consuming sells / GL closures.
+    # Without this, a BTO that expired worthless (only Schwab GL records the
+    # close) appears in the "Open lots" table forever.
+    lots = open_lots_view(
+        lots=raw_lots,
+        trades=repo.all_trades(),
+        gl_closures=repo.get_equity_gl_closures(),
+        gl_option_closures=repo.get_option_gl_closures(),
+    )
     violations = repo.get_violations_for_ticker(symbol)
 
     today = date.today()

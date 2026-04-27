@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from importlib.resources import files
 
 from fastapi import FastAPI
@@ -41,6 +42,9 @@ def create_app(settings: Settings) -> FastAPI:
     templates.env.globals["price_disclosure"] = (
         price_source_line("Yahoo Finance") if pricing_config.enable_remote else ""
     )
+    # Bust browser cache on every server start — local dev tool, not a CDN, so
+    # the server-restart cadence is the right TTL for static assets.
+    templates.env.globals["asset_v"] = str(int(time.time()))
     app.state.templates = templates
 
     @app.get("/healthz")
