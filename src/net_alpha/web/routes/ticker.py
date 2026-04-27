@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 from net_alpha.db.repository import Repository
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.web.dependencies import get_repository
+from net_alpha.web.format import display_action
 
 router = APIRouter()
 
@@ -55,5 +56,6 @@ def ticker_drilldown(
             "kpi_disallowed_ytd": disallowed_ytd,
             "kpi_accounts": accounts,
             "kpi_last_trade": last_trade,
+            "display_action": display_action,
         },
     )

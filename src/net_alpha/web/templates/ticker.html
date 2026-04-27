@@ -47,10 +47,12 @@
         <tr>
           <th>Date</th>
           <th>Account</th>
+          <th>Provenance</th>
           <th>Action</th>
           <th>Qty</th>
           <th>Basis</th>
           <th>Proceeds</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -58,14 +60,22 @@
           <tr>
             <td class="px-2 py-1 font-mono">{{ t.date }}</td>
             <td class="px-2 py-1">{{ t.account }}</td>
-            <td class="px-2 py-1">{{ t.action }}</td>
+            <td class="px-2 py-1 text-[11px]">
+              {% if t.is_manual %}<span class="pill" style="color: var(--color-accent);">manual</span>
+              {% elif t.transfer_basis_user_set %}<span class="pill" style="color: var(--color-warn);">edited</span>
+              {% endif %}
+            </td>
+            <td class="px-2 py-1">{{ display_action(t) }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.cost_basis if t.cost_basis is not none else "-" }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
+            <td class="px-2 py-1 text-[11px]" id="trade-affordance-{{ t.id }}">
+              {# Filled in by Task 13. Empty for now. #}
+            </td>
           </tr>
         {% endfor %}
         {% if not trades %}
-          <tr><td colspan="6" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
+          <tr><td colspan="8" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
         {% endif %}
       </tbody>
     </table>
