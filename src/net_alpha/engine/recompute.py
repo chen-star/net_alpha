@@ -5,6 +5,7 @@ from datetime import timedelta
 from net_alpha.db.repository import Repository
 from net_alpha.engine.detector import detect_in_window
 from net_alpha.engine.merge import merge_violations
+from net_alpha.splits.apply import apply_splits
 
 
 def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) -> None:
@@ -41,3 +42,6 @@ def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) 
     )
     repo.replace_violations_in_window(win_start, win_end, merged)
     repo.replace_lots_in_window(win_start, win_end, det.lots)
+
+    # Re-apply known splits to the freshly-regenerated lots. Idempotent.
+    apply_splits(repo)

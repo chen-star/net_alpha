@@ -937,6 +937,41 @@ class Repository:
             ).all()
             return list(rows)
 
+    def get_lot_rows_for_symbol(self, symbol: str) -> list:
+        """Return raw LotRow records (NOT domain Lot) so the splits applier
+        can mutate them by id. Open-only is the default since closed lots are
+        irrelevant to the user's current holdings; for split application we
+        also want closed lots so historical wash-sale data stays correct."""
+        from net_alpha.db.tables import LotRow
+
+        with Session(self.engine) as s:
+            rows = s.exec(select(LotRow).where(LotRow.ticker == symbol)).all()
+            # Detach from session by copying to dicts; caller will mutate via update_lot_qty_and_basis.
+            return [
+                {
+                    "id": r.id,
+                    "trade_id": r.trade_id,
+                    "ticker": r.ticker,
+                    "trade_date": r.trade_date,
+                    "quantity": r.quantity,
+                    "adjusted_basis": r.adjusted_basis,
+                    "cost_basis": r.cost_basis,
+                }
+                for r in rows
+            ]
+
+    def update_lot_qty_and_basis(self, lot_id: int, *, quantity: float, adjusted_basis: float) -> None:
+        from net_alpha.db.tables import LotRow
+
+        with Session(self.engine) as s:
+            row = s.get(LotRow, lot_id)
+            if row is None:
+                return
+            row.quantity = quantity
+            row.adjusted_basis = adjusted_basis
+            s.add(row)
+            s.commit()
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility
