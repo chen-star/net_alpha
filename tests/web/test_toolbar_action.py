@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 def test_toolbar_form_action_on_portfolio_page(client: TestClient, builders, repo):
     from datetime import date
+
     builders.seed_import(repo, "schwab", "lt", [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))])
     res = client.get("/")
     assert res.status_code == 200
@@ -14,6 +15,7 @@ def test_toolbar_form_action_on_portfolio_page(client: TestClient, builders, rep
 
 def test_toolbar_form_action_on_holdings_page(client: TestClient, builders, repo):
     from datetime import date
+
     builders.seed_import(repo, "schwab", "lt", [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))])
     res = client.get("/holdings")
     assert res.status_code == 200

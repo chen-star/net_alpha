@@ -8,8 +8,12 @@ from net_alpha.web.format import display_action
 
 def _t(action="Buy", basis_source="broker_csv"):
     return Trade(
-        account="Schwab/Tax", date=date(2026, 1, 15), ticker="AAPL",
-        action=action, quantity=10, basis_source=basis_source,
+        account="Schwab/Tax",
+        date=date(2026, 1, 15),
+        ticker="AAPL",
+        action=action,
+        quantity=10,
+        basis_source=basis_source,
     )
 
 
@@ -47,15 +51,19 @@ def test_ticker_timeline_renders_transfer_in_label(tmp_path):
     init_db(engine)
     with engine.begin() as conn:
         conn.execute(text("INSERT INTO accounts(broker, label) VALUES ('Schwab','Tax')"))
-        conn.execute(text(
-            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
-            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
-        ))
-        conn.execute(text(
-            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-            "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
-            "VALUES (1, 1, 'csv:t1', 'AAPL', '2026-02-01', 'Buy', 10, NULL, 'transfer_in', 0, 0, 0)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+                "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+                "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+                "VALUES (1, 1, 'csv:t1', 'AAPL', '2026-02-01', 'Buy', 10, NULL, 'transfer_in', 0, 0, 0)"
+            )
+        )
     client = TestClient(create_app(settings))
     response = client.get("/ticker/AAPL")
     assert response.status_code == 200

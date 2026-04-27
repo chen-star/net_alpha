@@ -30,27 +30,31 @@ def test_v5_to_v6_adds_new_columns(tmp_path):
     engine = get_engine(db_path)
     # Build a v5-style schema manually without the new columns
     with engine.begin() as conn:
-        conn.execute(text(
-            "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)"
-        ))
-        conn.execute(text(
-            "CREATE TABLE accounts (id INTEGER PRIMARY KEY, broker TEXT NOT NULL, label TEXT NOT NULL, "
-            "UNIQUE (broker, label))"
-        ))
-        conn.execute(text(
-            "CREATE TABLE imports (id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL, "
-            "csv_filename TEXT NOT NULL, csv_sha256 TEXT NOT NULL, imported_at TEXT NOT NULL, "
-            "trade_count INTEGER NOT NULL)"
-        ))
-        conn.execute(text(
-            "CREATE TABLE trades (id INTEGER PRIMARY KEY, import_id INTEGER NOT NULL, "
-            "account_id INTEGER NOT NULL, natural_key TEXT NOT NULL, ticker TEXT NOT NULL, "
-            "trade_date TEXT NOT NULL, action TEXT NOT NULL, quantity REAL NOT NULL, "
-            "proceeds REAL, cost_basis REAL, basis_unknown INTEGER NOT NULL DEFAULT 0, "
-            "option_strike REAL, option_expiry TEXT, option_call_put TEXT, "
-            "basis_source TEXT NOT NULL DEFAULT 'unknown', "
-            "UNIQUE (account_id, natural_key))"
-        ))
+        conn.execute(text("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)"))
+        conn.execute(
+            text(
+                "CREATE TABLE accounts (id INTEGER PRIMARY KEY, broker TEXT NOT NULL, label TEXT NOT NULL, "
+                "UNIQUE (broker, label))"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE TABLE imports (id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL, "
+                "csv_filename TEXT NOT NULL, csv_sha256 TEXT NOT NULL, imported_at TEXT NOT NULL, "
+                "trade_count INTEGER NOT NULL)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE TABLE trades (id INTEGER PRIMARY KEY, import_id INTEGER NOT NULL, "
+                "account_id INTEGER NOT NULL, natural_key TEXT NOT NULL, ticker TEXT NOT NULL, "
+                "trade_date TEXT NOT NULL, action TEXT NOT NULL, quantity REAL NOT NULL, "
+                "proceeds REAL, cost_basis REAL, basis_unknown INTEGER NOT NULL DEFAULT 0, "
+                "option_strike REAL, option_expiry TEXT, option_call_put TEXT, "
+                "basis_source TEXT NOT NULL DEFAULT 'unknown', "
+                "UNIQUE (account_id, natural_key))"
+            )
+        )
         conn.execute(text("INSERT INTO meta(key, value) VALUES ('schema_version', '5')"))
     with Session(engine) as s:
         assert not _column_exists(s, "trades", "is_manual")

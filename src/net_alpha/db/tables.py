@@ -152,9 +152,9 @@ class SplitRow(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     symbol: str = Field(index=True)
     split_date: str  # YYYY-MM-DD ex-date
-    ratio: float    # new shares ÷ old shares; 2.0 = 2-for-1; 0.1 = 1-for-10 reverse
-    source: str     # 'yahoo' | 'manual'
-    fetched_at: str # ISO 8601 UTC timestamp
+    ratio: float  # new shares ÷ old shares; 2.0 = 2-for-1; 0.1 = 1-for-10 reverse
+    source: str  # 'yahoo' | 'manual'
+    fetched_at: str  # ISO 8601 UTC timestamp
 
 
 class LotOverrideRow(SQLModel, table=True):
@@ -162,10 +162,10 @@ class LotOverrideRow(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     trade_id: int = Field(foreign_key="trades.id", index=True)
-    field: str          # 'quantity' | 'adjusted_basis'
+    field: str  # 'quantity' | 'adjusted_basis'
     old_value: float
     new_value: float
-    reason: str         # 'split' | 'manual' | 'transfer_basis_fix'
-    edited_at: str      # ISO 8601 UTC timestamp
+    reason: str  # 'split' | 'manual' | 'transfer_basis_fix'
+    edited_at: str  # ISO 8601 UTC timestamp
     split_id: int | None = Field(default=None, foreign_key="splits.id", index=True)
     # split_id is set when reason='split'; lets apply_split check idempotency.

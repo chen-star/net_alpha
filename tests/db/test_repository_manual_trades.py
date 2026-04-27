@@ -63,15 +63,19 @@ def test_update_imported_transfer_in_keeps_natural_key(tmp_path):
     repo = _setup(tmp_path)
     # Insert a transfer-in row directly (bypass parser).
     with repo.engine.begin() as conn:
-        conn.execute(text(
-            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
-            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
-        ))
-        conn.execute(text(
-            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-            "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
-            "VALUES (1, 1, 'csv:nk1', 'AAPL', '2026-02-01', 'Buy', 10, NULL, 'transfer_in', 0, 0, 0)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+                "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+                "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+                "VALUES (1, 1, 'csv:nk1', 'AAPL', '2026-02-01', 'Buy', 10, NULL, 'transfer_in', 0, 0, 0)"
+            )
+        )
         row = conn.execute(text("SELECT id FROM trades")).first()
         trade_id = str(row[0])
 
@@ -83,9 +87,9 @@ def test_update_imported_transfer_in_keeps_natural_key(tmp_path):
     )
 
     with repo.engine.begin() as conn:
-        row = conn.execute(text(
-            "SELECT trade_date, cost_basis, natural_key, transfer_basis_user_set FROM trades"
-        )).first()
+        row = conn.execute(
+            text("SELECT trade_date, cost_basis, natural_key, transfer_basis_user_set FROM trades")
+        ).first()
     assert row[0] == "2024-06-15"
     assert abs(row[1] - 2500.0) < 1e-9
     assert row[2] == "csv:nk1"  # preserved
@@ -95,15 +99,19 @@ def test_update_imported_transfer_in_keeps_natural_key(tmp_path):
 def test_update_imported_transfer_rejects_non_transfer_row(tmp_path):
     repo = _setup(tmp_path)
     with repo.engine.begin() as conn:
-        conn.execute(text(
-            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
-            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
-        ))
-        conn.execute(text(
-            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-            "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
-            "VALUES (1, 1, 'csv:nk2', 'AAPL', '2024-06-15', 'Buy', 10, 1000, 'broker_csv', 0, 0, 0)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+                "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+                "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+                "VALUES (1, 1, 'csv:nk2', 'AAPL', '2024-06-15', 'Buy', 10, 1000, 'broker_csv', 0, 0, 0)"
+            )
+        )
         trade_id = str(conn.execute(text("SELECT id FROM trades")).first()[0])
 
     import pytest
@@ -121,15 +129,19 @@ def test_update_imported_transfer_out_uses_proceeds(tmp_path):
     """transfer_out rows should write to proceeds, not cost_basis."""
     repo = _setup(tmp_path)
     with repo.engine.begin() as conn:
-        conn.execute(text(
-            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
-            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
-        ))
-        conn.execute(text(
-            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-            "quantity, proceeds, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
-            "VALUES (1, 1, 'csv:nk3', 'AAPL', '2026-02-01', 'Sell', 10, NULL, 'transfer_out', 0, 0, 0)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+                "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+                "quantity, proceeds, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+                "VALUES (1, 1, 'csv:nk3', 'AAPL', '2026-02-01', 'Sell', 10, NULL, 'transfer_out', 0, 0, 0)"
+            )
+        )
         trade_id = str(conn.execute(text("SELECT id FROM trades")).first()[0])
 
     repo.update_imported_transfer(
@@ -140,9 +152,7 @@ def test_update_imported_transfer_out_uses_proceeds(tmp_path):
     )
 
     with repo.engine.begin() as conn:
-        row = conn.execute(text(
-            "SELECT cost_basis, proceeds FROM trades"
-        )).first()
+        row = conn.execute(text("SELECT cost_basis, proceeds FROM trades")).first()
     assert row[0] is None  # cost_basis untouched
     assert abs(row[1] - 2700.0) < 1e-9  # proceeds set
 
@@ -183,15 +193,19 @@ def test_update_manual_trade_full_edit(tmp_path):
 def test_update_manual_trade_rejects_imported_row(tmp_path):
     repo = _setup(tmp_path)
     with repo.engine.begin() as conn:
-        conn.execute(text(
-            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
-            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
-        ))
-        conn.execute(text(
-            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-            "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
-            "VALUES (1, 1, 'csv:x', 'AAPL', '2024-06-15', 'Buy', 10, 1000, 'broker_csv', 0, 0, 0)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+                "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+                "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+                "VALUES (1, 1, 'csv:x', 'AAPL', '2024-06-15', 'Buy', 10, 1000, 'broker_csv', 0, 0, 0)"
+            )
+        )
         trade_id = str(conn.execute(text("SELECT id FROM trades")).first()[0])
 
     t = Trade(
@@ -206,6 +220,7 @@ def test_update_manual_trade_rejects_imported_row(tmp_path):
         is_manual=True,
     )
     import pytest
+
     with pytest.raises(ValueError):
         repo.update_manual_trade(t, etf_pairs={})
 
@@ -215,8 +230,14 @@ def test_update_manual_trade_preserves_natural_key(tmp_path):
     repo = _setup(tmp_path)
     saved = repo.create_manual_trade(
         Trade(
-            account="Schwab/Tax", date=date(2026, 1, 15), ticker="AAPL",
-            action="Buy", quantity=10, cost_basis=1500.0, basis_source="user", is_manual=True,
+            account="Schwab/Tax",
+            date=date(2026, 1, 15),
+            ticker="AAPL",
+            action="Buy",
+            quantity=10,
+            cost_basis=1500.0,
+            basis_source="user",
+            is_manual=True,
         ),
         etf_pairs={},
     )
@@ -227,8 +248,14 @@ def test_update_manual_trade_preserves_natural_key(tmp_path):
     repo.update_manual_trade(
         Trade(
             id=saved.id,
-            account="Schwab/Tax", date=date(2025, 1, 1), ticker="AAPL",
-            action="Buy", quantity=99, cost_basis=2999.0, basis_source="user", is_manual=True,
+            account="Schwab/Tax",
+            date=date(2025, 1, 1),
+            ticker="AAPL",
+            action="Buy",
+            quantity=99,
+            cost_basis=2999.0,
+            basis_source="user",
+            is_manual=True,
         ),
         etf_pairs={},
     )
@@ -240,8 +267,14 @@ def test_update_manual_trade_preserves_natural_key(tmp_path):
 def test_delete_manual_trade_removes_row(tmp_path):
     repo = _setup(tmp_path)
     t = Trade(
-        account="Schwab/Tax", date=date(2026, 1, 15), ticker="AAPL",
-        action="Buy", quantity=10, cost_basis=1500.0, basis_source="user", is_manual=True,
+        account="Schwab/Tax",
+        date=date(2026, 1, 15),
+        ticker="AAPL",
+        action="Buy",
+        quantity=10,
+        cost_basis=1500.0,
+        basis_source="user",
+        is_manual=True,
     )
     saved = repo.create_manual_trade(t, etf_pairs={})
     repo.delete_manual_trade(saved.id, etf_pairs={})
@@ -251,18 +284,23 @@ def test_delete_manual_trade_removes_row(tmp_path):
 def test_delete_manual_trade_rejects_imported_row(tmp_path):
     repo = _setup(tmp_path)
     with repo.engine.begin() as conn:
-        conn.execute(text(
-            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
-            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
-        ))
-        conn.execute(text(
-            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-            "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
-            "VALUES (1, 1, 'csv:x', 'AAPL', '2024-06-15', 'Buy', 10, 1000, 'broker_csv', 0, 0, 0)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+                "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+                "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+                "VALUES (1, 1, 'csv:x', 'AAPL', '2024-06-15', 'Buy', 10, 1000, 'broker_csv', 0, 0, 0)"
+            )
+        )
         trade_id = str(conn.execute(text("SELECT id FROM trades")).first()[0])
 
     import pytest
+
     with pytest.raises(ValueError):
         repo.delete_manual_trade(trade_id, etf_pairs={})
 
@@ -272,22 +310,28 @@ def test_delete_manual_trade_removes_associated_violation(tmp_path):
     repo = _setup(tmp_path)
     # Step 1: insert a loss sale (imported) so deleting the manual buy later removes the violation.
     with repo.engine.begin() as conn:
-        conn.execute(text(
-            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
-            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+                "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
+            )
+        )
         # Loss sale on Jan 5 — sold for less than basis.
-        conn.execute(text(
-            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-            "quantity, proceeds, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
-            "VALUES (1, 1, 'csv:loss', 'AAPL', '2026-01-05', 'Sell', 10, 800, 1000, 'broker_csv', 0, 0, 0)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+                "quantity, proceeds, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+                "VALUES (1, 1, 'csv:loss', 'AAPL', '2026-01-05', 'Sell', 10, 800, 1000, 'broker_csv', 0, 0, 0)"
+            )
+        )
         # Original buy lot — far enough back (>30 days) to be outside the wash window.
-        conn.execute(text(
-            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-            "quantity, proceeds, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
-            "VALUES (1, 1, 'csv:original', 'AAPL', '2025-12-01', 'Buy', 10, NULL, 1000, 'broker_csv', 0, 0, 0)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+                "quantity, proceeds, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+                "VALUES (1, 1, 'csv:original', 'AAPL', '2025-12-01', 'Buy', 10, NULL, 1000, 'broker_csv', 0, 0, 0)"
+            )
+        )
 
     # Step 2: add a manual replacement buy WITHIN the wash window — triggers a violation.
     saved = repo.create_manual_trade(

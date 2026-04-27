@@ -9,9 +9,14 @@ from fastapi.testclient import TestClient
 
 
 def test_no_alpine_expression_text_leaks(client: TestClient, builders, repo):
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
-    ])
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
+        ],
+    )
     res = client.get("/portfolio/positions?period=ytd&account=&group_options=merge&show=open&page=1")
     assert res.status_code == 200
     # The body of the old x-data leaked these strings to the rendered page.
@@ -21,7 +26,7 @@ def test_no_alpine_expression_text_leaks(client: TestClient, builders, repo):
     # Function body definitions should not appear in page text (call sites like
     # x-for="s in filtered()" are fine — those are Alpine binding expressions).
     assert "filtered() {" not in res.text  # method definition body should not appear
-    assert "return q ?" not in res.text    # inner logic should not appear
+    assert "return q ?" not in res.text  # inner logic should not appear
     # The Alpine component name should be present as the x-data value.
     assert "symbolFilter(" in res.text
 

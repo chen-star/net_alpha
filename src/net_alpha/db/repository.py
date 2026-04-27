@@ -649,14 +649,12 @@ class Repository:
             s.add(row)
             s.commit()
 
-    def _resolve_account(self, s: Session, display: str) -> "AccountRow":
+    def _resolve_account(self, s: Session, display: str) -> AccountRow:
         if "/" in display:
             broker, label = display.split("/", 1)
         else:
             broker, label = "Manual", display
-        row = s.exec(
-            select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)
-        ).first()
+        row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
         if row is None:
             raise LookupError(f"Account {display!r} not found — create it via /imports first")
         return row
@@ -721,9 +719,7 @@ class Repository:
             row.basis_unknown = trade.basis_unknown
             row.basis_source = trade.basis_source
             row.option_strike = trade.option_details.strike if trade.option_details else None
-            row.option_expiry = (
-                trade.option_details.expiry.isoformat() if trade.option_details else None
-            )
+            row.option_expiry = trade.option_details.expiry.isoformat() if trade.option_details else None
             row.option_call_put = trade.option_details.call_put if trade.option_details else None
             # is_manual stays True; natural_key untouched.
             s.add(row)
@@ -773,9 +769,7 @@ class Repository:
             if row.is_manual:
                 raise ValueError("Use update_manual_trade for manual rows")
             if row.basis_source not in ("transfer_in", "transfer_out"):
-                raise ValueError(
-                    f"update_imported_transfer requires a transfer row; basis_source={row.basis_source!r}"
-                )
+                raise ValueError(f"update_imported_transfer requires a transfer row; basis_source={row.basis_source!r}")
             row.trade_date = new_date.isoformat()
             if row.basis_source == "transfer_in":
                 row.cost_basis = new_basis_or_proceeds
@@ -789,6 +783,159 @@ class Repository:
             saved = self._row_to_trade(row, self._account_display_for_id(s, row.account_id))
         recompute_all_violations(self, etf_pairs)
         return saved
+
+    # --- Splits ---
+
+    def add_split(
+        self,
+        symbol: str,
+        split_date: date,
+        ratio: float,
+        source: str,
+    ) -> int | None:
+        """Insert a split. Returns the new id, or the existing id if (symbol, split_date)
+        already exists (no-op for re-fetch). Returns None only on unexpected failure."""
+        from datetime import UTC
+        from datetime import datetime as _dt
+
+        from net_alpha.db.tables import SplitRow
+
+        with Session(self.engine) as s:
+            existing = s.exec(
+                select(SplitRow).where(
+                    SplitRow.symbol == symbol,
+                    SplitRow.split_date == split_date.isoformat(),
+                )
+            ).first()
+            if existing is not None:
+                return existing.id
+            row = SplitRow(
+                symbol=symbol,
+                split_date=split_date.isoformat(),
+                ratio=ratio,
+                source=source,
+                fetched_at=_dt.now(UTC).isoformat(),
+            )
+            s.add(row)
+            s.commit()
+            s.refresh(row)
+            return row.id
+
+    def get_splits(self, symbol: str | None = None) -> list:
+        """Return all splits (optionally filtered by symbol), oldest first."""
+        from datetime import datetime as _dt
+
+        from net_alpha.db.tables import SplitRow
+        from net_alpha.models.splits import Split as SplitDomain
+
+        with Session(self.engine) as s:
+            stmt = select(SplitRow)
+            if symbol is not None:
+                stmt = stmt.where(SplitRow.symbol == symbol)
+            stmt = stmt.order_by(SplitRow.split_date)
+            rows = s.exec(stmt).all()
+            return [
+                SplitDomain(
+                    id=r.id,
+                    symbol=r.symbol,
+                    split_date=date.fromisoformat(r.split_date),
+                    ratio=r.ratio,
+                    source=r.source,
+                    fetched_at=_dt.fromisoformat(r.fetched_at),
+                )
+                for r in rows
+            ]
+
+    # --- Lot overrides ---
+
+    def add_lot_override(
+        self,
+        trade_id: int,
+        field: str,
+        old_value: float,
+        new_value: float,
+        reason: str,
+        split_id: int | None = None,
+    ) -> int:
+        from datetime import UTC
+        from datetime import datetime as _dt
+
+        from net_alpha.db.tables import LotOverrideRow
+
+        with Session(self.engine) as s:
+            row = LotOverrideRow(
+                trade_id=trade_id,
+                field=field,
+                old_value=old_value,
+                new_value=new_value,
+                reason=reason,
+                split_id=split_id,
+                edited_at=_dt.now(UTC).isoformat(),
+            )
+            s.add(row)
+            s.commit()
+            s.refresh(row)
+            return row.id
+
+    def get_lot_overrides_for_trade(self, trade_id: int) -> list:
+        from datetime import datetime as _dt
+
+        from net_alpha.db.tables import LotOverrideRow
+        from net_alpha.models.splits import LotOverride
+
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(LotOverrideRow).where(LotOverrideRow.trade_id == trade_id).order_by(LotOverrideRow.edited_at)
+            ).all()
+            return [
+                LotOverride(
+                    id=r.id,
+                    trade_id=r.trade_id,
+                    field=r.field,
+                    old_value=r.old_value,
+                    new_value=r.new_value,
+                    reason=r.reason,
+                    edited_at=_dt.fromisoformat(r.edited_at),
+                    split_id=r.split_id,
+                )
+                for r in rows
+            ]
+
+    def all_lot_overrides(self) -> list:
+        """All overrides across all trades, used by the post-recompute applier."""
+        from datetime import datetime as _dt
+
+        from net_alpha.db.tables import LotOverrideRow
+        from net_alpha.models.splits import LotOverride
+
+        with Session(self.engine) as s:
+            rows = s.exec(select(LotOverrideRow).order_by(LotOverrideRow.edited_at)).all()
+            return [
+                LotOverride(
+                    id=r.id,
+                    trade_id=r.trade_id,
+                    field=r.field,
+                    old_value=r.old_value,
+                    new_value=r.new_value,
+                    reason=r.reason,
+                    edited_at=_dt.fromisoformat(r.edited_at),
+                    split_id=r.split_id,
+                )
+                for r in rows
+            ]
+
+    def get_split_overrides_for_trade(self, trade_id: int, split_id: int) -> list:
+        """Used by apply_split to check idempotency: 'have I already applied this split to this trade?'"""
+        from net_alpha.db.tables import LotOverrideRow
+
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(LotOverrideRow).where(
+                    LotOverrideRow.trade_id == trade_id,
+                    LotOverrideRow.split_id == split_id,
+                )
+            ).all()
+            return list(rows)
 
 
 # ---------------------------------------------------------------------------

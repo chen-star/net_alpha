@@ -109,7 +109,8 @@ def _migrate_v5_to_v6(session: Session) -> None:
     import_id_row = next((r for r in info if r[1] == "import_id"), None)
     if import_id_row is not None and import_id_row[3] == 1:  # notnull flag is column 3
         session.exec(text("PRAGMA foreign_keys=OFF"))
-        session.exec(text("""
+        session.exec(
+            text("""
             CREATE TABLE trades_new (
               id INTEGER PRIMARY KEY,
               import_id INTEGER NULL REFERENCES imports(id),
@@ -130,15 +131,18 @@ def _migrate_v5_to_v6(session: Session) -> None:
               transfer_basis_user_set INTEGER NOT NULL DEFAULT 0,
               CONSTRAINT uq_trade_account_natkey UNIQUE (account_id, natural_key)
             )
-        """))
-        session.exec(text("""
+        """)
+        )
+        session.exec(
+            text("""
             INSERT INTO trades_new
             SELECT id, import_id, account_id, natural_key, ticker, trade_date, action,
                    quantity, proceeds, cost_basis, basis_unknown,
                    option_strike, option_expiry, option_call_put,
                    basis_source, is_manual, transfer_basis_user_set
             FROM trades
-        """))
+        """)
+        )
         session.exec(text("DROP TABLE trades"))
         session.exec(text("ALTER TABLE trades_new RENAME TO trades"))
         session.exec(text("CREATE INDEX ix_trades_account_id ON trades(account_id)"))
@@ -152,29 +156,33 @@ def _migrate_v5_to_v6(session: Session) -> None:
 
 def _migrate_v6_to_v7(session: Session) -> None:
     if not _table_exists(session, "splits"):
-        session.exec(text(
-            "CREATE TABLE splits ("
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "symbol TEXT NOT NULL, "
-            "split_date TEXT NOT NULL, "
-            "ratio REAL NOT NULL, "
-            "source TEXT NOT NULL, "
-            "fetched_at TEXT NOT NULL, "
-            "CONSTRAINT uq_splits_symbol_date UNIQUE (symbol, split_date))"
-        ))
+        session.exec(
+            text(
+                "CREATE TABLE splits ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "symbol TEXT NOT NULL, "
+                "split_date TEXT NOT NULL, "
+                "ratio REAL NOT NULL, "
+                "source TEXT NOT NULL, "
+                "fetched_at TEXT NOT NULL, "
+                "CONSTRAINT uq_splits_symbol_date UNIQUE (symbol, split_date))"
+            )
+        )
         session.exec(text("CREATE INDEX ix_splits_symbol ON splits(symbol)"))
     if not _table_exists(session, "lot_overrides"):
-        session.exec(text(
-            "CREATE TABLE lot_overrides ("
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "trade_id INTEGER NOT NULL REFERENCES trades(id), "
-            "field TEXT NOT NULL, "
-            "old_value REAL NOT NULL, "
-            "new_value REAL NOT NULL, "
-            "reason TEXT NOT NULL, "
-            "edited_at TEXT NOT NULL, "
-            "split_id INTEGER NULL REFERENCES splits(id))"
-        ))
+        session.exec(
+            text(
+                "CREATE TABLE lot_overrides ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "trade_id INTEGER NOT NULL REFERENCES trades(id), "
+                "field TEXT NOT NULL, "
+                "old_value REAL NOT NULL, "
+                "new_value REAL NOT NULL, "
+                "reason TEXT NOT NULL, "
+                "edited_at TEXT NOT NULL, "
+                "split_id INTEGER NULL REFERENCES splits(id))"
+            )
+        )
         session.exec(text("CREATE INDEX ix_lot_overrides_trade_id ON lot_overrides(trade_id)"))
         session.exec(text("CREATE INDEX ix_lot_overrides_split_id ON lot_overrides(split_id)"))
     session.commit()

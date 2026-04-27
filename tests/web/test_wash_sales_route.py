@@ -7,22 +7,32 @@ from fastapi.testclient import TestClient
 
 
 def test_wash_sales_default_renders_table_view(client: TestClient, builders, repo):
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
-    ])
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
+        ],
+    )
     res = client.get("/wash-sales")
     assert res.status_code == 200
     assert "Wash sales" in res.text
     # Default view = table; the segmented control should mark Table active.
     assert "seg-active" in res.text
     # Table-only fragment marker (totals bar/table); calendar ribbon shouldn't show.
-    assert "calendar-ribbon" not in res.text or 'view=calendar' in res.text
+    assert "calendar-ribbon" not in res.text or "view=calendar" in res.text
 
 
 def test_wash_sales_view_calendar_renders_calendar(client: TestClient, builders, repo):
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
-    ])
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
+        ],
+    )
     res = client.get("/wash-sales?view=calendar")
     assert res.status_code == 200
     # Calendar ribbon include marker — exact element will be the year-ribbon container.
@@ -30,9 +40,14 @@ def test_wash_sales_view_calendar_renders_calendar(client: TestClient, builders,
 
 
 def test_wash_sales_filter_ticker_propagates(client: TestClient, builders, repo):
-    builders.seed_import(repo, "schwab", "lt", [
-        builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
-    ])
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
+        ],
+    )
     res = client.get("/wash-sales?ticker=AAPL")
     assert res.status_code == 200
     assert 'value="AAPL"' in res.text

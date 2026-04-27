@@ -90,7 +90,9 @@ def _find_trade(repo: Repository, trade_id: str):
 
 @router.get("/ticker/{symbol}/edit-manual-form/{trade_id}", response_class=HTMLResponse)
 def trade_edit_manual_form(
-    request: Request, symbol: str, trade_id: str,
+    request: Request,
+    symbol: str,
+    trade_id: str,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     t = _find_trade(repo, trade_id)
@@ -112,7 +114,9 @@ def trade_edit_manual_form(
 
 @router.get("/ticker/{symbol}/edit-transfer-form/{trade_id}", response_class=HTMLResponse)
 def trade_edit_transfer_form(
-    request: Request, symbol: str, trade_id: str,
+    request: Request,
+    symbol: str,
+    trade_id: str,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     t = _find_trade(repo, trade_id)
@@ -130,7 +134,9 @@ def trade_edit_transfer_form(
 
 @router.get("/ticker/{symbol}/delete-confirm/{trade_id}", response_class=HTMLResponse)
 def trade_delete_confirm(
-    request: Request, symbol: str, trade_id: str,
+    request: Request,
+    symbol: str,
+    trade_id: str,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     t = _find_trade(repo, trade_id)

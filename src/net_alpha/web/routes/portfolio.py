@@ -333,9 +333,7 @@ def portfolio_body(
         period=period_tuple,
         account=account or None,
     )
-    points = build_equity_curve(
-        trades=scoped_trades, year=year, present_unrealized=kpis.period_unrealized
-    )
+    points = build_equity_curve(trades=scoped_trades, year=year, present_unrealized=kpis.period_unrealized)
     positions_for_alloc = compute_open_positions(
         trades=scoped_trades,
         lots=scoped_lots,

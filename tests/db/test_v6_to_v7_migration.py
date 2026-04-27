@@ -56,14 +56,18 @@ def test_v7_splits_unique_symbol_split_date(tmp_path):
         migrate(s)
 
     with Session(eng) as s:
-        s.exec(text(
-            "INSERT INTO splits (symbol, split_date, ratio, source, fetched_at) "
-            "VALUES ('AAPL', '2020-08-31', 4.0, 'yahoo', '2026-04-26T00:00:00Z')"
-        ))
+        s.exec(
+            text(
+                "INSERT INTO splits (symbol, split_date, ratio, source, fetched_at) "
+                "VALUES ('AAPL', '2020-08-31', 4.0, 'yahoo', '2026-04-26T00:00:00Z')"
+            )
+        )
         s.commit()
         with pytest.raises(Exception):  # IntegrityError on duplicate key
-            s.exec(text(
-                "INSERT INTO splits (symbol, split_date, ratio, source, fetched_at) "
-                "VALUES ('AAPL', '2020-08-31', 5.0, 'yahoo', '2026-04-26T00:00:00Z')"
-            ))
+            s.exec(
+                text(
+                    "INSERT INTO splits (symbol, split_date, ratio, source, fetched_at) "
+                    "VALUES ('AAPL', '2020-08-31', 5.0, 'yahoo', '2026-04-26T00:00:00Z')"
+                )
+            )
             s.commit()

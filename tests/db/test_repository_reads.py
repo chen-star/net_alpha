@@ -78,21 +78,24 @@ def test_trades_for_import(repo):
 
 def test_all_trades_includes_is_manual_and_transfer_flag(tmp_path):
     """Reads should propagate the new flags."""
+    from sqlalchemy import text
+
     from net_alpha.config import Settings
     from net_alpha.db.connection import get_engine, init_db
     from net_alpha.db.repository import Repository
-    from sqlalchemy import text
 
     settings = Settings(data_dir=tmp_path)
     engine = get_engine(settings.db_path)
     init_db(engine)
     with engine.begin() as conn:
         conn.execute(text("INSERT INTO accounts(broker, label) VALUES ('Schwab','Tax')"))
-        conn.execute(text(
-            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-            "quantity, basis_source, basis_unknown, is_manual, transfer_basis_user_set) "
-            "VALUES (NULL, 1, 'manual:1', 'AAPL', '2026-01-15', 'Buy', 10, 'user', 0, 1, 0)"
-        ))
+        conn.execute(
+            text(
+                "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+                "quantity, basis_source, basis_unknown, is_manual, transfer_basis_user_set) "
+                "VALUES (NULL, 1, 'manual:1', 'AAPL', '2026-01-15', 'Buy', 10, 'user', 0, 1, 0)"
+            )
+        )
     repo = Repository(engine)
     trades = repo.all_trades()
     assert len(trades) == 1
