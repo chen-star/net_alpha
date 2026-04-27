@@ -41,8 +41,8 @@ def test_portfolio_page_full_render(tmp_path):
             conn.execute(
                 text(
                     "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
-                    "quantity, proceeds, cost_basis, basis_unknown, basis_source) "
-                    "VALUES (1, 1, 'k1', 'SPY', '2025-01-15', 'Buy', 100, NULL, 40000, 0, 'broker_csv')"
+                    "quantity, proceeds, cost_basis, basis_unknown, basis_source, is_manual, transfer_basis_user_set) "
+                    "VALUES (1, 1, 'k1', 'SPY', '2025-01-15', 'Buy', 100, NULL, 40000, 0, 'broker_csv', 0, 0)"
                 )
             )
             conn.execute(
