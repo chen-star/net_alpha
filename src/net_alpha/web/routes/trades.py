@@ -80,6 +80,53 @@ def create_trade(
     return response
 
 
+@router.post("/trades/{trade_id}/edit-manual", response_model=None)
+def edit_manual(
+    request: Request,
+    trade_id: str,
+    account: str = Form(...),
+    ticker: str = Form(...),
+    trade_date: str = Form(...),
+    action_choice: str = Form(...),
+    quantity: float = Form(...),
+    basis_or_proceeds: float = Form(...),
+    repo: Repository = Depends(get_repository),
+) -> RedirectResponse:
+    if action_choice not in _ACTION_MAP:
+        raise HTTPException(status_code=400, detail=f"invalid action: {action_choice!r}")
+    if not ticker.strip():
+        raise HTTPException(status_code=400, detail="ticker required")
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="quantity must be > 0")
+    if basis_or_proceeds < 0:
+        raise HTTPException(status_code=400, detail="basis/proceeds must be >= 0")
+    _validate_account(repo, account)
+    d = _parse_date(trade_date)
+
+    action, basis_source = _ACTION_MAP[action_choice]
+    is_buy_side = action == "Buy"
+    trade = Trade(
+        id=trade_id,
+        account=account,
+        date=d,
+        ticker=ticker.strip().upper(),
+        action=action,
+        quantity=quantity,
+        cost_basis=basis_or_proceeds if is_buy_side else None,
+        proceeds=basis_or_proceeds if not is_buy_side else None,
+        basis_source=basis_source,
+        is_manual=True,
+    )
+    etf_pairs = load_etf_pairs()
+    try:
+        saved = repo.update_manual_trade(trade, etf_pairs=etf_pairs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    response = RedirectResponse(url=f"/ticker/{saved.ticker}", status_code=303)
+    response.headers["HX-Redirect"] = f"/ticker/{saved.ticker}"
+    return response
+
+
 @router.post("/trades/{trade_id}/edit-transfer", response_model=None)
 def edit_transfer(
     request: Request,
