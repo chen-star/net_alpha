@@ -138,3 +138,19 @@ def compute_cash_kpis(
         growth_pct=growth_pct,
         cash_share_pct=cash_share_pct,
     )
+
+
+def cash_allocation_slice(
+    *,
+    events: Iterable[CashEvent],
+    trades: Iterable[Trade],
+    account: str | None,
+) -> Decimal:
+    """Return the current cash balance (lifetime, no period clip).
+
+    Used by the allocation donut to render cash as one extra slice.
+    """
+    series = build_cash_balance_series(
+        events=events, trades=trades, account=account, period=None,
+    )
+    return series[-1].cash_balance if series else Decimal("0")

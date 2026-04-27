@@ -141,3 +141,14 @@ def test_kpis_growth_pct_none_when_no_contributions():
     )
     assert kpi.net_contributions == Decimal("0")
     assert kpi.growth_pct is None
+
+
+# Tests for cash_allocation_slice
+from net_alpha.portfolio.cash_flow import cash_allocation_slice
+
+
+def test_cash_allocation_slice_returns_current_balance():
+    events = [_ev(dt.date(2026, 3, 4), "transfer_in", 100.0)]
+    trades = [_trade(dt.date(2026, 3, 5), "Buy", -25.0)]
+    sl = cash_allocation_slice(events=events, trades=trades, account=None)
+    assert sl == Decimal("75")
