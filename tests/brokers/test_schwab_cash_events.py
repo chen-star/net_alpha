@@ -155,3 +155,26 @@ def test_security_transfer_remains_a_trade_not_a_cash_event():
     assert len(res.trades) == 1
     assert res.trades[0].basis_source == "transfer_in"
     assert res.cash_events == []
+
+
+def test_sell_to_open_and_buy_to_close_emit_no_warnings_no_cash_events():
+    """Option-side actions consumed by put-assignment basis-offset helper
+    should be silently ignored by parse_full — neither Trade nor CashEvent,
+    and crucially NO 'Unknown action' warning."""
+    rows = [
+        _row(
+            Date="03/19/2026", Action="Sell to Open",
+            Symbol="RR 04/17/2026 3.00 P",
+            Description="PUT RICHTECH ROBOTICS",
+            Quantity="1", Price="$0.88", Amount="$87.34",
+        ),
+        _row(
+            Date="04/14/2026", Action="Buy to Close",
+            Symbol="UUUU 04/17/2026 20.00 P",
+            Description="PUT ENERGY FUELS",
+            Quantity="1", Price="$0.82", Amount="-$82.66",
+        ),
+    ]
+    res = _parse(rows)
+    assert res.cash_events == []
+    assert res.parse_warnings == []

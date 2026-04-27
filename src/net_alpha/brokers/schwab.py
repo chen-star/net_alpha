@@ -42,8 +42,11 @@ _CASH_EVENT_ACTIONS: dict[str, tuple[str, str]] = {
 }
 
 # Non-trade actions handled by trade-side logic (existing) — never cash events.
+# Includes option-side actions (Sell to Open, Buy to Close) consumed by
+# _put_assignment_basis_offsets but not emitted as Trade rows.
 _TRADE_SIDE_NON_TRADE_ACTIONS = {
     "Reverse Split", "Assigned", "Expired",
+    "Sell to Open", "Buy to Close",
 }
 
 

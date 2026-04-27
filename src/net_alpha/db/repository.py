@@ -176,14 +176,6 @@ class Repository:
                     s.add(ir)
                     dup_count += 1
 
-            ir.trade_count = new_count
-            # `record.duplicate_trades` is the pre-filter count from the upload
-            # route (caller dedup'd against existing_natural_keys). `dup_count`
-            # is the runtime UNIQUE-constraint fallback. Sum so the displayed
-            # number matches what the user actually skipped.
-            ir.duplicate_trades = (record.duplicate_trades or 0) + dup_count
-            s.commit()
-
             # Cash events use the same import_id; deduplicate via UNIQUE.
             new_cash = 0
             if cash_events:
@@ -205,8 +197,17 @@ class Repository:
                     except Exception:
                         s.rollback()
                         s.add(ir)  # re-attach after rollback
+
+            # Update import record with final counts and commit everything atomically.
+            ir.trade_count = new_count
+            # `record.duplicate_trades` is the pre-filter count from the upload
+            # route (caller dedup'd against existing_natural_keys). `dup_count`
+            # is the runtime UNIQUE-constraint fallback. Sum so the displayed
+            # number matches what the user actually skipped.
+            ir.duplicate_trades = (record.duplicate_trades or 0) + dup_count
+            if cash_events:
                 ir.cash_event_count = (ir.cash_event_count or 0) + new_cash
-                s.commit()
+            s.commit()
 
             return AddImportResult(
                 import_id=ir.id,
