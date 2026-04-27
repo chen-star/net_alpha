@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.allocation import build_allocation
+from net_alpha.portfolio.cash_flow import (
+    build_cash_balance_series,
+    cash_allocation_slice,
+    compute_cash_kpis,
+)
 from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import compute_open_positions
@@ -364,6 +370,33 @@ def portfolio_body(
         account=None,
     )
     allocation = build_allocation(positions=positions_for_alloc, top_n=10)
+
+    # --- Cash flow ---
+    cash_events = repo.list_cash_events(account_id=None)
+    if account:
+        cash_events = [e for e in cash_events if e.account == account]
+    holdings_value_total = sum(
+        (Decimal(str(p.market_value)) for p in positions_for_alloc if p.market_value is not None),
+        start=Decimal("0"),
+    )
+    cash_kpis = compute_cash_kpis(
+        events=cash_events,
+        trades=scoped_trades,
+        holdings_value=holdings_value_total,
+        account=None,  # already filtered above
+        period=period_tuple,
+    )
+    cash_points = build_cash_balance_series(
+        events=cash_events,
+        trades=scoped_trades,
+        account=None,
+        period=period_tuple,
+    )
+    cash_slice = cash_allocation_slice(
+        events=cash_events,
+        trades=scoped_trades,
+        account=None,
+    )
     wash_rows = recent_loss_closes(
         repo=repo,
         today=today,
@@ -384,5 +417,8 @@ def portfolio_body(
             "allocation": allocation,
             "rows": wash_rows,
             "window_days": 30,
+            "cash_kpis": cash_kpis,
+            "cash_points": cash_points,
+            "cash_slice": cash_slice,
         },
     )
