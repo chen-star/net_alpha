@@ -274,3 +274,81 @@ def portfolio_wash_watch_fragment(
         "_portfolio_wash_watch.html",
         {"rows": rows, "window_days": window_days},
     )
+
+
+@router.get("/portfolio/body", response_class=HTMLResponse)
+def portfolio_body(
+    request: Request,
+    period: str | None = None,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Bundled fragment: KPIs + equity-curve + allocation + wash-watch.
+
+    Loads trades/lots/prices ONCE and feeds the existing pure compute
+    functions, replacing the 5-way page-load fan-out on /portfolio.
+    """
+    today = date.today()
+    period_tuple, period_label = _parse_period(period, today.year)
+    year = period_tuple[0] if period_tuple else today.year
+
+    all_trades = repo.all_trades()
+    all_lots = repo.all_lots()
+    if account:
+        scoped_trades = [t for t in all_trades if t.account == account]
+        scoped_lots = [lot for lot in all_lots if lot.account == account]
+    else:
+        scoped_trades = all_trades
+        scoped_lots = all_lots
+    symbols = sorted({lot.ticker for lot in scoped_lots if lot.option_details is None})
+    prices = svc.get_prices(symbols)
+    snap = svc.last_snapshot()
+
+    kpis = compute_kpis(
+        trades=scoped_trades,
+        lots=scoped_lots,
+        prices=prices,
+        period_label=period_label,
+        period=period_tuple,
+        account=None,  # already filtered above
+    )
+    wi = compute_wash_impact(
+        violations=repo.all_violations(),
+        period_label=period_label,
+        period=period_tuple,
+        account=account or None,
+    )
+    points = build_equity_curve(
+        trades=scoped_trades, year=year, present_unrealized=kpis.period_unrealized
+    )
+    positions_for_alloc = compute_open_positions(
+        trades=scoped_trades,
+        lots=scoped_lots,
+        prices=prices,
+        period=(today.year, today.year + 1),
+        account=None,
+    )
+    allocation = build_allocation(positions=positions_for_alloc, top_n=10)
+    wash_rows = recent_loss_closes(
+        repo=repo,
+        today=today,
+        window_days=30,
+        account=account or None,
+    )
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_portfolio_body.html",
+        {
+            "kpis": kpis,
+            "snapshot": snap,
+            "wash_impact_total": wi.disallowed_total,
+            "wash_violations": wi.violation_count,
+            "points": points,
+            "year": year,
+            "allocation": allocation,
+            "rows": wash_rows,
+            "window_days": 30,
+        },
+    )

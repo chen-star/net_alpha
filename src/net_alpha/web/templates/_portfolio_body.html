@@ -1,0 +1,19 @@
+{# Bundled portfolio body: KPIs + equity-curve + allocation + wash-watch.
+   Rendered by /portfolio/body in one shot. The positions table lives on
+   /holdings now and is NOT included here. #}
+<div id="portfolio-kpis" class="mb-4">
+  {% include "_portfolio_kpis.html" %}
+</div>
+
+<div class="grid gap-3 mb-4" style="grid-template-columns: 1fr 1fr;">
+  <div id="portfolio-equity" class="panel">
+    {% include "_portfolio_equity_curve.html" %}
+  </div>
+  <div id="portfolio-allocation" class="panel">
+    {% include "_portfolio_allocation.html" %}
+  </div>
+</div>
+
+<div id="portfolio-wash-watch" class="panel mb-4">
+  {% include "_portfolio_wash_watch.html" %}
+</div>
