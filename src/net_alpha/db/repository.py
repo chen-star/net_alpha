@@ -16,6 +16,7 @@ from net_alpha.db.tables import (
     LotRow,
     MetaRow,
     RealizedGLLotRow,
+    SplitRow,
     TradeRow,
     WashSaleViolationRow,
 )
@@ -31,6 +32,7 @@ from net_alpha.models.domain import (
     WashSaleViolation,
 )
 from net_alpha.models.realized_gl import RealizedGLLot
+from net_alpha.models.splits import LotOverride, Split
 
 
 class Repository:
@@ -800,8 +802,6 @@ class Repository:
         from datetime import UTC
         from datetime import datetime as _dt
 
-        from net_alpha.db.tables import SplitRow
-
         with Session(self.engine) as s:
             existing = s.exec(
                 select(SplitRow).where(
@@ -823,12 +823,9 @@ class Repository:
             s.refresh(row)
             return row.id
 
-    def get_splits(self, symbol: str | None = None) -> list:
+    def get_splits(self, symbol: str | None = None) -> list[Split]:
         """Return all splits (optionally filtered by symbol), oldest first."""
         from datetime import datetime as _dt
-
-        from net_alpha.db.tables import SplitRow
-        from net_alpha.models.splits import Split as SplitDomain
 
         with Session(self.engine) as s:
             stmt = select(SplitRow)
@@ -837,7 +834,7 @@ class Repository:
             stmt = stmt.order_by(SplitRow.split_date)
             rows = s.exec(stmt).all()
             return [
-                SplitDomain(
+                Split(
                     id=r.id,
                     symbol=r.symbol,
                     split_date=date.fromisoformat(r.split_date),
@@ -862,8 +859,6 @@ class Repository:
         from datetime import UTC
         from datetime import datetime as _dt
 
-        from net_alpha.db.tables import LotOverrideRow
-
         with Session(self.engine) as s:
             row = LotOverrideRow(
                 trade_id=trade_id,
@@ -879,11 +874,8 @@ class Repository:
             s.refresh(row)
             return row.id
 
-    def get_lot_overrides_for_trade(self, trade_id: int) -> list:
+    def get_lot_overrides_for_trade(self, trade_id: int) -> list[LotOverride]:
         from datetime import datetime as _dt
-
-        from net_alpha.db.tables import LotOverrideRow
-        from net_alpha.models.splits import LotOverride
 
         with Session(self.engine) as s:
             rows = s.exec(
@@ -903,12 +895,9 @@ class Repository:
                 for r in rows
             ]
 
-    def all_lot_overrides(self) -> list:
+    def all_lot_overrides(self) -> list[LotOverride]:
         """All overrides across all trades, used by the post-recompute applier."""
         from datetime import datetime as _dt
-
-        from net_alpha.db.tables import LotOverrideRow
-        from net_alpha.models.splits import LotOverride
 
         with Session(self.engine) as s:
             rows = s.exec(select(LotOverrideRow).order_by(LotOverrideRow.edited_at)).all()
@@ -926,10 +915,8 @@ class Repository:
                 for r in rows
             ]
 
-    def get_split_overrides_for_trade(self, trade_id: int, split_id: int) -> list:
+    def get_split_overrides_for_trade(self, trade_id: int, split_id: int) -> list[LotOverrideRow]:
         """Used by apply_split to check idempotency: 'have I already applied this split to this trade?'"""
-        from net_alpha.db.tables import LotOverrideRow
-
         with Session(self.engine) as s:
             rows = s.exec(
                 select(LotOverrideRow).where(
@@ -944,8 +931,6 @@ class Repository:
         can mutate them by id. Open-only is the default since closed lots are
         irrelevant to the user's current holdings; for split application we
         also want closed lots so historical wash-sale data stays correct."""
-        from net_alpha.db.tables import LotRow
-
         with Session(self.engine) as s:
             rows = s.exec(select(LotRow).where(LotRow.ticker == symbol)).all()
             # Detach from session by copying to dicts; caller will mutate via update_lot_qty_and_basis.
@@ -963,8 +948,6 @@ class Repository:
             ]
 
     def update_lot_qty_and_basis(self, lot_id: int, *, quantity: float, adjusted_basis: float) -> None:
-        from net_alpha.db.tables import LotRow
-
         with Session(self.engine) as s:
             row = s.get(LotRow, lot_id)
             if row is None:
@@ -978,8 +961,6 @@ class Repository:
         """Return raw lot data for a single lot by id, as a detached dict.
         Returns None if not found. Mirrors the dict shape used by
         get_lot_rows_for_symbol so consumers can mutate via update_lot_qty_and_basis."""
-        from net_alpha.db.tables import LotRow
-
         with Session(self.engine) as s:
             r = s.get(LotRow, lot_id)
             if r is None:
@@ -997,10 +978,6 @@ class Repository:
     def get_lot_row_dict_by_trade_id(self, trade_id: int) -> dict | None:
         """Return raw lot data for the lot belonging to a given trade_id.
         Returns None if not found."""
-        from sqlmodel import select
-
-        from net_alpha.db.tables import LotRow
-
         with Session(self.engine) as s:
             r = s.exec(select(LotRow).where(LotRow.trade_id == trade_id)).first()
             if r is None:

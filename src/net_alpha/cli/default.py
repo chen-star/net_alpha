@@ -1,7 +1,7 @@
 # src/net_alpha/cli/default.py
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 
 import typer
@@ -12,9 +12,8 @@ from net_alpha.brokers.schwab import SchwabParser
 from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
 from net_alpha.db.connection import init_db
 from net_alpha.db.repository import Repository
-from net_alpha.engine.detector import detect_in_window
 from net_alpha.engine.etf_pairs import load_etf_pairs
-from net_alpha.engine.merge import merge_violations
+from net_alpha.engine.recompute import recompute_all_violations
 from net_alpha.engine.stitch import stitch_account
 from net_alpha.ingest.csv_loader import compute_csv_sha256, load_csv
 from net_alpha.ingest.dedup import filter_new
@@ -123,20 +122,10 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
         for w in stitched.warnings:
             typer.echo(f"  ⚠ {w}", err=True)
 
-        if affected_dates:
-            win_start = min(affected_dates) - timedelta(days=30)
-            win_end = max(affected_dates) + timedelta(days=30)
-            window_trades = repo.trades_in_window(win_start, win_end)
-            det = detect_in_window(window_trades, win_start, win_end, etf_pairs=ETF_PAIRS)
-            all_gl = repo.get_gl_lots_for_account(account.id)
-            merged = merge_violations(
-                engine_violations=det.violations,
-                gl_lots_by_account={account.id: all_gl},
-            )
-            repo.replace_violations_in_window(win_start, win_end, merged)
-            repo.replace_lots_in_window(win_start, win_end, det.lots)
-
     _post_import_autosync_splits(repo, new_symbols=new_symbols, existing_symbols=existing_symbols)
+
+    if account is not None and affected_dates:
+        recompute_all_violations(repo, ETF_PAIRS)
 
     today = date.today()
     typer.echo("")

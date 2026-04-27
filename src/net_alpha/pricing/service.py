@@ -95,7 +95,7 @@ class PricingService:
         When pricing is disabled, returns a result with all symbols listed
         as errors (no network call attempted).
         """
-        from net_alpha.splits.apply import apply_splits
+        from net_alpha.splits.apply import apply_manual_overrides, apply_splits
 
         result = SplitSyncResult()
         if not self._enabled:
@@ -118,5 +118,8 @@ class PricingService:
                     result.applied_count += 1
 
         # Apply all pending mutations now (idempotent over already-applied splits).
+        # apply_splits establishes the split-adjusted baseline; apply_manual_overrides
+        # layers on top so manual edits retain precedence after a sync.
         apply_splits(repo)
+        apply_manual_overrides(repo)
         return result
