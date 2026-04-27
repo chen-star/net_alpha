@@ -15,6 +15,34 @@ class OptionDetails(BaseModel):
     call_put: str  # "C" or "P"
 
 
+class CashEvent(BaseModel):
+    """A non-trade cash movement (transfer, dividend, interest, fee, sweep)."""
+
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    account: str
+    event_date: date
+    kind: str  # transfer_in | transfer_out | dividend | interest | fee | sweep_in | sweep_out
+    amount: float  # always positive; sign comes from `kind`
+    ticker: str | None = None
+    description: str = ""
+
+    def compute_natural_key(self) -> str:
+        """SHA256 over canonical fields used for idempotent re-import dedup."""
+        import hashlib
+
+        payload = "|".join(
+            [
+                self.account,
+                self.event_date.isoformat(),
+                self.kind,
+                f"{self.amount:.6f}",
+                self.ticker or "",
+                self.description,
+            ]
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 class Trade(BaseModel):
     """A single trade (buy or sell) from a broker CSV."""
 
