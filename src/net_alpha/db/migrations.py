@@ -6,6 +6,7 @@ Schema versions:
   v3 — Adds PriceCacheRow table for the pricing subsystem.
   v4 — Adds aggregate columns to imports (date range, type counts, parse warnings).
   v5 — Adds imports.duplicate_trades count so re-imports show "X dupes" instead of "no records".
+  v6 — Adds trades.is_manual and trades.transfer_basis_user_set; relaxes trades.import_id NOT NULL.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 5
+CURRENT_SCHEMA_VERSION = 6
 
 
 def get_schema_version(session: Session) -> int:
@@ -94,6 +95,59 @@ def _migrate_v4_to_v5(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v5_to_v6(session: Session) -> None:
+    if not _table_exists(session, "trades"):
+        return
+    if not _column_exists(session, "trades", "is_manual"):
+        session.exec(text("ALTER TABLE trades ADD COLUMN is_manual INTEGER NOT NULL DEFAULT 0"))
+    if not _column_exists(session, "trades", "transfer_basis_user_set"):
+        session.exec(text("ALTER TABLE trades ADD COLUMN transfer_basis_user_set INTEGER NOT NULL DEFAULT 0"))
+    # Relax import_id NOT NULL via SQLite rebuild dance.
+    info = session.exec(text("PRAGMA table_info(trades)")).all()
+    import_id_row = next((r for r in info if r[1] == "import_id"), None)
+    if import_id_row is not None and import_id_row[3] == 1:  # notnull flag is column 3
+        session.exec(text("PRAGMA foreign_keys=OFF"))
+        session.exec(text("""
+            CREATE TABLE trades_new (
+              id INTEGER PRIMARY KEY,
+              import_id INTEGER NULL REFERENCES imports(id),
+              account_id INTEGER NOT NULL REFERENCES accounts(id),
+              natural_key TEXT NOT NULL,
+              ticker TEXT NOT NULL,
+              trade_date TEXT NOT NULL,
+              action TEXT NOT NULL,
+              quantity FLOAT NOT NULL,
+              proceeds FLOAT,
+              cost_basis FLOAT,
+              basis_unknown INTEGER NOT NULL DEFAULT 0,
+              option_strike FLOAT,
+              option_expiry TEXT,
+              option_call_put TEXT,
+              basis_source TEXT NOT NULL DEFAULT 'unknown',
+              is_manual INTEGER NOT NULL DEFAULT 0,
+              transfer_basis_user_set INTEGER NOT NULL DEFAULT 0,
+              CONSTRAINT uq_trade_account_natkey UNIQUE (account_id, natural_key)
+            )
+        """))
+        session.exec(text("""
+            INSERT INTO trades_new
+            SELECT id, import_id, account_id, natural_key, ticker, trade_date, action,
+                   quantity, proceeds, cost_basis, basis_unknown,
+                   option_strike, option_expiry, option_call_put,
+                   basis_source, is_manual, transfer_basis_user_set
+            FROM trades
+        """))
+        session.exec(text("DROP TABLE trades"))
+        session.exec(text("ALTER TABLE trades_new RENAME TO trades"))
+        session.exec(text("CREATE INDEX ix_trades_account_id ON trades(account_id)"))
+        session.exec(text("CREATE INDEX ix_trades_import_id ON trades(import_id)"))
+        session.exec(text("CREATE INDEX ix_trades_natural_key ON trades(natural_key)"))
+        session.exec(text("CREATE INDEX ix_trades_ticker ON trades(ticker)"))
+        session.exec(text("CREATE INDEX ix_trades_trade_date ON trades(trade_date)"))
+        session.exec(text("PRAGMA foreign_keys=ON"))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     current = get_schema_version(session)
@@ -117,6 +171,10 @@ def migrate(session: Session) -> None:
     if current == 4:
         _migrate_v4_to_v5(session)
         set_schema_version(session, 5)
+        current = 5
+    if current < 6:
+        _migrate_v5_to_v6(session)
+        set_schema_version(session, 6)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(

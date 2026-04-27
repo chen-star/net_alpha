@@ -40,8 +40,8 @@ def test_v3_to_v4_adds_columns_and_bumps_version(tmp_path: Path):
     with Session(eng) as s:
         assert get_schema_version(s) == 3
         migrate(s)
-        # `migrate()` runs to head; v3 → v4 → v5.
-        assert get_schema_version(s) == 5
+        # `migrate()` runs to head; v3 → v4 → v5 → v6.
+        assert get_schema_version(s) == 6
         cols = {r[1] for r in s.exec(text("PRAGMA table_info(imports)")).all()}
         for col in [
             "min_trade_date",
