@@ -2,6 +2,188 @@
 
 
 
+## v0.19.0 (2026-04-27)
+
+### Documentation
+
+* docs(spec): cash flow &amp; balance tracking design
+
+Persist non-trade Schwab CSV rows (transfers, dividends, interest,
+sweeps, fees) into a new cash_events table. Compute running cash
+balance, net contributions vs growth, and cash share of portfolio.
+Surface in the existing Portfolio page as a new chart alongside the
+realized P&amp;L curve, plus KPI tiles and a cash slice in the allocation
+donut.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9fe73d2`](https://github.com/chen-star/net_alpha/commit/9fe73d2f7470c090609e10b23a405ccc60448b7a))
+
+* docs: implementation plan for portfolio bugfixes + wash sales merge + splits
+
+Maps the spec into 13 task-by-task steps in 5 phases. Phase 1 quick UI
+fixes (items 1+6), Phase 2 Alpine extraction (item 4), Phase 3 page
+merge with redirects (item 2), Phase 4 split handling subsystem (item 5),
+Phase 5 e2e + manual smoke.
+
+Notes architectural refinement: lots are regenerated on every
+recompute_all_violations call, so split + manual-override application
+must happen as the final step inside that function (not just at import).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d4de4a0`](https://github.com/chen-star/net_alpha/commit/d4de4a088898e5cf4eac595c3bec8b3f05b9a3d4))
+
+* docs: portfolio bugfixes + wash sales merge + split handling spec
+
+Covers items 1, 2, 4, 5, 6 from the user&#39;s bug/improvement report:
+- Holdings table column cleanup ($ + % unrealized)
+- Multi-symbol filter dropdown extraction to a named Alpine component
+- Toolbar form action stays on current page
+- Detail+Calendar merge into /wash-sales (table/calendar toggle)
+- Stock-split handling via Yahoo + manual lot-edit fallback
+
+Item 3 (Portfolio panel additions) deferred per user request.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fc7f685`](https://github.com/chen-star/net_alpha/commit/fc7f6852600f7ca1b4476b43bd6f39df91cfcca8))
+
+### Feature
+
+* feat(splits): manual per-lot edit UI on /ticker/{sym} (item 5)
+
+Inline edit form on each lot row writes a lot_overrides record with
+reason=&#39;manual&#39;. apply_manual_overrides replays the latest edit per
+(trade_id, field) at the end of every recompute, so manual edits survive
+re-import / unimport / future recomputes.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`31f57ff`](https://github.com/chen-star/net_alpha/commit/31f57ff4a9d514e50c3cb598a9eb826ab0c3b09e))
+
+* feat(splits): auto-sync on first import of a new symbol (item 5)
+
+When a CSV brings in symbols never seen in any prior import, fire
+sync_splits for those symbols so existing wash-sale data stays accurate
+without manual intervention. Re-imports of known symbols do NOT trigger
+fetch -- avoids burning network on every CSV upload.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`251bf76`](https://github.com/chen-star/net_alpha/commit/251bf76d5089abde4dc8ae8e93d865a26364536e))
+
+* feat(splits): /splits/sync endpoint + toolbar Sync splits button (item 5)
+
+PricingService.sync_splits orchestrates fetch -&gt; upsert -&gt; apply. Honors
+the prices.enable_remote flag (returns error_symbols when disabled, no
+network call). Toolbar button POSTs symbols=ALL and reloads the page.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2105171`](https://github.com/chen-star/net_alpha/commit/2105171a98d74982758cec2c3e75f8aaa14dd5d2))
+
+* feat(engine): apply_splits as final step of recompute (item 5)
+
+apply_splits mutates regenerated lots whose date is before each known
+split&#39;s ex-date. Multiplies qty by ratio, preserves total basis (basis is
+dollar, not per-share). Idempotent via (trade_id, split_id) check in
+lot_overrides. Wired into recompute_all_violations so re-imports and
+unimports keep the split-adjustment intact. ([`861c924`](https://github.com/chen-star/net_alpha/commit/861c9248932c64b6bdbb8325c9a3675e3690b4a4))
+
+* feat(pricing): YahooPriceProvider.fetch_splits (item 5)
+
+Wraps yfinance.Ticker.splits with the same error-swallowing pattern as
+get_quotes (per-symbol failures return empty list, never raise). Default
+on the ABC is to return [] so providers without split data are unaffected.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`50ec151`](https://github.com/chen-star/net_alpha/commit/50ec1517a4a5979549cd588f01e2b8af541b804a))
+
+* feat(db): repository methods for splits + lot_overrides (item 5)
+
+add_split is idempotent on (symbol, split_date). lot_overrides keyed by
+trade_id since lots are regenerated on every recompute.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`51d4885`](https://github.com/chen-star/net_alpha/commit/51d4885d8082aa6a0f5701f1930eb0aafd3b8bee))
+
+* feat(db): schema v7 — splits + lot_overrides tables (item 5)
+
+splits: keyed (symbol, split_date) UNIQUE, holds ratio + source + fetched_at.
+lot_overrides: audit trail of qty/basis changes, keyed by trade_id (stable
+across recompute since lots are regenerated). split_id FK lets apply_split
+check idempotency. Also bumps hardcoded version assertions in older migration
+tests from 6 → 7. ([`299179b`](https://github.com/chen-star/net_alpha/commit/299179b64e62201bd5ed27f74c76c58fbab54c8f))
+
+* feat(web): merge Detail+Calendar into /wash-sales (item 2)
+
+New route /wash-sales with ?view=table|calendar toggle and a unified
+filter bar (ticker, account, year, confidence). Old paths 301-redirect
+preserving query string. Top-nav &#39;Detail&#39; becomes &#39;Wash sales&#39;;
+&#39;Calendar&#39; link removed.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a00ffcc`](https://github.com/chen-star/net_alpha/commit/a00ffcc0ee6d82186e7ee4fd9483a38d25ac6d3d))
+
+* feat(web): drop Realized col, add % to Unrealized on Holdings (item 1)
+
+The {period} Realized column was redundant with Portfolio KPIs and the
+Timeline. Unrealized now stacks dollar and percent inline, color-coded
+together. Percent is unrealized_pl / open_cost.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`663c1e2`](https://github.com/chen-star/net_alpha/commit/663c1e28b641bf0f03f21ca8dd0dff470e505f6c))
+
+### Fix
+
+* fix(splits): apply_splits idempotent via canonical formula
+
+The override-existence skip was wrong — lots are regenerated by
+replace_lots_in_window on every recompute, so a prior override row
+left freshly-regenerated raw lots un-adjusted on the next recompute.
+After Sync splits + any other import, SQQQ silently reverted from 10
+shares back to 100 — exactly the user&#39;s original bug.
+
+Replace the skip-list approach with a canonical-inputs formula:
+lot.quantity = trade.quantity * cumulative_ratio (product of split
+ratios with split_date &gt; trade.date). Idempotent by construction —
+calling apply_splits any number of times produces the same result.
+The lot_overrides table for splits is now purely an audit log.
+
+Adds regression test test_split_survives_repeated_recompute that
+fails without this fix.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`38a77dd`](https://github.com/chen-star/net_alpha/commit/38a77dd0f84d78d70e7486dcecbb8f17d1e83f50))
+
+* fix: route CLI lot replacement through recompute_all_violations
+
+Both cli/default.py:run and cli/imports.py:remove_cmd called
+detect_in_window + replace_lots_in_window directly, bypassing apply_splits
+and apply_manual_overrides. After CLI unimport or re-import of split-
+affected symbols, lots were silently un-split-adjusted. Switch both paths
+to recompute_all_violations which already handles the post-replace apply
+steps. Also: PricingService.sync_splits now calls apply_manual_overrides
+after apply_splits so manual edits retain precedence after a sync.
+Polish: SplitRow imports lifted to module top, repository methods now
+return list[Split]/list[LotOverride] instead of bare list.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6138f3e`](https://github.com/chen-star/net_alpha/commit/6138f3ee623f028be7631e53d4885fd1556a7f53))
+
+* fix(web): extract holdings symbol filter to named Alpine component (item 4)
+
+Inline 27-line x-data block was leaking its expression body as visible text
+on the Holdings page when Alpine couldn&#39;t evaluate it. Move to a separate
+JS file as a named Alpine.data(&#39;symbolFilter&#39;, ...) component, so the only
+inline content is the call site. Also fixes the dropdown&#39;s mis-positioning
+(secondary symptom of the same parse failure).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5bfa80f`](https://github.com/chen-star/net_alpha/commit/5bfa80f9dbbaa9ec0884abc3d902dbdb6a5a6841))
+
+* fix(web): toolbar form stays on the current page (item 6)
+
+Previously the period/account toolbar always submitted to /, bouncing the
+user from /holdings back to portfolio when they changed Account. Now each
+page passes its own toolbar_action.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2374ec0`](https://github.com/chen-star/net_alpha/commit/2374ec0de6e995d4e2ce9987c51e7ed70d2bed7d))
+
+### Test
+
+* test(splits): e2e split survival across unimport/reimport (item 5)
+
+Adds integration test verifying split adjustments persist through the
+full lifecycle of import -&gt; sync -&gt; unimport -&gt; reimport. Includes fix
+to remove_import to clean up lot_overrides for deleted trades, allowing
+splits to be re-applied on reimport.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a161b94`](https://github.com/chen-star/net_alpha/commit/a161b944bec4944679db45f87f42e957c8bd7d71))
+
+
 ## v0.18.0 (2026-04-27)
 
 ### Chore
