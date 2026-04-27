@@ -698,6 +698,49 @@ class Repository:
         recompute_all_violations(self, etf_pairs)
         return saved
 
+    def update_imported_transfer(
+        self,
+        trade_id: str,
+        new_date: date,
+        new_basis_or_proceeds: float,
+        etf_pairs: dict[str, list[str]],
+    ) -> Trade:
+        """Update date + basis (or proceeds) on an imported transfer row.
+
+        Raises ValueError if the row is is_manual=True or basis_source is not
+        in {'transfer_in','transfer_out'}.
+
+        Preserves natural_key explicitly so a future re-import of the original
+        CSV dedupes against the user's edit.
+
+        Triggers a full wash-sale recompute. Returns the updated Trade.
+        """
+        from net_alpha.engine.recompute import recompute_all_violations
+
+        with Session(self.engine) as s:
+            row = s.exec(select(TradeRow).where(TradeRow.id == int(trade_id))).first()
+            if row is None:
+                raise LookupError(f"Trade id {trade_id} not found")
+            if row.is_manual:
+                raise ValueError("Use update_manual_trade for manual rows")
+            if row.basis_source not in ("transfer_in", "transfer_out"):
+                raise ValueError(
+                    f"update_imported_transfer requires a transfer row; basis_source={row.basis_source!r}"
+                )
+            row.trade_date = new_date.isoformat()
+            if row.basis_source == "transfer_in":
+                row.cost_basis = new_basis_or_proceeds
+            else:  # transfer_out
+                row.proceeds = new_basis_or_proceeds
+            row.transfer_basis_user_set = True
+            # natural_key intentionally untouched.
+            s.add(row)
+            s.commit()
+            s.refresh(row)
+            saved = self._row_to_trade(row, self._account_display_for_id(s, row.account_id))
+        recompute_all_violations(self, etf_pairs)
+        return saved
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility
