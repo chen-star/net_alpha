@@ -9,6 +9,7 @@ Schema versions:
   v6 — Adds trades.is_manual and trades.transfer_basis_user_set; relaxes trades.import_id NOT NULL.
   v7 — Adds splits and lot_overrides tables for stock-split handling and
        manual lot edits.
+  v8 — Adds cash_events table; trades.gross_cash_impact; imports.cash_event_count.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 7
+CURRENT_SCHEMA_VERSION = 8
 
 
 def get_schema_version(session: Session) -> int:
@@ -188,6 +189,38 @@ def _migrate_v6_to_v7(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v7_to_v8(session: Session) -> None:
+    """Add cash_events table; gross_cash_impact column on trades; cash_event_count
+    on imports. All idempotent so re-running on a partially-migrated DB is safe.
+    """
+    if not _table_exists(session, "cash_events"):
+        session.exec(
+            text(
+                "CREATE TABLE cash_events ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "import_id INTEGER NOT NULL REFERENCES imports(id), "
+                "account_id INTEGER NOT NULL REFERENCES accounts(id), "
+                "natural_key TEXT NOT NULL, "
+                "event_date TEXT NOT NULL, "
+                "kind TEXT NOT NULL, "
+                "amount REAL NOT NULL, "
+                "ticker TEXT, "
+                "description TEXT NOT NULL DEFAULT '', "
+                "CONSTRAINT uq_cash_event_account_natkey UNIQUE (account_id, natural_key))"
+            )
+        )
+        session.exec(text("CREATE INDEX ix_cash_events_account_id ON cash_events(account_id)"))
+        session.exec(text("CREATE INDEX ix_cash_events_import_id ON cash_events(import_id)"))
+        session.exec(text("CREATE INDEX ix_cash_events_event_date ON cash_events(event_date)"))
+        session.exec(text("CREATE INDEX ix_cash_events_natural_key ON cash_events(natural_key)"))
+        session.exec(text("CREATE INDEX ix_cash_events_ticker ON cash_events(ticker)"))
+    if _table_exists(session, "trades") and not _column_exists(session, "trades", "gross_cash_impact"):
+        session.exec(text("ALTER TABLE trades ADD COLUMN gross_cash_impact REAL"))
+    if _table_exists(session, "imports") and not _column_exists(session, "imports", "cash_event_count"):
+        session.exec(text("ALTER TABLE imports ADD COLUMN cash_event_count INTEGER DEFAULT 0"))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     current = get_schema_version(session)
@@ -219,6 +252,10 @@ def migrate(session: Session) -> None:
     if current < 7:
         _migrate_v6_to_v7(session)
         set_schema_version(session, 7)
+        current = 7
+    if current < 8:
+        _migrate_v7_to_v8(session)
+        set_schema_version(session, 8)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
