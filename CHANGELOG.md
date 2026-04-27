@@ -2,6 +2,149 @@
 
 
 
+## v0.18.0 (2026-04-27)
+
+### Chore
+
+* chore: sync uv.lock to pyproject v0.17.0 wash-alpha version
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`16a73e5`](https://github.com/chen-star/net_alpha/commit/16a73e58c64c250a80de127484cc293e3879039b))
+
+### Documentation
+
+* docs: implementation plans for portfolio polish + perf and manual trade CRUD
+
+Two TDD-structured plans (one per spec). Plan A is 7 tasks; Plan B is
+14 tasks. Each task lists exact files, complete code, exact test
+commands, and a commit step.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fa508ad`](https://github.com/chen-star/net_alpha/commit/fa508ad485e6aad2e5787844bfff8b68f6a5939b))
+
+* docs: manual trade CRUD spec (Spec B of 2)
+
+Adds add/edit/delete trades on the per-symbol Timeline. Imported
+transfer rows become editable for date + basis only; manual rows
+are full CRUD. Re-import idempotency preserved via stable
+natural_key on edits.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7dc1cdc`](https://github.com/chen-star/net_alpha/commit/7dc1cdcec52d331b4ade88bcdbb04a3210882783))
+
+* docs: portfolio polish + perf spec (Spec A of 2)
+
+Bundles five UI/perf items: consolidate /portfolio fragment fan-out,
+move holdings to /holdings tab, multi-select symbol filter, restyle
+import-modal file input, equal-width equity/allocation panels.
+
+Manual trade CRUD on the timeline is intentionally deferred to Spec B.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b9b675e`](https://github.com/chen-star/net_alpha/commit/b9b675ef7f3bae8bc9db96ace47e9733c2eef041))
+
+### Feature
+
+* feat(web): Add-trade button + per-row affordances + form modals on ticker page ([`124a128`](https://github.com/chen-star/net_alpha/commit/124a128fa57030bfc8916ef4416769a7fa937b41))
+
+* feat(web): POST /trades/{id}/delete ([`881e59e`](https://github.com/chen-star/net_alpha/commit/881e59e302a3b7d97cc68d4da791e3b33c174d5e))
+
+* feat(web): POST /trades/{id}/edit-manual ([`def487a`](https://github.com/chen-star/net_alpha/commit/def487ae02e5f05ec3836e24971114f7580035bc))
+
+* feat(web): POST /trades/{id}/edit-transfer ([`12b97c1`](https://github.com/chen-star/net_alpha/commit/12b97c1aee41cfab684ee83db997083de9880a20))
+
+* feat(web): POST /trades — create manual trade
+
+Form-driven endpoint mapping Buy/Sell/Transfer In/Transfer Out to
+(action, basis_source), validates account/date/quantity, calls
+repo.create_manual_trade, and redirects to /ticker/{symbol}.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`38ca20d`](https://github.com/chen-star/net_alpha/commit/38ca20d9da605723b0da1df57d3f9ba08f437329))
+
+* feat(web): Timeline shows Transfer In/Out + provenance badges
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`939de89`](https://github.com/chen-star/net_alpha/commit/939de898b4bcd3dd5265412ed83b3dfc62270c6c))
+
+* feat(web): display_action helper for transfer-aware Timeline labels ([`45f7706`](https://github.com/chen-star/net_alpha/commit/45f7706805a5453ea2b128b211dd48f1df35b250))
+
+* feat(db): Repository.delete_manual_trade ([`94417cc`](https://github.com/chen-star/net_alpha/commit/94417cc378235a78f3ab53681b92acaca1b374a3))
+
+* feat(db): Repository.update_manual_trade ([`3685ea3`](https://github.com/chen-star/net_alpha/commit/3685ea3af7303026befb5b8200683e5e0b6b4f61))
+
+* feat(db): Repository.update_imported_transfer (date + basis|proceeds, immutable natural_key) ([`14e4be5`](https://github.com/chen-star/net_alpha/commit/14e4be591f4f7a58fb55facba23cfd3533990776))
+
+* feat(db): Repository.create_manual_trade + manual: natural_key namespace ([`0e8a4a4`](https://github.com/chen-star/net_alpha/commit/0e8a4a4202c6eb2acff912f00ca2bd3019c67e27))
+
+* feat(models): Trade.is_manual + Trade.transfer_basis_user_set
+
+Add is_manual and transfer_basis_user_set fields to the Pydantic Trade
+model and TradeRow SQLModel, relax TradeRow.import_id to nullable, and
+propagate both flags through _row_to_trade so all_trades() carries them.
+Update v5→v6 migration tests to reflect completed Task 2 state.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ac08d3c`](https://github.com/chen-star/net_alpha/commit/ac08d3c8e19778dfe2c17f4ecb24042c74e60b0b))
+
+* feat(db): v5→v6 — add trades.is_manual + transfer_basis_user_set; nullable import_id
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1414a3c`](https://github.com/chen-star/net_alpha/commit/1414a3cabacaf2393a46fa4f2a9a49eee44cafee))
+
+* feat(web): multi-select symbol filter popover on holdings table
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a388fcf`](https://github.com/chen-star/net_alpha/commit/a388fcf9c4c314380c1888da1c91c7c9d5602a1c))
+
+* feat(web): replace ?q= with ?symbols= multi-select filter on /portfolio/positions ([`ea460fc`](https://github.com/chen-star/net_alpha/commit/ea460fc765d01bcccb2c0534987b1834514bab81))
+
+* feat(web): /holdings page + nav link
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`be60977`](https://github.com/chen-star/net_alpha/commit/be60977cf2940491b706a6de017bf3592fbc3193))
+
+* feat(web): single-fragment load on /portfolio (5x→1x request) ([`9a496c2`](https://github.com/chen-star/net_alpha/commit/9a496c2d923019b43bb8215c6503fe12e1a832bc))
+
+* feat(web): /portfolio/body bundled fragment
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ef99fc2`](https://github.com/chen-star/net_alpha/commit/ef99fc2fb1d0bf7a5347c53a328e107941be5cea))
+
+* feat(web): styled Choose Files button + file-count chip in import modal ([`5467aa9`](https://github.com/chen-star/net_alpha/commit/5467aa995c5b7c8ff167b85447a46bea3decc8cc))
+
+* feat(web): equalize equity-curve and allocation panel widths ([`f5e03aa`](https://github.com/chen-star/net_alpha/commit/f5e03aa75a4222727288a5a3c538bf873629f28e))
+
+### Fix
+
+* fix(web): account allow-list from list_accounts; add duplicate-count and violation-removal tests
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`678f6f9`](https://github.com/chen-star/net_alpha/commit/678f6f92a181140f67cbebd6738db0e8151bcfa9))
+
+* fix(test): include is_manual + transfer_basis_user_set in raw trade insert ([`d93f05b`](https://github.com/chen-star/net_alpha/commit/d93f05b848fb6937e0db93779d787e4d738caffb))
+
+* fix(web): correct hx-target and smart-quote regressions in holdings table fragment
+
+Replace legacy hx-target=&#34;#portfolio-positions&#34; with &#34;#holdings-positions&#34; across all Show/Pagesize/Pagination buttons; fix Unicode smart quotes (U+201C/201D) on the status-hint span class attribute; add two regression tests covering both issues.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b4f95b4`](https://github.com/chen-star/net_alpha/commit/b4f95b4aeee76b9a106564ac020fe1eb49607d5d))
+
+### Test
+
+* test(integration): re-import preserves user edits to transfer rows
+
+End-to-end check that editing a transfer-in row&#39;s date+basis survives
+a re-import of the same Schwab CSV (idempotent dedup via natural_key).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ab83c0c`](https://github.com/chen-star/net_alpha/commit/ab83c0c4ddaf4f5a4c84edccb1b208dea830c8bc))
+
+### Unknown
+
+* wip: pre-Plan-A/B checkpoint
+
+Snapshot of in-progress work prior to executing the
+2026-04-26 portfolio-polish-and-perf and manual-trade-crud plans.
+
+Includes:
+- schwab.py: transfer-in/out parsing + put-assignment basis offsets
+- portfolio/positions.py: FIFO lot consumption with GL closure fallback
+- portfolio/equity_curve.py: dual-series (realized + total) curve
+- web templates: _portfolio_table + _portfolio_equity_curve restyle iterations
+- repository/migrations/tables/domain: small alignment changes
+- AGENTS.md / CLAUDE.md: stale GitNexus stat refresh
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e36e663`](https://github.com/chen-star/net_alpha/commit/e36e66371f820a86db1ad8d1c9a7f5f0b9ee92f4))
+
+
 ## v0.17.0 (2026-04-27)
 
 ### Chore
