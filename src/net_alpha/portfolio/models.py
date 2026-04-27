@@ -118,3 +118,16 @@ class CashBalancePoint:
     on: date
     cash_balance: Decimal
     cumulative_contributions: Decimal
+
+
+@dataclass(frozen=True)
+class CashFlowKPIs:
+    """Single-shot summary used by the Portfolio KPI strip."""
+
+    cash_balance: Decimal
+    net_contributions: Decimal
+    holdings_value: Decimal
+    account_value: Decimal
+    growth: Decimal
+    growth_pct: Decimal | None  # None when net_contributions == 0
+    cash_share_pct: Decimal
