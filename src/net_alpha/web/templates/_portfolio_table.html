@@ -1,48 +1,85 @@
 {# Common HTMX query string for swapping pages/toggle. #}
 {% set qs %}period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}{% endset %}
-<div class="flex items-center justify-between mb-2 text-sm">
-  <div class="flex items-center gap-2">
+{% set qs_full %}{{ qs }}&show={{ show }}&page_size={{ page_size }}&q={{ search_q|urlencode }}{% endset %}
+<div class="flex items-center justify-between flex-wrap gap-2 mb-2 text-sm">
+  <div class="flex items-center gap-2 flex-wrap">
     <span class="label-uc">Show:</span>
     <div class="seg">
       <button type="button"
-              hx-get="/portfolio/positions?{{ qs }}&show=open&page=1"
+              hx-get="/portfolio/positions?{{ qs }}&show=open&page=1&page_size={{ page_size }}&q={{ search_q|urlencode }}"
               hx-target="#portfolio-positions" hx-swap="innerHTML"
               class="{% if show == 'open' %}seg-active{% endif %}"
               title="Symbols with open quantity right now.">Open</button>
       <button type="button"
-              hx-get="/portfolio/positions?{{ qs }}&show=all&page=1"
+              hx-get="/portfolio/positions?{{ qs }}&show=all&page=1&page_size={{ page_size }}&q={{ search_q|urlencode }}"
               hx-target="#portfolio-positions" hx-swap="innerHTML"
               class="{% if show == 'all' %}seg-active{% endif %}"
               title="Open positions plus symbols you've fully closed in the selected period (showing realized P/L only).">All</button>
     </div>
-    <span class="text-[11px] text-label-2 ml-2">
-      {{ total_rows }} {% if show == 'all' %}total{% else %}open{% endif %} ·
-      account: {% if selected_account %}{{ selected_account }}{% else %}all{% endif %}
+
+    <input type="search"
+           name="q"
+           value="{{ search_q }}"
+           placeholder="Filter symbol…"
+           autocomplete="off"
+           hx-get="/portfolio/positions?{{ qs }}&show={{ show }}&page=1&page_size={{ page_size }}"
+           hx-trigger="input changed delay:200ms, search"
+           hx-target="#portfolio-positions" hx-swap="innerHTML"
+           class="ml-1 px-2 py-1 text-[12px] rounded-md w-[140px]"
+           style="background: var(--color-surface); color: var(--color-text); border: 0.5px solid var(--color-hairline);">
+
+    <span class="text-[11px] text-label-2 ml-1">
+      {{ total_rows }} {% if show == 'all' %}total{% else %}open{% endif %}
+      {% if search_q %}· filter “{{ search_q }}”{% endif %}
+      · account: {% if selected_account %}{{ selected_account }}{% else %}all{% endif %}
     </span>
   </div>
-  {% if total_pages > 1 %}
-    {% set prev_disabled = (page <= 1) %}
-    {% set next_disabled = (page >= total_pages) %}
-    <div class="flex items-center gap-1">
-      <button type="button"
-              {% if not prev_disabled %}hx-get="/portfolio/positions?{{ qs }}&show={{ show }}&page={{ page - 1 }}"
-              hx-target="#portfolio-positions" hx-swap="innerHTML"{% endif %}
-              class="px-2 py-1 text-[11px] rounded-md {% if prev_disabled %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
-              style="border:0.5px solid rgba(255,255,255,0.08); background: var(--color-surface);"
-              {% if prev_disabled %}disabled{% endif %}>← Prev</button>
-      <span class="text-[11px] text-label-2 px-2">page {{ page }} / {{ total_pages }}</span>
-      <button type="button"
-              {% if not next_disabled %}hx-get="/portfolio/positions?{{ qs }}&show={{ show }}&page={{ page + 1 }}"
-              hx-target="#portfolio-positions" hx-swap="innerHTML"{% endif %}
-              class="px-2 py-1 text-[11px] rounded-md {% if next_disabled %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
-              style="border:0.5px solid rgba(255,255,255,0.08); background: var(--color-surface);"
-              {% if next_disabled %}disabled{% endif %}>Next →</button>
-    </div>
-  {% endif %}
+
+  <div class="flex items-center gap-2 flex-wrap">
+    <label class="flex items-center gap-1 text-[11px] text-label-2">
+      <span>Per page:</span>
+      <select name="page_size"
+              hx-get="/portfolio/positions?{{ qs }}&show={{ show }}&page=1&q={{ search_q|urlencode }}"
+              hx-trigger="change"
+              hx-target="#portfolio-positions" hx-swap="innerHTML"
+              hx-include="this"
+              class="text-[11px] px-1 py-[2px] rounded-md"
+              style="background: var(--color-surface); color: var(--color-text); border: 0.5px solid var(--color-hairline);">
+        {% for n in page_size_options %}
+          <option value="{{ n }}" {% if n == page_size %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    {% if total_pages > 1 %}
+      {% set prev_disabled = (page <= 1) %}
+      {% set next_disabled = (page >= total_pages) %}
+      <div class="flex items-center gap-1">
+        <button type="button"
+                {% if not prev_disabled %}hx-get="/portfolio/positions?{{ qs_full }}&page={{ page - 1 }}"
+                hx-target="#portfolio-positions" hx-swap="innerHTML"{% endif %}
+                class="px-2 py-1 text-[11px] rounded-md {% if prev_disabled %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
+                style="border:0.5px solid rgba(255,255,255,0.08); background: var(--color-surface);"
+                {% if prev_disabled %}disabled{% endif %}>← Prev</button>
+        <span class="text-[11px] text-label-2 px-2">page {{ page }} / {{ total_pages }}</span>
+        <button type="button"
+                {% if not next_disabled %}hx-get="/portfolio/positions?{{ qs_full }}&page={{ page + 1 }}"
+                hx-target="#portfolio-positions" hx-swap="innerHTML"{% endif %}
+                class="px-2 py-1 text-[11px] rounded-md {% if next_disabled %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
+                style="border:0.5px solid rgba(255,255,255,0.08); background: var(--color-surface);"
+                {% if next_disabled %}disabled{% endif %}>Next →</button>
+      </div>
+    {% endif %}
+  </div>
 </div>
 
 {% if not rows %}
-  <div class="panel text-label-2 text-[13px]">{% if show == 'all' %}No positions in scope.{% else %}No open positions.{% endif %}</div>
+  <div class="panel text-label-2 text-[13px]">
+    {% if search_q %}No symbols match “{{ search_q }}”.
+    {% elif show == 'all' %}No positions in scope.
+    {% else %}No open positions.
+    {% endif %}
+  </div>
 {% else %}
   <div class="panel" style="padding:0;">
     <table class="net-table">

@@ -41,6 +41,10 @@ class EquityPoint:
     on: date
     cumulative_realized: Decimal
     unrealized: Decimal | None  # only on the present-day point
+    # Total P&L (realized + present unrealized). Plotted on the equity curve as
+    # a parallel "total" series so the gap between the two lines visualizes the
+    # unrealized component. None when no price data is available.
+    total_pl: Decimal | None = None
 
 
 @dataclass(frozen=True)

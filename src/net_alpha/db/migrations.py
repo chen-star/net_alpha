@@ -5,6 +5,7 @@ Schema versions:
   v2 — Adds RealizedGLLotRow table; adds Trade.basis_source, WashSaleViolation.source columns.
   v3 — Adds PriceCacheRow table for the pricing subsystem.
   v4 — Adds aggregate columns to imports (date range, type counts, parse warnings).
+  v5 — Adds imports.duplicate_trades count so re-imports show "X dupes" instead of "no records".
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 
 
 def get_schema_version(session: Session) -> int:
@@ -84,6 +85,15 @@ def _migrate_v3_to_v4(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v4_to_v5(session: Session) -> None:
+    """Add imports.duplicate_trades. Default 0 for existing rows so the imports
+    summary cell renders "no records" for old re-imports rather than misleading
+    text like "skipped 0 duplicates"."""
+    if _table_exists(session, "imports") and not _column_exists(session, "imports", "duplicate_trades"):
+        session.exec(text("ALTER TABLE imports ADD COLUMN duplicate_trades INTEGER NOT NULL DEFAULT 0"))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     current = get_schema_version(session)
@@ -103,6 +113,10 @@ def migrate(session: Session) -> None:
     if current == 3:
         _migrate_v3_to_v4(session)
         set_schema_version(session, 4)
+        current = 4
+    if current == 4:
+        _migrate_v4_to_v5(session)
+        set_schema_version(session, 5)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(

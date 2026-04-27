@@ -1,27 +1,60 @@
 {# Inputs: points: list[EquityPoint] (one row per realized event + Jan-1 zero seed),
            year: int #}
 
+{% set unrealized_today = points[-1].unrealized if points else None %}
 <div class="panel-head">
   <h4>Equity curve</h4>
-  <span class="meta">Realized cumulative · {{ year }}</span>
+  <span class="meta">
+    Realized {% if unrealized_today is not none %}+ unrealized {% endif %}· {{ year }}
+  </span>
 </div>
 
 {% if points|length <= 1 %}
   <div class="text-label-2 text-[13px] py-4">No realized activity in {{ year }}.</div>
 {% else %}
-  {% set unrealized_today = points[-1].unrealized %}
   <div id="equity-chart-{{ year }}" style="height: 218px;"></div>
 
   <script>
   (function () {
+    const hasTotal = {{ "true" if unrealized_today is not none else "false" }};
+    const series = [{
+      name: "Realized",
+      type: "area",
+      data: [
+        {% for p in points %}
+          { x: "{{ p.on.isoformat() }}", y: {{ p.cumulative_realized|float }} }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ],
+    }];
+    if (hasTotal) {
+      series.push({
+        name: "Total (incl. unrealized today)",
+        type: "line",
+        data: [
+          {% for p in points %}
+            { x: "{{ p.on.isoformat() }}", y: {{ (p.total_pl|float) if p.total_pl is not none else 'null' }} }{% if not loop.last %},{% endif %}
+          {% endfor %}
+        ],
+      });
+    }
+
     const opts = window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
-      chart: { type: "area", height: 218 },
-      colors: [window.netAlphaChartTheme.colors.pos],
-      stroke: { width: 2, curve: "smooth", lineCap: "round" },
-      fill: {
-        type: "gradient",
-        gradient: { shade: "dark", type: "vertical", opacityFrom: 0.30, opacityTo: 0, stops: [0, 100] },
+      chart: { type: "line", height: 218 },
+      colors: hasTotal
+        ? [window.netAlphaChartTheme.colors.pos, window.netAlphaChartTheme.colors.violet]
+        : [window.netAlphaChartTheme.colors.pos],
+      stroke: {
+        width: hasTotal ? [2, 2] : 2,
+        curve: "smooth",
+        lineCap: "round",
+        dashArray: hasTotal ? [0, 4] : 0,
       },
+      fill: {
+        type: hasTotal ? ["gradient", "solid"] : "gradient",
+        gradient: { shade: "dark", type: "vertical", opacityFrom: 0.30, opacityTo: 0, stops: [0, 100] },
+        opacity: hasTotal ? [1, 1] : 1,
+      },
+      legend: { show: hasTotal },
       xaxis: {
         type: "datetime",
         labels: { format: "MMM" },
@@ -39,40 +72,9 @@
       },
       tooltip: {
         x: { format: "yyyy-MM-dd" },
-        y: { formatter: (v) => "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
+        y: { formatter: (v) => v == null ? "—" : "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
       },
-      series: [{
-        name: "Realized cumulative",
-        data: [
-          {% for p in points %}
-            { x: "{{ p.on.isoformat() }}", y: {{ p.cumulative_realized|float }} }{% if not loop.last %},{% endif %}
-          {% endfor %}
-        ],
-      }],
-      annotations: {
-        {% if unrealized_today is not none %}
-        points: [{
-          x: new Date("{{ points[-1].on.isoformat() }}").getTime(),
-          y: {{ (points[-1].cumulative_realized|float + unrealized_today|float) }},
-          marker: {
-            size: 4,
-            fillColor: window.netAlphaChartTheme.colors.violet,
-            strokeColor: window.netAlphaChartTheme.colors.violet,
-            strokeWidth: 0,
-          },
-          label: {
-            text: "+ unrealized today",
-            offsetY: -6,
-            style: {
-              color: "#fff",
-              background: window.netAlphaChartTheme.colors.violet,
-              fontSize: "10px",
-              fontFamily: "Inter, sans-serif",
-            },
-          },
-        }],
-        {% endif %}
-      },
+      series: series,
     });
 
     function render() {

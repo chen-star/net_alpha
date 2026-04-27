@@ -33,6 +33,11 @@ class ImportRecordRow(SQLModel, table=True):
     option_count: int | None = None
     option_expiry_count: int | None = None
     parse_warnings_json: str | None = None  # JSON-encoded list[str]; "[]" = no warnings
+    # v5 — count of trades dropped as natural-key duplicates of prior imports.
+    # Nullable (defaults to 0 in Python) so legacy raw-SQL inserts in old tests
+    # that omit the column don't fail; the migration also stamps a DB DEFAULT 0
+    # so existing v4 rows read back as 0 not NULL.
+    duplicate_trades: int | None = Field(default=0)
 
 
 class TradeRow(SQLModel, table=True):

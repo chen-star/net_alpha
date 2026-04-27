@@ -130,6 +130,9 @@ def portfolio_kpis(
 PAGE_SIZE = 25
 
 
+PAGE_SIZE_OPTIONS = (10, 25, 50, 100)
+
+
 @router.get("/portfolio/positions", response_class=HTMLResponse)
 def portfolio_positions(
     request: Request,
@@ -138,6 +141,8 @@ def portfolio_positions(
     group_options: str = "merge",
     show: str = "open",  # "open" | "all"
     page: int = 1,
+    page_size: int = PAGE_SIZE,
+    q: str | None = None,
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
@@ -145,6 +150,7 @@ def portfolio_positions(
     period_tuple, period_label = _parse_period(period, today.year)
     trades = repo.all_trades()
     lots = repo.all_lots()
+    gl_closures = repo.get_equity_gl_closures()
     symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(symbols)
     include_closed = show == "all"
@@ -155,12 +161,19 @@ def portfolio_positions(
         period=period_tuple,
         account=account or None,
         include_closed=include_closed,
+        gl_closures=gl_closures,
     )
+    if q:
+        needle = q.strip().upper()
+        if needle:
+            rows = [r for r in rows if needle in r.symbol.upper()]
+    if page_size not in PAGE_SIZE_OPTIONS:
+        page_size = PAGE_SIZE
     total_rows = len(rows)
-    total_pages = max(1, (total_rows + PAGE_SIZE - 1) // PAGE_SIZE)
+    total_pages = max(1, (total_rows + page_size - 1) // page_size)
     page = max(1, min(page, total_pages))
-    start = (page - 1) * PAGE_SIZE
-    page_rows = rows[start : start + PAGE_SIZE]
+    start = (page - 1) * page_size
+    page_rows = rows[start : start + page_size]
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_table.html",
@@ -171,7 +184,9 @@ def portfolio_positions(
             "page": page,
             "total_pages": total_pages,
             "total_rows": total_rows,
-            "page_size": PAGE_SIZE,
+            "page_size": page_size,
+            "page_size_options": PAGE_SIZE_OPTIONS,
+            "search_q": q or "",
             "selected_period": period or "ytd",
             "selected_account": account or "",
             "group_options": group_options,
@@ -252,7 +267,7 @@ def portfolio_wash_watch_fragment(
         repo=repo,
         today=date.today(),
         window_days=window_days,
-        account=account,
+        account=account or None,
     )
     return request.app.state.templates.TemplateResponse(
         request,

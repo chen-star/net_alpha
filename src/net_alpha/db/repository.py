@@ -87,6 +87,7 @@ class Repository:
                         option_count=ir.option_count,
                         option_expiry_count=ir.option_expiry_count,
                         parse_warnings=json.loads(ir.parse_warnings_json) if ir.parse_warnings_json else [],
+                        duplicate_trades=ir.duplicate_trades or 0,
                     )
                 )
             return out
@@ -146,6 +147,7 @@ class Repository:
                     proceeds=t.proceeds,
                     cost_basis=t.cost_basis,
                     basis_unknown=t.basis_unknown,
+                    basis_source=t.basis_source,
                     option_strike=(t.option_details.strike if t.option_details else None),
                     option_expiry=(t.option_details.expiry.isoformat() if t.option_details else None),
                     option_call_put=(t.option_details.call_put if t.option_details else None),
@@ -161,8 +163,17 @@ class Repository:
                     dup_count += 1
 
             ir.trade_count = new_count
+            # `record.duplicate_trades` is the pre-filter count from the upload
+            # route (caller dedup'd against existing_natural_keys). `dup_count`
+            # is the runtime UNIQUE-constraint fallback. Sum so the displayed
+            # number matches what the user actually skipped.
+            ir.duplicate_trades = (record.duplicate_trades or 0) + dup_count
             s.commit()
-            return AddImportResult(import_id=ir.id, new_trades=new_count, duplicate_trades=dup_count)
+            return AddImportResult(
+                import_id=ir.id,
+                new_trades=new_count,
+                duplicate_trades=ir.duplicate_trades,
+            )
 
     # --- Reads ---
 
@@ -551,6 +562,23 @@ class Repository:
             ).all()
             account_display = self._account_display_for_id(s, account_id)
         return [self._row_to_gl_lot(r, account_display) for r in rows]
+
+    def get_equity_gl_closures(self) -> dict[tuple[str, str], float]:
+        """Sum of closed equity quantity per (account_display, ticker) across all GL lots.
+
+        Used by position aggregations to compute true open quantity when the user
+        has imported a Realized G/L CSV without the matching Transaction History
+        (so trade-table sells are incomplete). Options are excluded — only rows
+        with no option_strike contribute.
+        """
+        out: dict[tuple[str, str], float] = {}
+        with Session(self.engine) as s:
+            rows = s.exec(select(RealizedGLLotRow).where(RealizedGLLotRow.option_strike.is_(None))).all()
+            for r in rows:
+                display = self._account_display_for_id(s, r.account_id)
+                key = (display, r.ticker)
+                out[key] = out.get(key, 0.0) + float(r.quantity)
+        return out
 
     def get_gl_lots_for_account(self, account_id: int) -> list[RealizedGLLot]:
         with Session(self.engine) as s:

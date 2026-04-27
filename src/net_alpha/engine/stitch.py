@@ -109,9 +109,16 @@ def stitch_account(repo: Repository, account_id: int) -> StitchSummary:
       1. Try G/L match (preferred).
       2. Fall back to FIFO consumption of buy lots.
       3. Otherwise mark basis_source='unknown' and leave cost_basis NULL.
+
+    Transfer-out sells (basis_source='transfer_out') are skipped — they aren't
+    real disposals, so they have no proceeds and no realized P&L. Hydrating a
+    cost basis on them would make the position calc treat the transfer as a
+    loss for the source account.
     """
     summary = StitchSummary()
     for sell in repo.get_sells_for_account(account_id):
+        if sell.basis_source == "transfer_out":
+            continue
         outcome = _try_gl(repo, sell, account_id)
         if outcome is None:
             outcome = _try_fifo(repo, sell, account_id)

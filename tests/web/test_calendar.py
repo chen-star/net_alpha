@@ -71,18 +71,16 @@ def test_calendar_focus_404_for_unknown_id(client):
     assert resp.status_code == 404
 
 
-def test_calendar_renders_monthly_pl_ribbon(client, repo, builders):
+def test_calendar_does_not_render_monthly_pl_ribbon(client, repo, builders):
+    # The monthly realized-P&L ribbon was removed from the wash-sale calendar
+    # — it lives on the portfolio equity curve. The page should not render
+    # the "monthly realized" header.
     from datetime import date
 
     trades = [
         builders.make_sell("schwab/personal", "AAPL", date(2026, 3, 5), qty=10, proceeds=1500, cost=1000),
-        builders.make_sell("schwab/personal", "AAPL", date(2026, 5, 12), qty=10, proceeds=800, cost=1200),
     ]
     builders.seed_import(repo, "schwab", "personal", trades)
     resp = client.get("/calendar?year=2026")
     assert resp.status_code == 200
-    body = resp.text
-    assert "monthly realized" in body.lower()
-    # Green bar for March (gain) and red bar for May (loss) both rendered.
-    assert "#30D158" in body
-    assert "#FF453A" in body
+    assert "monthly realized" not in resp.text.lower()

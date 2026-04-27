@@ -55,7 +55,7 @@ def recent_loss_closes(
         pl = proceeds - basis
         if pl >= 0:
             continue
-        if account is not None and t.account != account:
+        if account and t.account != account:
             continue
         by_symbol[t.ticker].append((t.date, t.account, -pl))  # store loss as positive
 

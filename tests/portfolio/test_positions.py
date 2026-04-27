@@ -67,7 +67,9 @@ def test_position_with_sell_reduces_cash_sunk():
             id="t2", action="Sell", quantity=50.0, proceeds=25_000.0, cost_basis=20_000.0, date=dt.date(2025, 6, 10)
         ),
     ]
-    lots = [_lot(quantity=50.0, cost_basis=20_000.0, adjusted_basis=20_000.0)]
+    # Lot stored with full original buy quantity — engine never decrements lots
+    # when sells happen; compute_open_positions FIFO-consumes them at read time.
+    lots = [_lot(quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
     rows = compute_open_positions(
         trades=trades, lots=lots, prices={"SPY": _quote("SPY", 520)}, period=None, account=None
     )
@@ -75,6 +77,57 @@ def test_position_with_sell_reduces_cash_sunk():
     assert r.qty == Decimal("50")
     assert r.open_cost == Decimal("20000")
     assert r.cash_sunk_per_share == Decimal("300")  # (40000 − 25000) / 50
+
+
+def test_position_fully_closed_by_sells_excluded_from_open():
+    trades = [
+        _trade(id="t1", quantity=100.0, cost_basis=40_000.0),
+        _trade(
+            id="t2", action="Sell", quantity=100.0, proceeds=50_000.0, cost_basis=40_000.0, date=dt.date(2025, 6, 10)
+        ),
+    ]
+    lots = [_lot(quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
+    rows = compute_open_positions(
+        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 520)}, period=None, account=None
+    )
+    # Fully closed → no open row.
+    assert rows == []
+
+
+def test_position_closed_via_gl_when_trade_sells_missing():
+    # Simulates: user imported Realized G/L but only partial Transaction History
+    # — buys are present, sells are missing from trades. GL closures should
+    # still drive the open quantity down to zero.
+    trades = [_trade(id="t1", quantity=100.0, cost_basis=40_000.0)]
+    lots = [_lot(quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
+    rows = compute_open_positions(
+        trades=trades,
+        lots=lots,
+        prices={"SPY": _quote("SPY", 520)},
+        period=None,
+        account=None,
+        gl_closures={("Schwab Tax", "SPY"): 100.0},
+    )
+    assert rows == []
+
+
+def test_gl_closures_take_precedence_when_larger_than_trade_sells():
+    trades = [
+        _trade(id="t1", quantity=100.0, cost_basis=40_000.0),
+        _trade(id="t2", action="Sell", quantity=10.0, proceeds=5_000.0, cost_basis=4_000.0, date=dt.date(2025, 6, 10)),
+    ]
+    lots = [_lot(quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
+    # GL says 80 closed; trades say 10 — GL wins (canonical when more complete).
+    rows = compute_open_positions(
+        trades=trades,
+        lots=lots,
+        prices={"SPY": _quote("SPY", 520)},
+        period=None,
+        account=None,
+        gl_closures={("Schwab Tax", "SPY"): 80.0},
+    )
+    assert len(rows) == 1
+    assert rows[0].qty == Decimal("20")
 
 
 def test_missing_price_yields_none_market_value_and_unrealized():
@@ -128,7 +181,7 @@ def test_period_filter_scopes_realized_pl():
             id="t3", action="Sell", quantity=20.0, proceeds=10_000.0, cost_basis=8_000.0, date=dt.date(2026, 3, 1)
         ),  # +2000 in 2026
     ]
-    lots = [_lot(quantity=50.0, cost_basis=20_000.0, adjusted_basis=20_000.0)]
+    lots = [_lot(quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
     # YTD 2026 only: should see only the +2000 sell
     rows = compute_open_positions(
         trades=trades,

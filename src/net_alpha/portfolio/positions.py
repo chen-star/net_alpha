@@ -4,6 +4,13 @@ Pure function. Options are merged into their underlying ticker for
 quantity/market value (equity-only) but contribute their cash flows to
 cash_sunk_per_share. Period filtering applies to *realized P&L*, not to
 the lots used for open positions (open positions are always "now").
+
+Lots stored in the DB always carry the original buy quantity — the wash-sale
+engine never decrements them when sells occur. This module FIFO-consumes the
+oldest lot first against (a) sells in the trades table and (b) closed-quantity
+totals from the Realized G/L import (used as a fallback when the user imported
+G/L without the matching Transaction History, so the trade-table sells are
+incomplete). The larger of the two sources wins per (account, ticker).
 """
 
 from __future__ import annotations
@@ -17,6 +24,70 @@ from net_alpha.portfolio.models import PositionRow
 from net_alpha.pricing.provider import Quote
 
 
+def consume_lots_fifo(
+    *,
+    lots: Iterable[Lot],
+    trades: Iterable[Trade],
+    gl_closures: dict[tuple[str, str], float] | None = None,
+) -> list[tuple[Lot, Decimal, Decimal]]:
+    """FIFO-consume equity lots by sells (trades) and GL closures.
+
+    Returns a list of (original_lot, remaining_qty, remaining_adjusted_basis).
+    Option lots pass through with full quantity/basis. Lots fully consumed
+    have remaining_qty == 0 (still returned so callers can inspect).
+
+    For each (account, ticker), closed_qty = max(sum_sells_in_trades, gl_closures).
+    GL is treated as canonical when it exceeds the trade-side sells, since the
+    Realized G/L CSV captures every closed lot regardless of whether the
+    matching Sell trade was imported.
+    """
+    gl_closures = gl_closures or {}
+    lots_list = list(lots)
+
+    # Total equity sells per (account, ticker) from the trade table.
+    sells_qty: dict[tuple[str, str], float] = defaultdict(float)
+    for t in trades:
+        if t.option_details is not None:
+            continue
+        if t.action.lower() == "sell":
+            sells_qty[(t.account, t.ticker)] += float(t.quantity)
+
+    # Combine with GL closures, taking the larger value per key.
+    keys = set(sells_qty.keys()) | set(gl_closures.keys())
+    closed_qty: dict[tuple[str, str], float] = {k: max(sells_qty.get(k, 0.0), gl_closures.get(k, 0.0)) for k in keys}
+
+    # Group equity lots by (account, ticker), oldest first; preserve original order
+    # so the returned list matches input order on lot identity.
+    grouped: dict[tuple[str, str], list[Lot]] = defaultdict(list)
+    for lot in lots_list:
+        if lot.option_details is not None:
+            continue
+        grouped[(lot.account, lot.ticker)].append(lot)
+    for group in grouped.values():
+        group.sort(key=lambda lt: lt.date)
+
+    remaining: dict[str, tuple[Decimal, Decimal]] = {}  # lot.id -> (qty, basis)
+    for lot in lots_list:
+        remaining[lot.id] = (Decimal(str(lot.quantity)), Decimal(str(lot.adjusted_basis)))
+
+    for key, group in grouped.items():
+        to_consume = Decimal(str(closed_qty.get(key, 0.0)))
+        for lot in group:
+            if to_consume <= 0:
+                break
+            lot_qty, lot_basis = remaining[lot.id]
+            if lot_qty <= 0:
+                continue
+            take = min(lot_qty, to_consume)
+            ratio = take / lot_qty
+            new_qty = lot_qty - take
+            new_basis = lot_basis - (lot_basis * ratio)
+            remaining[lot.id] = (new_qty, new_basis)
+            to_consume -= take
+
+    return [(lot, *remaining[lot.id]) for lot in lots_list]
+
+
 def compute_open_positions(
     *,
     trades: Iterable[Trade],
@@ -25,6 +96,7 @@ def compute_open_positions(
     period: tuple[int, int] | None = None,  # (year_start, year_end_exclusive); None = all time
     account: str | None = None,
     include_closed: bool = False,
+    gl_closures: dict[tuple[str, str], float] | None = None,
 ) -> list[PositionRow]:
     """Return positions sorted by market value desc (None last).
 
@@ -39,16 +111,21 @@ def compute_open_positions(
     if account:
         trades = [t for t in trades if t.account == account]
         lots = [lot for lot in lots if lot.account == account]
+        gl_closures = {k: v for k, v in (gl_closures or {}).items() if k[0] == account} if gl_closures else None
 
-    # Equity-only quantities and basis come from open lots that are NOT options.
+    consumed = consume_lots_fifo(lots=lots, trades=trades, gl_closures=gl_closures)
+
+    # Aggregate equity-only quantities and basis from FIFO-reduced lots.
     qty_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     open_cost_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     accounts_by_sym: dict[str, set[str]] = defaultdict(set)
-    for lot in lots:
+    for lot, rem_qty, rem_basis in consumed:
         if lot.option_details is not None:
-            continue  # options excluded from equity qty/basis (rolled into cash flows below)
-        qty_by_sym[lot.ticker] += Decimal(str(lot.quantity))
-        open_cost_by_sym[lot.ticker] += Decimal(str(lot.adjusted_basis))
+            continue
+        if rem_qty <= 0:
+            continue
+        qty_by_sym[lot.ticker] += rem_qty
+        open_cost_by_sym[lot.ticker] += rem_basis
         accounts_by_sym[lot.ticker].add(lot.account)
 
     # Cash flows include ALL trades on the underlying ticker (equity AND options).

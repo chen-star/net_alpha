@@ -23,6 +23,12 @@ def get_match_confidence(
 
     Returns a confidence label ("Confirmed", "Probable", "Unclear") or None.
     """
+    # Account transfers move shares the user already owns; per IRS Pub 550 they
+    # are not a "buy" (and a transfer-out is not a "sell"). Never trigger a wash
+    # sale on either side.
+    if candidate.basis_source.startswith("transfer_") or loss_sale.basis_source.startswith("transfer_"):
+        return None
+
     # Special case: selling a put on same underlying as a stock loss
     if (
         candidate.is_sell()

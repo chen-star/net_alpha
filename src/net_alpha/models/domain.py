@@ -158,6 +158,10 @@ class ImportRecord(BaseModel):
     option_count: int | None = None
     option_expiry_count: int | None = None
     parse_warnings: list[str] = Field(default_factory=list)
+    # v5 — count of natural-key duplicates the upload route filtered out before
+    # add_import got the trade list. Persisted so the imports page can render
+    # "imported 0 trades · skipped 7 duplicates" instead of "no records".
+    duplicate_trades: int = 0
 
 
 class AddImportResult(BaseModel):
@@ -187,6 +191,7 @@ class ImportSummary(BaseModel):
     option_count: int | None = None
     option_expiry_count: int | None = None
     parse_warnings: list[str] = Field(default_factory=list)
+    duplicate_trades: int = 0
 
 
 class LotConsumption(BaseModel):
