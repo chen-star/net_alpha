@@ -2,6 +2,68 @@
 
 
 
+## v0.21.0 (2026-04-27)
+
+### Feature
+
+* feat: short-option lifecycle, assigned-put handling, lot-view correctness
+
+The largest change is treating Sell-to-Open / Buy-to-Close as first-class
+trades rather than dropping them. The v1 parser silently ignored both,
+which made premium income invisible and hid open short-option positions
+on tickers like UUUU/HIMS where the user only sells puts. Now:
+
+* SchwabParser emits STO as a Sell and BTC as a Buy, tagged with
+  basis_source markers (option_short_open / option_short_close) so
+  downstream code can recognise them. Assigned-put STOs are tagged
+  separately (option_short_open_assigned) and paired with a synthetic
+  closing trade on the assignment date — this keeps the open-option
+  counter honest without double-counting the premium (which is also
+  folded into the assigned underlying&#39;s cost basis).
+* engine/detector skips synthetic STO/BTC pairs from wash-sale scans
+  and excludes BTC trades from seeding new long lots.
+* engine/stitch skips STO sells from FIFO matching (an STO has no prior
+  long lot — falling through to FIFO mis-matched STO premiums against
+  unrelated equity buys, producing nonsense realised P/L).
+* portfolio/positions now consumes long-option lots by their STC trades
+  AND by GL-only closures (Schwab does not write a transaction row for
+  options that expire worthless, only a GL row), and surfaces a
+  per-underlying &#34;open option contracts&#34; count so tickers with
+  option-only exposure show up on the holdings page.
+* web ticker drilldown uses the new open_lots_view so long-closed BTOs
+  no longer linger in the &#34;Open lots&#34; table forever.
+
+Other changes:
+
+* Option-symbol regexes accept tickers with trailing digits (Schwab
+  appends &#34;1&#34; after corp actions: &#34;GME&#34; → &#34;GME1&#34;). A new
+  _opt_ticker_base() helper strips the suffix when matching events so
+  pre/post-action option pairs net out cleanly.
+* Trade gains an occurrence_index so byte-identical Schwab fill rows
+  (split fills on the same day at the same price) get distinct natural
+  keys instead of one being silently dropped on import. The suffix only
+  appears when &gt; 0, so existing DB rows continue to dedup against
+  re-imports.
+* Repository.add_import replaces a per-trade try/rollback dedup loop
+  (which on a duplicate would unwind the entire session, silently
+  losing every trade flushed earlier in the call) with a pre-filter
+  that mirrors how cash events are already handled.
+* PricingService skips split-history lookups for option-shaped symbols
+  to silence noisy 404s; YahooPriceProvider drops &#34;no price&#34; warnings
+  to debug.
+* web/app.py adds an asset_v cache-buster (server-start timestamp) on
+  every static asset reference so a dev restart actually refreshes
+  CSS/JS in the browser.
+* holdings_filter.js handles the case where Alpine has already
+  initialised before the script runs (alpine:init never fires).
+
+Tests: ~750 LOC of new coverage across brokers, db, detector, stitch,
+positions, holdings routes, plus a new tests/ingest/test_option_parser.py
+for the corp-action ticker regression.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b0ade79`](https://github.com/chen-star/net_alpha/commit/b0ade79dfe1eec5453e210f36b03d272430686a9))
+
+
 ## v0.20.1 (2026-04-27)
 
 ### Chore
