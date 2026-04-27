@@ -63,7 +63,7 @@ def test_calendar_focus_renders_schwab_source_badge(client, repo):
     violations = repo.all_violations()
     assert len(violations) == 1
     vid = violations[0].id
-    resp = client.get(f"/calendar/focus/{vid}")
+    resp = client.get(f"/wash-sales/focus/{vid}")
     assert resp.status_code == 200
     assert "schwab" in resp.text.lower()
 
@@ -72,6 +72,6 @@ def test_calendar_focus_renders_engine_source_badge(client, repo):
     _seed_violation(repo, source="engine", confidence="Probable")
     violations = repo.all_violations()
     vid = violations[0].id
-    resp = client.get(f"/calendar/focus/{vid}")
+    resp = client.get(f"/wash-sales/focus/{vid}")
     assert resp.status_code == 200
     assert "engine" in resp.text.lower() or "cross-account" in resp.text.lower()

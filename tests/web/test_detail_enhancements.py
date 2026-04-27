@@ -33,7 +33,7 @@ def test_detail_renders_totals_bar(client, repo):
             {"ticker": "AAPL", "disallowed_loss": 300.0, "confidence": "Probable"},
         ],
     )
-    resp = client.get("/detail")
+    resp = client.get("/wash-sales")
     assert resp.status_code == 200
     assert "2</span> violations" in resp.text or "2 violations" in resp.text
     assert "$500.00" in resp.text
@@ -50,7 +50,7 @@ def test_detail_groups_by_ticker_and_renders_lag(client, repo):
             {"ticker": "AAPL", "loss_sale_date": date(2025, 7, 1), "triggering_buy_date": date(2025, 7, 5)},
         ],
     )
-    resp = client.get("/detail")
+    resp = client.get("/wash-sales")
     assert resp.status_code == 200
     # Both tickers visible as group headers
     assert "TSLA" in resp.text and "AAPL" in resp.text
@@ -76,7 +76,7 @@ def test_detail_renders_source_badges(client, repo, builders):
             {"ticker": "MSFT", "source": "engine", "loss_account": "schwab/personal", "buy_account": "schwab/personal"},
         ],
     )
-    resp = client.get("/detail")
+    resp = client.get("/wash-sales")
     assert resp.status_code == 200
     # All three Source badges render
     assert ">Schwab<" in resp.text
@@ -87,7 +87,7 @@ def test_detail_renders_source_badges(client, repo, builders):
 def test_detail_default_collapsed_when_more_than_5_tickers(client, repo):
     items = [{"ticker": f"TIC{i}", "disallowed_loss": 100.0} for i in range(6)]
     _seed_violations(repo, items)
-    resp = client.get("/detail")
+    resp = client.get("/wash-sales")
     assert resp.status_code == 200
     # Each group's collapsible div uses x-data="{ open: false }"
     assert "open: false" in resp.text
@@ -96,7 +96,7 @@ def test_detail_default_collapsed_when_more_than_5_tickers(client, repo):
 def test_detail_default_expanded_when_5_or_fewer_tickers(client, repo):
     items = [{"ticker": f"TIC{i}", "disallowed_loss": 100.0} for i in range(3)]
     _seed_violations(repo, items)
-    resp = client.get("/detail")
+    resp = client.get("/wash-sales")
     assert resp.status_code == 200
     assert "open: true" in resp.text
 
@@ -109,8 +109,8 @@ def test_detail_sort_by_lag_changes_order(client, repo):
             {"ticker": "TSLA", "loss_sale_date": date(2025, 7, 1), "triggering_buy_date": date(2025, 7, 3)},  # lag 2
         ],
     )
-    resp_desc = client.get("/detail?sort=lag&order=desc")
-    resp_asc = client.get("/detail?sort=lag&order=asc")
+    resp_desc = client.get("/wash-sales?sort=lag&order=desc")
+    resp_asc = client.get("/wash-sales?sort=lag&order=asc")
     assert resp_desc.status_code == 200
     assert resp_asc.status_code == 200
     # Ordering check: in desc, "12d" appears before "2d"; in asc, the reverse.
@@ -126,7 +126,7 @@ def test_detail_filter_then_summary_reflects_filter(client, repo):
             {"ticker": "AAPL", "disallowed_loss": 300.0, "confidence": "Probable"},
         ],
     )
-    resp = client.get("/detail?ticker=TSLA")
+    resp = client.get("/wash-sales?ticker=TSLA")
     assert resp.status_code == 200
     assert "1</span> violations" in resp.text or "1 violations" in resp.text  # Filtered to one
     assert "$200.00" in resp.text  # Summed to one row's amount

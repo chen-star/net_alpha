@@ -4,9 +4,9 @@ from net_alpha.models.domain import WashSaleViolation
 
 
 def test_detail_empty_state(client):
-    resp = client.get("/detail")
+    resp = client.get("/wash-sales")
     assert resp.status_code == 200
-    assert "Violation detail" in resp.text
+    assert "Wash sales" in resp.text
     assert "No violations match" in resp.text
 
 
@@ -27,7 +27,7 @@ def test_detail_filter_by_ticker(client, repo, builders):
     )
     repo.replace_violations_in_window(date(2024, 8, 15), date(2024, 10, 15), [v])
 
-    resp = client.get("/detail?ticker=TSLA")
+    resp = client.get("/wash-sales?ticker=TSLA")
     assert resp.status_code == 200
     assert "TSLA" in resp.text
     assert "schwab/personal" in resp.text

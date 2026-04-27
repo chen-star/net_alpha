@@ -9,7 +9,7 @@
   {% if filter_confidence %}{% set _ = lag_qs.append('confidence=' ~ filter_confidence) %}{% endif %}
   {% set _ = lag_qs.append('sort=lag') %}
   {% set _ = lag_qs.append('order=' ~ next_lag_order) %}
-  {% set lag_url = '/detail?' ~ lag_qs|join('&') %}
+  {% set lag_url = '/wash-sales?' ~ lag_qs|join('&') %}
 
   <div class="panel" style="padding:0; overflow:hidden;">
     {% for g in groups %}

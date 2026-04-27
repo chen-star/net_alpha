@@ -11,7 +11,7 @@
       </div>
       {% for m in markers %}
         <button
-          hx-get="/calendar/focus/{{ m.id }}"
+          hx-get="/wash-sales/focus/{{ m.id }}"
           hx-target="#focus-strip"
           hx-swap="innerHTML"
           class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full hover:scale-150 transition-transform duration-200 cursor-pointer"
