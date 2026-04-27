@@ -23,6 +23,10 @@
       <div class="font-mono">{{ detail.equity_count }} · {{ detail.option_count }} · {{ detail.option_expiry_count }}</div>
     </div>
     <div>
+      <div class="label-uc">Cash events</div>
+      <div class="font-mono">{{ detail.cash_event_count or 0 }}</div>
+    </div>
+    <div>
       <div class="label-uc">Distinct tickers</div>
       <div class="font-mono">
         {{ detail.distinct_ticker_count }}{% if detail.tickers_preview %}: {{ detail.tickers_preview|join(", ") }}{% if detail.distinct_ticker_count > detail.tickers_preview|length %} …{% endif %}{% endif %}

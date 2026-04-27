@@ -507,6 +507,7 @@ class Repository:
             equity_count = ir.equity_count or 0
             option_count = ir.option_count or 0
             option_expiry_count = ir.option_expiry_count or 0
+            cash_event_count = ir.cash_event_count or 0
         return {
             "id": import_id,
             "broker": broker,
@@ -517,6 +518,7 @@ class Repository:
             "equity_count": equity_count,
             "option_count": option_count,
             "option_expiry_count": option_expiry_count,
+            "cash_event_count": cash_event_count,
             "distinct_ticker_count": len(distinct_tickers),
             "tickers_preview": distinct_tickers[:5],
             "parse_warnings": warnings,

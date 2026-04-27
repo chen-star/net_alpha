@@ -17,7 +17,7 @@
       <tbody>
         {% for imp in imports %}
           {% set has_dates = imp.min_trade_date and imp.max_trade_date %}
-          {% set total_units = (imp.trade_count or 0) + (imp.gl_lot_count or 0) %}
+          {% set total_units = (imp.trade_count or 0) + (imp.gl_lot_count or 0) + (imp.cash_event_count or 0) %}
           <tr id="import-row-{{ imp.id }}" class="align-top">
             <td class="px-3 py-2">
               <button class="text-label-3 hover:text-primary text-xs"
@@ -41,8 +41,12 @@
                 {%- if imp.trade_count %} · {% endif -%}
                 {{ imp.gl_lot_count }} G/L lot{{ "s" if imp.gl_lot_count != 1 else "" }}
               {%- endif -%}
-              {%- if imp.duplicate_trades -%}
+              {%- if imp.cash_event_count -%}
                 {%- if imp.trade_count or imp.gl_lot_count %} · {% endif -%}
+                {{ imp.cash_event_count }} cash event{{ "s" if imp.cash_event_count != 1 else "" }}
+              {%- endif -%}
+              {%- if imp.duplicate_trades -%}
+                {%- if imp.trade_count or imp.gl_lot_count or imp.cash_event_count %} · {% endif -%}
                 <span class="text-label-3">skipped {{ imp.duplicate_trades }} duplicate{{ "s" if imp.duplicate_trades != 1 else "" }}</span>
               {%- endif -%}
               {%- if not total_units and not imp.duplicate_trades -%}<span class="text-label-3">no records</span>{%- endif -%}
@@ -50,7 +54,7 @@
             <td class="px-3 py-2">
               <button class="btn-ghost text-confirmed border-confirmed/30"
                       hx-delete="/imports/{{ imp.id }}"
-                      hx-confirm="Remove import #{{ imp.id }} ({{ imp.trade_count }} trades, {{ imp.gl_lot_count }} G/L lots)? Wash sales will be recomputed."
+                      hx-confirm="Remove import #{{ imp.id }} ({{ imp.trade_count }} trades, {{ imp.gl_lot_count }} G/L lots, {{ imp.cash_event_count or 0 }} cash events)? Wash sales will be recomputed."
                       hx-target="#imports-table"
                       hx-swap="innerHTML">
                 Remove
