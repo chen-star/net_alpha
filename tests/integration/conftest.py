@@ -9,11 +9,14 @@ from unittest.mock import MagicMock
 
 import pytest
 import yaml
+from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel
 
+from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.repository import Repository
 from net_alpha.models.domain import Account, ImportRecord, Trade
+from net_alpha.web.app import create_app
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -105,12 +108,30 @@ def mock_anthropic_client() -> MagicMock:
 
 
 @pytest.fixture
-def repo(tmp_path: Path) -> Repository:
-    """Fresh isolated SQLite DB for split autosync integration tests."""
-    db_path = tmp_path / "autosync_test.db"
-    eng = get_engine(db_path)
+def settings(tmp_path: Path) -> Settings:
+    """Settings pointing at a temp data dir for full test isolation."""
+    return Settings(data_dir=tmp_path)
+
+
+@pytest.fixture
+def engine(settings: Settings):
+    """Engine bound to the temp DB; creates all tables once."""
+    eng = get_engine(settings.db_path)
     SQLModel.metadata.create_all(eng)
-    return Repository(eng)
+    return eng
+
+
+@pytest.fixture
+def repo(engine) -> Repository:
+    """Fresh isolated SQLite DB for split autosync integration tests."""
+    return Repository(engine)
+
+
+@pytest.fixture
+def client(settings: Settings, engine) -> TestClient:
+    """TestClient with the app pointed at the temp DB."""
+    app = create_app(settings)
+    return TestClient(app, raise_server_exceptions=False)
 
 
 def _make_buy(

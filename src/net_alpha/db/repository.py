@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 from net_alpha.db.tables import (
     AccountRow,
     ImportRecordRow,
+    LotOverrideRow,
     LotRow,
     MetaRow,
     RealizedGLLotRow,
@@ -327,6 +328,7 @@ class Repository:
                         | (WashSaleViolationRow.replacement_trade_id.in_(trade_ids))
                     )
                 )
+                s.exec(LotOverrideRow.__table__.delete().where(LotOverrideRow.trade_id.in_(trade_ids)))
             s.exec(TradeRow.__table__.delete().where(TradeRow.import_id == import_id))
             # Delete G/L lots tied to this import (added in schema v2)
             s.exec(RealizedGLLotRow.__table__.delete().where(RealizedGLLotRow.import_id == import_id))
@@ -977,6 +979,7 @@ class Repository:
         Returns None if not found. Mirrors the dict shape used by
         get_lot_rows_for_symbol so consumers can mutate via update_lot_qty_and_basis."""
         from net_alpha.db.tables import LotRow
+
         with Session(self.engine) as s:
             r = s.get(LotRow, lot_id)
             if r is None:
