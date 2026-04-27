@@ -154,6 +154,7 @@ class Repository:
                     cost_basis=t.cost_basis,
                     basis_unknown=t.basis_unknown,
                     basis_source=t.basis_source,
+                    gross_cash_impact=t.gross_cash_impact,  # NEW
                     option_strike=(t.option_details.strike if t.option_details else None),
                     option_expiry=(t.option_details.expiry.isoformat() if t.option_details else None),
                     option_call_put=(t.option_details.call_put if t.option_details else None),
@@ -276,6 +277,7 @@ class Repository:
             basis_source=row.basis_source,
             is_manual=row.is_manual,
             transfer_basis_user_set=row.transfer_basis_user_set,
+            gross_cash_impact=row.gross_cash_impact,  # NEW
             option_details=opt,
         )
 
@@ -762,6 +764,7 @@ class Repository:
                 cost_basis=trade.cost_basis,
                 basis_unknown=trade.basis_unknown,
                 basis_source=trade.basis_source,
+                gross_cash_impact=trade.gross_cash_impact,  # NEW
                 option_strike=(trade.option_details.strike if trade.option_details else None),
                 option_expiry=(trade.option_details.expiry.isoformat() if trade.option_details else None),
                 option_call_put=(trade.option_details.call_put if trade.option_details else None),
@@ -797,6 +800,7 @@ class Repository:
             row.cost_basis = trade.cost_basis
             row.basis_unknown = trade.basis_unknown
             row.basis_source = trade.basis_source
+            row.gross_cash_impact = trade.gross_cash_impact  # NEW
             row.option_strike = trade.option_details.strike if trade.option_details else None
             row.option_expiry = trade.option_details.expiry.isoformat() if trade.option_details else None
             row.option_call_put = trade.option_details.call_put if trade.option_details else None

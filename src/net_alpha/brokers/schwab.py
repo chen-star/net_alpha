@@ -211,6 +211,7 @@ class SchwabParser:
                 "proceeds": proceeds,
                 "cost_basis": cost_basis,
                 "option_details": opt[1] if opt else None,
+                "gross_cash_impact": amount,  # signed; from CSV `Amount`
             }
             if basis_source is not None:
                 kwargs["basis_source"] = basis_source
