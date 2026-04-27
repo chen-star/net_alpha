@@ -1,0 +1,84 @@
+{# Used for Add (POST /trades) and Edit-manual (POST /trades/{id}/edit-manual).
+   Caller passes:
+     form_action     — the POST URL
+     accounts        — list[str] of account display names
+     submit_label    — button text
+     trade           — optional Trade for prefill (None for Add)
+     symbol          — default ticker for Add
+#}
+<div class="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
+     style="border:0.5px solid rgba(255,255,255,0.08);"
+     onclick="event.stopPropagation()"
+     x-data="{ choice: '{{ trade.basis_source if trade else 'user' }}' === 'transfer_in' ? 'Transfer In'
+              : '{{ trade.basis_source if trade else 'user' }}' === 'transfer_out' ? 'Transfer Out'
+              : '{{ trade.action if trade else 'Buy' }}' }">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl">{{ submit_label }}</h2>
+    <button type="button" onclick="document.getElementById('trade-modal').classList.add('hidden')"
+            class="text-label-2 hover:text-text text-2xl leading-none">&times;</button>
+  </div>
+  <form action="{{ form_action }}" method="post" class="space-y-3">
+    <div>
+      <label class="block label-uc mb-1">Account</label>
+      <select name="account" required
+              class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
+              style="border:0.5px solid rgba(255,255,255,0.08);">
+        {% for a in accounts %}
+          <option value="{{ a }}" {% if trade and trade.account == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block label-uc mb-1">Ticker</label>
+        <input type="text" name="ticker" required
+               value="{{ trade.ticker if trade else (symbol or '') }}"
+               class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full font-mono"
+               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+      </div>
+      <div>
+        <label class="block label-uc mb-1">Date</label>
+        <input type="date" name="trade_date" required
+               value="{{ trade.date.isoformat() if trade else '' }}"
+               class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
+               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+      </div>
+    </div>
+    <div>
+      <label class="block label-uc mb-1">Action</label>
+      <select name="action_choice" x-model="choice" required
+              class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
+              style="border:0.5px solid rgba(255,255,255,0.08);">
+        <option>Buy</option>
+        <option>Sell</option>
+        <option>Transfer In</option>
+        <option>Transfer Out</option>
+      </select>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block label-uc mb-1">Quantity</label>
+        <input type="number" name="quantity" step="any" required min="0.0001"
+               value="{{ trade.quantity if trade else '' }}"
+               class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full font-mono"
+               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+      </div>
+      <div>
+        <label class="block label-uc mb-1">
+          <span x-text="(choice === 'Buy' || choice === 'Transfer In') ? 'Cost basis' : 'Proceeds'"></span>
+          ($)
+        </label>
+        <input type="number" name="basis_or_proceeds" step="any" required min="0"
+               value="{{ (trade.cost_basis if trade and trade.cost_basis is not none else trade.proceeds) if trade else '' }}"
+               class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full font-mono"
+               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+      </div>
+    </div>
+    <p class="text-xs text-label-3">&#9888; This is informational only. Consult a tax professional before filing.</p>
+    <div class="flex justify-end gap-2 pt-2">
+      <button type="button" class="btn-ghost"
+              onclick="document.getElementById('trade-modal').classList.add('hidden')">Cancel</button>
+      <button type="submit" class="btn">{{ submit_label }}</button>
+    </div>
+  </form>
+</div>

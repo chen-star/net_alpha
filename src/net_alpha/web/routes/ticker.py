@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
@@ -57,5 +57,90 @@ def ticker_drilldown(
             "kpi_accounts": accounts,
             "kpi_last_trade": last_trade,
             "display_action": display_action,
+        },
+    )
+
+
+@router.get("/ticker/{symbol}/add-form", response_class=HTMLResponse)
+def trade_add_form(
+    request: Request,
+    symbol: str,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    accounts = sorted({imp.account_display for imp in repo.list_imports()})
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_trade_form.html",
+        {
+            "form_action": "/trades",
+            "accounts": accounts,
+            "submit_label": "Add trade",
+            "trade": None,
+            "symbol": symbol.upper(),
+        },
+    )
+
+
+def _find_trade(repo: Repository, trade_id: str):
+    for t in repo.all_trades():
+        if t.id == trade_id:
+            return t
+    return None
+
+
+@router.get("/ticker/{symbol}/edit-manual-form/{trade_id}", response_class=HTMLResponse)
+def trade_edit_manual_form(
+    request: Request, symbol: str, trade_id: str,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    t = _find_trade(repo, trade_id)
+    if t is None or not t.is_manual:
+        raise HTTPException(status_code=404, detail="manual trade not found")
+    accounts = sorted({imp.account_display for imp in repo.list_imports()})
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_trade_form.html",
+        {
+            "form_action": f"/trades/{trade_id}/edit-manual",
+            "accounts": accounts,
+            "submit_label": "Save changes",
+            "trade": t,
+            "symbol": symbol.upper(),
+        },
+    )
+
+
+@router.get("/ticker/{symbol}/edit-transfer-form/{trade_id}", response_class=HTMLResponse)
+def trade_edit_transfer_form(
+    request: Request, symbol: str, trade_id: str,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    t = _find_trade(repo, trade_id)
+    if t is None or t.basis_source not in ("transfer_in", "transfer_out") or t.is_manual:
+        raise HTTPException(status_code=404, detail="transfer row not found")
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_trade_transfer_form.html",
+        {
+            "form_action": f"/trades/{trade_id}/edit-transfer",
+            "trade": t,
+        },
+    )
+
+
+@router.get("/ticker/{symbol}/delete-confirm/{trade_id}", response_class=HTMLResponse)
+def trade_delete_confirm(
+    request: Request, symbol: str, trade_id: str,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    t = _find_trade(repo, trade_id)
+    if t is None or not t.is_manual:
+        raise HTTPException(status_code=404, detail="manual trade not found")
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_trade_delete_confirm.html",
+        {
+            "form_action": f"/trades/{trade_id}/delete",
+            "trade": t,
         },
     )

@@ -3,7 +3,16 @@
 {% block content %}
   <div class="flex justify-between items-baseline mb-4">
     <h1 class="text-2xl font-mono text-primary">{{ symbol }}</h1>
-    <a href="/sim?ticker={{ symbol }}" class="btn">Simulate sale</a>
+    <div class="flex gap-2">
+      <button type="button" class="btn"
+              onclick="
+                fetch('/ticker/{{ symbol }}/add-form').then(r => r.text()).then(html => {
+                  document.getElementById('trade-modal-content').innerHTML = html;
+                  document.getElementById('trade-modal').classList.remove('hidden');
+                });
+              ">Add trade</button>
+      <a href="/sim?ticker={{ symbol }}" class="btn">Simulate sale</a>
+    </div>
   </div>
 
   <div class="grid grid-cols-5 gap-4 mb-6">
@@ -69,8 +78,28 @@
             <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.cost_basis if t.cost_basis is not none else "-" }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
-            <td class="px-2 py-1 text-[11px]" id="trade-affordance-{{ t.id }}">
-              {# Filled in by Task 13. Empty for now. #}
+            <td class="px-2 py-1 text-[11px] r" id="trade-affordance-{{ t.id }}">
+              {% if t.is_manual %}
+                <a href="#" class="text-label-2 hover:text-text mr-2"
+                   onclick="event.preventDefault();
+                     fetch('/ticker/{{ symbol }}/edit-manual-form/{{ t.id }}').then(r => r.text()).then(html => {
+                       document.getElementById('trade-modal-content').innerHTML = html;
+                       document.getElementById('trade-modal').classList.remove('hidden');
+                     });">edit</a>
+                <a href="#" class="text-confirmed hover:text-text"
+                   onclick="event.preventDefault();
+                     fetch('/ticker/{{ symbol }}/delete-confirm/{{ t.id }}').then(r => r.text()).then(html => {
+                       document.getElementById('trade-modal-content').innerHTML = html;
+                       document.getElementById('trade-modal').classList.remove('hidden');
+                     });">delete</a>
+              {% elif t.basis_source in ['transfer_in', 'transfer_out'] %}
+                <a href="#" class="text-label-2 hover:text-text"
+                   onclick="event.preventDefault();
+                     fetch('/ticker/{{ symbol }}/edit-transfer-form/{{ t.id }}').then(r => r.text()).then(html => {
+                       document.getElementById('trade-modal-content').innerHTML = html;
+                       document.getElementById('trade-modal').classList.remove('hidden');
+                     });">set basis &amp; date</a>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}
@@ -94,4 +123,9 @@
   {% endif %}
 
   {% include "_schwab_lot_detail.html" %}
+
+  <div id="trade-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
+       onclick="this.classList.add('hidden')">
+    <div id="trade-modal-content"></div>
+  </div>
 {% endblock %}

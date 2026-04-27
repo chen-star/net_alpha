@@ -1,0 +1,20 @@
+{# Caller passes:
+     trade           — the manual Trade row
+     form_action     — POST /trades/{id}/delete
+#}
+<div class="bg-surface rounded-lg shadow-xl max-w-sm w-full mx-4 p-6"
+     style="border:0.5px solid rgba(255,255,255,0.08);"
+     onclick="event.stopPropagation()">
+  <h2 class="text-lg mb-2">Delete trade?</h2>
+  <p class="text-[13px] text-label-2 mb-4">
+    {{ trade.ticker }} &middot; {{ trade.action }} {{ trade.quantity }} on {{ trade.date }}.<br>
+    This can't be undone.
+  </p>
+  <form action="{{ form_action }}" method="post">
+    <div class="flex justify-end gap-2">
+      <button type="button" class="btn-ghost"
+              onclick="document.getElementById('trade-modal').classList.add('hidden')">Cancel</button>
+      <button type="submit" class="btn" style="background:var(--color-neg);">Delete</button>
+    </div>
+  </form>
+</div>
