@@ -27,6 +27,15 @@ class PricingSnapshot:
     missing_symbols: list[str] = field(default_factory=list)
 
 
+@dataclass
+class SplitSyncResult:
+    """Summary returned by PricingService.sync_splits."""
+
+    applied_count: int = 0
+    skipped_count: int = 0
+    error_symbols: list[str] = field(default_factory=list)
+
+
 class PricingService:
     def __init__(self, *, provider: PriceProvider, cache: PriceCache, enabled: bool) -> None:
         self._provider = provider
@@ -78,3 +87,36 @@ class PricingService:
         """Invalidate cached entries for symbols and re-fetch from the provider."""
         self._cache.invalidate(symbols)
         return self.get_prices(symbols)
+
+    def sync_splits(self, symbols: list[str], *, repo) -> SplitSyncResult:
+        """For each symbol: fetch splits from provider, upsert into repo,
+        and call apply_splits to mutate freshly-loaded lots.
+
+        When pricing is disabled, returns a result with all symbols listed
+        as errors (no network call attempted).
+        """
+        from net_alpha.splits.apply import apply_splits
+
+        result = SplitSyncResult()
+        if not self._enabled:
+            result.error_symbols = list(symbols)
+            return result
+
+        for sym in symbols:
+            try:
+                events = self._provider.fetch_splits(sym)
+            except Exception as exc:
+                logger.warning("pricing: split fetch failed for {}: {}", sym, exc)
+                result.error_symbols.append(sym)
+                continue
+            for ev in events:
+                existing = [s for s in repo.get_splits(sym) if s.split_date == ev.split_date]
+                if existing:
+                    result.skipped_count += 1
+                else:
+                    repo.add_split(ev.symbol, ev.split_date, ev.ratio, "yahoo")
+                    result.applied_count += 1
+
+        # Apply all pending mutations now (idempotent over already-applied splits).
+        apply_splits(repo)
+        return result

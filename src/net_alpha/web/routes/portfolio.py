@@ -30,6 +30,28 @@ def _parse_period(period: str | None, current_year: int) -> tuple[tuple[int, int
         return ((current_year, current_year + 1), f"YTD {current_year}")
 
 
+@router.post("/splits/sync")
+def sync_splits(
+    symbols: str | None = Query(default="ALL"),
+    svc: PricingService = Depends(get_pricing_service),
+    repo: Repository = Depends(get_repository),
+) -> dict[str, object]:
+    if not symbols:
+        raise HTTPException(status_code=400, detail="symbols query param required")
+    if symbols.strip().upper() == "ALL":
+        sym_list = sorted({lot.ticker for lot in repo.all_lots() if lot.option_details is None})
+    else:
+        sym_list = [s.strip() for s in symbols.split(",") if s.strip()]
+    if not sym_list:
+        return {"applied_count": 0, "skipped_count": 0, "error_symbols": []}
+    result = svc.sync_splits(sym_list, repo=repo)
+    return {
+        "applied_count": result.applied_count,
+        "skipped_count": result.skipped_count,
+        "error_symbols": result.error_symbols,
+    }
+
+
 @router.post("/prices/refresh")
 def refresh_prices(
     symbols: str | None = Query(default=None),
