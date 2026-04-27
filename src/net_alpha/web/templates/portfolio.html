@@ -20,26 +20,8 @@
   {% if not imports %}
     {% include "_portfolio_empty_state.html" %}
   {% else %}
-    <div id="portfolio-kpis"
-         hx-get="/portfolio/kpis?period={{ selected_period }}&account={{ selected_account }}"
-         hx-trigger="load" hx-swap="innerHTML"
-         class="mb-4"></div>
-
-    <div class="grid gap-3 mb-4" style="grid-template-columns: 1fr 1fr;">
-      <div id="portfolio-equity" class="panel"
-           hx-get="/portfolio/equity-curve?period={{ selected_period }}&account={{ selected_account }}"
-           hx-trigger="load" hx-swap="innerHTML"></div>
-      <div id="portfolio-allocation" class="panel"
-           hx-get="/portfolio/allocation?account={{ selected_account }}"
-           hx-trigger="load" hx-swap="innerHTML"></div>
-    </div>
-
-    <div id="portfolio-wash-watch" class="panel mb-4"
-         hx-get="/portfolio/wash-watch?account={{ selected_account }}"
-         hx-trigger="load" hx-swap="innerHTML"></div>
-
-    <div id="portfolio-positions"
-         hx-get="/portfolio/positions?period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}&show=open&page=1"
+    <div id="portfolio-body"
+         hx-get="/portfolio/body?period={{ selected_period }}&account={{ selected_account }}"
          hx-trigger="load" hx-swap="innerHTML"></div>
   {% endif %}
 {% endblock %}
