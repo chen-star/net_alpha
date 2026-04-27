@@ -85,6 +85,55 @@
 
 </div>
 
+{% if cash_kpis is defined %}
+<div class="grid grid-cols-12 gap-[10px] mt-[10px]">
+
+  {# --- Cash --- #}
+  <div class="kpi col-span-4">
+    <div class="label-uc">Cash</div>
+    <div class="num text-[22px] font-bold mt-2">
+      {% if cash_kpis.cash_balance < 0 %}
+        <span class="text-neg">−${{ "%.2f"|format(cash_kpis.cash_balance|float|abs) }}</span>
+      {% else %}
+        ${{ "%.2f"|format(cash_kpis.cash_balance|float) }}
+      {% endif %}
+    </div>
+    <div class="text-[11px] text-label-3 mt-1">
+      {{ "%.0f"|format((cash_kpis.cash_share_pct|float) * 100) }}% of account
+    </div>
+  </div>
+
+  {# --- Net contributed --- #}
+  <div class="kpi col-span-4">
+    <div class="label-uc">Net contributed</div>
+    <div class="num text-[22px] font-bold mt-2">
+      {% if cash_kpis.net_contributions < 0 %}
+        <span class="text-neg">−${{ "%.2f"|format(cash_kpis.net_contributions|float|abs) }}</span>
+      {% else %}
+        ${{ "%.2f"|format(cash_kpis.net_contributions|float) }}
+      {% endif %}
+    </div>
+    <div class="text-[11px] text-label-3 mt-1">deposits − withdrawals</div>
+  </div>
+
+  {# --- Growth --- #}
+  <div class="kpi col-span-4">
+    <div class="label-uc">Growth</div>
+    <div class="num text-[22px] font-bold mt-2 {% if cash_kpis.growth < 0 %}text-neg{% else %}text-pos{% endif %}">
+      {% if cash_kpis.growth < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(cash_kpis.growth|float|abs) }}
+    </div>
+    <div class="text-[11px] text-label-3 mt-1">
+      {% if cash_kpis.growth_pct is not none %}
+        {% if cash_kpis.growth_pct < 0 %}−{% else %}+{% endif %}{{ "%.1f"|format((cash_kpis.growth_pct|float|abs) * 100) }}% vs contributed
+      {% else %}
+        no contributions
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
 {% if snapshot is defined and snapshot.degraded %}
   <div class="text-[11px] text-warn mt-2">Showing stale prices (provider unavailable).</div>
 {% endif %}
