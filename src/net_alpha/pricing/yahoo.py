@@ -9,12 +9,13 @@ silently dropped from the result.
 from __future__ import annotations
 
 import datetime as dt
+from datetime import date as _date
 from decimal import Decimal
 
 import yfinance as yf
 from loguru import logger
 
-from net_alpha.pricing.provider import PriceFetchError, PriceProvider, Quote
+from net_alpha.pricing.provider import PriceFetchError, PriceProvider, Quote, SplitEvent
 
 
 class YahooPriceProvider(PriceProvider):
@@ -45,3 +46,22 @@ class YahooPriceProvider(PriceProvider):
         except Exception as exc:  # systemic failure outside the per-symbol loop
             raise PriceFetchError(str(exc), symbols=symbols) from exc
         return out
+
+    def fetch_splits(self, symbol: str) -> list[SplitEvent]:
+        """Fetch all known splits for a symbol from yfinance. Returns [] on any error."""
+        try:
+            ticker = yf.Ticker(symbol)
+            series = ticker.splits  # pandas Series indexed by datetime
+        except Exception as exc:
+            logger.warning("yahoo: split fetch error for {}: {}", symbol, exc)
+            return []
+        events: list[SplitEvent] = []
+        try:
+            for ts, ratio in series.items():
+                d = ts.date() if hasattr(ts, "date") else _date.fromisoformat(str(ts)[:10])
+                events.append(SplitEvent(symbol=symbol, split_date=d, ratio=float(ratio)))
+        except Exception as exc:
+            logger.warning("yahoo: split parse error for {}: {}", symbol, exc)
+            return []
+        events.sort(key=lambda e: e.split_date)
+        return events

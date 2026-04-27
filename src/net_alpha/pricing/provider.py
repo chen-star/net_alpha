@@ -7,6 +7,7 @@ Quote is the normalized result type returned for a single symbol.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import date as _date
 from datetime import datetime
 from decimal import Decimal
 
@@ -36,6 +37,16 @@ class PriceFetchError(Exception):
         self.symbols = symbols or []
 
 
+class SplitEvent(BaseModel):
+    """A single stock-split event for a symbol. Yahoo convention:
+    ratio = new shares ÷ old shares (so 0.1 = 1-for-10 reverse, 4.0 = 4-for-1 forward)."""
+
+    model_config = {"frozen": True}
+    symbol: str
+    split_date: _date
+    ratio: float
+
+
 class PriceProvider(ABC):
     """Fetch live quotes for a list of symbols."""
 
@@ -46,3 +57,7 @@ class PriceProvider(ABC):
         Symbols missing from the result were unavailable. Raises PriceFetchError
         on systemic failures (network down, rate-limit), not on per-symbol misses.
         """
+
+    def fetch_splits(self, symbol: str) -> list[SplitEvent]:
+        """Optional: providers without split data return [] (default)."""
+        return []
