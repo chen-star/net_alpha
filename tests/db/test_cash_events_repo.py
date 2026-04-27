@@ -55,3 +55,39 @@ def test_add_cash_events_is_idempotent_on_natural_key():
     n2 = repo.add_cash_events(events, import_id=import_id)
     assert n2 == 0
     assert len(repo.list_cash_events()) == 1
+
+
+def test_list_cash_events_filters_by_account_id():
+    repo, account, import_id = _setup()
+    other = repo.get_or_create_account("Schwab", "long_term")
+    other_rec = ImportRecord(
+        id=None, account_id=other.id, csv_filename="y.csv", csv_sha256="def",
+        imported_at=datetime(2026, 4, 26, 12, 0, 0), trade_count=0,
+    )
+    other_import = repo.add_import(other, other_rec, trades=[]).import_id
+    repo.add_cash_events(
+        [_ev(date(2026, 3, 31), "dividend", 1.0, account="Schwab/short_term", description="A")],
+        import_id=import_id,
+    )
+    repo.add_cash_events(
+        [_ev(date(2026, 3, 31), "dividend", 2.0, account="Schwab/long_term", description="B")],
+        import_id=other_import,
+    )
+    short = repo.list_cash_events(account_id=account.id)
+    long = repo.list_cash_events(account_id=other.id)
+    assert {e.amount for e in short} == {1.0}
+    assert {e.amount for e in long} == {2.0}
+
+
+def test_list_cash_events_filters_by_date_range():
+    repo, _account, import_id = _setup()
+    repo.add_cash_events(
+        [
+            _ev(date(2025, 12, 31), "dividend", 1.0, description="A"),
+            _ev(date(2026, 1, 1), "dividend", 2.0, description="B"),
+            _ev(date(2026, 6, 30), "dividend", 3.0, description="C"),
+        ],
+        import_id=import_id,
+    )
+    in_2026 = repo.list_cash_events(since=date(2026, 1, 1), until=date(2026, 12, 31))
+    assert {e.amount for e in in_2026} == {2.0, 3.0}

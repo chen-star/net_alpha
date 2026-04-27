@@ -223,6 +223,36 @@ class Repository:
             s.commit()
             return inserted
 
+    def _row_to_cash_event(self, s: Session, row: CashEventRow) -> CashEvent:
+        return CashEvent(
+            id=str(row.id),
+            account=self._account_display_for_id(s, row.account_id),
+            event_date=date.fromisoformat(row.event_date),
+            kind=row.kind,
+            amount=row.amount,
+            ticker=row.ticker,
+            description=row.description or "",
+        )
+
+    def list_cash_events(
+        self,
+        *,
+        account_id: int | None = None,
+        since: date | None = None,
+        until: date | None = None,
+    ) -> list[CashEvent]:
+        with Session(self.engine) as s:
+            stmt = select(CashEventRow)
+            if account_id is not None:
+                stmt = stmt.where(CashEventRow.account_id == account_id)
+            if since is not None:
+                stmt = stmt.where(CashEventRow.event_date >= since.isoformat())
+            if until is not None:
+                stmt = stmt.where(CashEventRow.event_date <= until.isoformat())
+            stmt = stmt.order_by(CashEventRow.event_date)
+            rows = s.exec(stmt).all()
+            return [self._row_to_cash_event(s, r) for r in rows]
+
     # --- Reads ---
 
     def _row_to_trade(self, row: TradeRow, account_display: str) -> Trade:
