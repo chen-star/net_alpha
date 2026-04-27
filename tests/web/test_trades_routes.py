@@ -229,3 +229,45 @@ def test_edit_manual_rejects_imported_row(tmp_path):
         },
     )
     assert r.status_code == 400
+
+
+def test_delete_manual_removes_row(tmp_path):
+    client = _client(tmp_path)
+    client.post(
+        "/trades",
+        data={
+            "account": "Schwab/Tax", "ticker": "AAPL", "trade_date": "2026-01-15",
+            "action_choice": "Buy", "quantity": "10", "basis_or_proceeds": "1500",
+        },
+        follow_redirects=False,
+    )
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    with engine.begin() as conn:
+        trade_id = conn.execute(text("SELECT id FROM trades")).first()[0]
+    r = client.post(f"/trades/{trade_id}/delete", follow_redirects=False)
+    assert r.status_code in (200, 303)
+    with engine.begin() as conn:
+        n = conn.execute(text("SELECT COUNT(*) FROM trades")).first()[0]
+    assert n == 0
+
+
+def test_delete_imported_row_rejected(tmp_path):
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO accounts(broker, label) VALUES ('Schwab','Tax')"))
+        conn.execute(text(
+            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 1)"
+        ))
+        conn.execute(text(
+            "INSERT INTO trades(import_id, account_id, natural_key, ticker, trade_date, action, "
+            "quantity, cost_basis, basis_source, is_manual, transfer_basis_user_set, basis_unknown) "
+            "VALUES (1, 1, 'csv:k', 'AAPL', '2024-06-15', 'Buy', 10, 1000, 'broker_csv', 0, 0, 0)"
+        ))
+        trade_id = conn.execute(text("SELECT id FROM trades")).first()[0]
+    client = TestClient(create_app(settings))
+    r = client.post(f"/trades/{trade_id}/delete")
+    assert r.status_code == 400

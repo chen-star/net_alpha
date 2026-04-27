@@ -151,3 +151,25 @@ def edit_transfer(
     response = RedirectResponse(url=f"/ticker/{saved.ticker}", status_code=303)
     response.headers["HX-Redirect"] = f"/ticker/{saved.ticker}"
     return response
+
+
+@router.post("/trades/{trade_id}/delete", response_model=None)
+def delete_trade(
+    request: Request,
+    trade_id: str,
+    repo: Repository = Depends(get_repository),
+) -> RedirectResponse:
+    etf_pairs = load_etf_pairs()
+    # Look up the ticker before deleting so we can redirect back.
+    target_ticker = "?"
+    for t in repo.all_trades():
+        if t.id == trade_id:
+            target_ticker = t.ticker
+            break
+    try:
+        repo.delete_manual_trade(trade_id, etf_pairs=etf_pairs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    response = RedirectResponse(url=f"/ticker/{target_ticker}", status_code=303)
+    response.headers["HX-Redirect"] = f"/ticker/{target_ticker}"
+    return response
