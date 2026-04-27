@@ -1,5 +1,7 @@
 from datetime import date
 
+import pytest
+
 from net_alpha.audit.provenance import (
     CashRef,
     NetContributedRef,
@@ -54,7 +56,5 @@ def test_net_contributed_ref_round_trip():
 
 
 def test_decode_rejects_garbage():
-    import pytest
-
     with pytest.raises(ValueError):
         decode_metric_ref("not-a-valid-encoding")
