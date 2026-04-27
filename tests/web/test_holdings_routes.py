@@ -49,3 +49,29 @@ def test_holdings_link_appears_on_other_pages(tmp_path):
     response = client.get("/")
     assert response.status_code == 200
     assert ">Holdings<" in response.text
+
+
+def test_holdings_renders_symbol_multiselect_trigger(tmp_path):
+    """The holdings positions fragment should expose a multi-select trigger."""
+    client = _client(tmp_path)
+    # Fragment endpoint renders the toolbar inline.
+    r = client.get("/portfolio/positions?period=ytd")
+    assert r.status_code == 200
+    html = r.text
+    # Trigger button is present.
+    assert "Symbols:" in html
+    # Alpine state hook for the popover.
+    assert "x-data" in html
+    # No native search input.
+    assert 'name="q"' not in html
+
+
+def test_holdings_symbol_filter_with_selection_in_url(tmp_path):
+    """When ?symbols= is present, the trigger summarizes the selection."""
+    client = _client(tmp_path)
+    r = client.get("/portfolio/positions?period=ytd&symbols=AAPL,MSFT")
+    assert r.status_code == 200
+    html = r.text
+    # The summary names the selected symbols.
+    assert "AAPL" in html
+    assert "MSFT" in html

@@ -151,8 +151,8 @@ def portfolio_positions(
     trades = repo.all_trades()
     lots = repo.all_lots()
     gl_closures = repo.get_equity_gl_closures()
-    symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
-    prices = svc.get_prices(symbols)
+    all_lot_tickers = sorted({lot.ticker for lot in lots if lot.option_details is None})
+    prices = svc.get_prices(all_lot_tickers)
     include_closed = show == "all"
     rows = compute_open_positions(
         trades=trades,
