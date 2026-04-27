@@ -78,3 +78,29 @@ def create_trade(
     response = RedirectResponse(url=f"/ticker/{trade.ticker}", status_code=303)
     response.headers["HX-Redirect"] = f"/ticker/{trade.ticker}"
     return response
+
+
+@router.post("/trades/{trade_id}/edit-transfer", response_model=None)
+def edit_transfer(
+    request: Request,
+    trade_id: str,
+    trade_date: str = Form(...),
+    basis_or_proceeds: float = Form(...),
+    repo: Repository = Depends(get_repository),
+) -> RedirectResponse:
+    if basis_or_proceeds < 0:
+        raise HTTPException(status_code=400, detail="basis/proceeds must be >= 0")
+    d = _parse_date(trade_date)
+    etf_pairs = load_etf_pairs()
+    try:
+        saved = repo.update_imported_transfer(
+            trade_id=trade_id,
+            new_date=d,
+            new_basis_or_proceeds=basis_or_proceeds,
+            etf_pairs=etf_pairs,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    response = RedirectResponse(url=f"/ticker/{saved.ticker}", status_code=303)
+    response.headers["HX-Redirect"] = f"/ticker/{saved.ticker}"
+    return response
