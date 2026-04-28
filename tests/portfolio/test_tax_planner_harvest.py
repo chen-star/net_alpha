@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-from net_alpha.engine.detector import detect_in_window
 from net_alpha.models.domain import Trade
 from net_alpha.portfolio.tax_planner import HarvestOpportunity, compute_harvest_queue
 from net_alpha.pricing.provider import Quote
@@ -28,17 +27,6 @@ class _StubPricing:
         return out
 
 
-def _seed_lots(repo, trades: list[Trade]) -> None:
-    """Populate the lots table from a trade list via detect_in_window."""
-    if not trades:
-        return
-    dates = [t.date for t in trades]
-    win_start = min(dates)
-    win_end = max(dates)
-    result = detect_in_window(trades, win_start, win_end, etf_pairs={})
-    repo.replace_lots_in_window(win_start, win_end, result.lots)
-
-
 def test_harvest_opportunity_minimal() -> None:
     """Test creating a minimal HarvestOpportunity instance."""
     opp = HarvestOpportunity(
@@ -57,7 +45,7 @@ def test_harvest_opportunity_minimal() -> None:
     assert opp.loss < 0
 
 
-def test_compute_harvest_queue_returns_only_losses(repo, schwab_account, seed_import) -> None:
+def test_compute_harvest_queue_returns_only_losses(repo, schwab_account, seed_import, seed_lots) -> None:
     today = date(2026, 5, 1)
     aapl_buy = Trade(
         account=schwab_account.display(),
@@ -78,7 +66,7 @@ def test_compute_harvest_queue_returns_only_losses(repo, schwab_account, seed_im
         cost_basis=Decimal("600"),
     )
     seed_import(repo, schwab_account, [aapl_buy, uuuu_buy])
-    _seed_lots(repo, repo.all_trades())
+    seed_lots(repo)
 
     pricing = _StubPricing({"AAPL": Decimal("250"), "UUUU": Decimal("4")})
     rows = compute_harvest_queue(
@@ -94,7 +82,7 @@ def test_compute_harvest_queue_returns_only_losses(repo, schwab_account, seed_im
     assert rows[0].lt_st == "ST"
 
 
-def test_compute_harvest_queue_lt_classification(repo, schwab_account, seed_import) -> None:
+def test_compute_harvest_queue_lt_classification(repo, schwab_account, seed_import, seed_lots) -> None:
     today = date(2026, 5, 1)
     long_buy = Trade(
         account=schwab_account.display(),
@@ -106,7 +94,7 @@ def test_compute_harvest_queue_lt_classification(repo, schwab_account, seed_impo
         cost_basis=Decimal("600"),
     )
     seed_import(repo, schwab_account, [long_buy])
-    _seed_lots(repo, repo.all_trades())
+    seed_lots(repo)
 
     pricing = _StubPricing({"UUUU": Decimal("4")})
     rows = compute_harvest_queue(
@@ -119,7 +107,7 @@ def test_compute_harvest_queue_lt_classification(repo, schwab_account, seed_impo
     assert rows[0].lt_st == "LT"
 
 
-def test_compute_harvest_queue_excludes_when_pricing_unavailable(repo, schwab_account, seed_import) -> None:
+def test_compute_harvest_queue_excludes_when_pricing_unavailable(repo, schwab_account, seed_import, seed_lots) -> None:
     today = date(2026, 5, 1)
     buy = Trade(
         account=schwab_account.display(),
@@ -131,7 +119,7 @@ def test_compute_harvest_queue_excludes_when_pricing_unavailable(repo, schwab_ac
         cost_basis=Decimal("600"),
     )
     seed_import(repo, schwab_account, [buy])
-    _seed_lots(repo, repo.all_trades())
+    seed_lots(repo)
 
     pricing = _StubPricing({})
     rows = compute_harvest_queue(
@@ -144,7 +132,7 @@ def test_compute_harvest_queue_excludes_when_pricing_unavailable(repo, schwab_ac
     assert rows == []
 
 
-def test_compute_harvest_queue_filter_account(repo, schwab_account, seed_import) -> None:
+def test_compute_harvest_queue_filter_account(repo, schwab_account, seed_import, seed_lots) -> None:
     today = date(2026, 5, 1)
     buy = Trade(
         account=schwab_account.display(),
@@ -156,7 +144,7 @@ def test_compute_harvest_queue_filter_account(repo, schwab_account, seed_import)
         cost_basis=Decimal("600"),
     )
     seed_import(repo, schwab_account, [buy])
-    _seed_lots(repo, repo.all_trades())
+    seed_lots(repo)
 
     pricing = _StubPricing({"UUUU": Decimal("4")})
 
