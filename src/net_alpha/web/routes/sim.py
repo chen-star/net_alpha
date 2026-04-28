@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from net_alpha.db.repository import Repository
 from net_alpha.engine.etf_pairs import load_etf_pairs
 from net_alpha.engine.simulator import simulate_buy, simulate_sell
+from net_alpha.portfolio.tax_planner import PlannedTrade, TaxBrackets, assess_trade
 from net_alpha.web.dependencies import get_repository
 
 router = APIRouter()
@@ -48,6 +49,40 @@ def sim_run(
     accounts = repo.list_accounts()
     accounts_filtered = [a for a in accounts if a.display() == account] if account else accounts
 
+    # Build traffic-light signal for both buy and sell paths.
+    account_id_for_signal = 0
+    for a in accounts:
+        if a.display() == (account or ""):
+            account_id_for_signal = a.id or 0
+            break
+
+    planned = PlannedTrade(
+        symbol=ticker.upper(),
+        account_id=account_id_for_signal,
+        action="Sell" if action.lower() == "sell" else "Buy",
+        qty=Decimal(str(qty)),
+        price=Decimal(str(price)),
+        on=on_date,
+    )
+    cfg = request.app.state.tax_brackets_cfg
+    brackets_for_signal: TaxBrackets | None = None
+    if cfg is not None:
+        brackets_for_signal = TaxBrackets(
+            filing_status=cfg.filing_status,
+            state=cfg.state,
+            federal_marginal_rate=cfg.federal_marginal_rate,
+            state_marginal_rate=cfg.state_marginal_rate,
+            ltcg_rate=cfg.ltcg_rate,
+            qualified_div_rate=cfg.qualified_div_rate,
+        )
+    signal = assess_trade(
+        proposed=planned,
+        repo=repo,
+        brackets=brackets_for_signal,
+        as_of=on_date,
+        etf_pairs=request.app.state.etf_pairs,
+    )
+
     if action.lower() == "buy":
         options = simulate_buy(
             ticker=ticker.upper(),
@@ -63,7 +98,7 @@ def sim_run(
         return request.app.state.templates.TemplateResponse(
             request,
             "_sim_buy_result.html",
-            {"options": options, "ticker": ticker.upper()},
+            {"options": options, "ticker": ticker.upper(), "signal": signal},
         )
 
     options = simulate_sell(
@@ -78,5 +113,5 @@ def sim_run(
     return request.app.state.templates.TemplateResponse(
         request,
         "_sim_sell_result.html",
-        {"options": options, "ticker": ticker.upper()},
+        {"options": options, "ticker": ticker.upper(), "signal": signal},
     )
