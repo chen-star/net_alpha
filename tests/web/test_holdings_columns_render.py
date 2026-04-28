@@ -1,5 +1,5 @@
 # tests/web/test_holdings_columns_render.py
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
@@ -21,7 +21,7 @@ def _seed(tmp_path, profile_label, density="comfortable"):
             account_id=a.id,
             profile=profile_label,
             density=density,
-            updated_at=datetime(2026, 4, 27, tzinfo=timezone.utc),
+            updated_at=datetime(2026, 4, 27, tzinfo=UTC),
         )
     )
     app = create_app(settings)

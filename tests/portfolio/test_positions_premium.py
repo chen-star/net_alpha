@@ -41,10 +41,11 @@ def test_premium_received_for_closed_csp():
         action="Buy", quantity=100.0, proceeds=None, cost_basis=10000.0,
     )
 
+    _as_of_dt = dt.datetime(2026, 4, 27, tzinfo=dt.UTC)
     rows = compute_open_positions(
         trades=[eq_buy, csp_open, csp_close],
         lots=[eq_lot],
-        prices={"AAPL": Quote(symbol="AAPL", price=Decimal("150"), as_of=dt.datetime(2026, 4, 27, tzinfo=dt.timezone.utc), source="test")},
+        prices={"AAPL": Quote(symbol="AAPL", price=Decimal("150"), as_of=_as_of_dt, source="test")},
         as_of=date(2026, 4, 27),
     )
     aapl = next(r for r in rows if r.symbol == "AAPL")
@@ -61,10 +62,11 @@ def test_premium_received_zero_when_no_options():
         account="Schwab/Tax", date=date(2024, 1, 1), ticker="AAPL",
         action="Buy", quantity=100.0, proceeds=None, cost_basis=10000.0,
     )
+    _as_of_dt = dt.datetime(2026, 4, 27, tzinfo=dt.UTC)
     rows = compute_open_positions(
         trades=[eq_buy],
         lots=[eq_lot],
-        prices={"AAPL": Quote(symbol="AAPL", price=Decimal("150"), as_of=dt.datetime(2026, 4, 27, tzinfo=dt.timezone.utc), source="test")},
+        prices={"AAPL": Quote(symbol="AAPL", price=Decimal("150"), as_of=_as_of_dt, source="test")},
         as_of=date(2026, 4, 27),
     )
     aapl = next(r for r in rows if r.symbol == "AAPL")
