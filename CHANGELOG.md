@@ -2,6 +2,42 @@
 
 
 
+## v0.24.4 (2026-04-28)
+
+### Fix
+
+* fix(ticker): correct realized P&amp;L for short options + Timeline G/L column
+
+Five issues, all on the ticker drilldown page:
+
+#1 (Open lots empty for UUUU): when only short options are open, the long-lots
+   table is hidden and replaced with a brief &#34;see Open short options below&#34;
+   pointer so the user isn&#39;t staring at an empty table after a CSP open.
+
+#2 (Timeline gain/loss column): added a G/L column showing realized P&amp;L per
+   close row. Long-lot Sells show proceeds-basis directly; short-option
+   closes (BTC, expiry-synthetic) pair the close cost against the matching
+   STO premium so the user sees per-cycle profit on the close row.
+
+#3 (UUUU realized P&amp;L wrong): the legacy realized helper summed
+   proceeds-basis for every Sell, which counted STO premiums as realized at
+   open and silently dropped BTC closes (which are Buys). Replaced with
+   realized_pl_from_trades, which skips STOs and pairs BTCs against their
+   matching opens. Wired through ticker.py, compute_open_positions
+   (per-symbol realized), and the realized-P&amp;L provenance trace. UUUU YTD
+   2026 now reads $826.04 (was $750.02 inflated by un-paired STO premium).
+
+#4 (Schwab Lot Detail title style): heading lifted out of the panel header
+   bar and rendered as &lt;h2 class=&#34;text-xl mt-6 mb-2&#34;&gt; to match the Timeline /
+   Open lots / Open short options sections.
+
+#5 (sell-put basis/proceeds): same root cause as #3 — the bad realized
+   number propagated to FRMI as well. FRMI YTD 2026 now reads -$157.32
+   (one closed cycle: STO +129.34 paired with BTC -286.66).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`297fbdd`](https://github.com/chen-star/net_alpha/commit/297fbddbf11feef9ea9a93d29b0c21099165b814))
+
+
 ## v0.24.3 (2026-04-28)
 
 ### Fix
