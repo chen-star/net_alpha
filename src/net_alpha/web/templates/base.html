@@ -65,5 +65,11 @@
       <div class="text-label-3 text-sm">Loading…</div>
     </div>
   </dialog>
+  {% set _fvm = first_visit_modal_data() %}
+  {% if _fvm.show_modal %}
+    {% with accounts=_fvm.accounts %}
+      {% include "_profile_picker_modal.html" %}
+    {% endwith %}
+  {% endif %}
 </body>
 </html>
