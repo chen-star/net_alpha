@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-from net_alpha.models.domain import Trade
+from net_alpha.models.domain import OptionDetails, Trade
 from net_alpha.portfolio.tax_planner import HarvestOpportunity, compute_harvest_queue
 from net_alpha.pricing.provider import Quote
 
@@ -167,3 +167,100 @@ def test_compute_harvest_queue_filter_account(repo, schwab_account, seed_import,
         etf_replacements={},
     )
     assert rows == []
+
+
+def test_compute_harvest_queue_premium_offset_for_csp_assigned(
+    repo,
+    schwab_account,
+    seed_import,
+    seed_lots,
+) -> None:
+    """An assigned-put origin lot carries the premium_offset back through to the row."""
+    today = date(2026, 5, 1)
+
+    sto = Trade(
+        account=schwab_account.display(),
+        date=date(2025, 8, 14),
+        ticker="UUUU",
+        action="Sell to Open",
+        quantity=Decimal("1"),
+        proceeds=Decimal("120"),
+        cost_basis=Decimal("0"),
+        option_details=OptionDetails(strike=Decimal("5"), expiry=date(2025, 9, 19), call_put="P"),
+        basis_source="option_short_open",
+    )
+    btc = Trade(
+        account=schwab_account.display(),
+        date=date(2025, 9, 19),
+        ticker="UUUU",
+        action="Buy to Close",
+        quantity=Decimal("1"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("0"),
+        option_details=OptionDetails(strike=Decimal("5"), expiry=date(2025, 9, 19), call_put="P"),
+        basis_source="option_short_close_assigned",
+    )
+    assigned_buy = Trade(
+        account=schwab_account.display(),
+        date=date(2025, 9, 19),
+        ticker="UUUU",
+        action="Buy",
+        quantity=Decimal("100"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("380"),
+        basis_source="option_short_open_assigned",
+    )
+    seed_import(repo, schwab_account, [sto, btc, assigned_buy])
+    seed_lots(repo)
+
+    pricing = _StubPricing({"UUUU": Decimal("3")})
+    rows = compute_harvest_queue(
+        repo=repo,
+        pricing=pricing,
+        as_of=today,
+        etf_pairs={},
+        etf_replacements={},
+    )
+    assert len(rows) == 1
+    assert rows[0].premium_offset == Decimal("120")
+    assert rows[0].premium_origin_event is not None
+
+
+def test_only_harvestable_filter_excludes_locked_positions(
+    repo,
+    schwab_account,
+    seed_import,
+    seed_lots,
+) -> None:
+    today = date(2026, 5, 1)
+    buy = Trade(
+        account=schwab_account.display(),
+        date=today - timedelta(days=5),
+        ticker="UUUU",
+        action="Buy",
+        quantity=Decimal("100"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("600"),
+    )
+    seed_import(repo, schwab_account, [buy])
+    seed_lots(repo)
+    pricing = _StubPricing({"UUUU": Decimal("4")})
+    rows = compute_harvest_queue(
+        repo=repo,
+        pricing=pricing,
+        as_of=today,
+        etf_pairs={},
+        etf_replacements={},
+        only_harvestable=True,
+    )
+    assert rows == []
+    rows = compute_harvest_queue(
+        repo=repo,
+        pricing=pricing,
+        as_of=today,
+        etf_pairs={},
+        etf_replacements={},
+        only_harvestable=False,
+    )
+    assert len(rows) == 1
+    assert rows[0].lockout_clear is not None
