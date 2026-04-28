@@ -34,6 +34,7 @@ def test_harvest_opportunity_minimal() -> None:
         account_id=1,
         account_label="Schwab Tax",
         qty=Decimal("100"),
+        open_basis=Decimal("320"),  # 100 shares * $3.20/share basis
         loss=Decimal("-220"),
         lt_st="ST",
         lockout_clear=None,
@@ -322,3 +323,12 @@ def test_suggested_replacements_empty_when_no_entry(
         etf_replacements={"SPY": ["VTI"]},
     )
     assert rows[0].suggested_replacements == []
+
+
+def test_harvest_opportunity_has_open_basis_field():
+    """The Phase 2 at-loss UI displays MKT and BASIS columns. The model
+    must expose open_basis so the template can compute them."""
+    fields = HarvestOpportunity.model_fields
+    assert "open_basis" in fields, (
+        f"HarvestOpportunity is missing open_basis; got: {list(fields.keys())}"
+    )

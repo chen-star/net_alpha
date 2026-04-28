@@ -280,6 +280,7 @@ class HarvestOpportunity(BaseModel):
     account_id: int
     account_label: str
     qty: Decimal
+    open_basis: Decimal  # remaining basis on the open lot
     loss: Decimal  # negative (open_basis - market_value, signed loss)
     lt_st: Literal["LT", "ST"]
     lockout_clear: date | None
@@ -389,6 +390,7 @@ def compute_harvest_queue(
                 account_id=accounts.get(lot.account, 0),
                 account_label=lot.account,
                 qty=qty,
+                open_basis=basis,
                 loss=loss,
                 lt_st=lt_st,
                 lockout_clear=clear,

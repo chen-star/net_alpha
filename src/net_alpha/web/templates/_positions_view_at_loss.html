@@ -61,8 +61,8 @@
               <td class="font-semibold">{{ row.symbol }}</td>
               <td class="text-label-2">{{ row.account_label }}</td>
               <td class="text-right">{{ fmt_quantity(row.qty) }}</td>
-              <td class="text-right">{{ fmt_currency(row.open_basis + row.loss) if row.open_basis is defined else "—" }}</td>
-              <td class="text-right">{{ fmt_currency(row.open_basis) if row.open_basis is defined else "—" }}</td>
+              <td class="text-right">{{ fmt_currency(row.open_basis + row.loss) }}</td>
+              <td class="text-right">{{ fmt_currency(row.open_basis) }}</td>
               <td class="text-right text-loss">{{ fmt_currency(row.loss) }}</td>
               <td>
                 {% if row.lockout_clear and row.lockout_clear > today %}
