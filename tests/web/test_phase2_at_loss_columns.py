@@ -23,7 +23,7 @@ def test_at_loss_table_drops_legacy_harvest_queue_chrome(client: TestClient):
     partial's heading 'Harvest queue' should not appear."""
     resp = client.get("/positions?view=at-loss")
     html = resp.text
-    legacy = ("Harvest queue" in html and "_harvest_queue" in html.lower())
+    legacy = "Harvest queue" in html and "_harvest_queue" in html.lower()
     assert not legacy
 
 

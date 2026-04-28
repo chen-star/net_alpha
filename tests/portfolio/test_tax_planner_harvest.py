@@ -329,6 +329,4 @@ def test_harvest_opportunity_has_open_basis_field():
     """The Phase 2 at-loss UI displays MKT and BASIS columns. The model
     must expose open_basis so the template can compute them."""
     fields = HarvestOpportunity.model_fields
-    assert "open_basis" in fields, (
-        f"HarvestOpportunity is missing open_basis; got: {list(fields.keys())}"
-    )
+    assert "open_basis" in fields, f"HarvestOpportunity is missing open_basis; got: {list(fields.keys())}"
