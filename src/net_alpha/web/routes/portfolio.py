@@ -33,9 +33,16 @@ from net_alpha.portfolio.tax_planner import (
 )
 from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.pricing.service import PricingService
+from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 
 router = APIRouter()
+
+
+def _resolve_profile(repo: Repository, account: str | None):
+    prefs = repo.list_user_preferences()
+    filter_id = _resolve_account_id(account, repo)
+    return resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
 
 
 def _parse_period(period: str | None, current_year: int) -> tuple[tuple[int, int] | None, str]:
@@ -238,6 +245,7 @@ def portfolio_kpis(
         except MissingTaxConfig:
             projection = None
             has_tax_config = False
+    profile = _resolve_profile(repo, account)
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_kpis.html",
@@ -250,6 +258,7 @@ def portfolio_kpis(
             "offset_budget": offset_budget,
             "projection": projection,
             "has_tax_config": has_tax_config,
+            "profile": profile,
         },
     )
 
@@ -536,6 +545,7 @@ def portfolio_body(
         except MissingTaxConfig:
             projection = None
             has_tax_config = False
+    profile = _resolve_profile(repo, account)
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_body.html",
@@ -556,5 +566,6 @@ def portfolio_body(
             "offset_budget": offset_budget,
             "projection": projection,
             "has_tax_config": has_tax_config,
+            "profile": profile,
         },
     )

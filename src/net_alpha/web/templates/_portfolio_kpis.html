@@ -2,7 +2,7 @@
 {% set partial = kpis.missing_symbols and (kpis.open_position_value is not none) %}
 {% set period_label = kpis.period_label or 'Period' %}
 
-<div class="grid grid-cols-12 gap-[10px]">
+<div class="grid grid-cols-12 gap-[10px]" data-profile="{{ profile.profile if profile is defined else 'active' }}">
 
   {# --- Realized hero (combined YTD + Lifetime) --- #}
   <div class="kpi kpi-hero col-span-4">
