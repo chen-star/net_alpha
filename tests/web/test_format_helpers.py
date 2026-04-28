@@ -103,3 +103,30 @@ def test_fmt_percent_none_returns_em_dash():
 
 def test_fmt_percent_accepts_int():
     assert fmt_percent(0) == "0.0%"
+
+
+from datetime import date, datetime
+
+from net_alpha.web.format import fmt_date
+
+
+def test_fmt_date_iso_from_date():
+    assert fmt_date(date(2026, 4, 28)) == "2026-04-28"
+
+
+def test_fmt_date_iso_from_datetime_drops_time():
+    assert fmt_date(datetime(2026, 4, 28, 14, 32, 7)) == "2026-04-28"
+
+
+def test_fmt_date_iso_from_string_passthrough():
+    # Trade dates are stored as YYYY-MM-DD strings as-is per CLAUDE.md
+    assert fmt_date("2026-04-28") == "2026-04-28"
+
+
+def test_fmt_date_none_returns_em_dash():
+    assert fmt_date(None) == "—"
+
+
+def test_fmt_date_invalid_string_returns_input_verbatim():
+    # Don't crash; surface the bad data so it's noticed in the UI.
+    assert fmt_date("not-a-date") == "not-a-date"

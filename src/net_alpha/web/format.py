@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
 from net_alpha.models.domain import OptionDetails, Trade
 
 
@@ -110,3 +112,21 @@ def fmt_percent(value: Decimal | float | int | None) -> str:
     d = value if isinstance(value, Decimal) else Decimal(str(value))
     pct = (d * Decimal("100")).quantize(Decimal("0.1"), rounding=ROUND_HALF_EVEN)
     return f"{pct:.1f}%"
+
+
+def fmt_date(value: date | datetime | str | None) -> str:
+    """Render any date-like value as ``YYYY-MM-DD``.
+
+    Trade dates round-trip through SQLite as strings already in
+    ``YYYY-MM-DD`` form — those pass through unchanged. ``date`` and
+    ``datetime`` formats are converted with ``strftime``. Invalid strings
+    are returned verbatim so the bad input surfaces in the UI rather than
+    raising mid-render.
+    """
+    if value is None:
+        return "—"
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+    return str(value)
