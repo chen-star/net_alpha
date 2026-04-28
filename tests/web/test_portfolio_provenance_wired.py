@@ -23,9 +23,19 @@ def _seed(tmp_path):
         trade_count=1,
     )
     repo.add_import(
-        acct, record,
-        [Trade(account="Schwab/Tax", date=date(2026, 4, 1), ticker="AAPL",
-               action="Sell", quantity=10, proceeds=1500.0, cost_basis=1000.0)],
+        acct,
+        record,
+        [
+            Trade(
+                account="Schwab/Tax",
+                date=date(2026, 4, 1),
+                ticker="AAPL",
+                action="Sell",
+                quantity=10,
+                proceeds=1500.0,
+                cost_basis=1000.0,
+            )
+        ],
     )
 
 

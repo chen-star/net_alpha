@@ -9,6 +9,7 @@ Form params:
 When account_id is omitted, the same prefs are written to every existing
 account (the "all accounts" shortcut from the first-visit modal).
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

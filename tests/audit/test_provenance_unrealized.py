@@ -9,19 +9,17 @@ from tests.audit.conftest import seed_import
 def test_unrealized_provenance_lists_open_lot_buys(repo, schwab_account):
     # Two buys for AAPL — both should remain open lots.
     trades = [
-        Trade(account="Schwab/Tax", date=date(2026, 1, 15), ticker="AAPL",
-              action="Buy", quantity=10, cost_basis=1000.0),
-        Trade(account="Schwab/Tax", date=date(2026, 2, 1), ticker="AAPL",
-              action="Buy", quantity=5, cost_basis=520.0),
+        Trade(
+            account="Schwab/Tax", date=date(2026, 1, 15), ticker="AAPL", action="Buy", quantity=10, cost_basis=1000.0
+        ),
+        Trade(account="Schwab/Tax", date=date(2026, 2, 1), ticker="AAPL", action="Buy", quantity=5, cost_basis=520.0),
     ]
     seed_import(repo, schwab_account, trades)
 
     # Populate the lots table via detect_in_window + replace_lots_in_window.
     win_start = date(2026, 1, 1)
     win_end = date(2026, 3, 1)
-    result = detect_in_window(
-        repo.trades_in_window(win_start, win_end), win_start, win_end, etf_pairs={}
-    )
+    result = detect_in_window(repo.trades_in_window(win_start, win_end), win_start, win_end, etf_pairs={})
     repo.replace_lots_in_window(win_start, win_end, result.lots)
 
     ref = UnrealizedPLRef(kind="unrealized_pl", account_id=schwab_account.id, symbol="AAPL")

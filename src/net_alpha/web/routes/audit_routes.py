@@ -83,6 +83,7 @@ def set_basis(
     recompute_all_violations(repo, etf_pairs)
     # Invalidate the badge cache so the nav updates after the fix.
     from net_alpha.audit._badge_cache import _cache
+
     _cache.invalidate()
     return request.app.state.templates.TemplateResponse(
         request,

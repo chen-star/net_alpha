@@ -19,8 +19,7 @@ def test_profile_switcher_lists_each_account_with_profile_dropdown(tmp_path):
             request,
             "_profile_switcher.html",
             {
-                "accounts": [Account(id=1, broker="Schwab", label="Tax"),
-                             Account(id=2, broker="Schwab", label="Roth")],
+                "accounts": [Account(id=1, broker="Schwab", label="Tax"), Account(id=2, broker="Schwab", label="Roth")],
                 "account_profiles": {1: "active", 2: "options"},
                 "profile": ProfileSettings(profile="active", density="comfortable"),
             },

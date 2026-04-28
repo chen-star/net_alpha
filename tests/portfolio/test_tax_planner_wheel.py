@@ -73,7 +73,9 @@ def test_extract_premium_origin_returns_none_for_normal_buy() -> None:
 
 
 def test_close_stock_at_loss_locks_out_new_csp_open(
-    repo, schwab_account, seed_import,
+    repo,
+    schwab_account,
+    seed_import,
 ) -> None:
     """
     Spec section 2e: closing assigned shares at a loss should lock out new CSP
@@ -85,60 +87,95 @@ def test_close_stock_at_loss_locks_out_new_csp_open(
     """
     today = date(2026, 5, 1)
     stock_buy = Trade(
-        account=schwab_account.display(), date=today - timedelta(days=60),
-        ticker="UUUU", action="Buy",
-        quantity=Decimal("100"), proceeds=Decimal("0"), cost_basis=Decimal("1000"),
+        account=schwab_account.display(),
+        date=today - timedelta(days=60),
+        ticker="UUUU",
+        action="Buy",
+        quantity=Decimal("100"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("1000"),
     )
     stock_sell_at_loss = Trade(
-        account=schwab_account.display(), date=today - timedelta(days=10),
-        ticker="UUUU", action="Sell",
-        quantity=Decimal("100"), proceeds=Decimal("400"), cost_basis=Decimal("1000"),
+        account=schwab_account.display(),
+        date=today - timedelta(days=10),
+        ticker="UUUU",
+        action="Sell",
+        quantity=Decimal("100"),
+        proceeds=Decimal("400"),
+        cost_basis=Decimal("1000"),
     )
     seed_import(repo, schwab_account, [stock_buy, stock_sell_at_loss])
     proposed_csp = Trade(
-        account=schwab_account.display(), date=today,
-        ticker="UUUU", action="Sell to Open",
-        quantity=Decimal("1"), proceeds=Decimal("60"), cost_basis=Decimal("0"),
+        account=schwab_account.display(),
+        date=today,
+        ticker="UUUU",
+        action="Sell to Open",
+        quantity=Decimal("1"),
+        proceeds=Decimal("60"),
+        cost_basis=Decimal("0"),
         option_details=OptionDetails(
-            strike=Decimal("5"), expiry=today + timedelta(days=30), call_put="P",
+            strike=Decimal("5"),
+            expiry=today + timedelta(days=30),
+            call_put="P",
         ),
         basis_source="option_short_open",
     )
     all_trades = [stock_buy, stock_sell_at_loss, proposed_csp]
     clear = compute_lockout_clear_date(
-        symbol="UUUU", account=schwab_account.display(),
-        all_trades=all_trades, as_of=today, etf_pairs={},
+        symbol="UUUU",
+        account=schwab_account.display(),
+        all_trades=all_trades,
+        as_of=today,
+        etf_pairs={},
     )
     assert clear is not None
     assert clear == today + timedelta(days=31)
 
 
 def test_csp_origin_round_trip_through_repo(
-    repo, schwab_account, seed_import,
+    repo,
+    schwab_account,
+    seed_import,
 ) -> None:
     """End-to-end: CSP chain seeded into repo, premium origin still recoverable."""
     sto = Trade(
-        account=schwab_account.display(), date=date(2025, 8, 14),
-        ticker="UUUU", action="Sell to Open",
-        quantity=Decimal("1"), proceeds=Decimal("120"), cost_basis=Decimal("0"),
+        account=schwab_account.display(),
+        date=date(2025, 8, 14),
+        ticker="UUUU",
+        action="Sell to Open",
+        quantity=Decimal("1"),
+        proceeds=Decimal("120"),
+        cost_basis=Decimal("0"),
         option_details=OptionDetails(
-            strike=Decimal("5"), expiry=date(2025, 9, 19), call_put="P",
+            strike=Decimal("5"),
+            expiry=date(2025, 9, 19),
+            call_put="P",
         ),
         basis_source="option_short_open",
     )
     btc = Trade(
-        account=schwab_account.display(), date=date(2025, 9, 19),
-        ticker="UUUU", action="Buy to Close",
-        quantity=Decimal("1"), proceeds=Decimal("0"), cost_basis=Decimal("0"),
+        account=schwab_account.display(),
+        date=date(2025, 9, 19),
+        ticker="UUUU",
+        action="Buy to Close",
+        quantity=Decimal("1"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("0"),
         option_details=OptionDetails(
-            strike=Decimal("5"), expiry=date(2025, 9, 19), call_put="P",
+            strike=Decimal("5"),
+            expiry=date(2025, 9, 19),
+            call_put="P",
         ),
         basis_source="option_short_close_assigned",
     )
     assigned = Trade(
-        account=schwab_account.display(), date=date(2025, 9, 19),
-        ticker="UUUU", action="Buy",
-        quantity=Decimal("100"), proceeds=Decimal("0"), cost_basis=Decimal("380"),
+        account=schwab_account.display(),
+        date=date(2025, 9, 19),
+        ticker="UUUU",
+        action="Buy",
+        quantity=Decimal("100"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("380"),
         basis_source="option_short_open_assigned",
     )
     seed_import(repo, schwab_account, [sto, btc, assigned])

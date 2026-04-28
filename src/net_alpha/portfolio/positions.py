@@ -87,9 +87,7 @@ def consume_lots_fifo(
         if t.action.lower() == "sell":
             sells_qty[(t.account, t.ticker)] += float(t.quantity)
     eq_keys = set(sells_qty.keys()) | set(gl_closures.keys())
-    closed_qty: dict[tuple[str, str], float] = {
-        k: max(sells_qty.get(k, 0.0), gl_closures.get(k, 0.0)) for k in eq_keys
-    }
+    closed_qty: dict[tuple[str, str], float] = {k: max(sells_qty.get(k, 0.0), gl_closures.get(k, 0.0)) for k in eq_keys}
     eq_grouped: dict[tuple[str, str], list[Lot]] = defaultdict(list)
     for lot in lots_list:
         if lot.option_details is not None:

@@ -7,12 +7,9 @@ from tests.audit.conftest import seed_import
 
 def test_net_contributed_only_includes_transfers(repo, schwab_account):
     events = [
-        CashEvent(account="Schwab/Tax", event_date=date(2026, 1, 5),
-                  kind="transfer_in", amount=10000.0),
-        CashEvent(account="Schwab/Tax", event_date=date(2026, 2, 1),
-                  kind="dividend", amount=42.0),
-        CashEvent(account="Schwab/Tax", event_date=date(2026, 3, 1),
-                  kind="transfer_out", amount=2000.0),
+        CashEvent(account="Schwab/Tax", event_date=date(2026, 1, 5), kind="transfer_in", amount=10000.0),
+        CashEvent(account="Schwab/Tax", event_date=date(2026, 2, 1), kind="dividend", amount=42.0),
+        CashEvent(account="Schwab/Tax", event_date=date(2026, 3, 1), kind="transfer_out", amount=2000.0),
     ]
     seed_import(repo, schwab_account, [], cash_events=events)
 

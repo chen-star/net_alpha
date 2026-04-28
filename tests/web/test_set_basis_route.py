@@ -16,14 +16,27 @@ def test_set_basis_updates_trade_and_returns_swap_fragment(tmp_path):
     repo = Repository(engine)
     acct = repo.get_or_create_account(broker="Schwab", label="Tax")
     record = ImportRecord(
-        account_id=acct.id, csv_filename="t.csv", csv_sha256="h",
-        imported_at=datetime.now(), trade_count=1,
+        account_id=acct.id,
+        csv_filename="t.csv",
+        csv_sha256="h",
+        imported_at=datetime.now(),
+        trade_count=1,
     )
     repo.add_import(
-        acct, record,
-        [Trade(account="Schwab/Tax", date=date(2026, 1, 1), ticker="AAPL",
-               action="Buy", quantity=10, cost_basis=None,
-               basis_unknown=True, basis_source="transfer_in")],
+        acct,
+        record,
+        [
+            Trade(
+                account="Schwab/Tax",
+                date=date(2026, 1, 1),
+                ticker="AAPL",
+                action="Buy",
+                quantity=10,
+                cost_basis=None,
+                basis_unknown=True,
+                basis_source="transfer_in",
+            )
+        ],
     )
     # Get the DB-assigned trade id.
     trade = next(iter(repo.all_trades()))

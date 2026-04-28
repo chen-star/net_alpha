@@ -32,13 +32,23 @@ def test_premium_received_for_closed_csp():
     )
     # Plus an open equity lot so AAPL appears as a position.
     eq_lot = Lot(
-        id="1", trade_id="t-eq", account="Schwab/Tax", ticker="AAPL",
-        quantity=100.0, cost_basis=10000.0, adjusted_basis=10000.0,
+        id="1",
+        trade_id="t-eq",
+        account="Schwab/Tax",
+        ticker="AAPL",
+        quantity=100.0,
+        cost_basis=10000.0,
+        adjusted_basis=10000.0,
         date=date(2024, 1, 1),
     )
     eq_buy = Trade(
-        account="Schwab/Tax", date=date(2024, 1, 1), ticker="AAPL",
-        action="Buy", quantity=100.0, proceeds=None, cost_basis=10000.0,
+        account="Schwab/Tax",
+        date=date(2024, 1, 1),
+        ticker="AAPL",
+        action="Buy",
+        quantity=100.0,
+        proceeds=None,
+        cost_basis=10000.0,
     )
 
     _as_of_dt = dt.datetime(2026, 4, 27, tzinfo=dt.UTC)
@@ -54,13 +64,23 @@ def test_premium_received_for_closed_csp():
 
 def test_premium_received_zero_when_no_options():
     eq_lot = Lot(
-        id="1", trade_id="t-eq", account="Schwab/Tax", ticker="AAPL",
-        quantity=100.0, cost_basis=10000.0, adjusted_basis=10000.0,
+        id="1",
+        trade_id="t-eq",
+        account="Schwab/Tax",
+        ticker="AAPL",
+        quantity=100.0,
+        cost_basis=10000.0,
+        adjusted_basis=10000.0,
         date=date(2024, 1, 1),
     )
     eq_buy = Trade(
-        account="Schwab/Tax", date=date(2024, 1, 1), ticker="AAPL",
-        action="Buy", quantity=100.0, proceeds=None, cost_basis=10000.0,
+        account="Schwab/Tax",
+        date=date(2024, 1, 1),
+        ticker="AAPL",
+        action="Buy",
+        quantity=100.0,
+        proceeds=None,
+        cost_basis=10000.0,
     )
     _as_of_dt = dt.datetime(2026, 4, 27, tzinfo=dt.UTC)
     rows = compute_open_positions(

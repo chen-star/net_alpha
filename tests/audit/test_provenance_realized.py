@@ -8,14 +8,34 @@ from tests.audit.conftest import seed_import
 def test_realized_provenance_filters_by_period_and_symbol(repo, schwab_account):
     # Two AAPL sells (one in scope, one out), one MSFT sell (different symbol).
     trades_in = [
-        Trade(account="Schwab/Tax", date=date(2026, 3, 1), ticker="AAPL",
-              action="Buy", quantity=10, cost_basis=1000.0),
-        Trade(account="Schwab/Tax", date=date(2026, 4, 1), ticker="AAPL",
-              action="Sell", quantity=10, proceeds=1500.0, cost_basis=1000.0),
-        Trade(account="Schwab/Tax", date=date(2025, 12, 1), ticker="AAPL",
-              action="Sell", quantity=5, proceeds=600.0, cost_basis=400.0),
-        Trade(account="Schwab/Tax", date=date(2026, 4, 1), ticker="MSFT",
-              action="Sell", quantity=5, proceeds=2000.0, cost_basis=1500.0),
+        Trade(account="Schwab/Tax", date=date(2026, 3, 1), ticker="AAPL", action="Buy", quantity=10, cost_basis=1000.0),
+        Trade(
+            account="Schwab/Tax",
+            date=date(2026, 4, 1),
+            ticker="AAPL",
+            action="Sell",
+            quantity=10,
+            proceeds=1500.0,
+            cost_basis=1000.0,
+        ),
+        Trade(
+            account="Schwab/Tax",
+            date=date(2025, 12, 1),
+            ticker="AAPL",
+            action="Sell",
+            quantity=5,
+            proceeds=600.0,
+            cost_basis=400.0,
+        ),
+        Trade(
+            account="Schwab/Tax",
+            date=date(2026, 4, 1),
+            ticker="MSFT",
+            action="Sell",
+            quantity=5,
+            proceeds=2000.0,
+            cost_basis=1500.0,
+        ),
     ]
     seed_import(repo, schwab_account, trades_in)
 
@@ -37,8 +57,15 @@ def test_realized_provenance_filters_by_period_and_symbol(repo, schwab_account):
 def test_realized_provenance_aggregate_account(repo, schwab_account):
     # account_id=None means aggregate across accounts.
     trades = [
-        Trade(account="Schwab/Tax", date=date(2026, 4, 1), ticker="AAPL",
-              action="Sell", quantity=10, proceeds=1500.0, cost_basis=1000.0),
+        Trade(
+            account="Schwab/Tax",
+            date=date(2026, 4, 1),
+            ticker="AAPL",
+            action="Sell",
+            quantity=10,
+            proceeds=1500.0,
+            cost_basis=1000.0,
+        ),
     ]
     seed_import(repo, schwab_account, trades)
 
