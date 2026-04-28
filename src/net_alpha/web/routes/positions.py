@@ -72,7 +72,7 @@ def positions_page(
     if selected_view == "at-loss":
         _falsey = ("", "0", "false", "off")
         only_harvestable_bool = only_harvestable is not None and only_harvestable.lower() not in _falsey
-        ctx["rows"] = compute_harvest_queue(
+        rows = compute_harvest_queue(
             repo=repo,
             pricing=pricing,
             as_of=today,
@@ -80,6 +80,16 @@ def positions_page(
             etf_replacements=request.app.state.etf_replacements,
             only_harvestable=only_harvestable_bool,
         )
+
+        def _lockout_sort_key(row):
+            if row.lockout_clear is None or row.lockout_clear <= today:
+                return (0, today)
+            return (1, row.lockout_clear)
+
+        rows = sorted(rows, key=_lockout_sort_key)
+
+        ctx["rows"] = rows
+        ctx["today"] = today
         ctx["only_harvestable"] = only_harvestable_bool
         ctx["budget"] = compute_offset_budget(repo=repo, year=today.year)
         ctx["harvest_form_action"] = "/positions?view=at-loss"
