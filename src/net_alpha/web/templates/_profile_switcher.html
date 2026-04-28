@@ -1,0 +1,34 @@
+{# Inputs:
+    accounts: list[Account]   — every account in the DB
+    account_profiles: dict[int, str]   — account_id -> profile slug
+    profile: ProfileSettings  — current effective profile (label only)
+#}
+<div x-data="{ open: false }" class="relative inline-block">
+  <button type="button"
+          class="px-2 py-1 rounded bg-surface text-text text-[12px] flex items-center gap-1"
+          style="border:0.5px solid rgba(255,255,255,0.08);"
+          @click="open = !open">
+    <span class="capitalize">{{ profile.profile }}</span>
+    <span class="text-label-3" aria-hidden="true">▾</span>
+  </button>
+  <div x-show="open" x-cloak
+       class="absolute right-0 mt-1 z-30 bg-surface text-text rounded shadow-lg p-3 min-w-[280px]"
+       style="border:0.5px solid rgba(255,255,255,0.08);">
+    <div class="text-[11px] text-label-3 mb-2">Profile per account</div>
+    {% for a in accounts %}
+      {% set current = account_profiles.get(a.id, 'active') %}
+      <form method="post" action="/preferences" class="flex items-center gap-2 mb-2">
+        <input type="hidden" name="account_id" value="{{ a.id }}">
+        <input type="hidden" name="density" value="{{ profile.density }}">
+        <span class="text-[12px] flex-1 truncate">{{ a.broker }}/{{ a.label }}</span>
+        <select name="profile" onchange="this.form.submit()"
+                class="bg-bg text-text rounded px-1 py-0.5 text-[12px]"
+                style="border:0.5px solid rgba(255,255,255,0.08);">
+          <option value="conservative"{% if current == "conservative" %} selected{% endif %}>Conservative</option>
+          <option value="active"{% if current == "active" %} selected{% endif %}>Active</option>
+          <option value="options"{% if current == "options" %} selected{% endif %}>Options</option>
+        </select>
+      </form>
+    {% endfor %}
+  </div>
+</div>
