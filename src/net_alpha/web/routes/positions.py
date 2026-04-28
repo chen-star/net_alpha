@@ -12,8 +12,8 @@ from net_alpha.web.dependencies import get_repository
 router = APIRouter()
 
 
-@router.get("/holdings", response_class=HTMLResponse)
-def holdings_page(
+@router.get("/positions", response_class=HTMLResponse)
+def positions_page(
     request: Request,
     period: str | None = None,
     account: str | None = None,
@@ -50,10 +50,10 @@ def holdings_page(
             "selected_period": selected_period,
             "selected_account": account or "",
             "group_options": "merge",
-            "toolbar_action": "/holdings",
+            "toolbar_action": "/positions",
             "profile": profile,
             "extra_columns": extra_columns,
-            "page_key": "/holdings",
+            "page_key": "/positions",
             "account_id": filter_id,
         },
     )
