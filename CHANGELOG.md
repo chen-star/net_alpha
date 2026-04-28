@@ -2,6 +2,62 @@
 
 
 
+## v0.25.0 (2026-04-28)
+
+### Feature
+
+* feat(transfers): multi-segment split for one-to-many transfer rows
+
+A single broker-reported transfer often represents shares acquired across
+multiple lots/dates. The &#34;Set basis &amp; date&#34; form now accepts N segments
+(acquisition_date, qty, basis) per transfer; quantities must sum to the
+parent&#39;s total.
+
+Repository:
+- New split_imported_transfer() splits the parent row into N siblings that
+  share transfer_group_id and transfer_date. The first segment is written
+  in place to preserve the original natural_key (re-import dedup still
+  works); siblings get derived &#34;&lt;parent_nk&gt;:seg&lt;i&gt;&#34; keys.
+- The legacy update_imported_transfer is kept for any direct callers.
+
+Form:
+- Alpine-driven add/remove segment rows; running total of segment qtys
+  rendered next to the parent total so the user can validate the split
+  before submit.
+- The form GET now loads existing siblings (when transfer_group_id is set),
+  so re-opening a previously-split row shows every segment populated.
+
+Route:
+- /trades/{id}/edit-transfer accepts seg_date[], seg_qty[], seg_basis[]
+  parallel arrays and validates them as a unit.
+
+Tests cover single-segment edits (legacy behavior), 3-segment splits, and
+sum-mismatch rejection.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`410b3a6`](https://github.com/chen-star/net_alpha/commit/410b3a6ca13ba1e00968bfb2e00d520ce71ab7d9))
+
+* feat(web): portfolio reorg, allocation modal, sortable holdings, all-options panel
+
+- Portfolio page: split into Portfolio (top) and Tax planning (bottom) sections.
+- Allocation donut: clickable; opens modal with full ranked breakdown including
+  positions normally rolled into &#39;OTHER&#39;. Pledged-cash slice recolored to the
+  orange used in the Cash KPI bar so it&#39;s visually distinct from free cash.
+- Holdings: sortable column headers (server-side, preserves filters/paging).
+- Holdings: &#39;Open short options&#39; panel replaced with &#39;Open options&#39; (long+short),
+  sorted by expiry. New compute_open_option_positions function unifies long lots
+  with short option chains.
+- Ticker page: &#39;accounts&#39; KPI now derives from trades ∪ lots, so symbols with
+  only short-option exposure (e.g. UUUU) no longer show &#39;-&#39;.
+- Ticker timeline: transfer rows show both &#39;Acq&#39; (acquisition date) and
+  &#39;Xferred&#39; (broker-statement date) when they differ.
+- Schema v10: trades.transfer_date and trades.transfer_group_id columns added.
+  Initial import populates transfer_date from the broker date for transfer rows;
+  user edits modify only the acquisition date, preserving the transfer date for
+  audit. transfer_group_id reserved for the upcoming multi-segment split.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1010b24`](https://github.com/chen-star/net_alpha/commit/1010b245c671b716d685fc3eaaf13a1ba1ab9d25))
+
+
 ## v0.24.4 (2026-04-28)
 
 ### Fix
