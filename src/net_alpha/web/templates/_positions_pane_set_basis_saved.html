@@ -1,0 +1,14 @@
+<div class="panel p-3" data-testid="set-basis-saved">
+  <h3 class="m-0 text-[13px] font-semibold mb-2">Set basis &amp; date</h3>
+  <p class="text-label-2 m-0 text-[12px] flex items-center gap-1">
+    <img src="/static/icons/check.svg?v={{ asset_v }}" class="w-3.5 h-3.5 invert opacity-80" alt="">
+    Saved.
+  </p>
+  <button type="button"
+          hx-get="/positions/pane?sym={{ sym }}"
+          hx-target="#positions-pane-body"
+          hx-swap="innerHTML"
+          class="mt-2 text-[12px] text-accent hover:underline">
+    Refresh pane to see updated totals
+  </button>
+</div>

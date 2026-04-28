@@ -5,9 +5,9 @@
 <div class="panel p-3">
   <h3 class="m-0 text-[13px] font-semibold mb-2">Set basis &amp; date</h3>
   {% if trade_id %}
-    <form hx-post="/audit/set-basis"
-          hx-target="#positions-pane-body"
-          hx-swap="innerHTML"
+    <form hx-post="/audit/set-basis?caller=pane"
+          hx-target="this"
+          hx-swap="outerHTML"
           class="space-y-2">
       <input type="hidden" name="trade_id" value="{{ trade_id }}">
       <label class="block text-[12px] text-label-2">
