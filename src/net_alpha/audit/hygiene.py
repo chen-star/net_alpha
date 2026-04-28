@@ -107,8 +107,35 @@ def _check_basis_unknown(repo: Repository) -> list[HygieneIssue]:
 
 
 def _check_orphan_sells(repo: Repository) -> list[HygieneIssue]:
-    """Sell trades with no buy lot of the same ticker in the repository."""
-    return []
+    """A sell with no buy lot of the same ticker on/before its date.
+
+    The wash-sale engine already tracks buy lots; if a Sell has no
+    corresponding Lot row at all, the basis came from somewhere outside
+    net-alpha's view (most often a missing prior-year import).
+    """
+    lots_by_ticker: dict[str, bool] = {}
+    for lot in repo.all_lots():
+        lots_by_ticker[lot.ticker] = True
+
+    issues: list[HygieneIssue] = []
+    for t in repo.all_trades():
+        if t.action.lower() != "sell":
+            continue
+        if t.ticker in lots_by_ticker:
+            continue
+        issues.append(
+            HygieneIssue(
+                category="orphan_sell",
+                severity="warn",
+                summary=f"{t.ticker} sell on {t.date.isoformat()} has no matching buy lot",
+                detail=(
+                    "Usually means a missing prior-year import or a transfer not yet "
+                    "hydrated. Realized P&L for this trade may be incorrect."
+                ),
+                fix_url="/imports",
+            )
+        )
+    return issues
 
 
 def _check_dup_keys(repo: Repository) -> list[HygieneIssue]:
