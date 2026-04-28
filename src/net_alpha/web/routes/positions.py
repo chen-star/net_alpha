@@ -106,3 +106,33 @@ def positions_page(
         "positions.html",
         ctx,
     )
+
+
+@router.get("/positions/pane", response_class=HTMLResponse)
+def positions_pane(
+    request: Request,
+    sym: str,
+    account_id: int | None = None,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Return the side-pane body fragment for one position.
+
+    Mounted into ``#positions-pane-body`` via HTMX from a row click on
+    /positions. Phase 2 wires three sub-blocks (sim-sell preview, set-basis
+    form, open-ticker link) — see Section E of the Phase 2 plan.
+    """
+    sym = sym.upper().strip()
+    quotes = pricing.get_prices([sym])
+    quote = quotes.get(sym)
+    last_price = quote.price if quote and quote.price is not None else None
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_positions_pane_body.html",
+        {
+            "sym": sym,
+            "account_id": account_id,
+            "last_price": last_price,
+        },
+    )
