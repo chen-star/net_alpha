@@ -358,12 +358,22 @@ def trade_edit_transfer_form(
     t = _find_trade(repo, trade_id)
     if t is None or t.basis_source not in ("transfer_in", "transfer_out") or t.is_manual:
         raise HTTPException(status_code=404, detail="transfer row not found")
+    # When this transfer was previously split, surface every sibling so the
+    # form re-opens with all segments populated. Sorted by acquisition date
+    # for predictable ordering.
+    siblings: list[Trade] = []
+    if t.transfer_group_id:
+        siblings = sorted(
+            (x for x in repo.all_trades() if x.transfer_group_id == t.transfer_group_id),
+            key=lambda x: x.date,
+        )
     return request.app.state.templates.TemplateResponse(
         request,
         "_trade_transfer_form.html",
         {
             "form_action": f"/trades/{trade_id}/edit-transfer",
             "trade": t,
+            "siblings": siblings,
         },
     )
 

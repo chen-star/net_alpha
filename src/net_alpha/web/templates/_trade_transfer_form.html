@@ -1,37 +1,92 @@
 {# Caller passes:
      trade           — the imported transfer Trade row
      form_action     — POST /trades/{id}/edit-transfer
+     siblings        — list[Trade] of already-grouped sibling rows (incl. trade itself)
+                       when this transfer was already split. Empty/None = unsplit.
 #}
-<div class="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
+{% set _is_in = trade.basis_source == 'transfer_in' %}
+{% set _amount_label = 'Cost basis ($)' if _is_in else 'Proceeds ($)' %}
+{# Build the initial Alpine seed: list of {acq_date, qty, basis} for every
+   segment. When unsplit, that's just one entry derived from the parent row. #}
+{% set _initial_segments = [] %}
+{% if siblings %}
+  {% for s in siblings %}
+    {%- set _b = (s.cost_basis if _is_in else s.proceeds) or 0 -%}
+    {%- set _ = _initial_segments.append({"acq_date": s.date.isoformat(), "qty": s.quantity, "basis": _b}) -%}
+  {% endfor %}
+{% else %}
+  {%- set _b = (trade.cost_basis if _is_in else trade.proceeds) or 0 -%}
+  {%- set _ = _initial_segments.append({"acq_date": trade.date.isoformat(), "qty": trade.quantity, "basis": _b}) -%}
+{% endif %}
+
+<div class="bg-surface rounded-lg shadow-xl max-w-xl w-full mx-4 p-6"
      style="border:0.5px solid rgba(255,255,255,0.08);"
      onclick="event.stopPropagation()">
-  <div class="flex justify-between items-center mb-4">
+  <div class="flex justify-between items-center mb-3">
     <h2 class="text-xl">Set basis &amp; date</h2>
     <button type="button" onclick="document.getElementById('trade-modal').classList.add('hidden')"
             class="text-label-2 hover:text-text text-2xl leading-none">&times;</button>
   </div>
-  <p class="text-[12px] text-label-2 mb-3">
-    {{ trade.ticker }} &middot; {{ trade.account }} &middot; {{ trade.quantity }} sh
+  <p class="text-[12px] text-label-2 mb-1">
+    {{ trade.ticker }} &middot; {{ trade.account }} &middot; <span class="num">{{ trade.quantity }}</span> sh total
+    {% if trade.transfer_date %}
+      &middot; broker transfer date <span class="num">{{ trade.transfer_date }}</span>
+    {% endif %}
   </p>
-  <form action="{{ form_action }}" method="post" class="space-y-3">
-    <div>
-      <label class="block label-uc mb-1">Acquisition date</label>
-      <input type="date" name="trade_date" required
-             value="{{ trade.date.isoformat() }}"
-             class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
-             style="border:0.5px solid rgba(255,255,255,0.08);"/>
+  <p class="text-[11px] text-label-3 mb-4 leading-[1.5]">
+    A single transfer often represents shares acquired across multiple lots/dates.
+    Add a segment per acquisition lot — quantities must sum to the total above.
+  </p>
+
+  <form action="{{ form_action }}" method="post"
+        x-data='{ segments: {{ _initial_segments|tojson }} }'
+        @submit="$el.dataset.submitting = '1'">
+    <template x-for="(seg, i) in segments" :key="i">
+      <div class="grid gap-2 mb-2 items-end"
+           style="grid-template-columns: 1fr 80px 110px auto;">
+        <div>
+          <label class="block label-uc mb-1" x-text="i === 0 ? 'Acquisition date' : 'Segment ' + (i+1) + ' date'"></label>
+          <input type="date" :name="'seg_date'" required
+                 x-model="seg.acq_date"
+                 class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
+                 style="border:0.5px solid rgba(255,255,255,0.08);"/>
+        </div>
+        <div>
+          <label class="block label-uc mb-1">Qty</label>
+          <input type="number" :name="'seg_qty'" step="any" required min="0"
+                 x-model.number="seg.qty"
+                 class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full font-mono"
+                 style="border:0.5px solid rgba(255,255,255,0.08);"/>
+        </div>
+        <div>
+          <label class="block label-uc mb-1">{{ _amount_label }}</label>
+          <input type="number" :name="'seg_basis'" step="any" required min="0"
+                 x-model.number="seg.basis"
+                 class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full font-mono"
+                 style="border:0.5px solid rgba(255,255,255,0.08);"/>
+        </div>
+        <button type="button"
+                @click="segments.splice(i, 1)"
+                x-show="segments.length > 1"
+                class="text-confirmed hover:text-text text-[16px] leading-none mb-2 px-2"
+                title="Remove segment">&times;</button>
+      </div>
+    </template>
+
+    <div class="flex items-center justify-between mt-3">
+      <button type="button"
+              @click="segments.push({ acq_date: segments[segments.length-1].acq_date, qty: 0, basis: 0 })"
+              class="text-[12px] text-accent hover:text-text">+ add acquisition segment</button>
+      <span class="text-[11px] text-label-2">
+        total qty: <span class="num font-semibold"
+                         x-text="segments.reduce((a,s) => a + (Number(s.qty) || 0), 0)"></span>
+        / <span class="num">{{ trade.quantity }}</span>
+      </span>
     </div>
-    <div>
-      <label class="block label-uc mb-1">
-        {% if trade.basis_source == "transfer_in" %}Cost basis ($){% else %}Proceeds ($){% endif %}
-      </label>
-      <input type="number" name="basis_or_proceeds" step="any" required min="0"
-             value="{{ (trade.cost_basis if trade.cost_basis is not none else trade.proceeds) or '' }}"
-             class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full font-mono"
-             style="border:0.5px solid rgba(255,255,255,0.08);"/>
-    </div>
-    <p class="text-xs text-label-3">&#9888; This is informational only. Consult a tax professional before filing.</p>
-    <div class="flex justify-end gap-2 pt-2">
+
+    <p class="text-xs text-label-3 mt-3">&#9888; This is informational only. Consult a tax professional before filing.</p>
+    <div class="flex justify-end gap-2 pt-2 mt-2"
+         style="border-top:0.5px solid rgba(255,255,255,0.08);">
       <button type="button" class="btn-ghost"
               onclick="document.getElementById('trade-modal').classList.add('hidden')">Cancel</button>
       <button type="submit" class="btn">Save</button>

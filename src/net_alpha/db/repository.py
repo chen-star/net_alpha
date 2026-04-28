@@ -964,6 +964,123 @@ class Repository:
             s.commit()
         recompute_all_violations(self, etf_pairs)
 
+    def split_imported_transfer(
+        self,
+        trade_id: str,
+        segments: list[tuple[date, float, float]],
+        etf_pairs: dict[str, list[str]],
+    ) -> list[Trade]:
+        """Split one imported transfer row into N siblings (date, qty, basis_or_proceeds).
+
+        The user's broker hands them a single transfer row covering shares
+        that were originally acquired across multiple lots/dates. This
+        method represents that as N siblings sharing a ``transfer_group_id``
+        and the original ``transfer_date``.
+
+        Behaviour:
+          * Sum of segment quantities must equal the parent's quantity.
+          * The first segment overwrites the parent in place (so its
+            natural_key is preserved — re-importing the original CSV row
+            still dedupes).
+          * Remaining segments are inserted as new rows with derived keys
+            ``<parent_nk>:seg<i>`` so they don't collide on re-import.
+          * If there is exactly one segment, behaves like
+            ``update_imported_transfer``.
+
+        Triggers a full wash-sale recompute. Returns all sibling Trades.
+        """
+        from net_alpha.engine.recompute import recompute_all_violations
+
+        if not segments:
+            raise ValueError("at least one segment is required")
+        for d, q, b in segments:
+            if q <= 0:
+                raise ValueError(f"segment quantity must be > 0 (got {q})")
+            if b < 0:
+                raise ValueError(f"segment basis/proceeds must be >= 0 (got {b})")
+
+        with Session(self.engine) as s:
+            row = s.exec(select(TradeRow).where(TradeRow.id == int(trade_id))).first()
+            if row is None:
+                raise LookupError(f"Trade id {trade_id} not found")
+            if row.is_manual:
+                raise ValueError("Use update_manual_trade for manual rows")
+            if row.basis_source not in ("transfer_in", "transfer_out"):
+                raise ValueError(f"split_imported_transfer requires a transfer row; basis_source={row.basis_source!r}")
+
+            total_qty = sum(q for _, q, _ in segments)
+            # Float-safe equality with a small tolerance — the user types
+            # decimal quantities and rounding can drift by 1e-9.
+            if abs(total_qty - row.quantity) > 1e-6:
+                raise ValueError(f"segment quantities sum to {total_qty} but parent qty is {row.quantity}")
+
+            # Reuse existing group id if the row was already split before.
+            group_id = row.transfer_group_id or uuid4().hex
+
+            # Original transfer_date is the broker-statement date — preserve.
+            xfer_date = row.transfer_date or row.trade_date
+
+            # Apply first segment to the parent row in place.
+            first_date, first_qty, first_basis = segments[0]
+            row.trade_date = first_date.isoformat()
+            row.quantity = float(first_qty)
+            if row.basis_source == "transfer_in":
+                row.cost_basis = float(first_basis)
+            else:
+                row.proceeds = float(first_basis)
+            row.transfer_basis_user_set = True
+            row.transfer_group_id = group_id
+            row.transfer_date = xfer_date
+            s.add(row)
+            s.flush()  # materialize before sibling natural_keys derive from it
+
+            saved_rows: list[TradeRow] = [row]
+
+            # Remove any prior siblings from a previous split (excluding the
+            # parent), so re-splitting starts from a clean slate.
+            prior_siblings = s.exec(
+                select(TradeRow).where(
+                    TradeRow.transfer_group_id == group_id,
+                    TradeRow.id != row.id,
+                )
+            ).all()
+            for sib in prior_siblings:
+                s.delete(sib)
+            s.flush()
+
+            parent_nk = row.natural_key
+            for i, (seg_date, seg_qty, seg_basis) in enumerate(segments[1:], start=1):
+                sib = TradeRow(
+                    import_id=row.import_id,
+                    account_id=row.account_id,
+                    natural_key=f"{parent_nk}:seg{i}",
+                    ticker=row.ticker,
+                    trade_date=seg_date.isoformat(),
+                    action=row.action,
+                    quantity=float(seg_qty),
+                    proceeds=(float(seg_basis) if row.basis_source == "transfer_out" else None),
+                    cost_basis=(float(seg_basis) if row.basis_source == "transfer_in" else None),
+                    basis_unknown=False,
+                    basis_source=row.basis_source,
+                    is_manual=False,
+                    transfer_basis_user_set=True,
+                    gross_cash_impact=None,
+                    option_strike=row.option_strike,
+                    option_expiry=row.option_expiry,
+                    option_call_put=row.option_call_put,
+                    transfer_date=xfer_date,
+                    transfer_group_id=group_id,
+                )
+                s.add(sib)
+                saved_rows.append(sib)
+
+            s.commit()
+            for r in saved_rows:
+                s.refresh(r)
+            saved = [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in saved_rows]
+        recompute_all_violations(self, etf_pairs)
+        return saved
+
     def update_imported_transfer(
         self,
         trade_id: str,

@@ -44,7 +44,7 @@ def test_reimport_preserves_user_edits_to_transfer_row(tmp_path):
     # User fixes date (acquisition date) and basis.
     r = client.post(
         f"/trades/{trade_id}/edit-transfer",
-        data={"trade_date": "2024-06-15", "basis_or_proceeds": "2500"},
+        data={"seg_date": "2024-06-15", "seg_qty": "10", "seg_basis": "2500"},
         follow_redirects=False,
     )
     assert r.status_code in (200, 303)

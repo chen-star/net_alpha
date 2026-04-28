@@ -131,25 +131,41 @@ def edit_manual(
 def edit_transfer(
     request: Request,
     trade_id: str,
-    trade_date: str = Form(...),
-    basis_or_proceeds: float = Form(...),
+    seg_date: list[str] = Form(...),
+    seg_qty: list[float] = Form(...),
+    seg_basis: list[float] = Form(...),
     repo: Repository = Depends(get_repository),
 ) -> RedirectResponse:
-    if basis_or_proceeds < 0:
-        raise HTTPException(status_code=400, detail="basis/proceeds must be >= 0")
-    d = _parse_date(trade_date)
+    """Save segments for a transfer row.
+
+    Single-segment payloads are equivalent to the legacy single-row edit;
+    multi-segment payloads split the parent into N sibling rows that share
+    a transfer_group_id.
+    """
+    if not (len(seg_date) == len(seg_qty) == len(seg_basis)) or not seg_date:
+        raise HTTPException(status_code=400, detail="segment arrays must be non-empty and same length")
+
+    segments: list[tuple[date, float, float]] = []
+    for d_raw, q, b in zip(seg_date, seg_qty, seg_basis, strict=False):
+        d = _parse_date(d_raw)
+        if q <= 0:
+            raise HTTPException(status_code=400, detail="segment qty must be > 0")
+        if b < 0:
+            raise HTTPException(status_code=400, detail="segment basis/proceeds must be >= 0")
+        segments.append((d, float(q), float(b)))
+
     etf_pairs = load_etf_pairs()
     try:
-        saved = repo.update_imported_transfer(
+        saved = repo.split_imported_transfer(
             trade_id=trade_id,
-            new_date=d,
-            new_basis_or_proceeds=basis_or_proceeds,
+            segments=segments,
             etf_pairs=etf_pairs,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    response = RedirectResponse(url=f"/ticker/{saved.ticker}", status_code=303)
-    response.headers["HX-Redirect"] = f"/ticker/{saved.ticker}"
+    target = saved[0].ticker if saved else "?"
+    response = RedirectResponse(url=f"/ticker/{target}", status_code=303)
+    response.headers["HX-Redirect"] = f"/ticker/{target}"
     return response
 
 
