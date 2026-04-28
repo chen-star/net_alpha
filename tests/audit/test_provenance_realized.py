@@ -1,19 +1,8 @@
-from datetime import date, datetime
+from datetime import date
 
 from net_alpha.audit.provenance import Period, RealizedPLRef, provenance_for
-from net_alpha.models.domain import ImportRecord, Trade
-
-
-def _seed(repo, account, trades, filename="t.csv"):
-    """Helper: create an ImportRecord and call repo.add_import."""
-    record = ImportRecord(
-        account_id=account.id,
-        csv_filename=filename,
-        csv_sha256=f"sha-{filename}",
-        imported_at=datetime.now(),
-        trade_count=len(trades),
-    )
-    repo.add_import(account, record, trades)
+from net_alpha.models.domain import Trade
+from tests.audit.conftest import seed_import
 
 
 def test_realized_provenance_filters_by_period_and_symbol(repo, schwab_account):
@@ -28,7 +17,7 @@ def test_realized_provenance_filters_by_period_and_symbol(repo, schwab_account):
         Trade(account="Schwab/Tax", date=date(2026, 4, 1), ticker="MSFT",
               action="Sell", quantity=5, proceeds=2000.0, cost_basis=1500.0),
     ]
-    _seed(repo, schwab_account, trades_in)
+    seed_import(repo, schwab_account, trades_in)
 
     ref = RealizedPLRef(
         kind="realized_pl",
@@ -51,7 +40,7 @@ def test_realized_provenance_aggregate_account(repo, schwab_account):
         Trade(account="Schwab/Tax", date=date(2026, 4, 1), ticker="AAPL",
               action="Sell", quantity=10, proceeds=1500.0, cost_basis=1000.0),
     ]
-    _seed(repo, schwab_account, trades)
+    seed_import(repo, schwab_account, trades)
 
     ref = RealizedPLRef(
         kind="realized_pl",
