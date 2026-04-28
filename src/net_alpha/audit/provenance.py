@@ -15,6 +15,9 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
+from net_alpha.db.repository import Repository
+from net_alpha.models.domain import Trade
+
 
 class Period(BaseModel):
     """A date window for KPI scoping. ``end`` is exclusive."""
@@ -124,9 +127,6 @@ class ProvenanceTrace(BaseModel):
 # Dispatcher — extend by adding elif isinstance(metric, XxxRef) branches
 # ---------------------------------------------------------------------------
 
-from net_alpha.db.repository import Repository  # noqa: E402
-from net_alpha.models.domain import Trade  # noqa: E402
-
 
 def provenance_for(metric: MetricRef, repo: Repository) -> ProvenanceTrace:
     """Return the trades / adjustments / cash events that produced ``metric``.
@@ -216,13 +216,14 @@ def _unrealized_pl(metric: UnrealizedPLRef, repo: Repository) -> ProvenanceTrace
     """
     contributing: list[ContributingTrade] = []
     total = 0.0
+    trade_by_id = {t.id: t for t in repo.all_trades()}  # hoisted lookup
     for lot in repo.all_lots():
         if metric.symbol is not None and lot.ticker != metric.symbol:
             continue
         if not _account_id_match(lot.account, metric.account_id, repo):
             continue
         # The lot was created by the buy trade with id == lot.trade_id.
-        buy = next((t for t in repo.all_trades() if t.id == lot.trade_id), None)
+        buy = trade_by_id.get(lot.trade_id)
         if buy is None:
             continue
         contributing.append(
