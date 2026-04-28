@@ -4,7 +4,6 @@ import hashlib
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -30,7 +29,6 @@ router = APIRouter()
 @router.get("/imports/_legacy_page", response_class=HTMLResponse, include_in_schema=False)
 def imports_page(
     request: Request,
-    flash: str | None = None,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     records = repo.list_imports()
@@ -42,7 +40,6 @@ def imports_page(
         "imports.html",
         {
             "imports": records,
-            "flash": flash,
             "issues": issues,
             "profile": profile,
             "page_key": "/imports",
@@ -240,27 +237,11 @@ async def upload(
             for lot in lots:
                 affected_dates.append(lot.closed_date)
 
-    stitched = stitch_account(repo, acct.id)
+    stitch_account(repo, acct.id)
 
     if affected_dates:
         recompute_all_violations(repo, etf_pairs)
 
     _post_import_autosync_splits(repo, new_symbols=new_symbols, existing_symbols=existing_symbols)
 
-    msg_parts: list[str] = []
-    if new_trade_count:
-        msg_parts.append(f"Imported {new_trade_count} new trades")
-    if dup_trade_count:
-        msg_parts.append(f"skipped {dup_trade_count} duplicate trades")
-    if new_gl_count:
-        msg_parts.append(f"imported {new_gl_count} G/L lot rows")
-    if stitched.from_gl:
-        msg_parts.append(f"hydrated {stitched.from_gl} sells from G/L")
-    if stitched.from_fifo:
-        msg_parts.append(f"hydrated {stitched.from_fifo} sells via FIFO")
-    if stitched.warnings:
-        msg_parts.append(f"{len(stitched.warnings)} warning(s)")
-    if not msg_parts:
-        msg_parts.append("No changes")
-    msg = " · ".join(msg_parts)
-    return RedirectResponse(url=f"/imports?flash={quote(msg)}", status_code=303)
+    return RedirectResponse(url="/settings/imports", status_code=303)

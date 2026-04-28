@@ -21,8 +21,9 @@ def test_upload_full_flow_creates_import_and_violations(client, repo):
             data={"account": "personal"},
             follow_redirects=False,
         )
+    # Phase 1 IA critical fix #3: redirects to settings drawer instead of /imports?flash=...
     assert resp.status_code == 303
-    assert resp.headers["location"].startswith("/imports?flash=")
+    assert resp.headers["location"] == "/settings/imports"
     imports = repo.list_imports()
     assert len(imports) == 1
     assert imports[0].account_display == "schwab/personal"
