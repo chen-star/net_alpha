@@ -34,7 +34,7 @@
     </fieldset>
 
     <div x-show="mode === 'all'">
-      <form method="post" action="/preferences" class="flex flex-col gap-3">
+      <form hx-post="/preferences" hx-swap="none" class="flex flex-col gap-3">
         <input type="hidden" name="density" value="comfortable">
         <fieldset>
           <label class="flex items-start gap-2 mb-2">
@@ -65,7 +65,7 @@
 
     <div x-show="mode === 'per'" class="flex flex-col gap-2">
       {% for a in accounts %}
-        <form method="post" action="/preferences" class="flex items-center gap-2">
+        <form hx-post="/preferences" hx-swap="none" class="flex items-center gap-2">
           <input type="hidden" name="account_id" value="{{ a.id }}">
           <input type="hidden" name="density" value="comfortable">
           <span class="text-[12px] flex-1 truncate">{{ a.broker }}/{{ a.label }}</span>

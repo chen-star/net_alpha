@@ -10,7 +10,7 @@
      x-init="window.applyDensityFromLocalStorage && window.applyDensityFromLocalStorage($el)">
   <span class="text-label-3 mr-1">Density:</span>
   {% for d in ['compact', 'comfortable', 'tax'] %}
-    <form method="post" action="/preferences" class="inline">
+    <form hx-post="/preferences" hx-swap="none" class="inline">
       {% if account_id is not none %}<input type="hidden" name="account_id" value="{{ account_id }}">{% endif %}
       <input type="hidden" name="profile" value="{{ profile.profile }}">
       <input type="hidden" name="density" value="{{ d }}">

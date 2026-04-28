@@ -24,7 +24,7 @@ from net_alpha.portfolio.cash_flow import (
 )
 from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
-from net_alpha.portfolio.positions import compute_open_positions
+from net_alpha.portfolio.positions import compute_open_positions, compute_open_short_option_positions
 from net_alpha.portfolio.tax_planner import (
     MissingTaxConfig,
     TaxBrackets,
@@ -530,6 +530,19 @@ def portfolio_body(
         account=account or None,
     )
 
+    open_shorts = compute_open_short_option_positions(
+        scoped_trades,
+        gl_option_closures=repo.get_option_gl_closures(),
+    )
+    cash_secured_total = sum(
+        (s.cash_secured for s in open_shorts),
+        start=Decimal("0"),
+    )
+    premium_received_total = sum(
+        (s.premium_received for s in open_shorts),
+        start=Decimal("0"),
+    )
+
     account_id = _resolve_account_id(account, repo)
     offset_budget = compute_offset_budget(repo=repo, year=today.year)
     cfg = request.app.state.tax_brackets_cfg
@@ -563,6 +576,10 @@ def portfolio_body(
             "allocation": allocation,
             "rows": wash_rows,
             "window_days": 30,
+            "open_shorts": open_shorts,
+            "cash_secured_total": cash_secured_total,
+            "premium_received_total": premium_received_total,
+            "today": today,
             "cash_kpis": cash_kpis,
             "cash_points": cash_points,
             "cash_slice": cash_slice,

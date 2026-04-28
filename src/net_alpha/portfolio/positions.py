@@ -22,7 +22,7 @@ from datetime import date
 from decimal import Decimal
 
 from net_alpha.models.domain import Lot, Trade
-from net_alpha.portfolio.models import PositionRow
+from net_alpha.portfolio.models import OpenShortOptionRow, PositionRow
 from net_alpha.pricing.provider import Quote
 
 # Schwab appends a numeric suffix to an option's underlying after a split or
@@ -246,6 +246,89 @@ def compute_open_option_contracts(
         if qty != 0:
             out[ticker] += abs(qty)
     return dict(out)
+
+
+def compute_open_short_option_positions(
+    trades: Iterable[Trade],
+    *,
+    ticker: str | None = None,
+    gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
+) -> list[OpenShortOptionRow]:
+    """Return one row per open short option position (STO not yet covered).
+
+    A short option is "open" while the cumulative |sells - buys - GL closes|
+    on a given (account, ticker, strike, expiry, call_put) is still negative.
+    For each surviving group we report the remaining qty short, the net
+    premium received on that chain (STO proceeds minus any BTC costs), and
+    the date of the most recent STO that still has open contracts.
+
+    The lots table only carries long lots; this fills in the short side
+    so the ticker drilldown shows open CSPs/CCs.
+    """
+    trades = list(trades)
+    # Per (account, ticker_base, strike, expiry, call_put):
+    #   net_qty: positive for net long, negative for net short
+    #   net_premium: cumulative STO proceeds - BTC costs (signed)
+    #   latest_sto_date: most recent STO date in the chain
+    Key = tuple[str, str, float, object, str]
+    net_qty: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
+    net_premium: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
+    latest_sto_date: dict[Key, date] = {}
+    for t in trades:
+        if t.option_details is None:
+            continue
+        if ticker is not None and _opt_ticker_base(t.ticker) != _opt_ticker_base(ticker):
+            continue
+        opt = t.option_details
+        key: Key = (t.account, _opt_ticker_base(t.ticker), opt.strike, opt.expiry, opt.call_put)
+        delta = Decimal(str(t.quantity))
+        if t.action.lower() == "buy":
+            net_qty[key] += delta
+            net_premium[key] -= Decimal(str(t.cost_basis or 0))
+        else:
+            net_qty[key] -= delta
+            net_premium[key] += Decimal(str(t.proceeds or 0))
+            prior = latest_sto_date.get(key)
+            if prior is None or t.date > prior:
+                latest_sto_date[key] = t.date
+
+    # Apply GL closures: shrink net short toward zero (treat closures as
+    # additional buys-to-close that simply weren't in the trade table).
+    for (acct, ticker_raw, strike, expiry_iso, cp), gl_qty in (gl_option_closures or {}).items():
+        if gl_qty <= 0:
+            continue
+        try:
+            expiry = date.fromisoformat(expiry_iso) if isinstance(expiry_iso, str) else expiry_iso
+        except (TypeError, ValueError):
+            continue
+        if ticker is not None and _opt_ticker_base(ticker_raw) != _opt_ticker_base(ticker):
+            continue
+        key = (acct, _opt_ticker_base(ticker_raw), strike, expiry, cp)
+        n = net_qty.get(key, Decimal("0"))
+        if n < 0:
+            net_qty[key] = min(n + Decimal(str(gl_qty)), Decimal("0"))
+        elif n > 0:
+            net_qty[key] = max(n - Decimal(str(gl_qty)), Decimal("0"))
+
+    rows: list[OpenShortOptionRow] = []
+    for key, qty in net_qty.items():
+        if qty >= 0:
+            continue  # not short
+        acct, sym, strike, expiry, cp = key
+        rows.append(
+            OpenShortOptionRow(
+                account=acct,
+                ticker=sym,
+                strike=float(strike),
+                expiry=expiry,  # type: ignore[arg-type]
+                call_put=cp,
+                qty_short=-qty,  # positive number of contracts short
+                premium_received=net_premium[key].quantize(Decimal("0.01")),
+                opened_at=latest_sto_date.get(key),
+            )
+        )
+    rows.sort(key=lambda r: (r.expiry, r.ticker, r.strike))
+    return rows
 
 
 def compute_open_positions(

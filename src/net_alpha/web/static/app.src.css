@@ -201,6 +201,24 @@
   .nav-link:hover { color: var(--color-text); }
   .nav-link.active { @apply bg-surface-2; color: var(--color-text); }
 
+  /* Tabbed navigation (e.g. /tax) */
+  .tabs {
+    @apply inline-flex items-center gap-1;
+    border-bottom: 0.5px solid var(--color-hairline);
+  }
+  .tab {
+    @apply px-3 py-2 text-[13px] font-medium no-underline;
+    color: var(--color-label-2);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -0.5px;
+    transition: color 120ms, border-color 120ms;
+  }
+  .tab:hover { color: var(--color-text); }
+  .tab--active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-indigo, #5E5CE6);
+  }
+
   /* Status chips */
   .chip-confirm  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-neg);  background: rgba(255,69,58,0.14); }
   .chip-probable { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-warn); background: rgba(255,159,10,0.16); }

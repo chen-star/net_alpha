@@ -29,7 +29,7 @@ def test_base_topbar_includes_profile_switcher(tmp_path):
     # The switcher button label uses the profile name
     assert ">options<" in html.lower() or "options</span>" in html
     # And it includes a per-account form action to /preferences
-    assert 'action="/preferences"' in html
+    assert 'hx-post="/preferences"' in html
 
 
 def test_base_topbar_omitted_when_no_accounts(tmp_path):
@@ -39,4 +39,4 @@ def test_base_topbar_omitted_when_no_accounts(tmp_path):
     app = create_app(settings)
     client = TestClient(app)
     html = client.get("/").text
-    assert 'action="/preferences"' not in html
+    assert 'hx-post="/preferences"' not in html

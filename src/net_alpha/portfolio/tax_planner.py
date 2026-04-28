@@ -70,6 +70,8 @@ def _classify_st_lt_gains(repo: Repository, year: int) -> tuple[Decimal, Decimal
             continue
         if sell.date.year != year:
             continue
+        if sell.proceeds is None or sell.cost_basis is None:
+            continue
         chain = buys.get((sell.account, sell.ticker), [])
         pnl = Decimal(str(sell.proceeds)) - Decimal(str(sell.cost_basis))
         if not chain:
@@ -408,6 +410,8 @@ def _realized_in_year(repo: Repository, year: int) -> tuple[Decimal, Decimal]:
         if t.action.lower() not in {"sell", "sell to close"}:
             continue
         if t.date.year != year:
+            continue
+        if t.proceeds is None or t.cost_basis is None:
             continue
         pnl = Decimal(str(t.proceeds)) - Decimal(str(t.cost_basis))
         if pnl < 0:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from datetime import date as _date
 
@@ -8,12 +9,102 @@ from fastapi.responses import HTMLResponse
 
 from net_alpha.audit import Period, RealizedPLRef
 from net_alpha.db.repository import Repository
+from net_alpha.models.domain import OptionDetails, Trade
 from net_alpha.models.realized_gl import RealizedGLLot
-from net_alpha.portfolio.positions import open_lots_view
+from net_alpha.portfolio.positions import compute_open_short_option_positions, open_lots_view
 from net_alpha.web.dependencies import get_repository
 from net_alpha.web.format import display_action
 
 router = APIRouter()
+
+
+@dataclass(frozen=True)
+class TimelineRow:
+    """Display-ready Timeline entry — either a real Trade or a synthetic
+    closure (option expiry from Schwab GL with no matching BTC trade)."""
+
+    trade: Trade
+    assigned_from: OptionDetails | None = None  # set on put_assignment Buy rows
+
+
+def _build_timeline_rows(
+    trades: list[Trade],
+    gl_lots: list[RealizedGLLot],
+) -> list[TimelineRow]:
+    """Assemble the ticker-page Timeline rows.
+
+    Two transformations vs the raw trade list:
+
+    1. Synthesise a "Closed by Expiry" row for each option GL lot whose
+       underlying STO has no matching BTC trade and is not already
+       represented by a synthetic ``option_short_close_assigned`` Buy.
+       Without this, a Sell-to-Open that simply expired worthless would
+       leave the user wondering whether the position is still open.
+
+    2. Drop ``option_short_close_assigned`` rows; their information is
+       folded into the paired ``put_assignment`` Buy via ``assigned_from``
+       so a single timeline entry tells the full assignment story.
+    """
+    # --- Index assigned-close trades by (date, account, ticker) ---
+    assigned_close_by_key: dict[tuple[date, str, str], OptionDetails] = {}
+    for t in trades:
+        if t.basis_source == "option_short_close_assigned" and t.option_details is not None:
+            assigned_close_by_key[(t.date, t.account, t.ticker)] = t.option_details
+
+    # --- Index BTC / STC trade closures so we don't duplicate via GL ---
+    closed_keys_in_trades: set[tuple[str, float, date, str]] = set()
+    for t in trades:
+        if t.option_details is None:
+            continue
+        if t.action.lower() != "buy":
+            continue  # only closes on the buy side (BTC, including assigned-close)
+        opt = t.option_details
+        closed_keys_in_trades.add((t.ticker, opt.strike, opt.expiry, opt.call_put))
+
+    rows: list[TimelineRow] = []
+    for t in trades:
+        if t.basis_source == "option_short_close_assigned":
+            continue  # folded into the put-assignment Buy via assigned_from
+        assigned_from = None
+        if t.basis_source == "put_assignment":
+            assigned_from = assigned_close_by_key.get((t.date, t.account, t.ticker))
+        rows.append(TimelineRow(trade=t, assigned_from=assigned_from))
+
+    # --- Synthesize Closed-by-Expiry rows from GL ---
+    seen_synth: set[tuple[str, float, date, str, date]] = set()
+    for gl in gl_lots:
+        if gl.option_strike is None or gl.option_expiry is None or gl.option_call_put is None:
+            continue
+        try:
+            expiry = date.fromisoformat(gl.option_expiry)
+        except ValueError:
+            continue
+        key = (gl.ticker, float(gl.option_strike), expiry, gl.option_call_put)
+        if key in closed_keys_in_trades:
+            continue  # already represented by a BTC / STC / assigned-close trade
+        synth_key = (gl.ticker, float(gl.option_strike), expiry, gl.option_call_put, gl.closed_date)
+        if synth_key in seen_synth:
+            continue
+        seen_synth.add(synth_key)
+        synth = Trade(
+            account=gl.account_display,
+            date=gl.closed_date,
+            ticker=gl.ticker,
+            action="Buy",  # closing a short = buy-side
+            quantity=abs(float(gl.quantity)),
+            cost_basis=float(gl.cost_basis),
+            proceeds=None,
+            basis_source="option_short_close_expiry",
+            option_details=OptionDetails(
+                strike=float(gl.option_strike),
+                expiry=expiry,
+                call_put=gl.option_call_put,
+            ),
+        )
+        rows.append(TimelineRow(trade=synth))
+
+    rows.sort(key=lambda r: (r.trade.date, r.trade.id))
+    return rows
 
 
 @router.get("/ticker/{symbol}", response_class=HTMLResponse)
@@ -34,6 +125,11 @@ def ticker_drilldown(
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=repo.get_option_gl_closures(),
     )
+    open_shorts = compute_open_short_option_positions(
+        repo.all_trades(),
+        ticker=symbol,
+        gl_option_closures=repo.get_option_gl_closures(),
+    )
     violations = repo.get_violations_for_ticker(symbol)
 
     today = date.today()
@@ -41,8 +137,16 @@ def ticker_drilldown(
         ((t.proceeds or 0.0) - (t.cost_basis or 0.0) for t in trades if t.date.year == today.year and t.is_sell()),
         start=0.0,
     )
+    realized_lifetime = sum(
+        ((t.proceeds or 0.0) - (t.cost_basis or 0.0) for t in trades if t.is_sell()),
+        start=0.0,
+    )
     disallowed_ytd = sum(
         (v.disallowed_loss for v in violations if v.loss_sale_date and v.loss_sale_date.year == today.year),
+        start=0.0,
+    )
+    disallowed_lifetime = sum(
+        (v.disallowed_loss for v in violations),
         start=0.0,
     )
     accounts = sorted({lot.account for lot in lots})
@@ -63,6 +167,8 @@ def ticker_drilldown(
     for account in repo.list_accounts():
         gl_lots.extend(repo.get_gl_lots_for_ticker(account.id, symbol))
 
+    timeline_rows = _build_timeline_rows(list(trades), gl_lots)
+
     realized_ref = RealizedPLRef(
         kind="realized_pl",
         period=Period(
@@ -73,6 +179,12 @@ def ticker_drilldown(
         account_id=None,  # ticker page is account-aggregated
         symbol=symbol,
     )
+    realized_lifetime_ref = RealizedPLRef(
+        kind="realized_pl",
+        period=Period(start=_date(1970, 1, 1), end=_date(2100, 1, 1), label="Lifetime"),
+        account_id=None,
+        symbol=symbol,
+    )
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -80,13 +192,19 @@ def ticker_drilldown(
         {
             "symbol": symbol,
             "trades": trades,
+            "timeline_rows": timeline_rows,
             "lots": lots,
+            "open_shorts": open_shorts,
+            "kpi_today": today,
             "violations": violations,
             "gl_lots": gl_lots,
             "kpi_open_lots": len(lots),
             "kpi_open_basis": sum((lot.adjusted_basis for lot in lots), start=0.0),
             "kpi_realized_ytd": realized_ytd,
+            "kpi_realized_lifetime": realized_lifetime,
             "kpi_disallowed_ytd": disallowed_ytd,
+            "kpi_disallowed_lifetime": disallowed_lifetime,
+            "realized_lifetime_ref": realized_lifetime_ref,
             "kpi_accounts": accounts,
             "kpi_last_trade": last_trade,
             "account_ids": account_ids,

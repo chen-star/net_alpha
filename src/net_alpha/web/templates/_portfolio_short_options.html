@@ -1,0 +1,74 @@
+{# Inputs:
+    open_shorts: list[OpenShortOptionRow]
+    cash_secured_total: Decimal
+    premium_received_total: Decimal
+    today: date #}
+{% set _expanded = open_shorts|length > 0 %}
+
+<details{% if _expanded %} open{% endif %}>
+  <summary class="panel-head cursor-pointer">
+    <h4>Open short options</h4>
+    <span class="meta">
+      {% set _puts = open_shorts | selectattr('call_put', 'equalto', 'P') | list | length %}
+      {% set _calls = open_shorts | selectattr('call_put', 'equalto', 'C') | list | length %}
+      {% if _puts %}{{ _puts }} CSP{% if _puts != 1 %}s{% endif %}{% endif %}
+      {% if _puts and _calls %} · {% endif %}
+      {% if _calls %}{{ _calls }} CC{% if _calls != 1 %}s{% endif %}{% endif %}
+      {% if open_shorts %} · cash secured ${{ "{:,.0f}".format(cash_secured_total) }}{% endif %}
+      {% if premium_received_total %} · premium <span class="text-pos">+${{ "%.2f"|format(premium_received_total) }}</span>{% endif %}
+    </span>
+  </summary>
+
+{% if not open_shorts %}
+  <div class="text-label-2 text-[13px] py-3">No open short options.</div>
+{% else %}
+  <div class="flex flex-col">
+    {% for s in open_shorts %}
+      {% set dte = (s.expiry - today).days %}
+      {% if dte <= 7 %}{% set dte_class = 'text-warn' %}
+      {% elif dte <= 21 %}{% set dte_class = 'text-label-1' %}
+      {% else %}{% set dte_class = 'text-label-2' %}{% endif %}
+      {# Days since open as a progress bar from 0 → expiry. We don't know the
+         exact open date when GL closures shrink the chain, so use opened_at
+         when available; otherwise show a steady bar. #}
+      {% if s.opened_at %}
+        {% set total_days = (s.expiry - s.opened_at).days %}
+        {% set elapsed = (today - s.opened_at).days %}
+        {% if total_days > 0 %}{% set fill_pct = (elapsed / total_days * 100)|round(0, 'common') %}{% else %}{% set fill_pct = 100 %}{% endif %}
+      {% else %}
+        {% set fill_pct = 50 %}
+      {% endif %}
+      <div class="grid items-center gap-[14px] py-[9px] text-[13px]"
+           style="grid-template-columns: 90px 110px 1fr 100px 100px; border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+        <div class="flex items-center gap-2 font-semibold tracking-tightish">
+          <span style="width:6px; height:6px; border-radius:50%;
+                       background:{% if s.call_put == 'P' %}#FF9F0A{% else %}#5E5CE6{% endif %};
+                       box-shadow: 0 0 6px {% if s.call_put == 'P' %}#FF9F0A{% else %}#5E5CE6{% endif %};"></span>
+          <a href="/ticker/{{ s.ticker }}" class="no-underline text-text">{{ s.ticker }}</a>
+        </div>
+        <div class="text-[12px] font-mono text-label-1">
+          {% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %} ${{ "%g"|format(s.strike) }}
+          <div class="text-[10px] text-label-3">{{ s.expiry.strftime('%m/%d/%y') }}</div>
+        </div>
+        <div class="flex items-center gap-[10px]">
+          <span class="text-[11px] text-label-2 num min-w-[88px]">
+            {% if s.opened_at %}opened {{ (today - s.opened_at).days }}d ago{% else %}— {% endif %}
+          </span>
+          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: rgba(255,255,255,0.06);">
+            <div style="width: {{ fill_pct }}%; height: 100%;
+                        background: linear-gradient(90deg, #30D158 0%, #FF9F0A 70%, #FF453A 100%);
+                        border-radius: 999px;"></div>
+          </div>
+        </div>
+        <div class="text-right num text-[12px]">
+          <div class="text-pos font-medium">+${{ "%.2f"|format(s.premium_received) }}</div>
+          {% if s.call_put == 'P' %}<div class="text-[10px] text-label-3">${{ "{:,.0f}".format(s.cash_secured) }} secured</div>{% endif %}
+        </div>
+        <div class="text-right num text-[13px] font-semibold {{ dte_class }}">
+          {{ dte }}d <small class="text-[10px] text-label-3 font-normal ml-1">to expiry</small>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+</details>

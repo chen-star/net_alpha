@@ -13,7 +13,7 @@ def _format_option_suffix(opt: OptionDetails) -> str:
     return f"{cp} {strike} {expiry}"
 
 
-def display_action(t: Trade) -> str:
+def display_action(t: Trade, *, assigned_from: OptionDetails | None = None) -> str:
     """User-facing action label.
 
     Transfers are stored as Buy/Sell with basis_source set to transfer_in /
@@ -21,15 +21,23 @@ def display_action(t: Trade) -> str:
     re-expands the label for clarity. Option trades are extended with the
     contract details (CALL/PUT, strike, expiry) so the user can tell at a
     glance whether a row is stock or an option position.
+
+    ``assigned_from`` lets the timeline surface the originating short option
+    on a put-assignment Buy row, so the user sees "Buy 100 (assigned from
+    PUT $7 02/20/26)" without a separate synthetic close-by-assignment row.
     """
     if t.basis_source == "transfer_in":
         return "Transfer In"
     if t.basis_source == "transfer_out":
         return "Transfer Out"
+    if t.basis_source == "put_assignment" and assigned_from is not None:
+        return f"Buy (assigned from {_format_option_suffix(assigned_from)})"
     if t.basis_source == "option_short_open_assigned" and t.option_details is not None:
         return f"Sell to Open {_format_option_suffix(t.option_details)} (assigned)"
     if t.basis_source == "option_short_close_assigned" and t.option_details is not None:
         return f"Closed by Assignment {_format_option_suffix(t.option_details)}"
+    if t.basis_source == "option_short_close_expiry" and t.option_details is not None:
+        return f"Closed by Expiry {_format_option_suffix(t.option_details)}"
     if t.option_details is not None:
         if t.basis_source == "option_short_open":
             return f"Sell to Open {_format_option_suffix(t.option_details)}"

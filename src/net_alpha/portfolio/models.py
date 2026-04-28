@@ -36,6 +36,32 @@ class PositionRow:
 
 
 @dataclass(frozen=True)
+class OpenShortOptionRow:
+    """One open short option position (STO not yet covered).
+
+    Surfaced on the ticker drilldown so cash-secured puts and covered calls
+    show up alongside long lots. Quantity is reported as a positive number of
+    contracts short. ``cash_secured`` is the strike-times-shares the user has
+    pledged when this is a put (NaN when not applicable / call)."""
+
+    account: str
+    ticker: str
+    strike: float
+    expiry: date
+    call_put: str  # "P" or "C"
+    qty_short: Decimal  # positive
+    premium_received: Decimal  # net premium kept on this chain
+    opened_at: date | None
+    contract_multiplier: int = 100
+
+    @property
+    def cash_secured(self) -> Decimal:
+        if self.call_put != "P":
+            return Decimal("0")
+        return Decimal(str(self.strike)) * self.qty_short * Decimal(str(self.contract_multiplier))
+
+
+@dataclass(frozen=True)
 class KpiSet:
     period_label: str
     period_realized: Decimal

@@ -17,7 +17,7 @@
     <div class="text-[11px] text-label-3 mb-2">Profile per account</div>
     {% for a in accounts %}
       {% set current = account_profiles.get(a.id, 'active') %}
-      <form method="post" action="/preferences" class="flex items-center gap-2 mb-2">
+      <form hx-post="/preferences" hx-swap="none" class="flex items-center gap-2 mb-2">
         <input type="hidden" name="account_id" value="{{ a.id }}">
         <input type="hidden" name="density" value="{{ profile.density }}">
         <span class="text-[12px] flex-1 truncate">{{ a.broker }}/{{ a.label }}</span>

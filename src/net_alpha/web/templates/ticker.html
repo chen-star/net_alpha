@@ -19,18 +19,30 @@
   <div class="grid grid-cols-5 gap-4 mb-6">
     <div class="panel">
       <div class="label-uc">Open lots</div>
-      <div class="text-2xl font-mono num">{{ kpi_open_lots }}</div>
+      <div class="text-2xl font-mono num">{{ kpi_open_lots }}{% if open_shorts %}<span class="text-label-3 text-base"> + {{ open_shorts|length }} short opt</span>{% endif %}</div>
       <div class="text-xs text-label-2 mt-1">Basis: ${{ "%.2f"|format(kpi_open_basis) }}</div>
     </div>
     <div class="panel">
-      <div class="label-uc">YTD realized P&amp;L</div>
+      <div class="label-uc">Realized P&amp;L</div>
       <div class="text-2xl font-mono num {% if kpi_realized_ytd >= 0 %}text-pos{% else %}text-confirmed{% endif %}">
         ${{ "%.2f"|format(kpi_realized_ytd) }}{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
       </div>
+      <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
+      <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
+        <div class="text-sm font-mono num {% if kpi_realized_lifetime >= 0 %}text-pos{% else %}text-confirmed{% endif %}">
+          ${{ "%.2f"|format(kpi_realized_lifetime) }}{% if realized_lifetime_ref %}{{ provenance_link(realized_lifetime_ref) }}{% endif %}
+        </div>
+        <div class="text-xs text-label-3">Lifetime</div>
+      </div>
     </div>
     <div class="panel">
-      <div class="label-uc">YTD disallowed</div>
+      <div class="label-uc">Disallowed</div>
       <div class="text-2xl font-mono text-confirmed num">${{ "%.2f"|format(kpi_disallowed_ytd) }}</div>
+      <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
+      <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
+        <div class="text-sm font-mono text-confirmed num">${{ "%.2f"|format(kpi_disallowed_lifetime) }}</div>
+        <div class="text-xs text-label-3">Lifetime</div>
+      </div>
     </div>
     <div class="panel">
       <div class="label-uc">Accounts</div>
@@ -78,16 +90,19 @@
         </tr>
       </thead>
       <tbody>
-        {% for t in trades %}
-          <tr>
+        {% for row in timeline_rows %}
+          {% set t = row.trade %}
+          {% set is_synth = t.basis_source == 'option_short_close_expiry' %}
+          <tr {% if is_synth %}class="text-label-2"{% endif %}>
             <td class="px-2 py-1 font-mono">{{ t.date }}</td>
             <td class="px-2 py-1">{{ t.account }}</td>
             <td class="px-2 py-1 text-[11px]">
-              {% if t.is_manual %}<span class="pill" style="color: var(--color-accent);">manual</span>
+              {% if is_synth %}<span class="pill" style="color: var(--color-label-3);">auto</span>
+              {% elif t.is_manual %}<span class="pill" style="color: var(--color-accent);">manual</span>
               {% elif t.transfer_basis_user_set %}<span class="pill" style="color: var(--color-warn);">edited</span>
               {% endif %}
             </td>
-            <td class="px-2 py-1">{{ display_action(t) }}</td>
+            <td class="px-2 py-1">{{ display_action(t, assigned_from=row.assigned_from) }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.cost_basis if t.cost_basis is not none else "-" }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
@@ -116,7 +131,7 @@
             </td>
           </tr>
         {% endfor %}
-        {% if not trades %}
+        {% if not timeline_rows %}
           <tr><td colspan="8" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
         {% endif %}
       </tbody>
@@ -125,6 +140,49 @@
 
   <h2 class="text-xl mb-2">Open lots</h2>
   {% include "_lots_table.html" %}
+
+  {% if open_shorts %}
+    <h2 class="text-xl mt-6 mb-2">Open short options</h2>
+    <div class="panel mb-6" style="padding:0;">
+      <table class="net-table text-sm">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Contract</th>
+            <th>Opened</th>
+            <th class="r">Qty short</th>
+            <th class="r">Premium received</th>
+            <th class="r">Cash secured</th>
+            <th class="r">DTE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in open_shorts %}
+            {% set dte = (s.expiry - kpi_today).days if kpi_today else None %}
+            <tr>
+              <td class="px-2 py-1 font-mono">{{ s.account }}</td>
+              <td class="px-2 py-1 font-mono text-[12px]">
+                <span class="pill" style="color: var(--color-accent);">{% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %}</span>
+                ${{ "%g"|format(s.strike) }}
+                <span class="text-label-3">·</span>
+                {{ s.expiry.strftime('%m/%d/%y') }}
+                <span class="pill ml-1" style="color: var(--color-warn);">short</span>
+              </td>
+              <td class="px-2 py-1 font-mono">{{ s.opened_at if s.opened_at else "—" }}</td>
+              <td class="px-2 py-1 num font-mono r">-{{ s.qty_short }}</td>
+              <td class="px-2 py-1 num font-mono r text-pos">+${{ "%.2f"|format(s.premium_received) }}</td>
+              <td class="px-2 py-1 num font-mono r">
+                {% if s.call_put == 'P' %}${{ "%.0f"|format(s.cash_secured) }}{% else %}—{% endif %}
+              </td>
+              <td class="px-2 py-1 num font-mono r {% if dte is not none and dte <= 7 %}text-warn{% endif %}">
+                {% if dte is not none %}{{ dte }}d{% else %}—{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
 
   {% if violations %}
     <h2 class="text-xl mt-6 mb-2">Violations involving {{ symbol }}</h2>

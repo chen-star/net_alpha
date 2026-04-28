@@ -74,7 +74,7 @@ def test_phase3_smoke(tmp_path):
 
     # 7. Topbar switcher form posts to /preferences with account_id.
     home = client.get("/").text
-    assert 'action="/preferences"' in home
+    assert 'hx-post="/preferences"' in home
     # 8. POST /preferences flips Tax to conservative; verify persistence.
     resp = client.post(
         "/preferences",
