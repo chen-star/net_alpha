@@ -152,15 +152,9 @@ def _trade_in_period(t: Trade, period: Period) -> bool:
     return period.start <= t.date < period.end
 
 
-def _account_id_match(account_display: str, account_id: int | None, repo: Repository) -> bool:
-    """Return True if the display string belongs to account_id (or account_id is None)."""
-    if account_id is None:
-        return True
-    for a in repo.list_accounts():
-        full = f"{a.broker}/{a.label}" if a.label else a.broker
-        if full == account_display and a.id == account_id:
-            return True
-    return False
+def _accounts_by_id(repo: Repository) -> dict[int, str]:
+    """Build a one-shot id → display map; callers iterate without re-querying."""
+    return {a.id: f"{a.broker}/{a.label}" if a.label else a.broker for a in repo.list_accounts()}
 
 
 def _to_contributing(t: Trade, import_id: int | None) -> ContributingTrade:
@@ -180,7 +174,7 @@ def _to_contributing(t: Trade, import_id: int | None) -> ContributingTrade:
 def _realized_pl(metric: RealizedPLRef, repo: Repository) -> ProvenanceTrace:
     contributing: list[ContributingTrade] = []
     total = 0.0
-    accounts = {a.id: f"{a.broker}/{a.label}" if a.label else a.broker for a in repo.list_accounts()}
+    accounts = _accounts_by_id(repo)
     target_display = accounts.get(metric.account_id) if metric.account_id is not None else None
     for t in repo.all_trades():
         if t.action.lower() != "sell":
@@ -215,10 +209,12 @@ def _unrealized_pl(metric: UnrealizedPLRef, repo: Repository) -> ProvenanceTrace
     contributing: list[ContributingTrade] = []
     total = 0.0
     trade_by_id = {t.id: t for t in repo.all_trades()}  # hoisted lookup
+    accounts = _accounts_by_id(repo)
+    target_display = accounts.get(metric.account_id) if metric.account_id is not None else None
     for lot in repo.all_lots():
         if metric.symbol is not None and lot.ticker != metric.symbol:
             continue
-        if not _account_id_match(lot.account, metric.account_id, repo):
+        if target_display is not None and lot.account != target_display:
             continue
         # The lot was created by the buy trade with id == lot.trade_id.
         buy = trade_by_id.get(lot.trade_id)
@@ -296,7 +292,7 @@ def _net_contributed(metric: NetContributedRef, repo: Repository) -> ProvenanceT
 
 
 def _wash_impact(metric: WashImpactRef, repo: Repository) -> ProvenanceTrace:
-    accounts = {a.id: f"{a.broker}/{a.label}" if a.label else a.broker for a in repo.list_accounts()}
+    accounts = _accounts_by_id(repo)
     scoped_display = accounts.get(metric.account_id) if metric.account_id is not None else None
     adjustments: list[AppliedAdjustment] = []
     total = 0.0
