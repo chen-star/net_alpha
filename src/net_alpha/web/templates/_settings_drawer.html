@@ -2,12 +2,18 @@
 
    Empty. Phase 1 wires the gear-icon trigger and Imports tab content;
    Phases 2-3 add Profile / Density / ETF pairs / About tabs. Mounted in
-   base.html so the slide-over root is in the DOM ahead of any HTMX swap. #}
+   base.html so the slide-over root is in the DOM ahead of any HTMX swap.
+
+   Phase 1 triggers from outside this Alpine scope by dispatching a window
+   event:  $dispatch('open-settings-drawer'). This keeps state self-contained
+   instead of requiring base.html to host a wrapping x-data. #}
 <div id="settings-drawer"
-     class="fixed inset-y-0 right-0 w-[480px] bg-bg z-30 hidden"
+     class="fixed inset-y-0 right-0 w-[480px] bg-bg z-30"
      style="box-shadow: var(--shadow-drawer);"
      x-data="{ open: false }"
      x-show="open"
+     x-on:open-settings-drawer.window="open = true"
+     x-on:keydown.window.escape="open = false"
      x-cloak>
   {# Phase 1 will populate this with tab strip + tab panels. #}
 </div>

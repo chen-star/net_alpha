@@ -4,11 +4,8 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import ROUND_HALF_EVEN, Decimal
-from typing import Literal
 
 from net_alpha.models.domain import OptionDetails, Trade
-
-Density = Literal["compact", "comfortable", "tax-view"]
 
 
 def _format_option_suffix(opt: OptionDetails) -> str:
