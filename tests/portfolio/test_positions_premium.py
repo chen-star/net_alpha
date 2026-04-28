@@ -62,6 +62,62 @@ def test_premium_received_for_closed_csp():
     assert aapl.premium_received == Decimal("150")  # 200 - 50
 
 
+def test_premium_received_skips_assigned_put_chain():
+    """Assigned-put STO/synthetic-close trades fold premium into the underlying
+    basis. Counting them again in premium_received would double-credit."""
+    csp_open_assigned = Trade(
+        account="Schwab/Tax",
+        date=date(2026, 1, 1),
+        ticker="AAPL",
+        action="Sell to Open",
+        quantity=1.0,
+        proceeds=200.0,
+        cost_basis=None,
+        option_details=OptionDetails(strike=140.0, expiry=date(2026, 4, 17), call_put="P"),
+        basis_source="option_short_open_assigned",
+    )
+    csp_close_assigned = Trade(
+        account="Schwab/Tax",
+        date=date(2026, 4, 17),
+        ticker="AAPL",
+        action="Buy to Close",
+        quantity=1.0,
+        proceeds=None,
+        cost_basis=0.0,
+        option_details=OptionDetails(strike=140.0, expiry=date(2026, 4, 17), call_put="P"),
+        basis_source="option_short_close_assigned",
+    )
+    eq_lot = Lot(
+        id="1",
+        trade_id="t-eq",
+        account="Schwab/Tax",
+        ticker="AAPL",
+        quantity=100.0,
+        cost_basis=13800.0,  # 14000 strike - 200 premium folded in
+        adjusted_basis=13800.0,
+        date=date(2026, 4, 17),
+    )
+    eq_assignment = Trade(
+        account="Schwab/Tax",
+        date=date(2026, 4, 17),
+        ticker="AAPL",
+        action="Buy",
+        quantity=100.0,
+        proceeds=None,
+        cost_basis=13800.0,
+    )
+    _as_of_dt = dt.datetime(2026, 4, 27, tzinfo=dt.UTC)
+    rows = compute_open_positions(
+        trades=[eq_assignment, csp_open_assigned, csp_close_assigned],
+        lots=[eq_lot],
+        prices={"AAPL": Quote(symbol="AAPL", price=Decimal("150"), as_of=_as_of_dt, source="test")},
+        as_of=date(2026, 4, 27),
+    )
+    aapl = next(r for r in rows if r.symbol == "AAPL")
+    # Premium already folded into the underlying lot's basis; do not count again.
+    assert aapl.premium_received == Decimal("0")
+
+
 def test_premium_received_zero_when_no_options():
     eq_lot = Lot(
         id="1",

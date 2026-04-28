@@ -349,14 +349,17 @@ def compute_open_positions(
     for t in trades:
         sym = t.ticker
         accounts_by_sym[sym].add(t.account)  # ensure account is captured even if no open lot
+        if t.basis_source in _SKIP_AGG_SOURCES:
+            # Same skip applies to premium_received: assigned-put STO/synthetic-close
+            # premium is already folded into the underlying basis. Counting it here
+            # would double-credit it.
+            continue
         # Option premium accumulation (for premium_received field).
         if t.option_details is not None:
             if t.proceeds is not None:
                 premium_by_sym[sym] += Decimal(str(t.proceeds))
             if t.cost_basis is not None:
                 premium_by_sym[sym] -= Decimal(str(t.cost_basis))
-        if t.basis_source in _SKIP_AGG_SOURCES:
-            continue
         if t.action.lower() == "buy":
             buys_by_sym[sym] += Decimal(str(t.cost_basis or 0))
         elif t.action.lower() == "sell":
