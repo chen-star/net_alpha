@@ -14,7 +14,7 @@ from net_alpha.output.disclaimer import price_source_line
 from net_alpha.output.disclaimer import render as disclaimer_render
 from net_alpha.pricing.cache import PriceCache
 from net_alpha.pricing.yahoo import YahooPriceProvider
-from net_alpha.web.routes import holdings, sim, system, ticker, trades, wash_sales
+from net_alpha.web.routes import audit_routes, holdings, sim, system, ticker, trades, wash_sales
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
 
@@ -51,6 +51,7 @@ def create_app(settings: Settings) -> FastAPI:
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
 
+    app.include_router(audit_routes.router)
     app.include_router(wash_sales.router)
     app.include_router(holdings.router)
     app.include_router(imports_routes.router)

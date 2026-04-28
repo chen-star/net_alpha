@@ -1,0 +1,18 @@
+{# src/net_alpha/web/templates/_provenance_modal.html — placeholder; full
+   styling comes in Task 10. This is enough for the route test to pass. #}
+{% if error %}
+  <div class="text-neg">Couldn't reconstruct trace — file a bug.</div>
+  <div class="text-label-3 text-xs">{{ error }}</div>
+{% else %}
+  <div data-testid="provenance-trace">
+    <h3>{{ trace.metric_label }}</h3>
+    <div class="num">${{ "%.2f"|format(trace.total) }}</div>
+    {% if trace.trades %}
+      <ul>
+        {% for t in trace.trades %}
+          <li>{{ t.trade_date }} · {{ t.symbol }} · {{ t.action }} · ${{ "%.2f"|format(t.amount) }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+{% endif %}
