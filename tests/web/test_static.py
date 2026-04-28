@@ -53,3 +53,26 @@ def test_design_tokens_phase0_present():
     ]
     missing = [t for t in expected if t not in src]
     assert not missing, f"Missing tokens in app.src.css: {missing}"
+
+
+def test_lucide_icons_vendored():
+    """23 Lucide icons live under web/static/icons (§5.4)."""
+    icons_dir = (
+        Path(__file__).resolve().parents[2]
+        / "src" / "net_alpha" / "web" / "static" / "icons"
+    )
+    expected = {
+        "gauge", "wallet", "landmark", "flask-conical",
+        "settings",
+        "arrow-up-right", "play", "pencil", "trash-2",
+        "triangle-alert", "info", "check", "lock",
+        "arrow-up", "arrow-down", "move-vertical",
+        "search", "chevron-down", "x", "ellipsis",
+        "refresh-cw", "database", "download",
+    }
+    found = {p.stem for p in icons_dir.glob("*.svg")}
+    missing = expected - found
+    assert not missing, f"Missing vendored icons: {sorted(missing)}"
+    # Sanity check on a sample SVG so a corrupted download fails loudly.
+    sample = (icons_dir / "gauge.svg").read_text()
+    assert "<svg" in sample
