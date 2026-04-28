@@ -2,7 +2,8 @@ from datetime import date, timedelta
 
 
 def test_calendar_empty_state(client):
-    resp = client.get("/wash-sales?view=calendar")
+    # Calendar is now a sub-view of the wash-sales tab at /tax.
+    resp = client.get("/tax?view=calendar")
     assert resp.status_code == 200
     assert "calendar" in resp.text.lower()
     assert "No wash sales" in resp.text
@@ -28,7 +29,7 @@ def test_calendar_with_violation_renders_marker(client, repo, builders):
     )
     repo.replace_violations_in_window(win_start, win_end, result.violations)
 
-    resp = client.get("/wash-sales?view=calendar&year=2024")
+    resp = client.get("/tax?view=calendar&year=2024")
     assert resp.status_code == 200
     assert "TSLA" in resp.text
     # The marker uses loss_sale_date in its title attribute.
@@ -81,6 +82,6 @@ def test_calendar_does_not_render_monthly_pl_ribbon(client, repo, builders):
         builders.make_sell("schwab/personal", "AAPL", date(2026, 3, 5), qty=10, proceeds=1500, cost=1000),
     ]
     builders.seed_import(repo, "schwab", "personal", trades)
-    resp = client.get("/wash-sales?view=calendar&year=2026")
+    resp = client.get("/tax?view=calendar&year=2026")
     assert resp.status_code == 200
     assert "monthly realized" not in resp.text.lower()
