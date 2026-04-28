@@ -2,6 +2,7 @@
 
 Catches integration regressions when any of the three sub-features is touched.
 """
+
 from datetime import date, datetime
 
 from fastapi.testclient import TestClient
@@ -35,19 +36,40 @@ def test_phase1_smoke(tmp_path):
         acct,
         record,
         [
-            Trade(account="Schwab/Tax", date=date(2026, 1, 1), ticker="AAPL",
-                  action="Buy", quantity=10, cost_basis=1000.0),
-            Trade(account="Schwab/Tax", date=date(2026, 4, 1), ticker="AAPL",
-                  action="Sell", quantity=10, proceeds=1500.0, cost_basis=1000.0),
-            Trade(account="Schwab/Tax", date=date(2026, 4, 5), ticker="XYZ",
-                  action="Sell", quantity=5, proceeds=500.0, cost_basis=400.0),
-            Trade(account="Schwab/Tax", date=date(2026, 1, 1), ticker="MSFT",
-                  action="Buy", quantity=10, cost_basis=None,
-                  basis_unknown=True, basis_source="transfer_in"),
+            Trade(
+                account="Schwab/Tax", date=date(2026, 1, 1), ticker="AAPL", action="Buy", quantity=10, cost_basis=1000.0
+            ),
+            Trade(
+                account="Schwab/Tax",
+                date=date(2026, 4, 1),
+                ticker="AAPL",
+                action="Sell",
+                quantity=10,
+                proceeds=1500.0,
+                cost_basis=1000.0,
+            ),
+            Trade(
+                account="Schwab/Tax",
+                date=date(2026, 4, 5),
+                ticker="XYZ",
+                action="Sell",
+                quantity=5,
+                proceeds=500.0,
+                cost_basis=400.0,
+            ),
+            Trade(
+                account="Schwab/Tax",
+                date=date(2026, 1, 1),
+                ticker="MSFT",
+                action="Buy",
+                quantity=10,
+                cost_basis=None,
+                basis_unknown=True,
+                basis_source="transfer_in",
+            ),
         ],
         cash_events=[
-            CashEvent(account="Schwab/Tax", event_date=date(2026, 1, 1),
-                      kind="transfer_in", amount=10000.0),
+            CashEvent(account="Schwab/Tax", event_date=date(2026, 1, 1), kind="transfer_in", amount=10000.0),
         ],
     )
     repo.add_gl_lots(
@@ -55,11 +77,18 @@ def test_phase1_smoke(tmp_path):
         import_id=1,
         lots=[
             RealizedGLLot(
-                account_display="Schwab/Tax", symbol_raw="AAPL", ticker="AAPL",
-                closed_date=date(2026, 4, 1), opened_date=date(2026, 1, 1),
-                quantity=10.0, proceeds=1500.0, cost_basis=1000.0,
-                unadjusted_cost_basis=1000.0, wash_sale=False,
-                disallowed_loss=0.0, term="Long Term",
+                account_display="Schwab/Tax",
+                symbol_raw="AAPL",
+                ticker="AAPL",
+                closed_date=date(2026, 4, 1),
+                opened_date=date(2026, 1, 1),
+                quantity=10.0,
+                proceeds=1500.0,
+                cost_basis=1000.0,
+                unadjusted_cost_basis=1000.0,
+                wash_sale=False,
+                disallowed_loss=0.0,
+                term="Long Term",
             )
         ],
     )
@@ -67,11 +96,14 @@ def test_phase1_smoke(tmp_path):
     client = TestClient(create_app(settings))
 
     # 1) Provenance modal renders with a contributing trade.
-    encoded = encode_metric_ref(RealizedPLRef(
-        kind="realized_pl",
-        period=Period(start=date(2026, 1, 1), end=date(2027, 1, 1), label="YTD 2026"),
-        account_id=acct.id, symbol="AAPL",
-    ))
+    encoded = encode_metric_ref(
+        RealizedPLRef(
+            kind="realized_pl",
+            period=Period(start=date(2026, 1, 1), end=date(2027, 1, 1), label="YTD 2026"),
+            account_id=acct.id,
+            symbol="AAPL",
+        )
+    )
     r1 = client.get(f"/provenance/{encoded}")
     assert r1.status_code == 200, r1.text
     assert "AAPL" in r1.text
@@ -85,8 +117,8 @@ def test_phase1_smoke(tmp_path):
     r3 = client.get("/imports")
     assert r3.status_code == 200, r3.text
     assert "Data quality" in r3.text
-    assert "MSFT" in r3.text   # basis_unknown error
-    assert "XYZ" in r3.text    # orphan sell
+    assert "MSFT" in r3.text  # basis_unknown error
+    assert "XYZ" in r3.text  # orphan sell
 
     # 4) Nav-bar badge appears on every page (one error → badge).
     r4 = client.get("/")

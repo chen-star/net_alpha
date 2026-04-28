@@ -20,6 +20,7 @@ from net_alpha.import_.aggregations import compute_import_aggregates
 from net_alpha.ingest.csv_loader import load_csv
 from net_alpha.ingest.dedup import filter_new
 from net_alpha.models.domain import ImportRecord
+from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.splits.sync import _post_import_autosync_splits
 from net_alpha.web.dependencies import get_etf_pairs, get_repository
 
@@ -34,10 +35,20 @@ def imports_page(
 ) -> HTMLResponse:
     records = repo.list_imports()
     issues = collect_issues(repo)
+    prefs = repo.list_user_preferences()
+    profile = resolve_effective_profile(prefs=prefs, filter_account_id=None)
     return request.app.state.templates.TemplateResponse(
         request,
         "imports.html",
-        {"imports": records, "flash": flash, "issues": issues},
+        {
+            "imports": records,
+            "flash": flash,
+            "issues": issues,
+            "profile": profile,
+            "page_key": "/imports",
+            "account_id": None,
+            "selected_account": "",
+        },
     )
 
 

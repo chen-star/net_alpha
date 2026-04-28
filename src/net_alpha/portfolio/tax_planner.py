@@ -150,13 +150,9 @@ def project_year_end_tax(
     BRACKET_PUSH_THRESHOLD = Decimal("20000")
     warnings_list: list[str] = []
     if st >= BRACKET_PUSH_THRESHOLD:
-        warnings_list.append(
-            f"Short-term gain of ${st:,.0f} may push you into a higher federal bracket."
-        )
+        warnings_list.append(f"Short-term gain of ${st:,.0f} may push you into a higher federal bracket.")
     if lt >= BRACKET_PUSH_THRESHOLD:
-        warnings_list.append(
-            f"Long-term gain of ${lt:,.0f} may approach the 20% LTCG bracket boundary."
-        )
+        warnings_list.append(f"Long-term gain of ${lt:,.0f} may approach the 20% LTCG bracket boundary.")
 
     return TaxProjection(
         year=year,
@@ -170,6 +166,7 @@ def project_year_end_tax(
         total_tax=_quantize(federal + state),
         bracket_warnings=warnings_list,
     )
+
 
 LT_HOLDING_DAYS = 365  # tax long-term threshold (>365 days held)
 
@@ -431,7 +428,8 @@ def _planned_pnl(planned_trades: list[PlannedTrade], repo: Repository) -> Decima
         if total_qty <= 0:
             continue
         total_basis = sum(
-            (Decimal(str(lot.adjusted_basis)) for lot in lots), Decimal("0"),
+            (Decimal(str(lot.adjusted_basis)) for lot in lots),
+            Decimal("0"),
         )
         avg_basis = total_basis / total_qty
         delta += (p.price - avg_basis) * p.qty

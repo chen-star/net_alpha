@@ -187,3 +187,12 @@ class CashEventRow(SQLModel, table=True):
     amount: float  # always positive; sign comes from `kind`
     ticker: str | None = Field(default=None, index=True)
     description: str = ""
+
+
+class UserPreferenceRow(SQLModel, table=True):
+    __tablename__ = "user_preferences"
+
+    account_id: int = Field(primary_key=True, foreign_key="accounts.id")
+    profile: str = Field(default="active")  # 'conservative' | 'active' | 'options'
+    density: str = Field(default="comfortable")  # 'compact' | 'comfortable' | 'tax'
+    updated_at: datetime

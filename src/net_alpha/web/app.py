@@ -6,6 +6,7 @@ from importlib.resources import files
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from jinja2 import pass_context
 
 from net_alpha.audit import encode_metric_ref as _encode_metric_ref
 from net_alpha.config import Settings, load_pricing_config, load_tax_config
@@ -18,6 +19,7 @@ from net_alpha.pricing.yahoo import YahooPriceProvider
 from net_alpha.web.routes import audit_routes, holdings, sim, system, ticker, trades, wash_sales
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
+from net_alpha.web.routes import preferences as preferences_routes
 from net_alpha.web.routes import tax as tax_routes
 
 
@@ -62,6 +64,55 @@ def create_app(settings: Settings) -> FastAPI:
         return get_imports_badge_count(_Repository(_engine), settings=settings)
 
     templates.env.globals["imports_badge_count"] = _imports_badge_count
+
+    @pass_context
+    def _profile_switcher_data(ctx) -> dict[str, object]:
+        from net_alpha.db.repository import Repository as _Repository
+        from net_alpha.prefs.profile import (
+            DEFAULT_PROFILE_SETTINGS,
+            resolve_effective_profile,
+        )
+
+        request = ctx.get("request")
+        account = None
+        if request is not None:
+            account = request.query_params.get("account")
+
+        _engine = get_engine(settings.db_path)
+        _repo = _Repository(_engine)
+        accounts = _repo.list_accounts()
+        prefs = _repo.list_user_preferences()
+        filter_id: int | None = None
+        if account:
+            for a in accounts:
+                if f"{a.broker}/{a.label}" == account:
+                    filter_id = a.id
+                    break
+        prof_by_id = {p.account_id: p.profile for p in prefs}
+        profile = resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
+        return {
+            "accounts": accounts,
+            "account_profiles": prof_by_id,
+            "profile": profile if accounts else DEFAULT_PROFILE_SETTINGS,
+            "show_switcher": bool(accounts),
+        }
+
+    templates.env.globals["profile_switcher_data"] = _profile_switcher_data
+
+    def _first_visit_modal_data() -> dict[str, object]:
+        from net_alpha.db.repository import Repository as _Repository
+
+        _engine = get_engine(settings.db_path)
+        _repo = _Repository(_engine)
+        accounts = _repo.list_accounts()
+        prefs = _repo.list_user_preferences()
+        return {
+            "show_modal": bool(accounts) and not prefs,
+            "accounts": accounts,
+        }
+
+    templates.env.globals["first_visit_modal_data"] = _first_visit_modal_data
+
     app.state.templates = templates
 
     @app.get("/healthz")
@@ -69,6 +120,7 @@ def create_app(settings: Settings) -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(audit_routes.router)
+    app.include_router(preferences_routes.router)
     app.include_router(tax_routes.router)
     app.include_router(wash_sales.router)
     app.include_router(holdings.router)

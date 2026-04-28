@@ -1,0 +1,26 @@
+{# Inputs:
+    profile: ProfileSettings   — current profile (for .density)
+    page_key: str              — e.g., "/holdings"; used for localStorage key
+    selected_account: str      — display form, used to preserve filter on submit
+    account_id: int | None     — when set, density write is per-account; else all
+#}
+<div class="density-toggle inline-flex items-center gap-1 text-[12px]"
+     data-page-key="{{ page_key }}"
+     x-data
+     x-init="window.applyDensityFromLocalStorage && window.applyDensityFromLocalStorage($el)">
+  <span class="text-label-3 mr-1">Density:</span>
+  {% for d in ['compact', 'comfortable', 'tax'] %}
+    <form method="post" action="/preferences" class="inline">
+      {% if account_id is not none %}<input type="hidden" name="account_id" value="{{ account_id }}">{% endif %}
+      <input type="hidden" name="profile" value="{{ profile.profile }}">
+      <input type="hidden" name="density" value="{{ d }}">
+      <button type="submit"
+              class="px-2 py-0.5 rounded {% if profile.density == d %}bg-text text-bg{% else %}bg-surface{% endif %}"
+              style="border:0.5px solid rgba(255,255,255,0.08);"
+              data-density="{{ d }}" {% if profile.density == d %}aria-current="true"{% endif %}
+              onclick="window.recordDensityOverride && window.recordDensityOverride('{{ page_key }}', '{{ d }}')">
+        {{ {'compact':'Compact','comfortable':'Comfortable','tax':'Tax-view'}[d] }}
+      </button>
+    </form>
+  {% endfor %}
+</div>

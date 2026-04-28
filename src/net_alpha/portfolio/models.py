@@ -27,6 +27,12 @@ class PositionRow:
     # the holdings table so a ticker with only short-option exposure (e.g.
     # UUUU sell-puts) is visible even when equity qty is 0.
     open_option_contracts: Decimal = Decimal("0")
+    # Phase 3 density extras — populated only when as_of is provided to the
+    # compute function. None when not computed (older callers unaffected).
+    days_held: int | None = None  # oldest open lot age, in days
+    lt_qty: Decimal = Decimal("0")  # qty held > 365 days
+    st_qty: Decimal = Decimal("0")  # qty held <= 365 days
+    premium_received: Decimal = Decimal("0")  # net option premium captured on this underlying
 
 
 @dataclass(frozen=True)

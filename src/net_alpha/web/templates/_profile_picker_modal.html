@@ -1,0 +1,84 @@
+{# Inputs:
+    accounts: list[Account]
+   Renders an Alpine-driven dialog with Conservative/Active/Options choices.
+   "Use same profile for all accounts" omits account_id from the form.
+   "Pick per-account" expands to per-account dropdowns.
+   Dismissing without choosing = posting nothing; the modal will reappear next
+   load until at least one preference row exists. #}
+<dialog id="profile-picker-modal"
+        x-data="{ mode: 'all', profile: 'active' }"
+        x-init="setTimeout(() => $el.showModal(), 0)"
+        class="bg-bg text-text rounded p-0 backdrop:bg-black/50">
+  <div class="p-5 min-w-[440px]">
+    <h2 class="text-[16px] font-semibold mb-2">Pick a default profile per account</h2>
+    <p class="text-[12px] text-label-2 mb-3">
+      Profiles change <em>defaults</em>; nothing is hidden permanently. Switch any time
+      from the toolbar.
+    </p>
+
+    <fieldset class="mb-3">
+      <label class="flex items-start gap-2 mb-2">
+        <input type="radio" name="mode" value="all" class="mt-1" x-model="mode">
+        <div>
+          <div class="text-[13px] font-medium">Use the same profile for all accounts</div>
+          <div class="text-[11px] text-label-3">Recommended if your strategy is uniform.</div>
+        </div>
+      </label>
+      <label class="flex items-start gap-2">
+        <input type="radio" name="mode" value="per" class="mt-1" x-model="mode">
+        <div>
+          <div class="text-[13px] font-medium">Pick per-account</div>
+          <div class="text-[11px] text-label-3">Best when one account is taxable + traded actively, another is buy-and-hold.</div>
+        </div>
+      </label>
+    </fieldset>
+
+    <div x-show="mode === 'all'">
+      <form method="post" action="/preferences" class="flex flex-col gap-3">
+        <input type="hidden" name="density" value="comfortable">
+        <fieldset>
+          <label class="flex items-start gap-2 mb-2">
+            <input type="radio" name="profile" value="conservative" x-model="profile">
+            <div>
+              <div class="text-[13px] font-medium">Conservative</div>
+              <div class="text-[11px] text-label-3">Long-term investing, periodic rebalance, taxes once a year.</div>
+            </div>
+          </label>
+          <label class="flex items-start gap-2 mb-2">
+            <input type="radio" name="profile" value="active" x-model="profile">
+            <div>
+              <div class="text-[13px] font-medium">Active</div>
+              <div class="text-[11px] text-label-3">Frequent equity trading; wash-sale watch is your friend.</div>
+            </div>
+          </label>
+          <label class="flex items-start gap-2 mb-2">
+            <input type="radio" name="profile" value="options" x-model="profile">
+            <div>
+              <div class="text-[13px] font-medium">Options</div>
+              <div class="text-[11px] text-label-3">Wheel/CSP/CC strategies; premium tracking matters.</div>
+            </div>
+          </label>
+        </fieldset>
+        <button type="submit" class="btn-primary self-end">Save</button>
+      </form>
+    </div>
+
+    <div x-show="mode === 'per'" class="flex flex-col gap-2">
+      {% for a in accounts %}
+        <form method="post" action="/preferences" class="flex items-center gap-2">
+          <input type="hidden" name="account_id" value="{{ a.id }}">
+          <input type="hidden" name="density" value="comfortable">
+          <span class="text-[12px] flex-1 truncate">{{ a.broker }}/{{ a.label }}</span>
+          <select name="profile"
+                  class="bg-surface text-text rounded px-2 py-1 text-[12px]"
+                  style="border:0.5px solid rgba(255,255,255,0.08);">
+            <option value="active" selected>Active</option>
+            <option value="conservative">Conservative</option>
+            <option value="options">Options</option>
+          </select>
+          <button type="submit" class="btn-ghost">Save</button>
+        </form>
+      {% endfor %}
+    </div>
+  </div>
+</dialog>

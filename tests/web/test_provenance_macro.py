@@ -8,10 +8,7 @@ from net_alpha.web.app import create_app
 def test_macro_emits_correct_hx_get(tmp_path):
     app = create_app(Settings(data_dir=tmp_path))
     env = app.state.templates.env
-    template = env.from_string(
-        '{% from "_provenance_macros.html" import provenance_link %}'
-        "{{ provenance_link(ref) }}"
-    )
+    template = env.from_string('{% from "_provenance_macros.html" import provenance_link %}{{ provenance_link(ref) }}')
     ref = RealizedPLRef(
         kind="realized_pl",
         period=Period(start=date(2026, 1, 1), end=date(2027, 1, 1), label="YTD 2026"),

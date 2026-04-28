@@ -16,13 +16,20 @@ def test_ticker_page_includes_reconciliation_strip(tmp_path):
     repo = Repository(engine)
     acct = repo.get_or_create_account(broker="Schwab", label="Tax")
     record = ImportRecord(
-        account_id=acct.id, csv_filename="t.csv", csv_sha256="h",
-        imported_at=datetime.now(), trade_count=1,
+        account_id=acct.id,
+        csv_filename="t.csv",
+        csv_sha256="h",
+        imported_at=datetime.now(),
+        trade_count=1,
     )
     repo.add_import(
-        acct, record,
-        [Trade(account="Schwab/Tax", date=date(2026, 1, 1), ticker="AAPL",
-               action="Buy", quantity=10, cost_basis=1000.0)],
+        acct,
+        record,
+        [
+            Trade(
+                account="Schwab/Tax", date=date(2026, 1, 1), ticker="AAPL", action="Buy", quantity=10, cost_basis=1000.0
+            )
+        ],
     )
     client = TestClient(create_app(settings))
     resp = client.get("/ticker/AAPL")

@@ -13,9 +13,17 @@
         {% if selected_account %}{{ selected_account }}{% else %}All accounts{% endif %} ·
         {{ selected_period|default('YTD')|upper }}
       </div>
+      {% include "_density_toggle.html" with context %}
     </div>
     {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
   </div>
+
+  {# Emit column markers so tests / density.js can read extra_columns regardless
+     of whether imports exist (empty-state path never reaches _portfolio_table). #}
+  {% if extra_columns %}
+    <span hidden class="cols-meta"
+      {% for col in extra_columns %}data-col="{{ col }}" {% endfor %}></span>
+  {% endif %}
 
   {% if not imports %}
     {% include "_portfolio_empty_state.html" %}

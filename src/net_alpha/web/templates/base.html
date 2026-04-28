@@ -11,6 +11,7 @@
   <script src="/static/alpine.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/vendor/apexcharts/apexcharts.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/charts.js?v={{ asset_v }}" defer></script>
+  <script src="/static/density.js?v={{ asset_v }}" defer></script>
 </head>
 <body class="min-h-screen flex flex-col bg-bg text-text">
   <header class="topbar">
@@ -34,6 +35,12 @@
       </nav>
     </div>
     <div class="flex gap-2 items-center">
+      {% set _ps = profile_switcher_data() %}
+      {% if _ps.show_switcher %}
+        {% with accounts=_ps.accounts, account_profiles=_ps.account_profiles, profile=_ps.profile %}
+          {% include "_profile_switcher.html" %}
+        {% endwith %}
+      {% endif %}
       {% block topbar_right %}{% endblock %}
     </div>
   </header>
@@ -59,5 +66,11 @@
       <div class="text-label-3 text-sm">Loading…</div>
     </div>
   </dialog>
+  {% set _fvm = first_visit_modal_data() %}
+  {% if _fvm.show_modal %}
+    {% with accounts=_fvm.accounts %}
+      {% include "_profile_picker_modal.html" %}
+    {% endwith %}
+  {% endif %}
 </body>
 </html>
