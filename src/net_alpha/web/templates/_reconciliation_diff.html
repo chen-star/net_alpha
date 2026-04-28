@@ -1,0 +1,41 @@
+<div class="recon-strip recon-strip-expanded panel">
+  <div class="px-4 py-2 flex items-center gap-3" style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+    <span class="text-xs text-label-3">net-alpha:</span>
+    <span class="num font-mono">${{ "%.2f"|format(result.net_alpha_total) }}</span>
+    <span class="text-xs text-label-3">·</span>
+    <span class="text-xs text-label-3">{{ result.source_label }}:</span>
+    <span class="num font-mono">${{ "%.2f"|format(result.broker_total) }}</span>
+    <span class="text-warn">△ ${{ "%.2f"|format(result.delta|abs) }}</span>
+    <button class="text-xs underline ml-auto"
+            hx-get="/reconciliation/{{ result.symbol }}?account_id={{ result.account_id }}&expanded=false"
+            hx-target="closest .recon-strip-expanded"
+            hx-swap="outerHTML">
+      collapse
+    </button>
+  </div>
+  <table class="net-table text-sm w-full">
+    <thead>
+      <tr><th>Closed</th><th>Opened</th><th class="r">Qty</th>
+          <th class="r">Broker basis</th><th class="r">Broker proceeds</th>
+          <th class="r">net-alpha basis</th><th class="r">net-alpha proceeds</th>
+          <th class="r">Δ</th><th>Likely cause</th></tr>
+    </thead>
+    <tbody>
+      {% for d in diffs %}
+        <tr>
+          <td class="font-mono">{{ d.closed_date }}</td>
+          <td class="font-mono">{{ d.opened_date }}</td>
+          <td class="r num font-mono">{{ "%.4f"|format(d.qty) }}</td>
+          <td class="r num font-mono">${{ "%.2f"|format(d.broker_basis) }}</td>
+          <td class="r num font-mono">{% if d.broker_proceeds is not none %}${{ "%.2f"|format(d.broker_proceeds) }}{% endif %}</td>
+          <td class="r num font-mono">{% if d.net_alpha_basis is not none %}${{ "%.2f"|format(d.net_alpha_basis) }}{% endif %}</td>
+          <td class="r num font-mono">{% if d.net_alpha_proceeds is not none %}${{ "%.2f"|format(d.net_alpha_proceeds) }}{% endif %}</td>
+          <td class="r num font-mono {% if d.delta < 0 %}text-neg{% elif d.delta > 0 %}text-pos{% endif %}">
+            {% if d.delta != 0 %}${{ "%.2f"|format(d.delta|abs) }}{% else %}—{% endif %}
+          </td>
+          <td class="text-xs text-label-3">{{ d.likely_cause or "—" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
