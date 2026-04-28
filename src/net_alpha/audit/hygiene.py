@@ -1,4 +1,5 @@
 """Data hygiene: surface trade/lot/cash data quality issues for triage."""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -14,9 +15,9 @@ HygieneSeverity = Literal["info", "warn", "error"]
 class HygieneFixForm(BaseModel):
     """An inline HTMX form rendered on a hygiene row."""
 
-    action: str                   # POST endpoint, e.g. /audit/set-basis
-    fields: dict[str, str]        # field name -> field type ("date" | "number" | "text")
-    hidden: dict[str, str]        # hidden form values, e.g. {"trade_id": "..."}
+    action: str  # POST endpoint, e.g. /audit/set-basis
+    fields: dict[str, str]  # field name -> field type ("date" | "number" | "text")
+    hidden: dict[str, str]  # hidden form values, e.g. {"trade_id": "..."}
 
 
 class HygieneIssue(BaseModel):
@@ -38,9 +39,41 @@ def collect_issues(repo: Repository) -> list[HygieneIssue]:
     return issues
 
 
+def _get_unpriced_symbols(repo: Repository) -> list[str]:
+    """Symbols held in open lots without a cached price quote.
+
+    Reads from the existing PriceCache. Only equity lots are checked (option
+    lots don't drive the unpriced badge).
+    """
+    from net_alpha.pricing.cache import PriceCache
+
+    engine = repo.engine
+    cache = PriceCache(engine, ttl_seconds=86400)  # generous TTL — we just want presence
+    symbols = sorted({lot.ticker for lot in repo.all_lots() if lot.option_details is None})
+    missing: list[str] = []
+    for s in symbols:
+        if cache.get(s) is None:
+            missing.append(s)
+    return missing
+
+
 def _check_unpriced(repo: Repository) -> list[HygieneIssue]:
     """Open lots whose ticker has no current price quote."""
-    return []
+    issues: list[HygieneIssue] = []
+    for sym in _get_unpriced_symbols(repo):
+        issues.append(
+            HygieneIssue(
+                category="unpriced",
+                severity="warn",
+                summary=f"{sym} has no price quote",
+                detail=(
+                    "Unrealized P&L for this symbol is excluded from totals. "
+                    "Common causes: delisted, OTC, or symbol mismatch with Yahoo."
+                ),
+                fix_url=f"/holdings?symbol={sym}",
+            )
+        )
+    return issues
 
 
 def _check_basis_unknown(repo: Repository) -> list[HygieneIssue]:
