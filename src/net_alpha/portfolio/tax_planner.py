@@ -11,7 +11,13 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from net_alpha.models.domain import Trade
+from net_alpha.db.repository import Repository
+from net_alpha.engine.lockout import compute_lockout_clear_date
+from net_alpha.models.domain import Lot, Trade
+from net_alpha.portfolio.positions import consume_lots_fifo
+from net_alpha.pricing.service import PricingService
+
+LT_HOLDING_DAYS = 365  # tax long-term threshold (>365 days held)
 
 
 class CSPAssigned(BaseModel):
@@ -127,3 +133,117 @@ class HarvestOpportunity(BaseModel):
     premium_offset: Decimal | None  # absolute amount of premium received from origin event
     premium_origin_event: PremiumOriginEvent | None
     suggested_replacements: list[str]
+
+
+# ---------------------------------------------------------------------------
+# Harvest queue helpers
+# ---------------------------------------------------------------------------
+
+
+def _account_lookup(repo: Repository) -> dict[str, int]:
+    return {a.display(): a.id for a in repo.list_accounts() if a.id is not None}
+
+
+def _open_lots_with_loss(
+    repo: Repository,
+    pricing: PricingService,
+    as_of: date,
+    account_id: int | None,
+) -> list[tuple[Lot, Decimal, Decimal, Decimal]]:
+    """Return (lot, remaining_qty, remaining_basis, market_value) for open loss lots.
+
+    Excludes gains, options, and lots without a current price.
+    """
+    lots = repo.all_lots()
+    trades = repo.all_trades()
+    gl_eq = repo.get_equity_gl_closures()
+    gl_opt = repo.get_option_gl_closures()
+    consumed = consume_lots_fifo(
+        lots=lots,
+        trades=trades,
+        gl_closures=gl_eq,
+        gl_option_closures=gl_opt,
+    )
+
+    accounts = _account_lookup(repo)
+    symbols = sorted({lot.ticker for (lot, qty, _basis) in consumed if qty > 0 and lot.option_details is None})
+    quotes = pricing.get_prices(symbols)
+
+    candidates: list[tuple[Lot, Decimal, Decimal, Decimal]] = []
+    for lot, remaining_qty, remaining_basis in consumed:
+        if remaining_qty <= 0:
+            continue
+        if lot.option_details is not None:
+            continue
+        if account_id is not None and accounts.get(lot.account) != account_id:
+            continue
+        quote = quotes.get(lot.ticker)
+        if quote is None:
+            continue
+        market_value = Decimal(str(remaining_qty)) * Decimal(str(quote.price))
+        if market_value >= Decimal(str(remaining_basis)):
+            continue  # at gain or flat
+        candidates.append((lot, Decimal(str(remaining_qty)), Decimal(str(remaining_basis)), market_value))
+    return candidates
+
+
+def compute_harvest_queue(
+    repo: Repository,
+    pricing: PricingService,
+    as_of: date,
+    etf_pairs: dict[str, list[str]],
+    etf_replacements: dict[str, list[str]],
+    account_id: int | None = None,
+    only_harvestable: bool = False,
+) -> list[HarvestOpportunity]:
+    """Open lots at unrealized loss, sortable, with lockout-clear date and premium offset.
+
+    Pure read. Returns rows sorted by absolute loss descending (most-negative first).
+    """
+    candidates = _open_lots_with_loss(repo, pricing, as_of, account_id)
+    accounts = _account_lookup(repo)
+    all_trades = repo.all_trades()
+
+    rows: list[HarvestOpportunity] = []
+    for lot, qty, basis, market_value in candidates:
+        loss = market_value - basis
+        days_held = (as_of - lot.date).days
+        lt_st: Literal["LT", "ST"] = "LT" if days_held > LT_HOLDING_DAYS else "ST"
+        clear = compute_lockout_clear_date(
+            symbol=lot.ticker,
+            account=lot.account,
+            all_trades=all_trades,
+            as_of=as_of,
+            etf_pairs=etf_pairs,
+        )
+        if only_harvestable and clear is not None:
+            continue
+
+        # Premium offset: only if origin trade is a CSP-assigned synthetic Buy.
+        origin_event: PremiumOriginEvent | None = None
+        premium_offset: Decimal | None = None
+        if lot.trade_id is not None:
+            for t in all_trades:
+                if t.id is not None and str(t.id) == str(lot.trade_id):
+                    origin_event = extract_premium_origin(t, all_trades)
+                    if origin_event is not None:
+                        premium_offset = origin_event.premium_received
+                    break
+
+        rows.append(
+            HarvestOpportunity(
+                symbol=lot.ticker,
+                account_id=accounts.get(lot.account, 0),
+                account_label=lot.account,
+                qty=qty,
+                loss=loss,
+                lt_st=lt_st,
+                lockout_clear=clear,
+                premium_offset=premium_offset,
+                premium_origin_event=origin_event,
+                suggested_replacements=list(etf_replacements.get(lot.ticker, [])),
+            )
+        )
+
+    rows.sort(key=lambda r: r.loss)  # most-negative first
+    return rows
