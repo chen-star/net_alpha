@@ -139,6 +139,8 @@ def provenance_for(metric: MetricRef, repo: Repository) -> ProvenanceTrace:
         return _realized_pl(metric, repo)
     if isinstance(metric, UnrealizedPLRef):
         return _unrealized_pl(metric, repo)
+    if isinstance(metric, WashImpactRef):
+        return _wash_impact(metric, repo)
     raise KeyError(f"no provenance dispatcher for {metric.kind!r}")
 
 
@@ -240,4 +242,41 @@ def _unrealized_pl(metric: UnrealizedPLRef, repo: Repository) -> ProvenanceTrace
         metric_label=" ".join(label_bits),
         total=round(total, 2),
         trades=contributing,
+    )
+
+
+def _account_display_for_id(account_id: int, repo: Repository) -> str:
+    for a in repo.list_accounts():
+        if a.id == account_id:
+            return f"{a.broker}/{a.label}" if a.label else a.broker
+    return ""
+
+
+def _wash_impact(metric: WashImpactRef, repo: Repository) -> ProvenanceTrace:
+    adjustments: list[AppliedAdjustment] = []
+    total = 0.0
+    for v in repo.all_violations():
+        if v.loss_sale_date is None or not (
+            metric.period.start <= v.loss_sale_date < metric.period.end
+        ):
+            continue
+        if metric.account_id is not None:
+            # Either side of the violation must belong to the scoped account.
+            scoped = _account_display_for_id(metric.account_id, repo)
+            if scoped not in (v.loss_account, v.buy_account):
+                continue
+        total += v.disallowed_loss
+        adjustments.append(
+            AppliedAdjustment(
+                violation_id=v.id,
+                loss_trade_id=v.loss_trade_id,
+                replacement_trade_id=v.replacement_trade_id,
+                rolled_amount=v.disallowed_loss,
+                confidence=v.confidence,
+            )
+        )
+    return ProvenanceTrace(
+        metric_label=f"{metric.period.label} Wash Impact",
+        total=round(total, 2),
+        adjustments=adjustments,
     )
