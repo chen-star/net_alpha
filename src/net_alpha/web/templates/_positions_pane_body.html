@@ -14,10 +14,7 @@
     {% if loss is not none and loss < 0 %} · <span class="text-loss">{{ fmt_currency(loss) }}</span>{% endif %}
   </div>
 
-  <div class="panel p-3">
-    <h3 class="m-0 text-[13px] font-semibold mb-1">Sim sell preview</h3>
-    <p class="text-label-2 m-0 text-[12px]">Coming in Section E.</p>
-  </div>
+  {% include "_positions_pane_sim_preview.html" %}
 
   <div class="panel p-3">
     <h3 class="m-0 text-[13px] font-semibold mb-1">Set basis &amp; date</h3>
