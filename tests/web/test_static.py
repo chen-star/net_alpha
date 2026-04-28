@@ -1,3 +1,6 @@
+from pathlib import Path
+
+
 def test_static_htmx_served(client):
     resp = client.get("/static/htmx.min.js")
     assert resp.status_code == 200
@@ -31,3 +34,22 @@ def test_static_charts_js_served(client):
     resp = client.get("/static/charts.js")
     assert resp.status_code == 200
     assert "netAlphaChartTheme" in resp.text
+
+
+def test_design_tokens_phase0_present():
+    """Phase 0 tokens (§5.1 of UI/UX redesign spec) live in app.src.css."""
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "src" / "net_alpha" / "web" / "static" / "app.src.css"
+    ).read_text()
+    expected = [
+        "--accent-hero:",
+        "--font-feature-num:",
+        "--color-skeleton:",
+        "--color-skeleton-shimmer:",
+        "--shadow-drawer:",
+        "--shadow-pane:",
+        "--ring-focus:",
+    ]
+    missing = [t for t in expected if t not in src]
+    assert not missing, f"Missing tokens in app.src.css: {missing}"
