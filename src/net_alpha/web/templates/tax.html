@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set active_page = 'tax' %}
+{% block title %}Tax &middot; net-alpha{% endblock %}
+{% block content %}
+<div class="tax-page">
+  <h1 class="text-2xl mb-4">Tax</h1>
+  <nav class="tabs mb-4" role="tablist">
+    {% set tabs = [
+      ("wash-sales", "Wash sales"),
+      ("harvest", "Harvest queue"),
+      ("budget", "Offset budget"),
+      ("projection", "Projection"),
+    ] %}
+    {% set _active_tab = tab_view if tab_view is defined else view %}
+    {% for slug, label in tabs %}
+      <a role="tab"
+         class="tab {% if _active_tab == slug %}tab--active{% endif %}"
+         href="/tax?view={{ slug }}{% if selected_account %}&account={{ selected_account }}{% endif %}">
+        {{ label }}
+      </a>
+    {% endfor %}
+  </nav>
+  <div id="tab-content" class="tab-content" role="tabpanel">
+    {% set _active_tab = tab_view if tab_view is defined else view %}
+    {% if _active_tab == "wash-sales" %}
+      {% include "_tax_wash_sales_tab.html" with context %}
+    {% elif _active_tab == "harvest" %}
+      {% include "_harvest_queue.html" with context %}
+    {% elif _active_tab == "budget" %}
+      {% include "_offset_budget_tab.html" with context %}
+    {% elif _active_tab == "projection" %}
+      {% include "_projection_tab.html" with context %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
