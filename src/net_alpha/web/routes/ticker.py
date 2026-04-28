@@ -48,6 +48,16 @@ def ticker_drilldown(
     accounts = sorted({lot.account for lot in lots})
     last_trade = trades[-1] if trades else None
 
+    # Use all accounts that have any trade for this symbol (not just open lots,
+    # so the strip appears even when all lots have been closed or not yet built).
+    trade_displays = {t.account for t in trades}
+    account_ids: list[int] = []
+    for a in repo.list_accounts():
+        display = f"{a.broker}/{a.label}" if a.label else a.broker
+        if display in trade_displays and a.id is not None:
+            account_ids.append(a.id)
+    account_ids.sort()
+
     # Load G/L lots for this ticker across all accounts that have any
     gl_lots: list[RealizedGLLot] = []
     for account in repo.list_accounts():
@@ -79,6 +89,7 @@ def ticker_drilldown(
             "kpi_disallowed_ytd": disallowed_ytd,
             "kpi_accounts": accounts,
             "kpi_last_trade": last_trade,
+            "account_ids": account_ids,
             "display_action": display_action,
             "realized_ref": realized_ref,
         },
