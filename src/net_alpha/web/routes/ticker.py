@@ -11,6 +11,7 @@ from net_alpha.audit import Period, RealizedPLRef
 from net_alpha.db.repository import Repository
 from net_alpha.models.domain import OptionDetails, Trade
 from net_alpha.models.realized_gl import RealizedGLLot
+from net_alpha.portfolio.pnl import realized_pl_from_trades
 from net_alpha.portfolio.positions import compute_open_short_option_positions, open_lots_view
 from net_alpha.web.dependencies import get_repository
 from net_alpha.web.format import display_action
@@ -21,10 +22,22 @@ router = APIRouter()
 @dataclass(frozen=True)
 class TimelineRow:
     """Display-ready Timeline entry — either a real Trade or a synthetic
-    closure (option expiry from Schwab GL with no matching BTC trade)."""
+    closure (option expiry from Schwab GL with no matching BTC trade).
+
+    ``gain_loss`` is the realized P&L attributable to *this* row, when the row
+    represents a close. None for opening events (BTO long, STO short) and for
+    transfers / non-realizing actions. Closing rows get:
+
+    - **Long-lot Sell** (equity sale, STC of long option): ``proceeds - cost_basis``.
+    - **BTC of short** (option_short_close, _expiry, _assigned synthetic): the
+      paired STO premium minus the BTC cost. Assigned-close folds into the
+      stock buy basis instead and is intentionally ``None`` here so the user
+      sees the realization only on the eventual stock sale.
+    """
 
     trade: Trade
     assigned_from: OptionDetails | None = None  # set on put_assignment Buy rows
+    gain_loss: float | None = None
 
 
 def _build_timeline_rows(
@@ -61,6 +74,37 @@ def _build_timeline_rows(
         opt = t.option_details
         closed_keys_in_trades.add((t.ticker, opt.strike, opt.expiry, opt.call_put))
 
+    # --- Index STO premium per (account, ticker, strike, expiry, cp) so each
+    # BTC row can show the close-event gain/loss. We accept multiple STOs
+    # (e.g. an STO that was rolled and then closed in one BTC).
+    sto_premium_by_key: dict[tuple[str, str, float, date, str], float] = {}
+    for t in trades:
+        if not t.is_sell() or not t.basis_source.startswith("option_short_open"):
+            continue
+        if t.option_details is None:
+            continue
+        opt = t.option_details
+        key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
+        sto_premium_by_key[key] = sto_premium_by_key.get(key, 0.0) + (t.proceeds or 0.0)
+
+    def _row_gain_loss(t: Trade) -> float | None:
+        # Long-lot Sells (equity sale, STC of long option): direct realization.
+        if t.is_sell():
+            if t.basis_source.startswith("option_short_open"):
+                return None  # opening event, no realization yet
+            if t.proceeds is None or t.cost_basis is None:
+                return None
+            return float(t.proceeds) - float(t.cost_basis)
+        # BTC of regular / expired short: STO_premium - BTC_cost.
+        if t.is_buy() and t.basis_source in {"option_short_close", "option_short_close_expiry"}:
+            if t.option_details is None:
+                return None
+            opt = t.option_details
+            key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
+            sto = sto_premium_by_key.get(key, 0.0)
+            return sto - float(t.cost_basis or 0.0)
+        return None
+
     rows: list[TimelineRow] = []
     for t in trades:
         if t.basis_source == "option_short_close_assigned":
@@ -68,7 +112,7 @@ def _build_timeline_rows(
         assigned_from = None
         if t.basis_source == "put_assignment":
             assigned_from = assigned_close_by_key.get((t.date, t.account, t.ticker))
-        rows.append(TimelineRow(trade=t, assigned_from=assigned_from))
+        rows.append(TimelineRow(trade=t, assigned_from=assigned_from, gain_loss=_row_gain_loss(t)))
 
     # --- Synthesize Closed-by-Expiry rows from GL ---
     seen_synth: set[tuple[str, float, date, str, date]] = set()
@@ -101,7 +145,7 @@ def _build_timeline_rows(
                 call_put=gl.option_call_put,
             ),
         )
-        rows.append(TimelineRow(trade=synth))
+        rows.append(TimelineRow(trade=synth, gain_loss=_row_gain_loss(synth)))
 
     rows.sort(key=lambda r: (r.trade.date, r.trade.id))
     return rows
@@ -133,14 +177,8 @@ def ticker_drilldown(
     violations = repo.get_violations_for_ticker(symbol)
 
     today = date.today()
-    realized_ytd = sum(
-        ((t.proceeds or 0.0) - (t.cost_basis or 0.0) for t in trades if t.date.year == today.year and t.is_sell()),
-        start=0.0,
-    )
-    realized_lifetime = sum(
-        ((t.proceeds or 0.0) - (t.cost_basis or 0.0) for t in trades if t.is_sell()),
-        start=0.0,
-    )
+    realized_ytd = float(realized_pl_from_trades(trades, period=(today.year, today.year + 1)))
+    realized_lifetime = float(realized_pl_from_trades(trades, period=None))
     disallowed_ytd = sum(
         (v.disallowed_loss for v in violations if v.loss_sale_date and v.loss_sale_date.year == today.year),
         start=0.0,

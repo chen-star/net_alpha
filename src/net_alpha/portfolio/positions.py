@@ -427,11 +427,12 @@ def compute_open_positions(
     _SKIP_AGG_SOURCES = {"option_short_open_assigned", "option_short_close_assigned"}
     buys_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     sells_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
-    realized_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     premium_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    trades_by_sym: dict[str, list[Trade]] = defaultdict(list)
     for t in trades:
         sym = t.ticker
         accounts_by_sym[sym].add(t.account)  # ensure account is captured even if no open lot
+        trades_by_sym[sym].append(t)
         if t.basis_source in _SKIP_AGG_SOURCES:
             # Same skip applies to premium_received: assigned-put STO/synthetic-close
             # premium is already folded into the underlying basis. Counting it here
@@ -447,9 +448,15 @@ def compute_open_positions(
             buys_by_sym[sym] += Decimal(str(t.cost_basis or 0))
         elif t.action.lower() == "sell":
             sells_by_sym[sym] += Decimal(str(t.proceeds or 0))
-            in_period = period is None or (t.date.year >= period[0] and t.date.year < period[1])
-            if in_period:
-                realized_by_sym[sym] += Decimal(str((t.proceeds or 0) - (t.cost_basis or 0)))
+
+    # Realized P/L per symbol uses the canonical helper that pairs short-option
+    # STO/BTC events instead of treating every Sell as a realization. See
+    # net_alpha.portfolio.pnl.realized_pl_from_trades for the full rationale.
+    from net_alpha.portfolio.pnl import realized_pl_from_trades
+
+    realized_by_sym: dict[str, Decimal] = {
+        sym: realized_pl_from_trades(ts, period=period) for sym, ts in trades_by_sym.items()
+    }
 
     rows: list[PositionRow] = []
     for sym, qty in qty_by_sym.items():

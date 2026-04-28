@@ -6,6 +6,7 @@ or None for "Lifetime" (no period filter).
 
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Iterable
 from decimal import Decimal
 
@@ -13,16 +14,81 @@ from net_alpha.models.domain import Lot, Trade, WashSaleViolation
 from net_alpha.portfolio.models import KpiSet, WashImpact
 from net_alpha.pricing.provider import Quote
 
+# BTC basis_source values whose realization pairs with a matching STO. Excludes
+# ``option_short_close_assigned`` because that flow folds the STO premium into
+# the assigned long-stock basis — counting it again here would double-credit
+# the user.
+_BTC_REALIZE_SOURCES = frozenset({"option_short_close", "option_short_close_expiry"})
 
-def _realized_in(trades: Iterable[Trade], period: tuple[int, int] | None) -> Decimal:
+# STO sources whose premium is the proceeds side of a short. The "_assigned"
+# variant is paired through the put_assignment / synthetic-close flow and
+# folded into long-stock basis, so it's intentionally NOT considered for
+# trade-pair realization.
+_STO_PAIRABLE_SOURCES = frozenset({"option_short_open"})
+
+
+def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | None) -> Decimal:
+    """Sum realized P&L across a list of trades.
+
+    Three flows are handled:
+
+    1. **Long-lot Sells** (equity sales, STC of long options): realized on the
+       Sell date as ``proceeds - cost_basis``. Matches the legacy behavior.
+
+    2. **Short-option STO**: an open event — premium is *not* realized until
+       the position closes. STOs contribute zero on their own row.
+
+    3. **Short-option BTC** (``option_short_close`` / ``..._expiry``): paired
+       with all matching STO(s) on (account, ticker, strike, expiry, call_put).
+       Realized = sum_STO_premium - BTC_cost_basis, attributed to the BTC date.
+
+    The previous implementation summed ``proceeds - cost_basis`` for every
+    Sell, which counted the STO premium as realized at open and silently
+    dropped the BTC close (which is a Buy). This led to inflated and
+    direction-wrong YTD/lifetime realized values for any account that wrote
+    options.
+    """
+    trades = list(trades)
     total = Decimal("0")
+
+    sto_premium: dict[tuple, Decimal] = defaultdict(lambda: Decimal("0"))
     for t in trades:
-        if t.action.lower() != "sell":
+        if not t.is_sell():
             continue
-        if period is not None and not (period[0] <= t.date.year < period[1]):
+        if t.basis_source not in _STO_PAIRABLE_SOURCES:
             continue
-        total += Decimal(str((t.proceeds or 0) - (t.cost_basis or 0)))
+        if t.option_details is None:
+            continue
+        opt = t.option_details
+        key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
+        sto_premium[key] += Decimal(str(t.proceeds or 0))
+
+    for t in trades:
+        if t.is_sell():
+            # STOs and the assigned-STO variant are *not* realized at open —
+            # their realization is folded into the matching close (BTC, expiry
+            # synth, or rolled into stock basis on assignment).
+            if t.basis_source.startswith("option_short_open"):
+                continue
+            if period is not None and not (period[0] <= t.date.year < period[1]):
+                continue
+            total += Decimal(str((t.proceeds or 0) - (t.cost_basis or 0)))
+        elif t.is_buy():
+            if t.basis_source not in _BTC_REALIZE_SOURCES:
+                continue
+            if t.option_details is None:
+                continue
+            opt = t.option_details
+            key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
+            if period is not None and not (period[0] <= t.date.year < period[1]):
+                continue
+            total += sto_premium.get(key, Decimal("0")) - Decimal(str(t.cost_basis or 0))
+
     return total
+
+
+# Backwards-compat alias: older callers in this module reference _realized_in.
+_realized_in = realized_pl_from_trades
 
 
 def _open_market_and_basis(

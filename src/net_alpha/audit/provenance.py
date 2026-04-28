@@ -172,22 +172,39 @@ def _to_contributing(t: Trade, import_id: int | None) -> ContributingTrade:
 
 
 def _realized_pl(metric: RealizedPLRef, repo: Repository) -> ProvenanceTrace:
+    """Provenance trace for realized P&L.
+
+    Iterates the same Sell rows the user sees, but the displayed `total` uses
+    the canonical realized helper so STO/BTC option pairing is honored. The
+    contributing-trades list still surfaces every Sell that touched the
+    metric scope so the user can audit raw inputs; only the headline number
+    reflects the corrected math.
+    """
     contributing: list[ContributingTrade] = []
-    total = 0.0
     accounts = _accounts_by_id(repo)
     target_display = accounts.get(metric.account_id) if metric.account_id is not None else None
+    scoped: list[Trade] = []
     for t in repo.all_trades():
-        if t.action.lower() != "sell":
-            continue
-        if not _trade_in_period(t, metric.period):
-            continue
         if metric.symbol is not None and t.ticker != metric.symbol:
             continue
         if target_display is not None and t.account != target_display:
             continue
-        realized = (t.proceeds or 0.0) - (t.cost_basis or 0.0)
-        total += realized
+        scoped.append(t)
+        if t.action.lower() != "sell":
+            continue
+        if not _trade_in_period(t, metric.period):
+            continue
         contributing.append(_to_contributing(t, import_id=None))
+
+    from net_alpha.portfolio.pnl import realized_pl_from_trades
+
+    # Period.end is exclusive; pnl helper expects (year_start, year_end_excl).
+    # When end > Dec 31 of start.year (e.g. Lifetime spanning multi-year), the
+    # helper period filter is permissive enough — we only need the year bounds.
+    period_tuple = (metric.period.start.year, metric.period.end.year + 1)
+    if metric.period.end.year - metric.period.start.year > 50:
+        period_tuple = None  # treat very-wide windows ("Lifetime") as no filter
+    total = float(realized_pl_from_trades(scoped, period=period_tuple))
 
     label_bits = [metric.period.label, "Realized P/L"]
     if metric.symbol:

@@ -86,6 +86,7 @@
           <th>Qty</th>
           <th>Basis</th>
           <th>Proceeds</th>
+          <th class="r" title="Realized P&L attributable to this row. Long-lot sells use proceeds−basis; short-option closes pair the close cost against the matching opening premium.">G/L</th>
           <th></th>
         </tr>
       </thead>
@@ -106,6 +107,15 @@
             <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.cost_basis if t.cost_basis is not none else "-" }}</td>
             <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
+            <td class="px-2 py-1 num font-mono r">
+              {% if row.gain_loss is not none %}
+                <span class="{% if row.gain_loss >= 0 %}text-pos{% else %}text-neg{% endif %}">
+                  {% if row.gain_loss >= 0 %}+{% else %}−{% endif %}${{ "%.2f"|format(row.gain_loss|abs) }}
+                </span>
+              {% else %}
+                <span class="text-label-3">—</span>
+              {% endif %}
+            </td>
             <td class="px-2 py-1 text-[11px] r" id="trade-affordance-{{ t.id }}">
               {% if t.is_manual %}
                 <a href="#" class="text-label-2 hover:text-text mr-2"
@@ -132,14 +142,24 @@
           </tr>
         {% endfor %}
         {% if not timeline_rows %}
-          <tr><td colspan="8" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
+          <tr><td colspan="9" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
         {% endif %}
       </tbody>
     </table>
   </div>
 
-  <h2 class="text-xl mb-2">Open lots</h2>
-  {% include "_lots_table.html" %}
+  {% if lots or not open_shorts %}
+    <h2 class="text-xl mb-2">Open long lots</h2>
+    {% include "_lots_table.html" %}
+  {% else %}
+    {# Only short options open on this ticker — the Open lots table would be
+       empty and confusing. The "Open short options" section right below shows
+       the actual exposure. #}
+    <h2 class="text-xl mb-2">Open positions</h2>
+    <div class="panel mb-6 px-4 py-3 text-[13px] text-label-2">
+      No long lots on {{ symbol }} &mdash; see <strong class="text-text">Open short options</strong> below.
+    </div>
+  {% endif %}
 
   {% if open_shorts %}
     <h2 class="text-xl mt-6 mb-2">Open short options</h2>
