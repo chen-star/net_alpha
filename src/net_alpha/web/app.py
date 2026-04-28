@@ -18,6 +18,7 @@ from net_alpha.pricing.yahoo import YahooPriceProvider
 from net_alpha.web.routes import audit_routes, holdings, sim, system, ticker, trades, wash_sales
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
+from net_alpha.web.routes import preferences as preferences_routes
 from net_alpha.web.routes import tax as tax_routes
 
 
@@ -69,6 +70,7 @@ def create_app(settings: Settings) -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(audit_routes.router)
+    app.include_router(preferences_routes.router)
     app.include_router(tax_routes.router)
     app.include_router(wash_sales.router)
     app.include_router(holdings.router)
