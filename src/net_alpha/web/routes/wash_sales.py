@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from datetime import date as _date
 from datetime import timedelta
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.db.repository import Repository
@@ -44,18 +45,21 @@ def _sort_key(sort: str | None):
     return lambda v: v.loss_sale_date or _date.min
 
 
-@router.get("/wash-sales", response_class=HTMLResponse)
-def wash_sales_page(
-    request: Request,
-    repo: Repository = Depends(get_repository),
-    view: str = Query("table"),
-    ticker: str | None = Query(None),
-    account: str | None = Query(None),
-    year: int | None = Query(None),
-    confidence: str | None = Query(None),
-    sort: str | None = Query(None),
-    order: str | None = Query("desc"),
-) -> HTMLResponse:
+def _wash_sales_context(
+    repo: Repository,
+    ticker: str | None = None,
+    account: str | None = None,
+    year: int | None = None,
+    confidence: str | None = None,
+    sort: str | None = None,
+    order: str = "desc",
+    view: str = "table",
+) -> dict:
+    """Build the wash-sales view context (filters, summary, violations, tickers, accounts...).
+
+    Reusable from the new /tax route. Does NOT include ``request`` or ``active_page`` keys —
+    the caller adds those.
+    """
     if view not in ("table", "calendar"):
         view = "table"
 
@@ -134,7 +138,20 @@ def wash_sales_page(
             }
         )
 
-    return request.app.state.templates.TemplateResponse(request, "wash_sales.html", ctx)
+    return ctx
+
+
+@router.get("/wash-sales", response_class=HTMLResponse)
+def wash_sales_legacy(request: Request) -> RedirectResponse:
+    """301 redirect — /wash-sales has been renamed to /tax (Phase 2).
+
+    Old ?view=table|calendar sub-views are normalised to view=wash-sales
+    so the redirect always lands on a valid /tax view.
+    """
+    qs = dict(request.query_params)
+    if qs.get("view") in (None, "table", "calendar"):
+        qs["view"] = "wash-sales"
+    return RedirectResponse(url="/tax?" + urlencode(qs), status_code=301)
 
 
 # 301 redirects from old paths — preserve query string.
