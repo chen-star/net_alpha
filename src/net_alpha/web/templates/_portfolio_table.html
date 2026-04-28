@@ -97,6 +97,10 @@
   </div>
 </div>
 
+{% if extra_columns is defined and extra_columns %}
+  <span hidden class="cols-meta"
+    {% for col in extra_columns %}data-col="{{ col }}"{% endfor %}></span>
+{% endif %}
 {% if not rows %}
   <div class="panel text-label-2 text-[13px]">
     {% if selected_symbols %}No symbols match the selected filter.
@@ -117,6 +121,15 @@
           <th class="r" title="Open Cost ÷ Qty. The per-share book basis after wash-sale adjustments.">Avg Basis</th>
           <th class="r" title="(Total Buys − Total Sells, including option premium) ÷ current Qty. Your true per-share cash exposure on the position right now (independent of basis).">Cash Sunk/sh</th>
           <th class="r" title="Mkt $ − Open Cost on currently open lots. — when no price is available.">Unrealized</th>
+          {% if extra_columns is defined %}
+            {% if 'days_held' in extra_columns %}<th data-col="days_held" class="r">Days held</th>{% endif %}
+            {% if 'lt_st_split' in extra_columns %}<th data-col="lt_st_split" class="r">LT / ST</th>{% endif %}
+            {% if 'premium_received' in extra_columns %}<th data-col="premium_received" class="r">Prem.</th>{% endif %}
+            {% if 'origin_event' in extra_columns %}<th data-col="origin_event">Origin</th>{% endif %}
+            {% if 'days_to_ltcg' in extra_columns %}<th data-col="days_to_ltcg" class="r">&rarr;LTCG</th>{% endif %}
+            {% if 'harvestable' in extra_columns %}<th data-col="harvestable" class="r">Harv.</th>{% endif %}
+            {% if 'premium_offset' in extra_columns %}<th data-col="premium_offset" class="r">Prem.&nbsp;off</th>{% endif %}
+          {% endif %}
         </tr>
       </thead>
       <tbody>
@@ -166,6 +179,15 @@
                 {% endif %}
               {% endif %}
             </td>
+            {% if extra_columns is defined %}
+              {% if 'days_held' in extra_columns %}<td class="r num">{{ r.days_held if r.days_held is not none else '—' }}{% if r.days_held is not none %}d{% endif %}</td>{% endif %}
+              {% if 'lt_st_split' in extra_columns %}<td class="r num">{{ "%g"|format(r.lt_qty|float) }}LT / {{ "%g"|format(r.st_qty|float) }}ST</td>{% endif %}
+              {% if 'premium_received' in extra_columns %}<td class="r num">${{ "%.0f"|format(r.premium_received|float) }}</td>{% endif %}
+              {% if 'origin_event' in extra_columns %}<td>—</td>{% endif %}
+              {% if 'days_to_ltcg' in extra_columns %}<td class="r num">—</td>{% endif %}
+              {% if 'harvestable' in extra_columns %}<td class="r">—</td>{% endif %}
+              {% if 'premium_offset' in extra_columns %}<td class="r num">—</td>{% endif %}
+            {% endif %}
           </tr>
         {% endfor %}
       </tbody>

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
+from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.web.dependencies import get_repository
 
 router = APIRouter()
@@ -27,6 +28,17 @@ def holdings_page(
     available_years = sorted(import_years | {current_year}, reverse=True)
 
     selected_period = period or "ytd"
+
+    prefs = repo.list_user_preferences()
+    filter_id = None
+    if account:
+        for a in repo.list_accounts():
+            if f"{a.broker}/{a.label}" == account:
+                filter_id = a.id
+                break
+    profile = resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
+    extra_columns = profile.default_columns("holdings")
+
     return request.app.state.templates.TemplateResponse(
         request,
         "holdings.html",
@@ -39,5 +51,9 @@ def holdings_page(
             "selected_account": account or "",
             "group_options": "merge",
             "toolbar_action": "/holdings",
+            "profile": profile,
+            "extra_columns": extra_columns,
+            "page_key": "/holdings",
+            "account_id": filter_id,
         },
     )

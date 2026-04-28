@@ -332,6 +332,8 @@ def portfolio_positions(
         "show": show,
         "pageSize": page_size,
     }
+    profile = _resolve_profile(repo, account)
+    extra_columns = profile.default_columns("holdings")
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_table.html",
@@ -349,6 +351,8 @@ def portfolio_positions(
             "selected_period": period or "ytd",
             "selected_account": account or "",
             "group_options": group_options,
+            "profile": profile,
+            "extra_columns": extra_columns,
         },
     )
 
