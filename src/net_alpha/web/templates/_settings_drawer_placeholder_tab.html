@@ -1,12 +1,11 @@
 {# Generic placeholder for drawer tabs that arrive in later phases.
 
    Caller passes:
-     {% with phase="2", what="ETF pairs viewer" %}
+     {% with what="ETF pairs viewer" %}
        {% include "_settings_drawer_placeholder_tab.html" %}
      {% endwith %}
 #}
 <div class="flex flex-col items-center justify-center py-12 text-center">
-  <div class="text-label-2 text-[12px] uppercase tracking-wider mb-2">Phase {{ phase }}</div>
+  <div class="text-label-2 text-[12px] uppercase tracking-wider mb-2">Coming soon</div>
   <div class="text-text text-[14px] mb-1">{{ what }}</div>
-  <div class="text-label-3 text-[12px]">Coming in a future Phase {{ phase }} update.</div>
 </div>

@@ -76,7 +76,7 @@
         {% include "_settings_drawer_imports_tab.html" %}
       </div>
       <div x-show="tab === 'profile'" x-cloak>
-        {% with phase="2", what="Profile preferences (default tax tab, default account)" %}
+        {% with what="Profile preferences (default tax tab, default account)" %}
           {% include "_settings_drawer_placeholder_tab.html" %}
         {% endwith %}
       </div>
@@ -84,12 +84,12 @@
         {% include "_settings_drawer_density_tab.html" %}
       </div>
       <div x-show="tab === 'etf-pairs'" x-cloak>
-        {% with phase="2", what="ETF substantially-identical pairs viewer + extender" %}
+        {% with what="ETF substantially-identical pairs viewer + extender" %}
           {% include "_settings_drawer_placeholder_tab.html" %}
         {% endwith %}
       </div>
       <div x-show="tab === 'about'" x-cloak>
-        {% with phase="3", what="Version, disclaimer, privacy guarantees" %}
+        {% with what="Version, disclaimer, privacy guarantees" %}
           {% include "_settings_drawer_placeholder_tab.html" %}
         {% endwith %}
       </div>
