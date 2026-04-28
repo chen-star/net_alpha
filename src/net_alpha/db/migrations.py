@@ -10,6 +10,7 @@ Schema versions:
   v7 — Adds splits and lot_overrides tables for stock-split handling and
        manual lot edits.
   v8 — Adds cash_events table; trades.gross_cash_impact; imports.cash_event_count.
+  v9 — Adds user_preferences (per-account profile + density).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 8
+CURRENT_SCHEMA_VERSION = 9
 
 
 def get_schema_version(session: Session) -> int:
@@ -221,6 +222,22 @@ def _migrate_v7_to_v8(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v8_to_v9(session: Session) -> None:
+    """Add user_preferences (per-account profile + density). Idempotent."""
+    if not _table_exists(session, "user_preferences"):
+        session.exec(
+            text(
+                "CREATE TABLE user_preferences ("
+                "account_id INTEGER PRIMARY KEY, "
+                "profile TEXT NOT NULL DEFAULT 'active', "
+                "density TEXT NOT NULL DEFAULT 'comfortable', "
+                "updated_at TEXT NOT NULL, "
+                "FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE)"
+            )
+        )
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     current = get_schema_version(session)
@@ -256,6 +273,10 @@ def migrate(session: Session) -> None:
     if current < 8:
         _migrate_v7_to_v8(session)
         set_schema_version(session, 8)
+        current = 8
+    if current < 9:
+        _migrate_v8_to_v9(session)
+        set_schema_version(session, 9)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
