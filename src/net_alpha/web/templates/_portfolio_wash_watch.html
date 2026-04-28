@@ -1,15 +1,18 @@
 {# Inputs:
     rows: list[LossCloseRow]
-    window_days: int (default 30) #}
+    window_days: int (default 30)
+    profile: ProfileSettings (optional; absent => default open) #}
 {% set window = window_days|default(30) %}
+{% set _expanded = (profile.shows("wash_watch_expanded") if profile is defined else True) or (rows|length > 0) %}
 
-<div class="panel-head">
-  <h4>Wash-sale watch</h4>
-  <span class="meta">
-    Loss closes in the last {{ window }} days · don't buy back ·
-    {{ rows|length }} symbol{% if rows|length != 1 %}s{% endif %}
-  </span>
-</div>
+<details{% if _expanded %} open{% endif %}>
+  <summary class="panel-head cursor-pointer">
+    <h4>Wash-sale watch</h4>
+    <span class="meta">
+      Loss closes in the last {{ window }} days · don't buy back ·
+      {{ rows|length }} symbol{% if rows|length != 1 %}s{% endif %}
+    </span>
+  </summary>
 
 {% if not rows %}
   <div class="text-label-2 text-[13px] py-3">All clear · no loss closes in the last {{ window }} days.</div>
@@ -42,3 +45,4 @@
     {% endfor %}
   </div>
 {% endif %}
+</details>
