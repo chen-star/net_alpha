@@ -17,8 +17,13 @@ def positions_page(
     request: Request,
     period: str | None = None,
     account: str | None = None,
+    view: str | None = None,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
+    selected_view = view or "all"
+    if selected_view not in {"all", "stocks", "options", "at-loss", "closed"}:
+        selected_view = "all"
+
     imports = repo.list_imports()
     accounts = sorted({imp.account_display for imp in imports})
 
@@ -41,7 +46,7 @@ def positions_page(
 
     return request.app.state.templates.TemplateResponse(
         request,
-        "holdings.html",
+        "positions.html",
         {
             "imports": imports,
             "accounts": accounts,
@@ -55,5 +60,6 @@ def positions_page(
             "extra_columns": extra_columns,
             "page_key": "/positions",
             "account_id": filter_id,
+            "selected_view": selected_view,
         },
     )
