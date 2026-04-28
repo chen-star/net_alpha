@@ -247,3 +247,31 @@ def compute_harvest_queue(
 
     rows.sort(key=lambda r: r.loss)  # most-negative first
     return rows
+
+
+class PlannedTrade(BaseModel):
+    """Transient struct: a hypothetical sell/buy that hasn't been imported yet.
+
+    Used by the harvest queue 'Mark planned' action and by the traffic light.
+    Stored only in the user's localStorage for the session.
+    """
+
+    symbol: str
+    account_id: int
+    action: Literal["Buy", "Sell"]
+    qty: Decimal
+    price: Decimal
+    on: date
+
+
+class OffsetBudget(BaseModel):
+    """YTD realized loss vs the $3,000-against-ordinary-income cap."""
+
+    year: int
+    realized_losses_ytd: Decimal  # signed (negative magnitude)
+    realized_gains_ytd: Decimal  # positive
+    net_realized: Decimal  # gains + losses (signed)
+    cap_against_ordinary: Decimal = Decimal("3000")
+    used_against_ordinary: Decimal  # min(|net_loss|, cap), >= 0
+    carryforward_projection: Decimal  # |net_loss| - cap, clamped to >= 0
+    planned_delta: Decimal  # change in net_realized that would result from planned_trades
