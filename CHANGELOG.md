@@ -2,6 +2,27 @@
 
 
 
+## v0.24.1 (2026-04-28)
+
+### Fix
+
+* fix(web): open-short visualization, lifetime KPIs, density HTMX, tax CSS
+
+- portfolio: skip None proceeds/cost_basis in tax_planner (fixes 500)
+- positions: add compute_open_short_option_positions + OpenShortOptionRow
+- ticker: KPIs show YTD + Lifetime; timeline merges put_assignment Buy and
+  synthesizes &#34;Closed by Expiry&#34; rows; drops duplicate option_short_close_assigned
+- portfolio body: new &#34;Open short options&#34; panel (CSP/CC counts, premium, cash
+  secured) shown when shorts exist
+- density/profile forms switched to hx-post so HX-Refresh response actually
+  refreshes the page
+- tax: add .tabs/.tab/.tab--active styles, _harvest_queue uses .net-table ([`66d0c92`](https://github.com/chen-star/net_alpha/commit/66d0c920612eeedc948bf6d88054a42bf34cc786))
+
+### Unknown
+
+* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`ba3c1cd`](https://github.com/chen-star/net_alpha/commit/ba3c1cd0f229b4dacfcea9e30c3cdde7f329dc33))
+
+
 ## v0.24.0 (2026-04-28)
 
 ### Chore
