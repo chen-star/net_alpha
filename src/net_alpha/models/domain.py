@@ -60,6 +60,16 @@ class Trade(BaseModel):
     transfer_basis_user_set: bool = False
     gross_cash_impact: float | None = None
     option_details: OptionDetails | None = None
+    # Original broker-statement date for transfer rows. ``date`` (above) holds
+    # the *acquisition* date — initially the same as the broker date but
+    # rewritten by the user once they look up when the lot was acquired.
+    # Storing both lets the timeline render "Acq … · Xferred …" so the
+    # broker date is preserved as audit context. Null on non-transfer rows.
+    transfer_date: date | None = None
+    # Groups sibling rows produced by splitting one transfer into N
+    # acquisition lots (multi-segment). All siblings share this id and the
+    # same ``transfer_date``. Null on un-split rows.
+    transfer_group_id: str | None = None
     raw_row_hash: str | None = None
     schema_cache_id: str | None = None
     # Within-CSV occurrence index for trades whose canonical fields are

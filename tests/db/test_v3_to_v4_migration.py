@@ -40,8 +40,10 @@ def test_v3_to_v4_adds_columns_and_bumps_version(tmp_path: Path):
     with Session(eng) as s:
         assert get_schema_version(s) == 3
         migrate(s)
-        # `migrate()` runs to head; v3 → v4 → v5 → v6 → v7 → v8 → v9.
-        assert get_schema_version(s) == 9
+        # `migrate()` runs to head — every step up to CURRENT_SCHEMA_VERSION.
+        from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION
+
+        assert get_schema_version(s) == CURRENT_SCHEMA_VERSION
         cols = {r[1] for r in s.exec(text("PRAGMA table_info(imports)")).all()}
         for col in [
             "min_trade_date",

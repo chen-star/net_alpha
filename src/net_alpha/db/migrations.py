@@ -11,6 +11,10 @@ Schema versions:
        manual lot edits.
   v8 — Adds cash_events table; trades.gross_cash_impact; imports.cash_event_count.
   v9 — Adds user_preferences (per-account profile + density).
+  v10 — Adds trades.transfer_date and trades.transfer_group_id so transfer
+        rows can preserve the original broker-statement date alongside an
+        edited acquisition date, and a single transfer can be split into
+        multiple sibling rows that share a group id.
 """
 
 from __future__ import annotations
@@ -18,7 +22,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 9
+CURRENT_SCHEMA_VERSION = 10
 
 
 def get_schema_version(session: Session) -> int:
@@ -238,6 +242,18 @@ def _migrate_v8_to_v9(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v9_to_v10(session: Session) -> None:
+    """Add trades.transfer_date and trades.transfer_group_id. Idempotent."""
+    if not _table_exists(session, "trades"):
+        return
+    if not _column_exists(session, "trades", "transfer_date"):
+        session.exec(text("ALTER TABLE trades ADD COLUMN transfer_date TEXT"))
+    if not _column_exists(session, "trades", "transfer_group_id"):
+        session.exec(text("ALTER TABLE trades ADD COLUMN transfer_group_id TEXT"))
+        session.exec(text("CREATE INDEX IF NOT EXISTS ix_trades_transfer_group_id ON trades(transfer_group_id)"))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     current = get_schema_version(session)
@@ -277,6 +293,10 @@ def migrate(session: Session) -> None:
     if current < 9:
         _migrate_v8_to_v9(session)
         set_schema_version(session, 9)
+        current = 9
+    if current < 10:
+        _migrate_v9_to_v10(session)
+        set_schema_version(session, 10)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(

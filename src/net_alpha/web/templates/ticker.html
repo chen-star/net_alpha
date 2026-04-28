@@ -94,8 +94,21 @@
         {% for row in timeline_rows %}
           {% set t = row.trade %}
           {% set is_synth = t.basis_source == 'option_short_close_expiry' %}
+          {% set is_transfer = t.basis_source in ('transfer_in', 'transfer_out') %}
           <tr {% if is_synth %}class="text-label-2"{% endif %}>
-            <td class="px-2 py-1 font-mono">{{ t.date }}</td>
+            <td class="px-2 py-1 font-mono">
+              {% if is_transfer %}
+                <span class="text-[10px] text-label-3 uppercase tracking-tightish">Acq</span>
+                {{ t.date }}
+                {% if t.transfer_date and t.transfer_date != t.date %}
+                  <div class="text-[10px] text-label-3">
+                    <span class="uppercase tracking-tightish">Xferred</span> {{ t.transfer_date }}
+                  </div>
+                {% endif %}
+              {% else %}
+                {{ t.date }}
+              {% endif %}
+            </td>
             <td class="px-2 py-1">{{ t.account }}</td>
             <td class="px-2 py-1 text-[11px]">
               {% if is_synth %}<span class="pill" style="color: var(--color-label-3);">auto</span>

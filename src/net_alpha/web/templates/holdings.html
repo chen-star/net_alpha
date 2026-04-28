@@ -32,8 +32,8 @@
          hx-get="/portfolio/positions?period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}&show=open&page=1"
          hx-trigger="load" hx-swap="innerHTML"></div>
 
-    <div id="holdings-short-options" class="panel mt-4"
-         hx-get="/holdings/short-options?account={{ selected_account }}"
+    <div id="holdings-options" class="panel mt-4"
+         hx-get="/holdings/options?account={{ selected_account }}"
          hx-trigger="load" hx-swap="innerHTML"></div>
   {% endif %}
 {% endblock %}

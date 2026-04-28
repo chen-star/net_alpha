@@ -22,7 +22,7 @@ from datetime import date
 from decimal import Decimal
 
 from net_alpha.models.domain import Lot, Trade
-from net_alpha.portfolio.models import OpenShortOptionRow, PositionRow
+from net_alpha.portfolio.models import OpenOptionRow, OpenShortOptionRow, PositionRow
 from net_alpha.pricing.provider import Quote
 
 # Schwab appends a numeric suffix to an option's underlying after a split or
@@ -246,6 +246,86 @@ def compute_open_option_contracts(
         if qty != 0:
             out[ticker] += abs(qty)
     return dict(out)
+
+
+def compute_open_option_positions(
+    trades: Iterable[Trade],
+    lots: Iterable[Lot],
+    *,
+    ticker: str | None = None,
+    account: str | None = None,
+    gl_closures: dict[tuple[str, str], float] | None = None,
+    gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
+) -> list[OpenOptionRow]:
+    """Return one row per open option position — long *or* short.
+
+    Long rows come from the FIFO-consumed lot view (so partially-closed
+    positions report only their remaining quantity and basis). Short rows
+    come from the existing trade-aggregation logic (a chain of STO/BTC
+    paired by (account, ticker_base, strike, expiry, cp)).
+
+    Caller-provided ``ticker`` filters by digit-stripped underlying so
+    corp-action variants (e.g. GME / GME1) collapse together.
+    """
+    trades_list = list(trades)
+    lots_list = list(lots)
+    if account:
+        trades_list = [t for t in trades_list if t.account == account]
+        lots_list = [lot for lot in lots_list if lot.account == account]
+
+    rows: list[OpenOptionRow] = []
+
+    # --- Long side: FIFO-consumed open lots filtered to options ---
+    open_view = open_lots_view(
+        lots=lots_list,
+        trades=trades_list,
+        gl_closures=gl_closures,
+        gl_option_closures=gl_option_closures,
+    )
+    for lot in open_view:
+        if lot.option_details is None:
+            continue
+        if ticker is not None and _opt_ticker_base(lot.ticker) != _opt_ticker_base(ticker):
+            continue
+        opt = lot.option_details
+        rows.append(
+            OpenOptionRow(
+                side="long",
+                account=lot.account,
+                ticker=_opt_ticker_base(lot.ticker),
+                strike=float(opt.strike),
+                expiry=opt.expiry,
+                call_put=opt.call_put,
+                qty=Decimal(str(lot.quantity)),
+                opened_at=lot.date,
+                cash_basis=Decimal(str(lot.adjusted_basis)),
+            )
+        )
+
+    # --- Short side: reuse existing aggregation ---
+    short_rows = compute_open_short_option_positions(
+        trades_list,
+        ticker=ticker,
+        gl_option_closures=gl_option_closures,
+    )
+    for s in short_rows:
+        rows.append(
+            OpenOptionRow(
+                side="short",
+                account=s.account,
+                ticker=s.ticker,
+                strike=s.strike,
+                expiry=s.expiry,
+                call_put=s.call_put,
+                qty=s.qty_short,
+                opened_at=s.opened_at,
+                cash_basis=s.premium_received,
+                contract_multiplier=s.contract_multiplier,
+            )
+        )
+
+    rows.sort(key=lambda r: (r.expiry, r.ticker, r.strike, 0 if r.side == "long" else 1))
+    return rows
 
 
 def compute_open_short_option_positions(

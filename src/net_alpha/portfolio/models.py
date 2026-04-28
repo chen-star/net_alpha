@@ -36,6 +36,33 @@ class PositionRow:
 
 
 @dataclass(frozen=True)
+class OpenOptionRow:
+    """One open option position — long or short — for the unified Holdings panel.
+
+    ``cash_basis`` is the unsigned cash flow on the open contracts: for long
+    rows the cost paid (BTO debit), for short rows the premium received (STO
+    credit minus any BTC). The renderer signs it based on ``side``.
+    """
+
+    side: str  # "long" or "short"
+    account: str
+    ticker: str
+    strike: float
+    expiry: date
+    call_put: str  # "P" or "C"
+    qty: Decimal  # positive number of contracts; side flag carries direction
+    opened_at: date | None
+    cash_basis: Decimal  # long: cost paid; short: premium received (both positive)
+    contract_multiplier: int = 100
+
+    @property
+    def cash_secured(self) -> Decimal:
+        if self.side == "short" and self.call_put == "P":
+            return Decimal(str(self.strike)) * self.qty * Decimal(str(self.contract_multiplier))
+        return Decimal("0")
+
+
+@dataclass(frozen=True)
 class OpenShortOptionRow:
     """One open short option position (STO not yet covered).
 
@@ -136,6 +163,10 @@ class AllocationView:
     top3_pct: Decimal
     top5_pct: Decimal
     top10_pct: Decimal
+    # Every priced holding (no top-N aggregation, no synthetic 'OTHER').
+    # Used by the click-through allocation details modal so the user can see
+    # the full ranked breakdown including small positions hidden in 'OTHER'.
+    all_slices: tuple[AllocationSlice, ...] = ()
 
 
 @dataclass(frozen=True)

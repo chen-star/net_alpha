@@ -53,6 +53,7 @@ def build_allocation(
             top3_pct=Decimal("0"),
             top5_pct=Decimal("0"),
             top10_pct=Decimal("0"),
+            all_slices=(),
         )
 
     head = valued[:top_n]
@@ -117,6 +118,46 @@ def build_allocation(
         s = sum((p.market_value for p in valued[:n]), start=Decimal("0"))
         return (s / grand_total * 100).quantize(Decimal("0.01"))
 
+    # Full ranked list for the click-through details modal — every priced
+    # holding gets its own slice (no top-N aggregation, no 'OTHER' rollup).
+    # Cash slices are appended at the bottom matching the donut's order.
+    all_slices: list[AllocationSlice] = []
+    for i, pos in enumerate(valued, start=1):
+        pct = (pos.market_value / grand_total * 100).quantize(Decimal("0.01"))
+        all_slices.append(
+            AllocationSlice(
+                rank=i,
+                symbol=pos.symbol,
+                market_value=pos.market_value,
+                pct=pct,
+                is_rest=False,
+            )
+        )
+    if has_cash:
+        if free_cash > 0:
+            all_slices.append(
+                AllocationSlice(
+                    rank=0,
+                    symbol="Cash",
+                    market_value=free_cash,
+                    pct=(free_cash / grand_total * 100).quantize(Decimal("0.01")),
+                    is_rest=False,
+                    is_cash=True,
+                )
+            )
+        if pledged > 0:
+            all_slices.append(
+                AllocationSlice(
+                    rank=0,
+                    symbol="Pledged",
+                    market_value=pledged,
+                    pct=(pledged / grand_total * 100).quantize(Decimal("0.01")),
+                    is_rest=False,
+                    is_cash=True,
+                    is_pledged_cash=True,
+                )
+            )
+
     return AllocationView(
         total_market_value=grand_total,
         symbol_count=len(valued),
@@ -125,4 +166,5 @@ def build_allocation(
         top3_pct=_share(3),
         top5_pct=_share(5),
         top10_pct=_share(10),
+        all_slices=tuple(all_slices),
     )

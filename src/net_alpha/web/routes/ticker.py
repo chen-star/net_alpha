@@ -187,7 +187,9 @@ def ticker_drilldown(
         (v.disallowed_loss for v in violations),
         start=0.0,
     )
-    accounts = sorted({lot.account for lot in lots})
+    # Union trade accounts with lot accounts so the KPI strip still surfaces
+    # accounts when only short options are open (no long lots → empty `lots`).
+    accounts = sorted({t.account for t in trades} | {lot.account for lot in lots})
     last_trade = trades[-1] if trades else None
 
     # Use all accounts that have any trade for this symbol (not just open lots,

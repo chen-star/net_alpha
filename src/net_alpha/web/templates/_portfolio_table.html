@@ -1,7 +1,26 @@
 {# Common HTMX query string for swapping pages/toggle. #}
 {% set sym_qs %}{{ selected_symbols|join(',') }}{% endset %}
-{% set qs %}period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}&symbols={{ sym_qs|urlencode }}{% endset %}
+{% set _sort = sort|default('market_value') %}
+{% set _dir = dir|default('desc') %}
+{% set qs %}period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}&symbols={{ sym_qs|urlencode }}&sort={{ _sort }}&dir={{ _dir }}{% endset %}
 {% set qs_full %}{{ qs }}&show={{ show }}&page_size={{ page_size }}{% endset %}
+
+{# Macro: a sortable column header. Toggles direction when re-clicked, otherwise
+   defaults to descending. Preserves all current state via qs_full. #}
+{% macro sort_th(key, label, align='', tooltip='') %}
+  {% set cur = (_sort == key) %}
+  {% set new_dir = 'asc' if (cur and _dir == 'desc') else 'desc' %}
+  <th {% if align %}class="{{ align }}"{% endif %} {% if tooltip %}title="{{ tooltip }}"{% endif %}>
+    <a href="#"
+       hx-get="/portfolio/positions?period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}&symbols={{ sym_qs|urlencode }}&show={{ show }}&page_size={{ page_size }}&sort={{ key }}&dir={{ new_dir }}&page=1"
+       hx-target="#holdings-positions" hx-swap="innerHTML"
+       onclick="event.preventDefault()"
+       class="cursor-pointer {% if cur %}text-text{% else %}hover:text-text{% endif %}"
+       style="text-decoration:none;">
+      {{ label }}{% if cur %} <span class="text-[9px]">{{ '↓' if _dir == 'desc' else '↑' }}</span>{% endif %}
+    </a>
+  </th>
+{% endmacro %}
 <div class="flex items-center justify-between flex-wrap gap-2 mb-2 text-sm">
   <div class="flex items-center gap-2 flex-wrap">
     <span class="label-uc">Show:</span>
@@ -113,14 +132,14 @@
     <table class="net-table">
       <thead>
         <tr>
-          <th title="Underlying ticker. Options are merged into their underlying for quantity/market value (cash flows still tracked).">Symbol</th>
+          {{ sort_th('symbol', 'Symbol', tooltip='Underlying ticker. Click to sort. Options are merged into their underlying for quantity/market value (cash flows still tracked).') }}
           <th title="All accounts that hold (or held) this symbol within the selected scope.">Accounts</th>
-          <th class="r" title="Sum of remaining quantity across all open lots (equity only; options excluded).">Qty</th>
-          <th class="r" title="Qty × latest fetched price. — when no price is available.">Mkt $</th>
-          <th class="r" title="Sum of adjusted basis across open lots — i.e., cost basis after any wash-sale adjustments have been rolled into the replacement lot.">Open Cost</th>
-          <th class="r" title="Open Cost ÷ Qty. The per-share book basis after wash-sale adjustments.">Avg Basis</th>
-          <th class="r" title="(Total Buys − Total Sells, including option premium) ÷ current Qty. Your true per-share cash exposure on the position right now (independent of basis).">Cash Sunk/sh</th>
-          <th class="r" title="Mkt $ − Open Cost on currently open lots. — when no price is available.">Unrealized</th>
+          {{ sort_th('qty', 'Qty', align='r', tooltip='Sum of remaining quantity across all open lots (equity only; options excluded). Click to sort.') }}
+          {{ sort_th('market_value', 'Mkt $', align='r', tooltip='Qty × latest fetched price. — when no price is available. Click to sort.') }}
+          {{ sort_th('open_cost', 'Open Cost', align='r', tooltip='Sum of adjusted basis across open lots. Click to sort.') }}
+          {{ sort_th('avg_basis', 'Avg Basis', align='r', tooltip='Open Cost ÷ Qty. Per-share book basis after wash-sale adjustments. Click to sort.') }}
+          {{ sort_th('cash_sunk', 'Cash Sunk/sh', align='r', tooltip='(Total Buys − Total Sells, including option premium) ÷ current Qty. Click to sort.') }}
+          {{ sort_th('unrealized', 'Unrealized', align='r', tooltip='Mkt $ − Open Cost on currently open lots. — when no price is available. Click to sort.') }}
           {% if extra_columns is defined %}
             {% if 'days_held' in extra_columns %}<th data-col="days_held" class="r" title="Days since the oldest open lot was acquired.">Days held</th>{% endif %}
             {% if 'lt_st_split' in extra_columns %}<th data-col="lt_st_split" class="r" title="Quantity split between long-term (held > 365d) and short-term lots. Affects whether a sale realizes LTCG (favored rate) vs STCG.">LT / ST</th>{% endif %}

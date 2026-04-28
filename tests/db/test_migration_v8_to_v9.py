@@ -36,4 +36,4 @@ def test_migrate_v9_idempotent():
     with Session(engine) as s:
         migrate(s)
         migrate(s)  # second run must not raise
-        assert get_schema_version(s) == 9
+        assert get_schema_version(s) == CURRENT_SCHEMA_VERSION

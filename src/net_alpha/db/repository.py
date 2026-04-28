@@ -217,6 +217,10 @@ class Repository:
                     dup_count += 1
                     continue
                 seen_in_batch.add(nk)
+                # On first import the broker date IS the acquisition date —
+                # populate transfer_date with the same value so the user can
+                # later edit `date` (acquisition) without losing the original.
+                _is_transfer = t.basis_source in ("transfer_in", "transfer_out")
                 tr = TradeRow(
                     import_id=ir.id,
                     account_id=account.id,
@@ -233,6 +237,7 @@ class Repository:
                     option_strike=(t.option_details.strike if t.option_details else None),
                     option_expiry=(t.option_details.expiry.isoformat() if t.option_details else None),
                     option_call_put=(t.option_details.call_put if t.option_details else None),
+                    transfer_date=(t.date.isoformat() if _is_transfer else None),
                 )
                 s.add(tr)
                 s.flush()
@@ -382,8 +387,10 @@ class Repository:
             basis_source=row.basis_source,
             is_manual=row.is_manual,
             transfer_basis_user_set=row.transfer_basis_user_set,
-            gross_cash_impact=row.gross_cash_impact,  # NEW
+            gross_cash_impact=row.gross_cash_impact,
             option_details=opt,
+            transfer_date=(date.fromisoformat(row.transfer_date) if row.transfer_date else None),
+            transfer_group_id=row.transfer_group_id,
         )
 
     def _account_display_for_id(self, s: Session, account_id: int) -> str:

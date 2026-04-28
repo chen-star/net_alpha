@@ -5,7 +5,7 @@
 ] %}
 {% set rest_color = 'rgba(255,255,255,0.14)' %}
 {% set cash_color = 'rgba(142,142,147,0.6)' %}  {# neutral gray; matches Apple's systemGray — free cash #}
-{% set cash_pledged_color = 'rgba(142,142,147,0.32)' %}  {# muted variant — pledged cash (CSP collateral) #}
+{% set cash_pledged_color = 'rgba(255,159,10,0.65)' %}  {# orange (matches Cash KPI's pledged bar) — distinct from free cash + rest #}
 
 {% if allocation.symbol_count == 0 %}
   <div class="text-label-3 text-[12px] py-4 text-center">
@@ -13,8 +13,11 @@
   </div>
 {% else %}
   <div class="flex gap-5 items-center">
-    {# Donut #}
-    <div class="relative shrink-0">
+    {# Donut — click opens full allocation details modal #}
+    <button type="button" class="relative shrink-0 cursor-pointer p-0 m-0 bg-transparent border-0
+                                  hover:scale-[1.02] transition-transform"
+            title="Click for full allocation breakdown"
+            onclick="document.getElementById('allocation-details-modal').classList.remove('hidden')">
       <svg viewBox="0 0 100 100" width="148" height="148"
            style="filter: drop-shadow(0 0 18px rgba(10,132,255,0.14));">
         <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="11"/>
@@ -45,7 +48,7 @@
         </div>
         <div class="text-[10px] text-label-3 mt-[2px]">{{ allocation.symbol_count }} symbol{% if allocation.symbol_count != 1 %}s{% endif %}</div>
       </div>
-    </div>
+    </button>
 
     {# Concentration stats #}
     <div class="flex-1 flex flex-col">
@@ -105,6 +108,72 @@
           </span>
         {% endif %}
       {% endfor %}
+    </div>
+  </div>
+
+  {# Click-through details modal — full ranked breakdown including small
+     positions normally rolled into the 'rest' aggregate. #}
+  <div id="allocation-details-modal"
+       class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+       onclick="if (event.target === this) this.classList.add('hidden')">
+    <div class="bg-surface rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col"
+         style="border:0.5px solid rgba(255,255,255,0.08);">
+      <div class="flex items-baseline justify-between p-4"
+           style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+        <div>
+          <h2 class="text-lg font-semibold tracking-tightish">Allocation breakdown</h2>
+          <div class="text-[11px] text-label-3 mt-1">
+            {{ allocation.symbol_count }} priced symbol{% if allocation.symbol_count != 1 %}s{% endif %}
+            · ${{ "{:,.2f}".format(allocation.total_market_value|float) }} total
+          </div>
+        </div>
+        <button type="button"
+                onclick="document.getElementById('allocation-details-modal').classList.add('hidden')"
+                class="text-label-2 hover:text-text text-2xl leading-none">&times;</button>
+      </div>
+      <div class="overflow-y-auto" style="padding:0;">
+        <table class="net-table text-sm">
+          <thead>
+            <tr>
+              <th class="r" style="width:48px;">#</th>
+              <th>Symbol</th>
+              <th>Type</th>
+              <th class="r">Market $</th>
+              <th class="r">% of total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in allocation.all_slices %}
+              {% if s.is_pledged_cash %}
+                {% set _color = cash_pledged_color %}
+                {% set _type = 'Cash · pledged' %}
+              {% elif s.is_cash %}
+                {% set _color = cash_color %}
+                {% set _type = 'Cash · free' %}
+              {% else %}
+                {% set _color = rank_palette[s.rank - 1] if s.rank <= rank_palette|length else 'rgba(255,255,255,0.4)' %}
+                {% set _type = 'Equity' %}
+              {% endif %}
+              <tr>
+                <td class="r num text-label-3">{{ s.rank if s.rank > 0 else '—' }}</td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <span style="width:8px; height:8px; border-radius:50%; background:{{ _color }};"></span>
+                    <span class="font-semibold">{{ s.symbol }}</span>
+                  </div>
+                </td>
+                <td class="text-[12px] text-label-2">{{ _type }}</td>
+                <td class="r num">${{ "{:,.2f}".format(s.market_value|float) }}</td>
+                <td class="r num font-semibold">{{ "%.2f"|format(s.pct|float) }}%</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 text-[11px] text-label-3"
+           style="border-top:0.5px solid rgba(255,255,255,0.08);">
+        Click outside or press × to close.
+      </div>
     </div>
   </div>
 {% endif %}

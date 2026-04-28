@@ -24,7 +24,11 @@ from net_alpha.portfolio.cash_flow import (
 )
 from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
-from net_alpha.portfolio.positions import compute_open_positions, compute_open_short_option_positions
+from net_alpha.portfolio.positions import (
+    compute_open_option_positions,
+    compute_open_positions,
+    compute_open_short_option_positions,
+)
 from net_alpha.portfolio.tax_planner import (
     MissingTaxConfig,
     TaxBrackets,
@@ -280,6 +284,34 @@ PAGE_SIZE = 25
 PAGE_SIZE_OPTIONS = (10, 25, 50, 100)
 
 
+_SORT_KEYS: dict[str, callable] = {
+    "symbol": lambda r: r.symbol.upper(),
+    "qty": lambda r: r.qty,
+    "market_value": lambda r: r.market_value,
+    "open_cost": lambda r: r.open_cost,
+    "avg_basis": lambda r: r.avg_basis,
+    "cash_sunk": lambda r: r.cash_sunk_per_share,
+    "unrealized": lambda r: r.unrealized_pl,
+}
+
+
+def _sort_rows(rows: list, sort: str | None, direction: str | None) -> list:
+    """Sort holdings rows by a stable key. None values are pushed to the end
+    regardless of direction so the user always sees priced rows first."""
+    key_fn = _SORT_KEYS.get(sort or "")
+    if key_fn is None:
+        # Default: market_value desc with None last (the historical behavior).
+        priced = [r for r in rows if r.market_value is not None]
+        unpriced = [r for r in rows if r.market_value is None]
+        priced.sort(key=lambda r: r.market_value, reverse=True)
+        return priced + unpriced
+    desc = (direction or "desc").lower() == "desc"
+    has = [r for r in rows if key_fn(r) is not None]
+    none_rows = [r for r in rows if key_fn(r) is None]
+    has.sort(key=key_fn, reverse=desc)
+    return has + none_rows
+
+
 @router.get("/portfolio/positions", response_class=HTMLResponse)
 def portfolio_positions(
     request: Request,
@@ -290,6 +322,8 @@ def portfolio_positions(
     page: int = 1,
     page_size: int = PAGE_SIZE,
     symbols: str | None = None,
+    sort: str | None = None,
+    dir: str | None = None,
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
@@ -324,7 +358,8 @@ def portfolio_positions(
     if selected_symbols:
         rows = [r for r in all_rows if r.symbol.upper() in selected_symbols]
     else:
-        rows = all_rows
+        rows = list(all_rows)
+    rows = _sort_rows(rows, sort, dir)
     if page_size not in PAGE_SIZE_OPTIONS:
         page_size = PAGE_SIZE
     total_rows = len(rows)
@@ -364,6 +399,8 @@ def portfolio_positions(
             "group_options": group_options,
             "profile": profile,
             "extra_columns": extra_columns,
+            "sort": sort or "market_value",
+            "dir": (dir or "desc").lower(),
         },
     )
 
@@ -397,39 +434,51 @@ def portfolio_allocation_fragment(
     )
 
 
-@router.get("/holdings/short-options", response_class=HTMLResponse)
-def holdings_short_options(
+@router.get("/holdings/options", response_class=HTMLResponse)
+def holdings_options(
     request: Request,
     account: str | None = None,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
-    """Open short options (CSPs / CCs) panel — rendered on /holdings.
+    """All open option positions (long + short) panel — rendered on /holdings.
 
-    Pure read of trades + GL closures, scoped by account. Returns the same
-    fragment we previously embedded on Portfolio, now keyed off /holdings so
-    the inventory of "things you owe" lives next to the inventory of "things
-    you own".
+    Pure read of trades + lots + GL closures, scoped by account. Sorted by
+    expiry so the next contract to roll/manage is always at the top.
     """
     today = date.today()
     trades = repo.all_trades()
-    if account:
-        trades = [t for t in trades if t.account == account]
-    open_shorts = compute_open_short_option_positions(
+    lots = repo.all_lots()
+    open_options = compute_open_option_positions(
         trades,
+        lots,
+        account=account or None,
+        gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=repo.get_option_gl_closures(),
     )
-    cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
-    premium_received_total = sum((s.premium_received for s in open_shorts), start=Decimal("0"))
+    cash_secured_total = sum((o.cash_secured for o in open_options), start=Decimal("0"))
+    premium_received_total = sum((o.cash_basis for o in open_options if o.side == "short"), start=Decimal("0"))
+    long_cost_total = sum((o.cash_basis for o in open_options if o.side == "long"), start=Decimal("0"))
     return request.app.state.templates.TemplateResponse(
         request,
-        "_portfolio_short_options.html",
+        "_portfolio_open_options.html",
         {
-            "open_shorts": open_shorts,
+            "open_options": open_options,
             "cash_secured_total": cash_secured_total,
             "premium_received_total": premium_received_total,
+            "long_cost_total": long_cost_total,
             "today": today,
         },
     )
+
+
+@router.get("/holdings/short-options", response_class=HTMLResponse)
+def holdings_short_options_legacy(
+    request: Request,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """Backwards-compat alias — renders the unified options panel."""
+    return holdings_options(request, account=account, repo=repo)
 
 
 @router.get("/portfolio/equity-curve", response_class=HTMLResponse)

@@ -113,16 +113,8 @@
   {% endfor %}
 </div>
 
-{# Tax-aware row: offset budget + year-end projection (2-col grid, only if either is present). #}
-{% if (offset_budget is defined and offset_budget) or (has_tax_config is defined or projection is defined) %}
-<div class="grid grid-cols-2 gap-[10px] mt-[10px]">
-  {% if offset_budget is defined and offset_budget %}
-    {% set budget = offset_budget %}
-    {% include "_offset_budget_tile.html" with context %}
-  {% endif %}
-  {% include "_projection_card.html" with context %}
-</div>
-{% endif %}
+{# Tax tiles moved to the dedicated Tax planning section at the bottom of the
+   page (see _portfolio_body.html). Portfolio KPIs stay focused on portfolio. #}
 
 {% if cash_kpis is defined %}
 {% set _csp_total = (cash_secured_total|float) if cash_secured_total is defined and cash_secured_total else 0 %}

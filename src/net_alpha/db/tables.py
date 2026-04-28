@@ -66,6 +66,18 @@ class TradeRow(SQLModel, table=True):
     is_manual: bool = Field(default=False)
     transfer_basis_user_set: bool = Field(default=False)
     gross_cash_impact: float | None = Field(default=None)
+    # The original broker-statement date the transfer landed in the account.
+    # ``trade_date`` (above) is the *acquisition* date — set initially to the
+    # broker date but rewritten by the user once they look up the lot's
+    # acquisition history. Storing both lets the timeline show "Acq …
+    # · Xferred …" so the user can audit when the shares actually moved
+    # vs when the cost basis began. Only meaningful when basis_source is in
+    # {'transfer_in','transfer_out'}; null otherwise.
+    transfer_date: str | None = Field(default=None)
+    # Groups sibling rows that came from a single multi-segment transfer split
+    # (one transfer with N acquisition lots). All siblings share the same
+    # transfer_group_id and the same transfer_date. Null for un-split rows.
+    transfer_group_id: str | None = Field(default=None, index=True)
 
 
 class LotRow(SQLModel, table=True):
