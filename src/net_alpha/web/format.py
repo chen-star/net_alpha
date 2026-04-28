@@ -66,3 +66,34 @@ def fmt_quantity(value: Decimal | float | int | None) -> str:
         return str(int(quantized))
     text = format(quantized, "f").rstrip("0").rstrip(".")
     return text
+
+
+from typing import Literal
+
+Density = Literal["compact", "comfortable", "tax-view"]
+
+
+def fmt_currency(
+    amount: Decimal | float | int | None,
+    *,
+    density: str = "comfortable",
+) -> str:
+    """Render a USD amount.
+
+    Default 2dp. In ``compact`` density, amounts whose absolute value is
+    ≥ $10,000 round to whole dollars. ``tax-view`` follows ``comfortable``
+    (always 2dp). Unknown density values fall back to ``comfortable``
+    rather than raising — formatters must never block render.
+    """
+    if amount is None:
+        return "—"
+    d = amount if isinstance(amount, Decimal) else Decimal(str(amount))
+    use_zero_dp = density == "compact" and abs(d) >= Decimal("10000")
+    if use_zero_dp:
+        rounded = d.quantize(Decimal("1"), rounding=ROUND_HALF_EVEN)
+        body = f"{abs(rounded):,}"
+    else:
+        rounded = d.quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+        body = f"{abs(rounded):,.2f}"
+    sign = "-" if d < 0 else ""
+    return f"{sign}${body}"

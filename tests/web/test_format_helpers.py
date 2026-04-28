@@ -39,3 +39,40 @@ def test_fmt_quantity_accepts_float():
 
 def test_fmt_quantity_none_returns_em_dash():
     assert fmt_quantity(None) == "—"
+
+
+from net_alpha.web.format import fmt_currency
+
+
+@pytest.mark.parametrize(
+    "amount,density,expected",
+    [
+        (Decimal("0"),         "comfortable", "$0.00"),
+        (Decimal("12.5"),      "comfortable", "$12.50"),
+        (Decimal("1234.56"),   "comfortable", "$1,234.56"),
+        (Decimal("1000000"),   "comfortable", "$1,000,000.00"),
+        (Decimal("-50.25"),    "comfortable", "-$50.25"),
+        # Compact + ≥ $10k → 0dp
+        (Decimal("9999.99"),   "compact",     "$9,999.99"),
+        (Decimal("10000"),     "compact",     "$10,000"),
+        (Decimal("12345.67"),  "compact",     "$12,346"),
+        (Decimal("-12345.67"), "compact",     "-$12,346"),
+        # Tax-view follows comfortable (always 2dp)
+        (Decimal("12345.67"),  "tax-view",    "$12,345.67"),
+    ],
+)
+def test_fmt_currency_density_aware(amount, density, expected):
+    assert fmt_currency(amount, density=density) == expected
+
+
+def test_fmt_currency_default_density_is_comfortable():
+    assert fmt_currency(Decimal("12345.67")) == "$12,345.67"
+
+
+def test_fmt_currency_none_returns_em_dash():
+    assert fmt_currency(None) == "—"
+
+
+def test_fmt_currency_unknown_density_falls_back_to_comfortable():
+    # Future-proofing: never raise; never silently swallow values.
+    assert fmt_currency(Decimal("12345.67"), density="bogus") == "$12,345.67"
