@@ -97,3 +97,16 @@ def fmt_currency(
         body = f"{abs(rounded):,.2f}"
     sign = "-" if d < 0 else ""
     return f"{sign}${body}"
+
+
+def fmt_percent(value: Decimal | float | int | None) -> str:
+    """Render a fractional value as a percent with one decimal place.
+
+    Input is fractional (``0.354`` → ``"35.4%"``), not basis-points or
+    pre-multiplied. ``None`` renders as an em dash.
+    """
+    if value is None:
+        return "—"
+    d = value if isinstance(value, Decimal) else Decimal(str(value))
+    pct = (d * Decimal("100")).quantize(Decimal("0.1"), rounding=ROUND_HALF_EVEN)
+    return f"{pct:.1f}%"

@@ -76,3 +76,30 @@ def test_fmt_currency_none_returns_em_dash():
 def test_fmt_currency_unknown_density_falls_back_to_comfortable():
     # Future-proofing: never raise; never silently swallow values.
     assert fmt_currency(Decimal("12345.67"), density="bogus") == "$12,345.67"
+
+
+from net_alpha.web.format import fmt_percent
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (Decimal("0"),       "0.0%"),
+        (Decimal("0.354"),   "35.4%"),       # input is fractional (0.354 = 35.4%)
+        (Decimal("1.0"),     "100.0%"),
+        (Decimal("-0.054"),  "-5.4%"),
+        (Decimal("0.00499"), "0.5%"),        # banker's rounding, halves to even
+        (Decimal("0.0001"),  "0.0%"),
+        (Decimal("1.234"),   "123.4%"),
+    ],
+)
+def test_fmt_percent_one_decimal(value, expected):
+    assert fmt_percent(value) == expected
+
+
+def test_fmt_percent_none_returns_em_dash():
+    assert fmt_percent(None) == "—"
+
+
+def test_fmt_percent_accepts_int():
+    assert fmt_percent(0) == "0.0%"
