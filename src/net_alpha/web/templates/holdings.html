@@ -18,6 +18,13 @@
     {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
   </div>
 
+  {# Emit column markers so tests / density.js can read extra_columns regardless
+     of whether imports exist (empty-state path never reaches _portfolio_table). #}
+  {% if extra_columns %}
+    <span hidden class="cols-meta"
+      {% for col in extra_columns %}data-col="{{ col }}" {% endfor %}></span>
+  {% endif %}
+
   {% if not imports %}
     {% include "_portfolio_empty_state.html" %}
   {% else %}
