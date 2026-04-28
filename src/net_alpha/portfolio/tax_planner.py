@@ -17,6 +17,51 @@ from net_alpha.models.domain import Lot, Trade
 from net_alpha.portfolio.positions import consume_lots_fifo
 from net_alpha.pricing.service import PricingService
 
+# ---------------------------------------------------------------------------
+# Tax projection models (Task 15)
+# ---------------------------------------------------------------------------
+
+
+class MissingTaxConfig(Exception):
+    """Raised by project_year_end_tax when no TaxBrackets provided."""
+
+
+class TaxBrackets(BaseModel):
+    """Single-marginal-rate tax inputs (loaded from config.yaml `tax:` section)."""
+
+    filing_status: Literal["single", "mfj", "mfs", "hoh"]
+    state: str  # ISO; "" for federal-only
+    federal_marginal_rate: Decimal
+    state_marginal_rate: Decimal
+    ltcg_rate: Decimal
+    qualified_div_rate: Decimal
+
+
+class TaxProjection(BaseModel):
+    """Single-marginal-rate year-end estimate. NOT a tax return."""
+
+    year: int
+    realized_st_gain: Decimal  # signed
+    realized_lt_gain: Decimal  # signed
+    qualified_div: Decimal
+    ordinary_div: Decimal
+    interest_income: Decimal
+    federal_tax: Decimal
+    state_tax: Decimal
+    total_tax: Decimal
+    bracket_warnings: list[str] = []
+
+
+def project_year_end_tax(
+    repo: Repository,
+    year: int,
+    brackets: TaxBrackets | None,
+    planned_trades: list[PlannedTrade] | None = None,
+) -> TaxProjection:
+    if brackets is None:
+        raise MissingTaxConfig("TaxBrackets required; set tax: section in config.yaml")
+    raise NotImplementedError  # filled in Task 16
+
 LT_HOLDING_DAYS = 365  # tax long-term threshold (>365 days held)
 
 
