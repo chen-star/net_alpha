@@ -149,11 +149,12 @@
             {% if 'harvestable' in extra_columns %}<th data-col="harvestable" class="r" title="Harvestable loss available on this position right now (capital loss the unrealized P&L would realize if you sold today). (Not yet computed.)">Harv.</th>{% endif %}
             {% if 'premium_offset' in extra_columns %}<th data-col="premium_offset" class="r" title="Premium received this year on this underlying that offsets cost basis when assignment occurs. (Not yet computed.)">Prem.&nbsp;off</th>{% endif %}
           {% endif %}
+          <th class="w-10"></th>
         </tr>
       </thead>
       <tbody>
         {% for r in rows %}
-          <tr class="cursor-pointer"
+          <tr data-row="position" class="group cursor-pointer"
               onclick="window.location='/ticker/{{ r.symbol }}'">
             <td>
               <div class="flex items-center gap-2 font-semibold tracking-tightish">
@@ -207,6 +208,11 @@
               {% if 'harvestable' in extra_columns %}<td class="r">—</td>{% endif %}
               {% if 'premium_offset' in extra_columns %}<td class="r num">—</td>{% endif %}
             {% endif %}
+            <td class="w-10 relative">
+              {% with sym=r.symbol, qty=r.qty, account=r.accounts[0] if r.accounts else '', account_id=none %}
+                {% include "_row_actions.html" %}
+              {% endwith %}
+            </td>
           </tr>
         {% endfor %}
       </tbody>
