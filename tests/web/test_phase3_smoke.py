@@ -58,7 +58,8 @@ def test_phase3_smoke(tmp_path):
     holdings_roth = client.get("/holdings", params={"account": "Schwab/Roth"}).text
     assert 'data-col="lt_st_split"' in holdings_roth
     assert 'data-col="days_to_ltcg"' in holdings_roth  # tax density adds this
-    assert 'data-page-key="/positions"' in holdings_roth
+    # Phase 1 E1: per-page density toggle removed; drawer toggle uses page_key="/"
+    assert 'data-page-key="/"' in holdings_roth
 
     # 5. /holdings with active + comfortable -> days_held + lt_st_split, no tax-only cols.
     holdings_tax = client.get("/holdings", params={"account": "Schwab/Tax"}).text

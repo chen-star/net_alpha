@@ -4,7 +4,6 @@
 {% block content %}
 <div class="tax-page" data-active-tab="{{ tab_view if tab_view is defined else view }}">
   <h1 class="text-2xl mb-4">Tax</h1>
-  {% include "_density_toggle.html" with context %}
   <nav class="tabs mb-4" role="tablist">
     {% set tabs = [
       ("wash-sales", "Wash sales"),

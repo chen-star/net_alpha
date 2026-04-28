@@ -10,8 +10,7 @@
         {% if selected_account %}{{ selected_account }}{% else %}All accounts{% endif %} ·
         {{ selected_period|default('YTD')|upper }}
       </div>
-      {% include "_density_toggle.html" with context %}
-    </div>
+</div>
     {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
   </div>
 

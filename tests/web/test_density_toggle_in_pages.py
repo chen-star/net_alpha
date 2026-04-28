@@ -1,4 +1,10 @@
 # tests/web/test_density_toggle_in_pages.py
+#
+# After Phase 1 E1 the inline density toggle is removed from page chrome.
+# The toggle now lives in the Settings drawer's Density tab (visible on every
+# page via base.html). These tests verify the drawer on each page still carries
+# the toggle — the per-page chrome assertions are replaced by the drawer-scoped
+# check.  Per-page *absence* is covered by test_phase1_density_relocation.py.
 from fastapi.testclient import TestClient
 
 from net_alpha.config import Settings
@@ -16,22 +22,35 @@ def _bootstrap(tmp_path):
     return TestClient(create_app(settings))
 
 
+def _drawer_html(html: str) -> str:
+    """Return the portion of the page inside the settings drawer root."""
+    idx = html.find('id="settings-drawer-root"')
+    assert idx > 0, "settings-drawer-root not found in HTML"
+    return html[idx:idx + 12000]
+
+
 def test_holdings_renders_density_toggle(tmp_path):
+    """Density toggle is present in the drawer on the /holdings page."""
     client = _bootstrap(tmp_path)
     html = client.get("/holdings").text
-    assert 'class="density-toggle' in html
-    assert 'data-page-key="/positions"' in html
+    drawer = _drawer_html(html)
+    assert 'class="density-toggle' in drawer
+    assert 'data-density="compact"' in drawer
 
 
 def test_tax_renders_density_toggle(tmp_path):
+    """Density toggle is present in the drawer on the /tax page."""
     client = _bootstrap(tmp_path)
     html = client.get("/tax").text
-    assert 'class="density-toggle' in html
-    assert 'data-page-key="/tax"' in html
+    drawer = _drawer_html(html)
+    assert 'class="density-toggle' in drawer
+    assert 'data-density="compact"' in drawer
 
 
 def test_imports_renders_density_toggle(tmp_path):
+    """Density toggle is present in the drawer on the /imports/_legacy_page."""
     client = _bootstrap(tmp_path)
     html = client.get("/imports/_legacy_page").text
-    assert 'class="density-toggle' in html
-    assert 'data-page-key="/imports"' in html
+    drawer = _drawer_html(html)
+    assert 'class="density-toggle' in drawer
+    assert 'data-density="compact"' in drawer
