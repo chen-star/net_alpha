@@ -87,7 +87,4 @@ def test_baseline_snapshot(
     if diff_bytes > threshold:
         diff_path = out.with_suffix(".diff.png")
         diff_path.write_bytes(actual)
-        pytest.fail(
-            f"snapshot mismatch for {name}/{device} "
-            f"(|Δsize|={diff_bytes} > {threshold}); wrote {diff_path}"
-        )
+        pytest.fail(f"snapshot mismatch for {name}/{device} (|Δsize|={diff_bytes} > {threshold}); wrote {diff_path}")

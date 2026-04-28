@@ -38,10 +38,7 @@ def test_static_charts_js_served(client):
 
 def test_design_tokens_phase0_present():
     """Phase 0 tokens (§5.1 of UI/UX redesign spec) live in app.src.css."""
-    src = (
-        Path(__file__).resolve().parents[2]
-        / "src" / "net_alpha" / "web" / "static" / "app.src.css"
-    ).read_text()
+    src = (Path(__file__).resolve().parents[2] / "src" / "net_alpha" / "web" / "static" / "app.src.css").read_text()
     expected = [
         "--accent-hero:",
         "--font-feature-num:",
@@ -57,18 +54,31 @@ def test_design_tokens_phase0_present():
 
 def test_lucide_icons_vendored():
     """23 Lucide icons live under web/static/icons (§5.4)."""
-    icons_dir = (
-        Path(__file__).resolve().parents[2]
-        / "src" / "net_alpha" / "web" / "static" / "icons"
-    )
+    icons_dir = Path(__file__).resolve().parents[2] / "src" / "net_alpha" / "web" / "static" / "icons"
     expected = {
-        "gauge", "wallet", "landmark", "flask-conical",
+        "gauge",
+        "wallet",
+        "landmark",
+        "flask-conical",
         "settings",
-        "arrow-up-right", "play", "pencil", "trash-2",
-        "triangle-alert", "info", "check", "lock",
-        "arrow-up", "arrow-down", "move-vertical",
-        "search", "chevron-down", "x", "ellipsis",
-        "refresh-cw", "database", "download",
+        "arrow-up-right",
+        "play",
+        "pencil",
+        "trash-2",
+        "triangle-alert",
+        "info",
+        "check",
+        "lock",
+        "arrow-up",
+        "arrow-down",
+        "move-vertical",
+        "search",
+        "chevron-down",
+        "x",
+        "ellipsis",
+        "refresh-cw",
+        "database",
+        "download",
     }
     found = {p.stem for p in icons_dir.glob("*.svg")}
     missing = expected - found
