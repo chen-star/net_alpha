@@ -10,10 +10,8 @@ from net_alpha.portfolio.tax_planner import (
     MissingTaxConfig,
     PlannedTrade,
     TaxBrackets,
-    TaxProjection,
     project_year_end_tax,
 )
-
 
 _BRACKETS = TaxBrackets(
     filing_status="single",

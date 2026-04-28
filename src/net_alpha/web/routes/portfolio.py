@@ -17,12 +17,6 @@ from net_alpha.audit import (
 )
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.allocation import build_allocation
-from net_alpha.portfolio.tax_planner import (
-    MissingTaxConfig,
-    TaxBrackets,
-    compute_offset_budget,
-    project_year_end_tax,
-)
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
     cash_allocation_slice,
@@ -31,6 +25,12 @@ from net_alpha.portfolio.cash_flow import (
 from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import compute_open_positions
+from net_alpha.portfolio.tax_planner import (
+    MissingTaxConfig,
+    TaxBrackets,
+    compute_offset_budget,
+    project_year_end_tax,
+)
 from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
