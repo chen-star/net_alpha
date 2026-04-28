@@ -19,5 +19,5 @@ def test_toolbar_form_action_on_holdings_page(client: TestClient, builders, repo
     builders.seed_import(repo, "schwab", "lt", [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))])
     res = client.get("/holdings")
     assert res.status_code == 200
-    assert 'action="/holdings"' in res.text
+    assert 'action="/positions"' in res.text
     assert 'action="/"' not in res.text

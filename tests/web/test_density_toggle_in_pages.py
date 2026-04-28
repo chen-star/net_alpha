@@ -20,7 +20,7 @@ def test_holdings_renders_density_toggle(tmp_path):
     client = _bootstrap(tmp_path)
     html = client.get("/holdings").text
     assert 'class="density-toggle' in html
-    assert 'data-page-key="/holdings"' in html
+    assert 'data-page-key="/positions"' in html
 
 
 def test_tax_renders_density_toggle(tmp_path):
