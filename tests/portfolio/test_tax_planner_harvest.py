@@ -264,3 +264,61 @@ def test_only_harvestable_filter_excludes_locked_positions(
     )
     assert len(rows) == 1
     assert rows[0].lockout_clear is not None
+
+
+def test_suggested_replacements_populated_from_dict(
+    repo,
+    schwab_account,
+    seed_import,
+    seed_lots,
+) -> None:
+    today = date(2026, 5, 1)
+    buy = Trade(
+        account=schwab_account.display(),
+        date=today - timedelta(days=10),
+        ticker="SPY",
+        action="Buy",
+        quantity=Decimal("10"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("4500"),
+    )
+    seed_import(repo, schwab_account, [buy])
+    seed_lots(repo)
+    pricing = _StubPricing({"SPY": Decimal("400")})
+    rows = compute_harvest_queue(
+        repo=repo,
+        pricing=pricing,
+        as_of=today,
+        etf_pairs={},
+        etf_replacements={"SPY": ["VTI", "SCHB"]},
+    )
+    assert rows[0].suggested_replacements == ["VTI", "SCHB"]
+
+
+def test_suggested_replacements_empty_when_no_entry(
+    repo,
+    schwab_account,
+    seed_import,
+    seed_lots,
+) -> None:
+    today = date(2026, 5, 1)
+    buy = Trade(
+        account=schwab_account.display(),
+        date=today - timedelta(days=10),
+        ticker="UUUU",
+        action="Buy",
+        quantity=Decimal("100"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("600"),
+    )
+    seed_import(repo, schwab_account, [buy])
+    seed_lots(repo)
+    pricing = _StubPricing({"UUUU": Decimal("4")})
+    rows = compute_harvest_queue(
+        repo=repo,
+        pricing=pricing,
+        as_of=today,
+        etf_pairs={},
+        etf_replacements={"SPY": ["VTI"]},
+    )
+    assert rows[0].suggested_replacements == []
