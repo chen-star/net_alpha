@@ -1,6 +1,7 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
+from net_alpha.engine.lockout import compute_lockout_clear_date
 from net_alpha.models.domain import OptionDetails, Trade
 from net_alpha.portfolio.tax_planner import (
     CSPAssigned,
@@ -69,3 +70,44 @@ def test_extract_premium_origin_returns_none_for_normal_buy() -> None:
         basis_source="unknown",
     )
     assert extract_premium_origin(normal_buy, []) is None
+
+
+def test_close_stock_at_loss_locks_out_new_csp_open(
+    repo, schwab_account, seed_import,
+) -> None:
+    """
+    Spec section 2e: closing assigned shares at a loss should lock out new CSP
+    opens on the same underlying for 30 days.
+
+    The lockout function answers symmetrically: an open CSP on UUUU extends
+    UUUU's lockout-clear date because closing the underlying at a loss while
+    a CSP is open is a wash sale.
+    """
+    today = date(2026, 5, 1)
+    stock_buy = Trade(
+        account=schwab_account.display(), date=today - timedelta(days=60),
+        ticker="UUUU", action="Buy",
+        quantity=Decimal("100"), proceeds=Decimal("0"), cost_basis=Decimal("1000"),
+    )
+    stock_sell_at_loss = Trade(
+        account=schwab_account.display(), date=today - timedelta(days=10),
+        ticker="UUUU", action="Sell",
+        quantity=Decimal("100"), proceeds=Decimal("400"), cost_basis=Decimal("1000"),
+    )
+    seed_import(repo, schwab_account, [stock_buy, stock_sell_at_loss])
+    proposed_csp = Trade(
+        account=schwab_account.display(), date=today,
+        ticker="UUUU", action="Sell to Open",
+        quantity=Decimal("1"), proceeds=Decimal("60"), cost_basis=Decimal("0"),
+        option_details=OptionDetails(
+            strike=Decimal("5"), expiry=today + timedelta(days=30), call_put="P",
+        ),
+        basis_source="option_short_open",
+    )
+    all_trades = [stock_buy, stock_sell_at_loss, proposed_csp]
+    clear = compute_lockout_clear_date(
+        symbol="UUUU", account=schwab_account.display(),
+        all_trades=all_trades, as_of=today, etf_pairs={},
+    )
+    assert clear is not None
+    assert clear == today + timedelta(days=31)
