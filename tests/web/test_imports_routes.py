@@ -2,7 +2,7 @@ from datetime import date
 
 
 def test_imports_page_empty_state(client):
-    resp = client.get("/imports")
+    resp = client.get("/imports/_legacy_page")
     assert resp.status_code == 200
     assert "Imports" in resp.text
     assert "No imports yet" in resp.text
@@ -11,7 +11,7 @@ def test_imports_page_empty_state(client):
 def test_imports_page_lists_imports(client, repo, builders):
     trades = [builders.make_buy("schwab/personal", "AAPL", date(2024, 5, 1), qty=10, cost=1700)]
     builders.seed_import(repo, "schwab", "personal", trades, csv_filename="aapl.csv")
-    resp = client.get("/imports")
+    resp = client.get("/imports/_legacy_page")
     assert resp.status_code == 200
     assert "schwab/personal" in resp.text
     assert "aapl.csv" in resp.text
@@ -40,7 +40,7 @@ def test_delete_nonexistent_import_returns_404(client):
 
 
 def test_imports_page_embeds_drop_zone(client):
-    resp = client.get("/imports")
+    resp = client.get("/imports/_legacy_page")
     assert resp.status_code == 200
     body = resp.text
     # Drop-zone is embedded directly on the page (not behind a "+ New import" link).
@@ -70,7 +70,7 @@ def test_import_modal_reuses_drop_zone_file_input(client):
 def test_drop_zone_input_is_associated_with_import_form(client):
     """The drop-zone file input declares `form=\"import-form\"` so its FileList
     is submitted when the modal form is submitted."""
-    resp = client.get("/imports")
+    resp = client.get("/imports/_legacy_page")
     assert resp.status_code == 200
     body = resp.text
     assert 'id="csv-input"' in body

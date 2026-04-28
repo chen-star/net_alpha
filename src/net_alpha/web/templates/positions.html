@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% set active_page = 'positions' %}
+{% block title %}Positions · net-alpha{% endblock %}
+{% block topbar_right %}{% endblock %}
+{% block content %}
+  <div class="flex items-end justify-between flex-wrap gap-3 mb-4">
+    <div>
+      <h1>Positions</h1>
+      <div class="text-[13px] text-label-2 mt-[3px]">
+        {% if selected_account %}{{ selected_account }}{% else %}All accounts{% endif %} ·
+        {{ selected_period|default('YTD')|upper }}
+      </div>
+</div>
+    {% if imports and selected_view in ('all', 'stocks') %}{% include "_portfolio_toolbar.html" %}{% endif %}
+  </div>
+
+  {# Emit column markers so tests / density.js can read extra_columns regardless
+     of whether imports exist (empty-state path never reaches _portfolio_table). #}
+  {% if extra_columns %}
+    <span hidden class="cols-meta"
+      {% for col in extra_columns %}data-col="{{ col }}" {% endfor %}></span>
+  {% endif %}
+
+  {% include "_positions_tabs.html" %}
+
+  {% if selected_view == 'all' %}
+    {% include "_positions_view_all.html" %}
+  {% elif selected_view == 'stocks' %}
+    {% include "_positions_view_stocks.html" %}
+  {% elif selected_view == 'options' %}
+    {% include "_positions_view_options.html" %}
+  {% elif selected_view == 'at-loss' %}
+    {% include "_positions_view_at_loss.html" %}
+  {% elif selected_view == 'closed' %}
+    {% include "_positions_view_closed.html" %}
+  {% endif %}
+{% endblock %}

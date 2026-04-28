@@ -45,6 +45,8 @@ def test_holdings_columns_tax_view_adds_tax_specific():
 
 
 def test_default_tax_tab_per_profile():
+    # Phase 1 IA critical fix #2: harvest moved to /positions?view=at-loss.
+    # All profiles now default to wash-sales on /tax.
     assert ProfileSettings(profile="conservative", density="comfortable").default_tax_tab() == "wash-sales"
-    assert ProfileSettings(profile="active", density="comfortable").default_tax_tab() == "harvest"
-    assert ProfileSettings(profile="options", density="comfortable").default_tax_tab() == "harvest"
+    assert ProfileSettings(profile="active", density="comfortable").default_tax_tab() == "wash-sales"
+    assert ProfileSettings(profile="options", density="comfortable").default_tax_tab() == "wash-sales"

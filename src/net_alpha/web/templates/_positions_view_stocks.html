@@ -1,0 +1,9 @@
+{# Stocks-only — Phase 1 reuses the existing portfolio HTMX panel.
+   Phase 2 filters out option positions. #}
+{% if not imports %}
+  {% include "_portfolio_empty_state.html" %}
+{% else %}
+  <div id="holdings-positions"
+       hx-get="/portfolio/positions?period={{ selected_period }}&account={{ selected_account }}&group_options=none&show=open&page=1"
+       hx-trigger="load" hx-swap="innerHTML"></div>
+{% endif %}

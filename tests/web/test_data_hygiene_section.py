@@ -39,7 +39,7 @@ def test_imports_page_shows_hygiene_section_when_issues_exist(tmp_path):
         ],
     )
     client = TestClient(create_app(settings))
-    resp = client.get("/imports")
+    resp = client.get("/imports/_legacy_page")
     assert resp.status_code == 200
     assert "Data quality" in resp.text
     assert "AAPL" in resp.text
@@ -50,6 +50,6 @@ def test_imports_page_shows_hygiene_section_when_issues_exist(tmp_path):
 def test_imports_page_hides_hygiene_section_when_clean(tmp_path):
     settings = Settings(data_dir=tmp_path)
     client = TestClient(create_app(settings))
-    resp = client.get("/imports")
+    resp = client.get("/imports/_legacy_page")
     assert resp.status_code == 200
     assert "Data quality" not in resp.text

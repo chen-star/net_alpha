@@ -13,7 +13,9 @@
   <script src="/static/charts.js?v={{ asset_v }}" defer></script>
   <script src="/static/density.js?v={{ asset_v }}" defer></script>
 </head>
-<body class="min-h-screen flex flex-col bg-bg text-text">
+<body class="min-h-screen flex flex-col bg-bg text-text"
+      x-data
+      {% if open_settings_tab %}data-open-settings-tab="{{ open_settings_tab }}"{% endif %}>
   <header class="topbar">
     <div class="flex items-center gap-6">
       <a href="/" class="flex items-center gap-2 no-underline text-text">
@@ -21,16 +23,10 @@
         <span class="font-semibold tracking-tight text-[14px]">net-alpha</span>
       </a>
       <nav class="flex gap-1">
-        <a href="/" class="nav-link{% if active_page == 'portfolio' %} active{% endif %}">Portfolio</a>
-        <a href="/holdings" class="nav-link{% if active_page == 'holdings' %} active{% endif %}">Holdings</a>
+        <a href="/" class="nav-link{% if active_page == 'overview' %} active{% endif %}">Overview</a>
+        <a href="/positions" class="nav-link{% if active_page == 'positions' %} active{% endif %}">Positions</a>
         <a href="/tax" class="nav-link{% if active_page == 'tax' %} active{% endif %}">Tax</a>
-        <a href="/imports" class="nav-link{% if active_page == 'imports' %} active{% endif %}">
-          Imports
-          {% set _badge = imports_badge_count() %}
-          {% if _badge > 0 %}
-            <span data-testid="imports-badge" class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[10px] rounded bg-warn text-bg">{{ _badge }}</span>
-          {% endif %}
-        </a>
+        <a href="/sim" class="nav-link{% if active_page == 'sim' %} active{% endif %}">Sim</a>
       </nav>
     </div>
     <div class="flex gap-2 items-center">
@@ -41,6 +37,21 @@
         {% endwith %}
       {% endif %}
       {% block topbar_right %}{% endblock %}
+      <button
+        data-testid="settings-gear"
+        type="button"
+        class="relative inline-flex items-center justify-center w-8 h-8 rounded-md text-label-2 hover:text-text hover:bg-surface-2 transition-colors"
+        @click="$dispatch('open-settings-drawer', { tab: 'imports' })"
+        aria-label="Settings"
+        aria-keyshortcuts=",">
+        <img src="/static/icons/settings.svg?v={{ asset_v }}" class="w-5 h-5 invert opacity-80" alt="" aria-hidden="true">
+        {% set _badge = imports_badge_count() %}
+        {% if _badge > 0 %}
+          <span data-testid="settings-gear-dot"
+                class="absolute top-1 right-1 w-2 h-2 rounded-full bg-warn"
+                aria-hidden="true"></span>
+        {% endif %}
+      </button>
     </div>
   </header>
 
@@ -72,5 +83,17 @@
       {% include "_profile_picker_modal.html" %}
     {% endwith %}
   {% endif %}
+  <script>
+    document.addEventListener("alpine:init", () => {
+      const tab = document.body.dataset.openSettingsTab;
+      if (tab) {
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("open-settings-drawer", { detail: { tab } })
+          );
+        }, 0);
+      }
+    });
+  </script>
 </body>
 </html>

@@ -29,7 +29,7 @@ def _seed_import(tmp_path) -> None:
 def test_holdings_page_returns_200(tmp_path):
     client = _client(tmp_path)  # creates app + initialises DB tables
     _seed_import(tmp_path)
-    response = client.get("/holdings")
+    response = client.get("/positions")
     assert response.status_code == 200
     # The page wires the existing positions fragment.
     assert "/portfolio/positions" in response.text
@@ -38,9 +38,9 @@ def test_holdings_page_returns_200(tmp_path):
 
 def test_holdings_page_active_in_nav(tmp_path):
     client = _client(tmp_path)
-    response = client.get("/holdings")
+    response = client.get("/positions")
     assert response.status_code == 200
-    assert ">Holdings<" in response.text
+    assert ">Positions<" in response.text
     assert 'class="nav-link active"' in response.text
 
 
@@ -48,7 +48,7 @@ def test_holdings_link_appears_on_other_pages(tmp_path):
     client = _client(tmp_path)
     response = client.get("/")
     assert response.status_code == 200
-    assert ">Holdings<" in response.text
+    assert ">Positions<" in response.text
 
 
 def test_holdings_renders_symbol_multiselect_trigger(tmp_path):

@@ -1,35 +1,32 @@
 """Tabbed /tax page — replaces /wash-sales as the primary tax-related route.
 
-Views: wash-sales | harvest | budget | projection
+Views: wash-sales | projection
+(harvest and budget were moved to /positions?view=at-loss in Phase 1 IA)
 """
 
 from __future__ import annotations
 
 from datetime import date as _date
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.tax_planner import (
     MissingTaxConfig,
     TaxBrackets,
-    compute_harvest_queue,
-    compute_offset_budget,
     project_year_end_tax,
 )
 from net_alpha.prefs.profile import resolve_effective_profile
-from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import (
-    get_etf_pairs,
-    get_pricing_service,
     get_repository,
 )
 
 router = APIRouter()
 
 
-@router.get("/tax", response_class=HTMLResponse)
+@router.get("/tax", response_class=HTMLResponse, response_model=None)
 def get_tax(
     request: Request,
     view: str | None = None,
@@ -39,28 +36,32 @@ def get_tax(
     confidence: str | None = None,
     sort: str | None = None,
     order: str = "desc",
-    only_harvestable: str | None = None,
     repo: Repository = Depends(get_repository),
-    pricing: PricingService = Depends(get_pricing_service),
-    etf_pairs: dict[str, list[str]] = Depends(get_etf_pairs),
-) -> HTMLResponse:
+) -> HTMLResponse | RedirectResponse:
     """Tabbed tax page. Replaces /wash-sales — preserves existing wash-sales UI as default tab.
 
-    Accepted ``view`` values: wash-sales | table | calendar | harvest | budget | projection.
+    Accepted ``view`` values: wash-sales | table | calendar | projection.
     ``table`` and ``calendar`` are synonyms for the wash-sales tab sub-views.
+    ``harvest`` and ``budget`` are permanently redirected to /positions?view=at-loss.
     """
+    # Resolve aliases first so /tax?view=budget also redirects to /positions.
+    _VIEW_ALIASES = {"budget": "harvest"}
+    if view in _VIEW_ALIASES:
+        view = _VIEW_ALIASES[view]
+
+    if view == "harvest":
+        params = dict(request.query_params)
+        params.pop("view", None)
+        params["view"] = "at-loss"
+        target = f"/positions?{urlencode(params)}"
+        return RedirectResponse(url=target, status_code=301)
+
     today = _date.today()
 
     # Normalise tab-level view key for context / template branching.
-    # "budget" is a back-compat alias for "harvest" — the offset-budget tile
-    # is now rendered above the harvest queue on the harvest tab.
-    _TAB_VIEWS = {"wash-sales", "harvest", "projection"}
-    _VIEW_ALIASES = {"budget": "harvest"}
+    _TAB_VIEWS = {"wash-sales", "projection"}
     # Inner sub-views for the wash-sales tab (table / calendar toggle).
     _WASH_SUB_VIEWS = {"table", "calendar"}
-
-    if view in _VIEW_ALIASES:
-        view = _VIEW_ALIASES[view]
 
     prefs = repo.list_user_preferences()
     filter_id = None
@@ -114,20 +115,6 @@ def get_tax(
         # Override the view key in ctx with the inner view so the template toggles correctly.
         ctx["view"] = inner_view
         ctx["tab_view"] = tab_view
-    elif view == "harvest":
-        _falsey = ("", "0", "false", "off")
-        only_harvestable_bool = only_harvestable is not None and only_harvestable.lower() not in _falsey
-        rows = compute_harvest_queue(
-            repo=repo,
-            pricing=pricing,
-            as_of=today,
-            etf_pairs=etf_pairs,
-            etf_replacements=request.app.state.etf_replacements,
-            only_harvestable=only_harvestable_bool,
-        )
-        ctx["rows"] = rows
-        ctx["only_harvestable"] = only_harvestable_bool
-        ctx["budget"] = compute_offset_budget(repo=repo, year=today.year)
     elif view == "projection":
         cfg = request.app.state.tax_brackets_cfg
         if cfg is not None:

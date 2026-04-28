@@ -38,9 +38,9 @@ def test_phase3_smoke(tmp_path):
     # 1. The first-visit modal is gone (prefs exist).
     assert "Pick a default profile per account" not in client.get("/").text
 
-    # 2. /tax with active filter -> default tab harvest.
+    # 2. /tax with active filter -> default tab wash-sales (Phase 1 IA: harvest moved to /positions?view=at-loss).
     tax_resp = client.get("/tax", params={"account": "Schwab/Tax"}).text
-    assert 'data-active-tab="harvest"' in tax_resp
+    assert 'data-active-tab="wash-sales"' in tax_resp
 
     # 3. /tax with conservative would default to wash-sales — but we don't have
     #    a conservative account, so flip Roth temporarily.
@@ -58,7 +58,8 @@ def test_phase3_smoke(tmp_path):
     holdings_roth = client.get("/holdings", params={"account": "Schwab/Roth"}).text
     assert 'data-col="lt_st_split"' in holdings_roth
     assert 'data-col="days_to_ltcg"' in holdings_roth  # tax density adds this
-    assert 'data-page-key="/holdings"' in holdings_roth
+    # Phase 1 E1: per-page density toggle removed; drawer toggle uses page_key="/"
+    assert 'data-page-key="/"' in holdings_roth
 
     # 5. /holdings with active + comfortable -> days_held + lt_st_split, no tax-only cols.
     holdings_tax = client.get("/holdings", params={"account": "Schwab/Tax"}).text

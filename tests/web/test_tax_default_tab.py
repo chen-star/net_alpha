@@ -31,14 +31,16 @@ def _seed(tmp_path, profile_label):
     return TestClient(app)
 
 
-def test_tax_no_view_active_renders_harvest(tmp_path):
+def test_tax_no_view_active_renders_wash_sales(tmp_path):
+    """Phase 1 IA critical fix #2: active profile now defaults to wash-sales on /tax.
+    Harvest content moved to /positions?view=at-loss."""
     client = _seed(tmp_path, "active")
     html = client.get("/tax", params={"account": "Schwab/Tax"}).text
-    # the harvest tab is "active" in the nav
-    assert 'class="tab tab--active"' in html
-    assert 'href="/tax?view=harvest&amp;account=Schwab/Tax"' in html or "view=harvest" in html
-    # Inner panel renders the harvest queue marker, not the wash-sales table
-    assert "Harvest queue" in html
+    # The Harvest tab link is gone from the nav.
+    assert 'href="/tax?view=harvest' not in html
+    # The active profile now defaults to wash-sales, not harvest.
+    assert 'data-active-tab="wash-sales"' in html
+    assert "Wash sales" in html
 
 
 def test_tax_no_view_conservative_renders_wash_sales(tmp_path):
