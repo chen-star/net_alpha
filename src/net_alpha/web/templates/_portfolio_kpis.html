@@ -87,6 +87,11 @@
 
 </div>
 
+{% if offset_budget is defined and offset_budget %}
+  {% set budget = offset_budget %}
+  {% include "_offset_budget_tile.html" with context %}
+{% endif %}
+
 {% if cash_kpis is defined %}
 <div class="grid grid-cols-12 gap-[10px] mt-[10px]">
 

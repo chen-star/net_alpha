@@ -1,0 +1,18 @@
+{# Offset-budget tile: YTD realized loss vs $3,000 cap. #}
+<div class="kpi-tile offset-budget">
+  <div class="kpi-label">Loss harvested YTD</div>
+  <div class="kpi-value">
+    ${{ "{:,.0f}".format(budget.used_against_ordinary) }}
+    <span class="muted">of ${{ "{:,.0f}".format(budget.cap_against_ordinary) }} cap</span>
+  </div>
+  {% set pct = (budget.used_against_ordinary / budget.cap_against_ordinary * 100) if budget.cap_against_ordinary else 0 %}
+  <div class="progress" role="progressbar"
+       aria-valuenow="{{ pct|round(0,'floor')|int }}" aria-valuemin="0" aria-valuemax="100">
+    <div class="bar" style="width: {{ pct|round(0,'floor')|int }}%"></div>
+    <span class="pct">{{ pct|round(0,'floor')|int }}%</span>
+  </div>
+  <div class="carryforward">
+    Carryforward projection:
+    ${{ "{:,.0f}".format(budget.carryforward_projection) }}
+  </div>
+</div>

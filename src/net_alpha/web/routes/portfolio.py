@@ -17,6 +17,7 @@ from net_alpha.audit import (
 )
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.allocation import build_allocation
+from net_alpha.portfolio.tax_planner import compute_offset_budget
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
     cash_allocation_slice,
@@ -214,6 +215,7 @@ def portfolio_kpis(
     )
     snap = svc.last_snapshot()
     account_id = _resolve_account_id(account, repo)
+    offset_budget = compute_offset_budget(repo=repo, year=today.year)
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_kpis.html",
@@ -223,6 +225,7 @@ def portfolio_kpis(
             "wash_impact_total": wi.disallowed_total,
             "wash_violations": wi.violation_count,
             "metric_refs": _build_metric_refs(period_tuple, period_label, account_id),
+            "offset_budget": offset_budget,
         },
     )
 
@@ -491,6 +494,7 @@ def portfolio_body(
     )
 
     account_id = _resolve_account_id(account, repo)
+    offset_budget = compute_offset_budget(repo=repo, year=today.year)
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_body.html",
@@ -508,5 +512,6 @@ def portfolio_body(
             "cash_points": cash_points,
             "cash_slice": cash_slice,
             "metric_refs": _build_metric_refs(period_tuple, period_label, account_id),
+            "offset_budget": offset_budget,
         },
     )
