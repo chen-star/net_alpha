@@ -5,9 +5,10 @@ Behavior:
   - Otherwise, fail with a diff if the captured PNG differs from baseline
     by more than the threshold.
 
-Routes covered are the same set surveyed during the audit:
-    /              /holdings       /tax              /tax?view=projection
-    /imports       /sim            /ticker/NVDA
+Routes covered reflect the Phase 1 IA: top nav is
+``Overview · Positions · Tax · Sim``; the harvest queue moved to
+``/positions?view=at-loss``; the imports page now opens in the Settings
+drawer via ``/settings/imports``.
 
 Each route is captured at 1440×900 (desktop) and 768×1024 (tablet).
 """
@@ -22,15 +23,12 @@ from playwright.sync_api import Page
 BASELINE_DIR = Path(__file__).parent / "baseline"
 
 PAGES = [
-    ("portfolio", "/"),
-    ("holdings", "/holdings"),
+    ("overview", "/"),
+    ("positions-all", "/positions?view=all"),
+    ("positions-at-loss", "/positions?view=at-loss"),
     ("tax-wash", "/tax?view=wash-sales"),
-    # NOTE: /tax?view=harvest will 301-redirect to /positions?view=at-loss
-    # in Phase 1. Re-run `make snapshot-update` after that lands so this
-    # baseline reflects the new page structure.
-    ("tax-harvest", "/tax?view=harvest"),
     ("tax-proj", "/tax?view=projection"),
-    ("imports", "/imports"),
+    ("settings-imports", "/settings/imports"),
     ("sim", "/sim"),
     ("ticker-nvda", "/ticker/NVDA"),
 ]
