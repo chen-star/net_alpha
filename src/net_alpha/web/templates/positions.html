@@ -34,4 +34,41 @@
   {% elif selected_view == 'closed' %}
     {% include "_positions_view_closed.html" %}
   {% endif %}
+
+  {# Side pane (§3.5). Non-modal — table stays interactive while pane is
+     open. Alpine state tracks the currently-open row. HTMX fetches the
+     pane body from /positions/pane?sym=…&account_id=…. Closing zeros the
+     state; clicking another row swaps content via @click on each <tr>. #}
+  <aside id="positions-pane"
+         class="positions-pane fixed inset-y-0 right-0 bg-bg border-l flex flex-col"
+         style="border-color: var(--color-hairline); box-shadow: var(--shadow-pane); width: 480px;"
+         x-data="{ open: false, sym: null, accountId: null }"
+         x-show="open"
+         x-on:open-positions-pane.window="
+           open = true;
+           sym = $event.detail.sym;
+           accountId = $event.detail.account_id || null;
+           htmx.ajax('GET', '/positions/pane?sym=' + encodeURIComponent(sym) + (accountId ? '&account_id=' + accountId : ''), '#positions-pane-body');
+         "
+         x-on:keydown.window.escape="open = false"
+         x-on:click.outside="open = false"
+         x-cloak
+         role="complementary"
+         aria-label="Position details">
+    <header class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--color-hairline);">
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-[14px]" x-text="sym || ''"></span>
+      </div>
+      <button data-testid="positions-pane-close"
+              type="button"
+              class="text-label-2 hover:text-text"
+              @click="open = false"
+              aria-label="Close pane">
+        <img src="/static/icons/x.svg?v={{ asset_v }}" class="w-5 h-5 invert opacity-80" alt="">
+      </button>
+    </header>
+    <div id="positions-pane-body" class="flex-1 overflow-y-auto px-4 py-4">
+      <div class="text-label-3 text-[12px]">Loading…</div>
+    </div>
+  </aside>
 {% endblock %}
