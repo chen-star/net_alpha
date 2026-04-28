@@ -495,3 +495,100 @@ class OffsetBudget(BaseModel):
     used_against_ordinary: Decimal  # min(|net_loss|, cap), >= 0
     carryforward_projection: Decimal  # |net_loss| - cap, clamped to >= 0
     planned_delta: Decimal  # change in net_realized that would result from planned_trades
+
+
+# ---------------------------------------------------------------------------
+# Traffic-light signal (Task 19-21)
+# ---------------------------------------------------------------------------
+
+
+class TaxLightSignal(BaseModel):
+    """Traffic-light verdict for a hypothetical trade."""
+
+    color: Literal["green", "yellow", "red"]
+    reason_codes: list[str]
+    explanation: str
+    suggestion: str | None
+    lot_method_recommended: Literal["FIFO", "HIFO", "LIFO"] | None
+
+
+def _avg_basis(repo: Repository, symbol: str) -> Decimal | None:
+    lots = repo.get_lots_for_ticker(symbol)
+    total_qty = sum((Decimal(str(lot.quantity)) for lot in lots), Decimal("0"))
+    if total_qty <= 0:
+        return None
+    total_basis = sum((Decimal(str(lot.adjusted_basis)) for lot in lots), Decimal("0"))
+    return total_basis / total_qty
+
+
+def assess_trade(
+    proposed: PlannedTrade,
+    repo: Repository,
+    brackets: TaxBrackets | None,
+    as_of: date,
+    etf_pairs: dict[str, list[str]],
+) -> TaxLightSignal:
+    """Pre-trade traffic-light: green/yellow/red verdict with explanation."""
+    if proposed.action != "Sell":
+        return TaxLightSignal(
+            color="green",
+            reason_codes=["BUY"],
+            explanation="Buy trades aren't tax-blocking on the sell side.",
+            suggestion=None,
+            lot_method_recommended=None,
+        )
+
+    avg_basis = _avg_basis(repo, proposed.symbol)
+    pnl_per_share = (proposed.price - avg_basis) if avg_basis is not None else None
+    is_loss = pnl_per_share is not None and pnl_per_share < 0
+
+    if is_loss:
+        clear = compute_lockout_clear_date(
+            symbol=proposed.symbol,
+            account="",
+            all_trades=repo.all_trades(),
+            as_of=as_of,
+            etf_pairs=etf_pairs,
+        )
+        if clear is not None and clear > as_of:
+            return TaxLightSignal(
+                color="red",
+                reason_codes=["WASH_RISK"],
+                explanation=(
+                    f"Selling at a loss today triggers wash-sale lockout until "
+                    f"{clear.isoformat()} due to a recent qualifying buy."
+                ),
+                suggestion=f"Delay sell until {clear.isoformat()} to avoid the lockout.",
+                lot_method_recommended=None,
+            )
+
+    days_held: int | None = None
+    if avg_basis is not None:
+        lots = repo.get_lots_for_ticker(proposed.symbol)
+        if lots:
+            oldest = min(lots, key=lambda lot: lot.date).date
+            days_held = (as_of - oldest).days
+
+    if pnl_per_share is not None and pnl_per_share > 0:
+        gain = pnl_per_share * proposed.qty
+        is_st = days_held is not None and days_held <= LT_HOLDING_DAYS
+        BRACKET_PUSH_THRESHOLD = Decimal("20000")
+        if gain >= BRACKET_PUSH_THRESHOLD and is_st and brackets is not None:
+            return TaxLightSignal(
+                color="yellow",
+                reason_codes=["ST_GAIN_BRACKET_PUSH"],
+                explanation=(
+                    f"Proposed sale would create a ${gain:,.0f} short-term gain "
+                    "— may push you into a higher federal bracket."
+                ),
+                suggestion="Consider holding past the long-term threshold to switch to LTCG rate.",
+                lot_method_recommended="FIFO",
+            )
+
+    return TaxLightSignal(
+        color="green",
+        reason_codes=["CLEAR"],
+        explanation="No wash-sale risk detected for this proposed sale.",
+        suggestion=None,
+        lot_method_recommended="HIFO" if is_loss else None,
+    )
