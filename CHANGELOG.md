@@ -2,6 +2,32 @@
 
 
 
+## v0.26.0 (2026-04-28)
+
+### Feature
+
+* feat(web): instant page loads, move wash UI to Tax, filterable allocation modal
+
+- Pricing: stale-while-revalidate read path. PricingService.get_prices
+  now serves cached entries (fresh OR stale) immediately and only
+  network-fetches symbols with no cache row at all. Stale entries surface
+  via snapshot.stale_symbols so the Portfolio KPIs panel shows a soft
+  refresh hint. Eliminates the multi-second blocking Yahoo fetch on every
+  cold load past the 15-min TTL — Portfolio/Holdings/Tax pages now render
+  from cache in under a second after the first ever load.
+
+- Tax-related UI off Portfolio: drop wash_impact slot from default
+  active/options profile orderings, remove the Wash-sale watch panel
+  from the bundled /portfolio/body fragment, and add the watch panel
+  to the Tax page wash-sales tab (which already showed the wash-impact
+  summary). Wash-watch is now scoped by the same account filter as the
+  rest of that tab.
+
+- Allocation modal: was a wall of low-density rows with no way to find
+  a symbol. Adds a typeahead filter (Alpine), sticky table header, and
+  compact row padding. Two keystrokes to find any holding. ([`d90d765`](https://github.com/chen-star/net_alpha/commit/d90d765fd456540725010081e7b6390a8d72630b))
+
+
 ## v0.25.0 (2026-04-28)
 
 ### Feature
