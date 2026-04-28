@@ -1,0 +1,68 @@
+{# Row action menu (§3.4 of UI/UX redesign spec).
+
+   Caller passes:
+     `sym`         — ticker (str)
+     `qty`         — quantity (Decimal | str)
+     `account`     — account label (str)
+     `account_id`  — account id (int | None) — passed through to the side
+                     pane so the set-basis form can scope to a single lot
+
+   The button is hover-revealed via the `.row-actions` CSS utility on the
+   parent <tr>. Phase 4 wires the keyboard shortcuts (Enter / S / B / C);
+   the `aria-keyshortcuts` advertise the future binding now. #}
+
+<div data-testid="row-actions"
+     class="row-actions opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+     x-data="{ open: false }">
+  <button type="button"
+          class="inline-flex items-center justify-center w-7 h-7 rounded-md text-label-2 hover:text-text hover:bg-surface-2"
+          aria-label="Row actions"
+          aria-haspopup="menu"
+          aria-expanded="open ? 'true' : 'false'"
+          @click.stop="open = !open"
+          @keydown.escape.stop="open = false">
+    <img src="/static/icons/ellipsis.svg?v={{ asset_v }}" class="w-4 h-4 invert opacity-80" alt="">
+  </button>
+
+  <div x-show="open"
+       x-cloak
+       @click.outside="open = false"
+       class="absolute right-0 mt-1 w-56 bg-bg border rounded shadow-lg z-10"
+       style="box-shadow: var(--shadow-pane); border-color: var(--color-hairline);"
+       role="menu">
+    <a href="/ticker/{{ sym }}"
+       data-action="open-ticker"
+       class="flex items-center justify-between px-3 py-2 text-[13px] hover:bg-surface-2"
+       aria-keyshortcuts="Enter"
+       role="menuitem">
+      <span>Open ticker</span>
+      <kbd class="text-label-3 text-[11px] font-mono">↵</kbd>
+    </a>
+    <a href="/sim?ticker={{ sym }}&qty={{ qty }}&account={{ account|urlencode }}&action=sell"
+       data-action="sim-sell"
+       class="flex items-center justify-between px-3 py-2 text-[13px] hover:bg-surface-2"
+       aria-keyshortcuts="S"
+       role="menuitem">
+      <span>Sim sell at market</span>
+      <kbd class="text-label-3 text-[11px] font-mono">S</kbd>
+    </a>
+    <button type="button"
+            data-action="set-basis"
+            class="w-full text-left flex items-center justify-between px-3 py-2 text-[13px] hover:bg-surface-2"
+            aria-keyshortcuts="B"
+            role="menuitem"
+            @click="$dispatch('open-positions-pane', { sym: '{{ sym }}', account_id: {{ account_id|default('null') }} }); open = false">
+      <span>Set basis &amp; date</span>
+      <kbd class="text-label-3 text-[11px] font-mono">B</kbd>
+    </button>
+    <button type="button"
+            data-action="copy-ticker"
+            class="w-full text-left flex items-center justify-between px-3 py-2 text-[13px] hover:bg-surface-2"
+            aria-keyshortcuts="C"
+            role="menuitem"
+            @click="navigator.clipboard.writeText('{{ sym }}'); open = false">
+      <span>Copy ticker</span>
+      <kbd class="text-label-3 text-[11px] font-mono">C</kbd>
+    </button>
+  </div>
+</div>

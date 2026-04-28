@@ -261,6 +261,16 @@
     box-shadow: 0 0 14px rgba(94,92,230,0.35), inset 0 0 0 0.5px rgba(255,255,255,0.2);
   }
 
+  /* Row action menu — hover-revealed `⋯` button per spec §3.4. */
+  .row-actions {
+    position: relative;
+    display: inline-block;
+  }
+  tr:hover .row-actions,
+  tr:focus-within .row-actions {
+    opacity: 1;
+  }
+
   /* Back-compat: keep existing classes alive until templates are restyled */
   .btn {
     @apply inline-flex items-center px-3 py-2 rounded-md bg-indigo text-white text-sm font-medium cursor-pointer;

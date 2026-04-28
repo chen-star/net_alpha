@@ -57,7 +57,7 @@
           </tr>
         {% else %}
           {% for row in rows %}
-            <tr data-row="lot">
+            <tr data-row="lot" class="group">
               <td class="font-semibold">{{ row.symbol }}</td>
               <td class="text-label-2">{{ row.account_label }}</td>
               <td class="text-right">{{ fmt_quantity(row.qty) }}</td>
@@ -78,8 +78,10 @@
                   <span class="text-label-3">none</span>
                 {% endif %}
               </td>
-              <td class="w-10">
-                {# Phase 2 Section C wires the row-action menu here. #}
+              <td class="w-10 relative">
+                {% with sym=row.symbol, qty=row.qty, account=row.account_label, account_id=row.account_id %}
+                  {% include "_row_actions.html" %}
+                {% endwith %}
               </td>
             </tr>
           {% endfor %}
