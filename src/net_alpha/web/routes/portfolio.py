@@ -25,6 +25,12 @@ from net_alpha.portfolio.cash_flow import (
 from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import compute_open_positions
+from net_alpha.portfolio.tax_planner import (
+    MissingTaxConfig,
+    TaxBrackets,
+    compute_offset_budget,
+    project_year_end_tax,
+)
 from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
@@ -214,6 +220,24 @@ def portfolio_kpis(
     )
     snap = svc.last_snapshot()
     account_id = _resolve_account_id(account, repo)
+    offset_budget = compute_offset_budget(repo=repo, year=today.year)
+    cfg = request.app.state.tax_brackets_cfg
+    projection = None
+    has_tax_config = cfg is not None
+    if cfg is not None:
+        brackets = TaxBrackets(
+            filing_status=cfg.filing_status,
+            state=cfg.state,
+            federal_marginal_rate=cfg.federal_marginal_rate,
+            state_marginal_rate=cfg.state_marginal_rate,
+            ltcg_rate=cfg.ltcg_rate,
+            qualified_div_rate=cfg.qualified_div_rate,
+        )
+        try:
+            projection = project_year_end_tax(repo=repo, year=today.year, brackets=brackets)
+        except MissingTaxConfig:
+            projection = None
+            has_tax_config = False
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_kpis.html",
@@ -223,6 +247,9 @@ def portfolio_kpis(
             "wash_impact_total": wi.disallowed_total,
             "wash_violations": wi.violation_count,
             "metric_refs": _build_metric_refs(period_tuple, period_label, account_id),
+            "offset_budget": offset_budget,
+            "projection": projection,
+            "has_tax_config": has_tax_config,
         },
     )
 
@@ -491,6 +518,24 @@ def portfolio_body(
     )
 
     account_id = _resolve_account_id(account, repo)
+    offset_budget = compute_offset_budget(repo=repo, year=today.year)
+    cfg = request.app.state.tax_brackets_cfg
+    projection = None
+    has_tax_config = cfg is not None
+    if cfg is not None:
+        brackets = TaxBrackets(
+            filing_status=cfg.filing_status,
+            state=cfg.state,
+            federal_marginal_rate=cfg.federal_marginal_rate,
+            state_marginal_rate=cfg.state_marginal_rate,
+            ltcg_rate=cfg.ltcg_rate,
+            qualified_div_rate=cfg.qualified_div_rate,
+        )
+        try:
+            projection = project_year_end_tax(repo=repo, year=today.year, brackets=brackets)
+        except MissingTaxConfig:
+            projection = None
+            has_tax_config = False
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_body.html",
@@ -508,5 +553,8 @@ def portfolio_body(
             "cash_points": cash_points,
             "cash_slice": cash_slice,
             "metric_refs": _build_metric_refs(period_tuple, period_label, account_id),
+            "offset_budget": offset_budget,
+            "projection": projection,
+            "has_tax_config": has_tax_config,
         },
     )

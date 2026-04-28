@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Literal
 
 from pydantic import BaseModel
 
+from net_alpha.config import Settings, load_tax_config
 from net_alpha.db.repository import Repository
 
-HygieneCategory = Literal["unpriced", "basis_unknown", "orphan_sell", "dup_key"]
+HygieneCategory = Literal["unpriced", "basis_unknown", "orphan_sell", "dup_key", "tax_config_missing"]
 HygieneSeverity = Literal["info", "warn", "error"]
 
 
@@ -29,13 +31,15 @@ class HygieneIssue(BaseModel):
     fix_form: HygieneFixForm | None = None
 
 
-def collect_issues(repo: Repository) -> list[HygieneIssue]:
+def collect_issues(repo: Repository, settings: Settings | None = None) -> list[HygieneIssue]:
     """Run all category checks against the current Repository state."""
     issues: list[HygieneIssue] = []
     issues.extend(_check_unpriced(repo))
     issues.extend(_check_basis_unknown(repo))
     issues.extend(_check_orphan_sells(repo))
     issues.extend(_check_dup_keys(repo))
+    if settings is not None:
+        issues.extend(_check_tax_config_missing(settings))
     return issues
 
 
@@ -146,8 +150,6 @@ def _check_dup_keys(repo: Repository) -> list[HygieneIssue]:
     (date, account, ticker, action, quantity) is unusually dense and worth
     surfacing as info — could be a re-import that escaped dedup.
     """
-    from collections import defaultdict
-
     clusters: dict[tuple, int] = defaultdict(int)
     for t in repo.all_trades():
         key = (t.date, t.account, t.ticker, t.action, round(t.quantity, 4))
@@ -170,3 +172,22 @@ def _check_dup_keys(repo: Repository) -> list[HygieneIssue]:
             )
         )
     return issues
+
+
+def _check_tax_config_missing(settings: Settings) -> list[HygieneIssue]:
+    if load_tax_config(settings.config_yaml_path) is not None:
+        return []
+    return [
+        HygieneIssue(
+            category="tax_config_missing",
+            severity="info",
+            summary="Tax bracket configuration not set",
+            detail=(
+                "Add a `tax:` section to ~/.net_alpha/config.yaml to enable the "
+                "year-end tax projection card. The harvest queue, offset budget, "
+                "and trade traffic light still work without it."
+            ),
+            fix_url="/imports#tax-config",
+            fix_form=None,
+        )
+    ]

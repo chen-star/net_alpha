@@ -1,0 +1,17 @@
+{# Pre-trade traffic-light verdict header for /sim result panels. #}
+{% if signal %}
+<div class="traffic-light traffic-light--{{ signal.color }}">
+  <span class="dot" aria-hidden="true">
+    {%- if signal.color == 'green' -%}&#x1F7E2;
+    {%- elif signal.color == 'yellow' -%}&#x1F7E1;
+    {%- else -%}&#x1F534;{%- endif -%}
+  </span>
+  <span class="explanation">{{ signal.explanation }}</span>
+  {% if signal.suggestion %}
+    <div class="suggestion">{{ signal.suggestion }}</div>
+  {% endif %}
+  {% if signal.lot_method_recommended %}
+    <div class="muted">Lot method recommended: {{ signal.lot_method_recommended }}</div>
+  {% endif %}
+</div>
+{% endif %}

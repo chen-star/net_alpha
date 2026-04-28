@@ -1,0 +1,14 @@
+{# Full /tax tab variant: projection card + breakdown table. #}
+<section class="projection-tab">
+  {% include "_projection_card.html" with context %}
+  {% if has_tax_config and projection %}
+    <h3>Breakdown</h3>
+    <dl>
+      <dt>Short-term gain</dt><dd>${{ "{:,.2f}".format(projection.realized_st_gain) }}</dd>
+      <dt>Long-term gain</dt><dd>${{ "{:,.2f}".format(projection.realized_lt_gain) }}</dd>
+      <dt>Qualified div</dt><dd>${{ "{:,.2f}".format(projection.qualified_div) }}</dd>
+      <dt>Ordinary div</dt><dd>${{ "{:,.2f}".format(projection.ordinary_div) }}</dd>
+      <dt>Interest income</dt><dd>${{ "{:,.2f}".format(projection.interest_income) }}</dd>
+    </dl>
+  {% endif %}
+</section>

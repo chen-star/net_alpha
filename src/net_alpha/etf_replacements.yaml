@@ -1,0 +1,30 @@
+# Substantially-SIMILAR replacements: similar exposure, NOT substantially identical.
+# Use to suggest harvest replacements that should not trigger wash-sale rules.
+# This is a judgment call — every suggestion is labeled "discuss with CPA."
+
+SPY:
+  - VTI    # total US market vs S&P 500
+  - SCHB
+VOO:
+  - VTI
+  - SCHB
+IVV:
+  - VTI
+  - SCHB
+QQQ:
+  - VGT    # tech sector vs Nasdaq-100
+  - SPYG   # S&P 500 growth
+QQQM:
+  - VGT
+  - SPYG
+VTI:
+  - SPY    # S&P 500 vs total US
+  - SCHX
+DIA:
+  - VTV    # value vs Dow 30
+SCHD:
+  - DGRO   # dividend growth, distinct methodology vs SCHD
+EFA:
+  - VEA    # developed-market ex-US, distinct index families
+EEM:
+  - VWO    # emerging markets, distinct index families

@@ -1,0 +1,15 @@
+{# Full /tax tab variant: offset budget gauge with extra detail rows. #}
+<section class="offset-budget-tab">
+  <h2>Loss harvest budget &mdash; {{ budget.year }}</h2>
+  {% include "_offset_budget_tile.html" with context %}
+  <div class="details">
+    <div>Realized losses YTD: ${{ "{:,.2f}".format(budget.realized_losses_ytd) }}</div>
+    <div>Realized gains YTD: ${{ "{:,.2f}".format(budget.realized_gains_ytd) }}</div>
+    <div>Net realized: ${{ "{:,.2f}".format(budget.net_realized) }}</div>
+    {% if budget.planned_delta %}
+      <div class="planned">
+        Planned-trade delta: ${{ "{:,.2f}".format(budget.planned_delta) }}
+      </div>
+    {% endif %}
+  </div>
+</section>

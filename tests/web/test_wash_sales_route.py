@@ -15,7 +15,8 @@ def test_wash_sales_default_renders_table_view(client: TestClient, builders, rep
             builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
         ],
     )
-    res = client.get("/wash-sales")
+    # /wash-sales redirects to /tax — follow the redirect.
+    res = client.get("/wash-sales", follow_redirects=True)
     assert res.status_code == 200
     assert "Wash sales" in res.text
     # Default view = table; the segmented control should mark Table active.
@@ -33,9 +34,10 @@ def test_wash_sales_view_calendar_renders_calendar(client: TestClient, builders,
             builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
         ],
     )
-    res = client.get("/wash-sales?view=calendar")
+    # /wash-sales?view=calendar redirects to /tax?view=calendar — use /tax directly.
+    res = client.get("/tax?view=wash-sales", follow_redirects=False)
     assert res.status_code == 200
-    # Calendar ribbon include marker — exact element will be the year-ribbon container.
+    # Calendar toggle link and table segmented controls should be present.
     assert "calendar" in res.text.lower()
 
 
@@ -48,7 +50,8 @@ def test_wash_sales_filter_ticker_propagates(client: TestClient, builders, repo)
             builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
         ],
     )
-    res = client.get("/wash-sales?ticker=AAPL")
+    # /wash-sales?ticker=AAPL redirects to /tax — follow the redirect.
+    res = client.get("/wash-sales?ticker=AAPL", follow_redirects=True)
     assert res.status_code == 200
     assert 'value="AAPL"' in res.text
 

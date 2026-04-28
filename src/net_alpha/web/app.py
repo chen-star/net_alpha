@@ -8,9 +8,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from net_alpha.audit import encode_metric_ref as _encode_metric_ref
-from net_alpha.config import Settings, load_pricing_config
+from net_alpha.config import Settings, load_pricing_config, load_tax_config
 from net_alpha.db.connection import get_engine, init_db
-from net_alpha.engine.etf_pairs import load_etf_pairs
+from net_alpha.engine.etf_pairs import load_etf_pairs, load_etf_replacements
 from net_alpha.output.disclaimer import price_source_line
 from net_alpha.output.disclaimer import render as disclaimer_render
 from net_alpha.pricing.cache import PriceCache
@@ -18,12 +18,18 @@ from net_alpha.pricing.yahoo import YahooPriceProvider
 from net_alpha.web.routes import audit_routes, holdings, sim, system, ticker, trades, wash_sales
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
+from net_alpha.web.routes import tax as tax_routes
 
 
 def create_app(settings: Settings) -> FastAPI:
     app = FastAPI(title="net-alpha")
     app.state.settings = settings
     app.state.etf_pairs = load_etf_pairs(user_path=str(settings.user_etf_pairs_path))
+    app.state.etf_replacements = load_etf_replacements(
+        user_path=settings.data_dir / "etf_replacements.yaml",
+        etf_pairs=app.state.etf_pairs,
+    )
+    app.state.tax_brackets_cfg = load_tax_config(settings.config_yaml_path)
 
     # Ensure the database schema exists before accepting requests.
     engine = get_engine(settings.db_path)
@@ -53,7 +59,7 @@ def create_app(settings: Settings) -> FastAPI:
         from net_alpha.db.repository import Repository as _Repository
 
         _engine = get_engine(settings.db_path)
-        return get_imports_badge_count(_Repository(_engine))
+        return get_imports_badge_count(_Repository(_engine), settings=settings)
 
     templates.env.globals["imports_badge_count"] = _imports_badge_count
     app.state.templates = templates
@@ -63,6 +69,7 @@ def create_app(settings: Settings) -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(audit_routes.router)
+    app.include_router(tax_routes.router)
     app.include_router(wash_sales.router)
     app.include_router(holdings.router)
     app.include_router(imports_routes.router)
