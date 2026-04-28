@@ -31,6 +31,14 @@ def imports_page(
     request: Request,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
+    """Render the legacy imports page body.
+
+    Reachable only at the hidden ``/imports/_legacy_page`` URL — the
+    Settings drawer's Imports tab fetches this fragment via HTMX
+    (``hx-get="/imports/_legacy_page" hx-select="main > *"``) and
+    surfaces it inline. Public ``/imports`` 301-redirects to
+    ``/settings/imports`` (Phase 1 IA migration).
+    """
     records = repo.list_imports()
     issues = collect_issues(repo)
     prefs = repo.list_user_preferences()

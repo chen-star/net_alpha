@@ -1,0 +1,25 @@
+{# Side pane body fragment (§3.5).
+
+   Phase 2 D2 ships the skeleton — three sub-block stubs.
+   E2 wires the sim-sell preview; E3 the set-basis form; E1 reorganizes
+   the layout into a polished header + sub-blocks. #}
+
+<div class="space-y-4">
+  <div class="text-label-2 text-[13px]">
+    <strong class="text-text font-semibold">{{ sym }}</strong>
+    {% if qty %} · {{ fmt_quantity(qty) }} sh{% endif %}
+    {% if account_label %} · {{ account_label }}{% endif %}
+    {% if last_price %} · last <span class="font-mono text-text">{{ fmt_currency(last_price) }}</span>{% endif %}
+    {% if open_basis %} · basis <span class="font-mono">{{ fmt_currency(open_basis) }}</span>{% endif %}
+    {% if loss is not none and loss < 0 %} · <span class="text-loss">{{ fmt_currency(loss) }}</span>{% endif %}
+  </div>
+
+  {% include "_positions_pane_sim_preview.html" %}
+
+  {% include "_positions_pane_set_basis.html" %}
+
+  <a href="/ticker/{{ sym }}" class="inline-flex items-center gap-1 text-[13px] text-accent hover:underline">
+    Open ticker
+    <img src="/static/icons/external-link.svg?v={{ asset_v }}" class="w-3.5 h-3.5 invert opacity-80" alt="">
+  </a>
+</div>

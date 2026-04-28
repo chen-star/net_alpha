@@ -1,9 +1,94 @@
-{# At a loss — Phase 1 serves the existing harvest queue content (which
-   was at /tax?view=harvest). Phase 2 rewrites this with proper columns
-   (Lockout-clear, Replacement ETF) and side-pane sim-sell preview.
+{# At a loss — Phase 2 dedicated table (§3.3 of UI/UX redesign spec).
 
-   Wrapped in `#positions-tab-content` so the harvest-queue's HTMX
-   checkbox can re-fetch the panel on toggle. #}
+   Reads `rows` (list of HarvestOpportunity), `only_harvestable` (bool),
+   and `budget` from context — passed by `routes/positions.py` when
+   `selected_view == 'at-loss'`. The harvestable-only checkbox uses
+   `harvest_form_action` and `harvest_form_target` from context (Phase 1
+   review-fix Critical #1) so HTMX targets work on the new home.
+
+   Phase 3 polishes: stacked mini-bar in the summary strip (T5-style),
+   inline sim preview on hover, replacement detail (gain/loss for
+   substitute), and density-aware row height. #}
+
 <div id="positions-tab-content">
-  {% include "_harvest_tab.html" with context %}
+  <div class="flex items-center justify-between mb-3">
+    <div class="text-label-2 text-[13px]">
+      <strong class="text-text font-semibold">{{ rows|length }} lots at a loss</strong>
+      {% if budget is defined and budget %}
+        · loss-harvest budget {{ fmt_currency(budget.net_realized) }} / {{ fmt_currency(budget.cap_against_ordinary) }} cap
+      {% endif %}
+    </div>
+    <form hx-get="{{ harvest_form_action|default('/tax?view=harvest') }}"
+          hx-target="{{ harvest_form_target|default('#tab-content') }}"
+          hx-swap="innerHTML"
+          class="flex items-center gap-2">
+      <label class="text-label-2 text-[12px] flex items-center gap-1 cursor-pointer">
+        <input type="checkbox"
+               name="only_harvestable"
+               value="1"
+               {% if only_harvestable %}checked{% endif %}
+               hx-trigger="change">
+        Currently harvestable only
+      </label>
+    </form>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="data-table w-full">
+      <thead>
+        <tr>
+          <th>SYM</th>
+          <th>ACCT</th>
+          <th class="text-right">QTY</th>
+          <th class="text-right">MKT</th>
+          <th class="text-right">BASIS</th>
+          <th class="text-right">UNREAL</th>
+          <th>LOCKOUT-CLEAR</th>
+          <th>REPLACEMENT</th>
+          <th class="w-10"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not rows %}
+          <tr>
+            <td colspan="9" class="py-10 text-center text-label-2">
+              No at-loss positions — every open position is at or above its cost basis.
+            </td>
+          </tr>
+        {% else %}
+          {% for row in rows %}
+            <tr data-row="lot"
+                class="group cursor-pointer hover:bg-surface-2"
+                @click.stop="$dispatch('open-positions-pane', { sym: '{{ row.symbol }}', account_id: {{ row.account_id }} })">
+              <td class="font-semibold">{{ row.symbol }}</td>
+              <td class="text-label-2">{{ row.account_label }}</td>
+              <td class="text-right">{{ fmt_quantity(row.qty) }}</td>
+              <td class="text-right">{{ fmt_currency(row.open_basis + row.loss) }}</td>
+              <td class="text-right">{{ fmt_currency(row.open_basis) }}</td>
+              <td class="text-right text-loss">{{ fmt_currency(row.loss) }}</td>
+              <td>
+                {% if row.lockout_clear and row.lockout_clear > today %}
+                  {{ fmt_date(row.lockout_clear) }}
+                {% else %}
+                  <span class="text-success">clear</span>
+                {% endif %}
+              </td>
+              <td class="text-label-2">
+                {% if row.suggested_replacements %}
+                  {{ row.suggested_replacements[0] }}
+                {% else %}
+                  <span class="text-label-3">none</span>
+                {% endif %}
+              </td>
+              <td class="w-10 relative">
+                {% with sym=row.symbol, qty=row.qty, account=row.account_label, account_id=row.account_id %}
+                  {% include "_row_actions.html" %}
+                {% endwith %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </div>

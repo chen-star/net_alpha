@@ -17,7 +17,7 @@
   {% endif %}
 
   <form hx-post="/sim" hx-target="#sim-result" hx-swap="innerHTML"
-        x-data="{ action: '{{ 'sell' if harvest_mode else 'sell' }}' }"
+        x-data="{ action: '{{ action_pref if action_pref else ('sell' if harvest_mode else 'sell') }}' }"
         class="panel mb-6">
     <div class="grid grid-cols-6 gap-3 items-end">
       <div class="col-span-1">
@@ -32,7 +32,11 @@
                   :class="action==='sell' ? 'seg-active' : ''"
                   class="px-3 py-1.5 font-medium seg">Sell</button>
         </div>
-        <input type="hidden" name="action" :value="action"/>
+        {# Hidden select carries the form value; Alpine keeps it in sync via x-model. #}
+        <select name="action" x-model="action" class="hidden" aria-hidden="true">
+          <option value="buy" {% if action_pref == 'buy' %}selected{% endif %}>Buy</option>
+          <option value="sell" {% if action_pref == 'sell' %}selected{% endif %}>Sell</option>
+        </select>
       </div>
       <div>
         <label class="block label-uc">Ticker</label>
@@ -60,7 +64,7 @@
         <select name="account" class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
                 style="border:0.5px solid rgba(255,255,255,0.08);">
           <option value="">All</option>
-          {% for a in accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+          {% for a in accounts %}<option value="{{ a }}" {% if account_pref == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
         </select>
       </div>
       <div>

@@ -20,6 +20,7 @@ def test_harvest_queue_renders_loss_amounts() -> None:
             account_id=1,
             account_label="Schwab Tax",
             qty=Decimal("100"),
+            open_basis=Decimal("320"),  # 100 shares * $3.20/share basis
             loss=Decimal("-220"),
             lt_st="ST",
             lockout_clear=None,
@@ -42,6 +43,7 @@ def test_harvest_queue_renders_lockout_clear_when_present() -> None:
             account_id=1,
             account_label="Schwab Tax",
             qty=Decimal("100"),
+            open_basis=Decimal("320"),  # 100 shares * $3.20/share basis
             loss=Decimal("-220"),
             lt_st="ST",
             lockout_clear=date(2026, 5, 16),
@@ -61,6 +63,7 @@ def test_harvest_queue_renders_premium_offset_for_csp_origin() -> None:
             account_id=1,
             account_label="Schwab Tax",
             qty=Decimal("100"),
+            open_basis=Decimal("320"),  # 100 shares * $3.20/share basis
             loss=Decimal("-220"),
             lt_st="ST",
             lockout_clear=None,

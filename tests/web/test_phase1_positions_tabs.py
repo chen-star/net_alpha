@@ -39,14 +39,14 @@ def test_view_at_loss_marks_at_loss_tab_active(client: TestClient):
 
 
 def test_at_loss_view_renders_harvest_queue_content(client: TestClient):
-    """`/positions?view=at-loss` shows the same harvest queue table that
-    `/tax?view=harvest` used to render before the redirect."""
+    """`/positions?view=at-loss` renders the Phase 2 at-loss dedicated table
+    (replaces the old `_harvest_queue.html` partial as of B1)."""
     resp = client.get("/positions?view=at-loss")
     html = resp.text
     assert resp.status_code == 200
-    # Harvest queue uses literal section title 'Harvest queue'. If the
-    # heading was renamed, update assertion.
-    assert "Harvest queue" in html or "harvest queue" in html.lower()
+    # Phase 2 B1 replaced the old "Harvest queue" heading with a dedicated
+    # table; verify the new column headers are present instead.
+    assert "LOCKOUT-CLEAR" in html or "Lockout-clear" in html
 
 
 def test_view_all_renders_existing_positions_table(client: TestClient):

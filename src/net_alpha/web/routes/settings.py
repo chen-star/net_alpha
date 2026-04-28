@@ -39,9 +39,6 @@ def settings_drawer_entry(request: Request) -> HTMLResponse:
     """
     return request.app.state.templates.TemplateResponse(
         request,
-        "base.html",
-        {
-            "active_page": "overview",
-            "open_settings_tab": "imports",
-        },
+        "settings_entry.html",
+        {"open_settings_tab": "imports"},
     )

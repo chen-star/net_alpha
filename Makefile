@@ -48,7 +48,8 @@ LUCIDE_ICONS := \
 	triangle-alert info check lock \
 	arrow-up arrow-down move-vertical \
 	search chevron-down x ellipsis \
-	refresh-cw database download
+	refresh-cw database download \
+	external-link
 
 vendor-lucide:
 	@mkdir -p src/net_alpha/web/static/icons

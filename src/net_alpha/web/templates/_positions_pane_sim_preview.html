@@ -1,0 +1,22 @@
+{# Read-only sim-sell preview (§4.2 wireframe). The "Run full sim →" link
+   takes the user to /sim with the row pre-filled (Phase 2 F1). #}
+
+<div class="panel p-3">
+  <h3 class="m-0 text-[13px] font-semibold mb-2">Sim sell preview</h3>
+  {% if qty and last_price %}
+    <dl class="grid grid-cols-2 gap-y-1 text-[12px] m-0">
+      <dt class="text-label-2 m-0">Sell</dt>
+      <dd class="text-right m-0">{{ fmt_quantity(qty) }} @ {{ fmt_currency(last_price) }}</dd>
+      <dt class="text-label-2 m-0">Realized</dt>
+      <dd class="text-right m-0 {% if realized_delta and realized_delta < 0 %}text-loss{% elif realized_delta and realized_delta > 0 %}text-gain{% endif %}">
+        {{ fmt_currency(realized_delta) if realized_delta is not none else "—" }}
+      </dd>
+    </dl>
+    <a href="/sim?ticker={{ sym }}&qty={{ fmt_quantity(qty) }}{% if account_label %}&account={{ account_label|urlencode }}{% endif %}&action=sell"
+       class="mt-2 inline-flex items-center gap-1 text-[13px] text-accent hover:underline">
+      Run full sim →
+    </a>
+  {% else %}
+    <p class="text-label-2 m-0 text-[12px]">No open lots for {{ sym }}.</p>
+  {% endif %}
+</div>

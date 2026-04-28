@@ -67,6 +67,7 @@ def set_basis(
     request: Request,
     trade_id: str = Form(...),
     cost_basis: float = Form(...),
+    caller: str | None = Query(None),
     repo: Repository = Depends(get_repository),
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
@@ -85,6 +86,15 @@ def set_basis(
     from net_alpha.audit._badge_cache import _cache
 
     _cache.invalidate()
+    if caller == "pane":
+        # Return an inline confirmation that stays inside the positions pane.
+        trade = repo.get_trade_by_id(int(trade_id))
+        sym = trade.ticker if trade is not None else ""
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_positions_pane_set_basis_saved.html",
+            {"sym": sym},
+        )
     return request.app.state.templates.TemplateResponse(
         request,
         "_data_hygiene_set_basis.html",
