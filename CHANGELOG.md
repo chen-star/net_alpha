@@ -2,6 +2,192 @@
 
 
 
+## v0.28.0 (2026-04-28)
+
+### Documentation
+
+* docs(plans): Phase 1 — IA migration implementation plan
+
+7 sections / ~25 bite-sized tasks: 301 redirects (/holdings →
+/positions, /tax?view=harvest → /positions?view=at-loss, /imports →
+/settings/imports), top nav rewrite (Overview · Positions · Tax · Sim
++ gear icon), settings drawer with tab strip and functional Imports +
+Density tabs, density toggle relocated from per-page to global, and
+positions tabs (All / Stocks / Options / At a loss / Closed) with
+at-loss serving the existing harvest queue HTML for now.
+
+Visible IA shift; no page-interior content rebuilds (those are
+Phases 2-4). Phase 5 ships the responsive viewport fix.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`af2f264`](https://github.com/chen-star/net_alpha/commit/af2f264f1bbd4d0908be7f973b03da5644c2943b))
+
+### Feature
+
+* feat(web): drop Harvest tab from /tax (moved to /positions?view=at-loss)
+
+Removes the Harvest nav tab from tax.html. The route still processes the
+harvest view for profile-default routing, but the tab link is gone. Updates
+test_tax_default_tab to assert new behaviour (no nav link, content still
+renders).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`778dc70`](https://github.com/chen-star/net_alpha/commit/778dc7067812cb73af6202627809230ba2b60f41))
+
+* feat(web): positions tab views — at-loss serves harvest queue
+
+Wires harvest queue context (rows, only_harvestable, budget) into
+positions_page when selected_view == &#39;at-loss&#39;, replicating the context
+that /tax?view=harvest used to build before it became a redirect.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6be555a`](https://github.com/chen-star/net_alpha/commit/6be555a9b8975b40bfea4381e1f5581cef419313))
+
+* feat(web): positions tab strip — All/Stocks/Options/At-a-loss/Closed
+
+Renames holdings.html → positions.html, updates route to render positions.html
+and accept ?view= param. Adds _positions_tabs.html with 5-tab strip wired into
+positions.html with view-based partial switching.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b3472d9`](https://github.com/chen-star/net_alpha/commit/b3472d9a0e6b9cca51cd5e51f2d01482d4f28fda))
+
+* feat(web): remove inline density toggle from page chrome (audit H4/T1)
+
+Per-page density toggles removed from holdings.html, tax.html, and
+imports.html; the toggle now lives exclusively in the Settings drawer&#39;s
+Density tab. Updated test_density_toggle_in_pages.py to assert drawer
+presence instead of per-page chrome, updated test_phase3_smoke.py&#39;s
+stale page-key assertion, and added test_phase1_density_relocation.py
+to guard against per-page regression.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`67ce51b`](https://github.com/chen-star/net_alpha/commit/67ce51b17375a1e62a214318700cb238e4bbe98a))
+
+* feat(web): drawer Density tab — global preference
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0ef49b5`](https://github.com/chen-star/net_alpha/commit/0ef49b5a9153b1d55eb072c0e403fc2242cb5241))
+
+* feat(web): drawer Imports tab — lazy-load content from legacy page
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d21940a`](https://github.com/chen-star/net_alpha/commit/d21940a9f8d76098537b1e277736d92bbbaf0c1a))
+
+* feat(web): settings drawer tab strip + placeholders
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c60ea57`](https://github.com/chen-star/net_alpha/commit/c60ea572ac213a9d95b0ed1c7cfc8795ae465b13))
+
+* feat(web): auto-open settings drawer on /settings/imports load
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`74c97e9`](https://github.com/chen-star/net_alpha/commit/74c97e9479ea082f5647765374d95459a7567ec5))
+
+* feat(web): add gear icon to topbar with drawer-open dispatch
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f04064d`](https://github.com/chen-star/net_alpha/commit/f04064d6b426950146ee5daaa898fadbfebc070c))
+
+* feat(web): drop redundant topbar pills (audit P10)
+
+Remove account-count and period pills from portfolio and holdings topbar_right
+blocks — they duplicate info already shown in the page subhead. Update
+test_positions_routes and test_phase1_topnav to match new nav labels.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1142f6e`](https://github.com/chen-star/net_alpha/commit/1142f6e4e303e1d43a8641ca6130713e021db398))
+
+* feat(web): update active_page values for new nav (overview/positions)
+
+portfolio→overview, holdings→positions, wash_sales→tax, imports→overview.
+Also updates deprecated nav-badge test assertions to match Phase 1 design
+(badge removed from nav, will move to gear icon in Section C).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`92e62a4`](https://github.com/chen-star/net_alpha/commit/92e62a4eb4e7cf12ea30933e18724b2d85839ac4))
+
+* feat(web): rewrite top nav — Overview · Positions · Tax · Sim
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`406871f`](https://github.com/chen-star/net_alpha/commit/406871fc718b227474152992632fc890c3ceb8a2))
+
+* feat(web): 301 /imports → /settings/imports; add settings drawer entry routes ([`4dc8703`](https://github.com/chen-star/net_alpha/commit/4dc87033229ccda8a82d73586fb5782fde855509))
+
+* feat(web): 301 /tax?view=harvest → /positions?view=at-loss ([`5fb023d`](https://github.com/chen-star/net_alpha/commit/5fb023d0124cdf16ca26d5faf2c1de01e6a3a130))
+
+* feat(web): 301 /holdings → /positions (preserves query string) ([`3cee147`](https://github.com/chen-star/net_alpha/commit/3cee1471935a11a28ece48eb85330a3b2bfdec78))
+
+### Fix
+
+* fix(web): CSV upload now redirects to Settings drawer instead of /imports
+
+Critical #3: POST /imports returned 303 to /imports?flash=..., which
+then hit the Phase 1 301 to /settings/imports — dropping the flash
+param. Flash was already cosmetic (template never displayed it), so
+removed the dead plumbing and changed the redirect target to
+/settings/imports so the user lands on the drawer&#39;s Imports tab where
+the new import is visible in the past-imports table.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f1751b6`](https://github.com/chen-star/net_alpha/commit/f1751b667ae3c8c001ccaf8e3639386433482156))
+
+* fix(web): harvest queue routing — at-loss owns the toggle, /tax fully redirects
+
+Critical #1: the &#39;currently harvestable only&#39; checkbox on
+/positions?view=at-loss had hardcoded hx-get=&#39;/tax?view=harvest&#39; and
+hx-target=&#39;#tab-content&#39;, neither of which works on the new home.
+Parameterized via harvest_form_action / harvest_form_target context vars
+and a #positions-tab-content wrapper. HX-Request to /positions?view=at-loss
+now returns the panel partial only.
+
+Critical #2: /tax with active/options profile defaults (or ?view=budget)
+rendered harvest content with no visible tab. Resolved /budget alias
+before the redirect so it 301s to /positions?view=at-loss; updated
+profile.default_tax_tab() so &#39;active&#39;/&#39;options&#39; default to &#39;wash-sales&#39;;
+deleted the dead harvest-render branch in routes/tax.py and its include
+in tax.html.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`002fcbc`](https://github.com/chen-star/net_alpha/commit/002fcbcf8206250c505290be3c2fdd94260a7a47))
+
+### Refactor
+
+* refactor(web): /holdings → /positions (redirects come in next commit) ([`ac0e0ce`](https://github.com/chen-star/net_alpha/commit/ac0e0ce42e68f4d48ad94bd68e7d88d1f4aa7fe5))
+
+* refactor(web): rename holdings router to positions (no path change yet) ([`20c25f2`](https://github.com/chen-star/net_alpha/commit/20c25f2562a53b854f45597897f715080db731c5))
+
+### Style
+
+* style(web): ruff format Phase 1 touchpoints
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1abe3f2`](https://github.com/chen-star/net_alpha/commit/1abe3f2d09b272e4697a033dd5c8b7c0b8cd8c22))
+
+### Test
+
+* test(web): re-capture snapshot baselines for Phase 1 IA
+
+PAGES list updated to reflect the new IA: overview / positions-all /
+positions-at-loss / tax-wash / tax-proj / settings-imports / sim /
+ticker-nvda. The old `holdings`, `tax-harvest`, `imports`, and `portfolio`
+baseline directories are gone — those URLs now 301 to the new locations.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4ef15a6`](https://github.com/chen-star/net_alpha/commit/4ef15a604d796927592613da2c4eba5ccb3f9b39))
+
+* test(web): nav-link round-trip smoke test
+
+Adds docstring clarifying the B4 round-trip parametrize purpose: each of
+the four nav destinations (/, /positions, /tax, /sim) must appear as an
+href on the home page and return HTTP 200 with the label in the HTML.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ce92f48`](https://github.com/chen-star/net_alpha/commit/ce92f484d73c1c80e8f25612ae2e9d816da50cc7))
+
+### Unknown
+
+* Merge branch &#39;phase1-ia-migration&#39; — Phase 1 IA Migration
+
+The IA shift from the §3 design spec lands: top nav becomes
+Overview · Positions · Tax · Sim plus a settings gear; /holdings becomes
+/positions (with 301); /tax?view=harvest 301-redirects to a new
+/positions?view=at-loss tab; the Imports page content lifts into a
+Settings drawer triggered by the gear; the per-page Density toggle
+moves to that drawer as a global preference.
+
+22 commits across sections A (routing &amp; redirects), B (top nav rewrite),
+C (gear icon + drawer trigger), D (drawer content — Imports + Density
+tabs), E (density toggle removal from page chrome), F (positions tabs
+scaffold), G (final verification), plus review-feedback fixes for the
+harvest queue toggle wiring and CSV upload redirect target.
+
+Phase 1 is structural only — page-interior content stays untouched.
+Phase 2 rebuilds the at-loss tab; Phase 3 polishes page interiors. ([`7379f6d`](https://github.com/chen-star/net_alpha/commit/7379f6d4343701cc04e029fd7e479fb24a344f38))
+
+
 ## v0.27.0 (2026-04-28)
 
 ### Build
