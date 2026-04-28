@@ -260,6 +260,7 @@ def compute_open_positions(
     include_closed: bool = False,
     gl_closures: dict[tuple[str, str], float] | None = None,
     gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
+    as_of: date | None = None,
 ) -> list[PositionRow]:
     """Return positions sorted by market value desc (None last).
 
@@ -320,6 +321,24 @@ def compute_open_positions(
         open_cost_by_sym[lot.ticker] += rem_basis
         accounts_by_sym[lot.ticker].add(lot.account)
 
+    # Phase 3 density extras: oldest-lot age and LT/ST split.
+    LT_DAYS = 365
+    today = as_of or date.today()
+    oldest_open_by_sym: dict[str, date] = {}
+    lt_qty_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    st_qty_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    for lot, rem_qty, rem_basis in consumed:
+        if lot.option_details is not None or rem_qty <= 0:
+            continue
+        sym = lot.ticker
+        prior = oldest_open_by_sym.get(sym)
+        if prior is None or lot.date < prior:
+            oldest_open_by_sym[sym] = lot.date
+        if (today - lot.date).days > LT_DAYS:
+            lt_qty_by_sym[sym] += rem_qty
+        else:
+            st_qty_by_sym[sym] += rem_qty
+
     # Cash flows include ALL trades on the underlying ticker (equity AND options).
     # Exception: assigned-put STO/synthetic-close pairs — the premium has
     # already been folded into the underlying stock's cost basis. Counting it
@@ -328,9 +347,16 @@ def compute_open_positions(
     buys_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     sells_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     realized_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    premium_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     for t in trades:
         sym = t.ticker
         accounts_by_sym[sym].add(t.account)  # ensure account is captured even if no open lot
+        # Option premium accumulation (for premium_received field).
+        if t.option_details is not None:
+            if t.proceeds is not None:
+                premium_by_sym[sym] += Decimal(str(t.proceeds))
+            if t.cost_basis is not None:
+                premium_by_sym[sym] -= Decimal(str(t.cost_basis))
         if t.basis_source in _SKIP_AGG_SOURCES:
             continue
         if t.action.lower() == "buy":
@@ -351,6 +377,8 @@ def compute_open_positions(
         quote = prices.get(sym)
         market_value = (qty * quote.price) if quote else None
         unrealized = (market_value - open_cost) if market_value is not None else None
+        oldest = oldest_open_by_sym.get(sym)
+        days_held = (today - oldest).days if oldest is not None else None
         rows.append(
             PositionRow(
                 symbol=sym,
@@ -363,6 +391,10 @@ def compute_open_positions(
                 realized_pl=realized_by_sym[sym],
                 unrealized_pl=unrealized,
                 open_option_contracts=open_options_by_sym.get(sym, Decimal("0")),
+                days_held=days_held,
+                lt_qty=lt_qty_by_sym[sym],
+                st_qty=st_qty_by_sym[sym],
+                premium_received=premium_by_sym[sym].quantize(Decimal("0.01")),
             )
         )
     # Tickers with only open option exposure (no equity lot): emit a qty=0 row
