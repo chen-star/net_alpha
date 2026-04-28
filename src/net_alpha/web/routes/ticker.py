@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import date
+from datetime import date as _date
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
+from net_alpha.audit import Period, RealizedPLRef
 from net_alpha.db.repository import Repository
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.portfolio.positions import open_lots_view
@@ -51,6 +53,17 @@ def ticker_drilldown(
     for account in repo.list_accounts():
         gl_lots.extend(repo.get_gl_lots_for_ticker(account.id, symbol))
 
+    realized_ref = RealizedPLRef(
+        kind="realized_pl",
+        period=Period(
+            start=_date(today.year, 1, 1),
+            end=_date(today.year + 1, 1, 1),
+            label=f"YTD {today.year}",
+        ),
+        account_id=None,  # ticker page is account-aggregated
+        symbol=symbol,
+    )
+
     return request.app.state.templates.TemplateResponse(
         request,
         "ticker.html",
@@ -67,6 +80,7 @@ def ticker_drilldown(
             "kpi_accounts": accounts,
             "kpi_last_trade": last_trade,
             "display_action": display_action,
+            "realized_ref": realized_ref,
         },
     )
 

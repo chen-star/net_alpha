@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_provenance_macros.html" import provenance_link %}
 {% block title %}{{ symbol }} · net-alpha{% endblock %}
 {% block content %}
   <div class="flex justify-between items-baseline mb-4">
@@ -24,7 +25,7 @@
     <div class="panel">
       <div class="label-uc">YTD realized P&amp;L</div>
       <div class="text-2xl font-mono num {% if kpi_realized_ytd >= 0 %}text-pos{% else %}text-confirmed{% endif %}">
-        ${{ "%.2f"|format(kpi_realized_ytd) }}
+        ${{ "%.2f"|format(kpi_realized_ytd) }}{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
       </div>
     </div>
     <div class="panel">

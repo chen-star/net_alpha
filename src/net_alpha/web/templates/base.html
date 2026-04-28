@@ -44,5 +44,14 @@
       <div class="text-[11px] text-label-3 text-center mt-1 opacity-70">{{ price_disclosure }}</div>
     {% endif %}
   </footer>
+  <dialog id="provenance-dialog"
+          class="provenance-dialog backdrop:bg-black/40 bg-bg text-text rounded p-0">
+    <form method="dialog" class="flex justify-end px-3 py-2">
+      <button class="text-label-3 hover:text-text">close ✕</button>
+    </form>
+    <div id="provenance-dialog-body" class="px-4 pb-4 min-w-[640px]">
+      <div class="text-label-3 text-sm">Loading…</div>
+    </div>
+  </dialog>
 </body>
 </html>
