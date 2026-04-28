@@ -32,7 +32,7 @@ router = APIRouter()
 @router.get("/tax", response_class=HTMLResponse)
 def get_tax(
     request: Request,
-    view: str = "wash-sales",
+    view: str | None = None,
     account: str | None = None,
     year: int | None = None,
     ticker: str | None = None,
@@ -55,6 +55,19 @@ def get_tax(
     # Inner sub-views for the wash-sales tab (table / calendar toggle).
     _WASH_SUB_VIEWS = {"table", "calendar"}
 
+    prefs = repo.list_user_preferences()
+    filter_id = None
+    if account:
+        for a in repo.list_accounts():
+            if f"{a.broker}/{a.label}" == account:
+                filter_id = a.id
+                break
+    profile = resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
+
+    # Resolve effective view: when view is absent or invalid, use profile default.
+    if view not in _TAB_VIEWS and view not in _WASH_SUB_VIEWS:
+        view = profile.default_tax_tab()
+
     if view in _WASH_SUB_VIEWS:
         inner_view = view
         tab_view = "wash-sales"
@@ -64,15 +77,6 @@ def get_tax(
     else:
         inner_view = "table"
         tab_view = "wash-sales"
-
-    prefs = repo.list_user_preferences()
-    filter_id = None
-    if account:
-        for a in repo.list_accounts():
-            if f"{a.broker}/{a.label}" == account:
-                filter_id = a.id
-                break
-    profile = resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
 
     ctx: dict = {
         "request": request,
