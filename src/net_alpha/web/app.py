@@ -63,6 +63,43 @@ def create_app(settings: Settings) -> FastAPI:
         return get_imports_badge_count(_Repository(_engine), settings=settings)
 
     templates.env.globals["imports_badge_count"] = _imports_badge_count
+
+    def _profile_switcher_data() -> dict[str, object]:
+        from net_alpha.db.repository import Repository as _Repository
+        from net_alpha.prefs.profile import (
+            DEFAULT_PROFILE_SETTINGS,
+            resolve_effective_profile,
+        )
+
+        _engine = get_engine(settings.db_path)
+        _repo = _Repository(_engine)
+        accounts = _repo.list_accounts()
+        prefs = _repo.list_user_preferences()
+        prof_by_id = {p.account_id: p.profile for p in prefs}
+        profile = resolve_effective_profile(prefs=prefs, filter_account_id=None)
+        return {
+            "accounts": accounts,
+            "account_profiles": prof_by_id,
+            "profile": profile if accounts else DEFAULT_PROFILE_SETTINGS,
+            "show_switcher": bool(accounts),
+        }
+
+    templates.env.globals["profile_switcher_data"] = _profile_switcher_data
+
+    def _first_visit_modal_data() -> dict[str, object]:
+        from net_alpha.db.repository import Repository as _Repository
+
+        _engine = get_engine(settings.db_path)
+        _repo = _Repository(_engine)
+        accounts = _repo.list_accounts()
+        prefs = _repo.list_user_preferences()
+        return {
+            "show_modal": bool(accounts) and not prefs,
+            "accounts": accounts,
+        }
+
+    templates.env.globals["first_visit_modal_data"] = _first_visit_modal_data
+
     app.state.templates = templates
 
     @app.get("/healthz")

@@ -34,6 +34,12 @@
       </nav>
     </div>
     <div class="flex gap-2 items-center">
+      {% set _ps = profile_switcher_data() %}
+      {% if _ps.show_switcher %}
+        {% with accounts=_ps.accounts, account_profiles=_ps.account_profiles, profile=_ps.profile %}
+          {% include "_profile_switcher.html" %}
+        {% endwith %}
+      {% endif %}
       {% block topbar_right %}{% endblock %}
     </div>
   </header>
