@@ -141,6 +141,10 @@ def provenance_for(metric: MetricRef, repo: Repository) -> ProvenanceTrace:
         return _unrealized_pl(metric, repo)
     if isinstance(metric, WashImpactRef):
         return _wash_impact(metric, repo)
+    if isinstance(metric, CashRef):
+        return _cash(metric, repo)
+    if isinstance(metric, NetContributedRef):
+        return _net_contributed(metric, repo)
     raise KeyError(f"no provenance dispatcher for {metric.kind!r}")
 
 
@@ -242,6 +246,53 @@ def _unrealized_pl(metric: UnrealizedPLRef, repo: Repository) -> ProvenanceTrace
         metric_label=" ".join(label_bits),
         total=round(total, 2),
         trades=contributing,
+    )
+
+
+_TRANSFER_KINDS = frozenset({"transfer_in", "transfer_out"})
+
+
+def _to_contributing_cash(ev) -> ContributingCashEvent:
+    sign = -1.0 if ev.kind in {"transfer_out", "fee", "sweep_out"} else 1.0
+    return ContributingCashEvent(
+        event_id=ev.id,
+        event_date=ev.event_date,
+        account=ev.account,
+        kind=ev.kind,
+        amount=sign * ev.amount,
+        description=ev.description,
+    )
+
+
+def _cash(metric: CashRef, repo: Repository) -> ProvenanceTrace:
+    events = []
+    total = 0.0
+    for ev in repo.list_cash_events(account_id=metric.account_id):
+        contrib = _to_contributing_cash(ev)
+        events.append(contrib)
+        total += contrib.amount
+    return ProvenanceTrace(
+        metric_label="Cash balance",
+        total=round(total, 2),
+        cash_events=events,
+    )
+
+
+def _net_contributed(metric: NetContributedRef, repo: Repository) -> ProvenanceTrace:
+    events = []
+    total = 0.0
+    for ev in repo.list_cash_events(account_id=metric.account_id):
+        if ev.kind not in _TRANSFER_KINDS:
+            continue
+        if not (metric.period.start <= ev.event_date < metric.period.end):
+            continue
+        contrib = _to_contributing_cash(ev)
+        events.append(contrib)
+        total += contrib.amount
+    return ProvenanceTrace(
+        metric_label=f"{metric.period.label} Net Contributed",
+        total=round(total, 2),
+        cash_events=events,
     )
 
 
