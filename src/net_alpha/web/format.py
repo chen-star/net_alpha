@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from decimal import ROUND_HALF_EVEN, Decimal
+from typing import Literal
 
 from net_alpha.models.domain import OptionDetails, Trade
+
+Density = Literal["compact", "comfortable", "tax-view"]
 
 
 def _format_option_suffix(opt: OptionDetails) -> str:
@@ -49,9 +53,6 @@ def display_action(t: Trade, *, assigned_from: OptionDetails | None = None) -> s
     return t.action
 
 
-from decimal import ROUND_HALF_EVEN, Decimal
-
-
 def fmt_quantity(value: Decimal | float | int | None) -> str:
     """Render a share-quantity-like number.
 
@@ -68,11 +69,6 @@ def fmt_quantity(value: Decimal | float | int | None) -> str:
         return str(int(quantized))
     text = format(quantized, "f").rstrip("0").rstrip(".")
     return text
-
-
-from typing import Literal
-
-Density = Literal["compact", "comfortable", "tax-view"]
 
 
 def fmt_currency(
