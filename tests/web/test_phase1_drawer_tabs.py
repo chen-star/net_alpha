@@ -32,3 +32,45 @@ def test_drawer_imports_tab_lazy_loads_from_legacy_endpoint(client: TestClient):
     via HTMX so the home page doesn't pay the imports DB cost on every load."""
     resp = client.get("/")
     assert 'hx-get="/imports/_legacy_page"' in resp.text
+
+
+def test_drawer_density_tab_renders_inside_drawer(tmp_path):
+    """The Density tab inside the drawer renders the existing density
+    toggle (Compact / Comfortable / Tax-view). We scope the assertion
+    to the drawer container so we don't false-positive on per-page
+    toggles still present in the page chrome (those are removed in E1).
+
+    Note: _density_toggle.html renders label text with surrounding whitespace
+    via Jinja `{{ dict[d] }}`, so we assert the label text and the preceding
+    data-density attribute rather than `>Label<` with no whitespace.
+
+    The density toggle is gated on show_switcher (requires at least one
+    account), so we seed an account before fetching the page.
+    """
+    from net_alpha.config import Settings
+    from net_alpha.db.connection import get_engine, init_db
+    from net_alpha.db.repository import Repository
+    from net_alpha.web.app import create_app
+
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+    repo.get_or_create_account("Schwab", "Tax")
+
+    app = create_app(settings)
+    client = TestClient(app, raise_server_exceptions=False)
+    resp = client.get("/")
+    html = resp.text
+    drawer_idx = html.find('id="settings-drawer-root"')
+    assert drawer_idx > 0, "drawer root not found in HTML"
+    # Use a generous window — density tab content sits ~4KB into the drawer
+    drawer_html = html[drawer_idx:drawer_idx + 12000]
+    # Check data-density attributes (unambiguous, no whitespace variation)
+    assert 'data-density="compact"' in drawer_html
+    assert 'data-density="comfortable"' in drawer_html
+    assert 'data-density="tax"' in drawer_html
+    # Check visible label text (may have surrounding whitespace from Jinja template)
+    assert "Compact" in drawer_html
+    assert "Comfortable" in drawer_html
+    assert "Tax-view" in drawer_html
