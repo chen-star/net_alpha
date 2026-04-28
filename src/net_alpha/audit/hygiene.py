@@ -78,7 +78,32 @@ def _check_unpriced(repo: Repository) -> list[HygieneIssue]:
 
 def _check_basis_unknown(repo: Repository) -> list[HygieneIssue]:
     """Buy trades flagged ``basis_unknown=True`` (transfer-in without basis)."""
-    return []
+    issues: list[HygieneIssue] = []
+    for t in repo.all_trades():
+        if not t.basis_unknown:
+            continue
+        # Buy-side transfers in particular need basis to compute realized P&L
+        # when sold. Sell-side basis_unknown is rarer (transfer_out) and
+        # doesn't need user fix.
+        if t.action.lower() != "buy":
+            continue
+        issues.append(
+            HygieneIssue(
+                category="basis_unknown",
+                severity="error",
+                summary=f"{t.ticker} buy on {t.date.isoformat()} has unknown basis",
+                detail=(
+                    f"Account: {t.account} · Qty: {t.quantity:.4f} · Source: {t.basis_source}. "
+                    "Until basis is set, realized P&L for this lot can't be computed."
+                ),
+                fix_form=HygieneFixForm(
+                    action="/audit/set-basis",
+                    fields={"cost_basis": "number"},
+                    hidden={"trade_id": t.id},
+                ),
+            )
+        )
+    return issues
 
 
 def _check_orphan_sells(repo: Repository) -> list[HygieneIssue]:
