@@ -2,6 +2,243 @@
 
 
 
+## v0.22.0 (2026-04-28)
+
+### Documentation
+
+* docs(plan): Phase 1 implementation plan — Provenance layer
+
+28 TDD tasks covering Sections 1a (drillable KPI tiles), 1b
+(reconciliation strip + BrokerGLProvider abstraction), and 1c (data
+hygiene queue + nav badge). Phases 2 and 3 deferred to separate plans.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`27a1293`](https://github.com/chen-star/net_alpha/commit/27a1293115cf351d7d9be565ab3f8c32f3377a91))
+
+* docs(spec): provenance, forward tax planner, and style-aware density
+
+Three new feature areas that reposition net-alpha as portfolio tracker
+plus tax tool: drillable provenance for every KPI, forward-looking tax
+planning (harvest queue, offset budget, year-end projection, pre-trade
+traffic light, wheel-strategy aware), and per-account profile picker
+with density toggle. Zero new top-level pages; one route rename
+(/wash-sales -&gt; /tax) with 301; one DB migration (v8 -&gt; v9 for
+user_preferences); one optional config section (tax). Phased
+Provenance -&gt; Tax Planner -&gt; Density.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`db68b8a`](https://github.com/chen-star/net_alpha/commit/db68b8a7dc62e4e02449aa321b1d24d0e80e233d))
+
+### Feature
+
+* feat(audit): nav-bar Imports badge with 30s TTL cache
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`266afbd`](https://github.com/chen-star/net_alpha/commit/266afbdc179448889d69c361a8df82e5952b676b))
+
+* feat(audit): POST /audit/set-basis updates trade basis with HTMX swap
+
+Also clears basis_unknown=False in update_trade_basis when cost_basis is set.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`72d77d3`](https://github.com/chen-star/net_alpha/commit/72d77d339643fa68ff0d1cc4e90ac2d72a5052ac))
+
+* feat(audit): embed data-hygiene section on /imports
+
+Adds _data_hygiene.html partial with severity badges and inline HTMX
+fix-forms; wires collect_issues(repo) into the imports_page route so
+the section appears when issues exist and is hidden when the DB is clean.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3d22b5c`](https://github.com/chen-star/net_alpha/commit/3d22b5c9f5f8dab0a1a0f8095e655de83f83422f))
+
+* feat(audit): hygiene check — duplicate natural-key clusters ([`e911034`](https://github.com/chen-star/net_alpha/commit/e911034d24095f4298106a52759f90ed9f74e3b5))
+
+* feat(audit): hygiene check — orphan sells ([`6dbe94f`](https://github.com/chen-star/net_alpha/commit/6dbe94f0f84c97fcb1e6bd2bd0d36f6cd9ac40ec))
+
+* feat(audit): hygiene check — basis-unknown buys with inline fix form
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e9b16db`](https://github.com/chen-star/net_alpha/commit/e9b16db0f1ea62b6bb96404991e513b3ec59f4e2))
+
+* feat(audit): hygiene check — unpriced symbols
+
+Add _get_unpriced_symbols helper (monkeypatchable seam) and implement
+_check_unpriced to emit a warn-severity HygieneIssue per equity symbol
+with no cached price quote, with fix_url pointing to /holdings?symbol=X.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8397ae7`](https://github.com/chen-star/net_alpha/commit/8397ae731fd56ff19b6e20694dd01be2ecd4ff29))
+
+* feat(audit): hygiene scaffold with HygieneIssue model + collect_issues dispatcher ([`b31fe7a`](https://github.com/chen-star/net_alpha/commit/b31fe7ac3c74dfcf7e41fc4ff811b8a2a87906a5))
+
+* feat(audit): embed reconciliation strip on ticker page (lazy HTMX load)
+
+Passes account_ids (derived from all accounts with trades for the symbol)
+to the ticker template; the template renders one hx-get=&#34;load&#34; div per
+account that triggers the /reconciliation/{symbol}?account_id= fragment.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`96570a9`](https://github.com/chen-star/net_alpha/commit/96570a9b856869a8dbf5b00311965d2404873536))
+
+* feat(audit): /reconciliation/{symbol} route + strip + diff fragments
+
+Appends GET /reconciliation/{symbol}?account_id=&amp;expanded= to audit_routes,
+renders _reconciliation_strip.html (match/near_match/diff states with HTMX
+investigate button) or _reconciliation_diff.html (per-lot table with collapse).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1eb8f31`](https://github.com/chen-star/net_alpha/commit/1eb8f31c55eaa7eb2eca8e579c1a8a9050b90872))
+
+* feat(audit): per_lot_diffs() with cause hints
+
+Appends LotDiff model, per_lot_diffs(), and _cause_hint() to
+reconciliation.py; pairs broker G/L lots against net-alpha sell
+trades by close date and returns deltas with heuristic cause labels.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d8d30c1`](https://github.com/chen-star/net_alpha/commit/d8d30c11cc7f733affb2094b5d915757e2b6ad6a))
+
+* feat(audit): reconcile() with tolerance + status enum
+
+Adds ReconciliationResult + reconcile() comparing net_alpha realized P/L
+against broker G/L lots, classifying results as MATCH / NEAR_MATCH / DIFF /
+UNAVAILABLE based on a configurable tolerance threshold (default $0.50).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4555c55`](https://github.com/chen-star/net_alpha/commit/4555c5557ee96a93bcb0eb8d9c275a8672c763cf))
+
+* feat(audit): broker provider registry ([`9f363ce`](https://github.com/chen-star/net_alpha/commit/9f363ce5a5631e85b75f6e446435a9402f36886b))
+
+* feat(audit): SchwabGLProvider over existing get_gl_lots_for_ticker
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`da643b7`](https://github.com/chen-star/net_alpha/commit/da643b7f021b9f23cc4c08eb52a6ea7130869b4e))
+
+* feat(audit): BrokerLot + BrokerGLProvider ABC
+
+Define normalized broker lot row and abstract provider interface for
+reconciliation. Supports flexibility across broker GL formats.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`325bf22`](https://github.com/chen-star/net_alpha/commit/325bf228f5a46f3d0072bb9bfc153a3e44b34fa8))
+
+* feat(audit): wire provenance triggers into Portfolio KPIs and Ticker page
+
+- Add &lt;dialog id=&#34;provenance-dialog&#34;&gt; mount point to base.html (all pages)
+- Add _resolve_account_id + _build_metric_refs helpers to portfolio route
+- Pass metric_refs to _portfolio_kpis.html via portfolio_kpis and portfolio_body handlers
+- Decorate Realized P/L (period + lifetime), Unrealized P/L (period + lifetime), Wash Impact, Cash, and Net Contributed KPIs with provenance_link macro; skip Open Position $ (market snapshot)
+- Build RealizedPLRef per symbol in ticker_drilldown, decorate YTD Realized P/L
+- Add integration tests (TDD: 3 fail → 3 pass)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`68d54fc`](https://github.com/chen-star/net_alpha/commit/68d54fc66a9867c6fc81e8b46fb1d85253491fe4))
+
+* feat(audit): provenance_link Jinja macro with HTMX trigger
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5cce62d`](https://github.com/chen-star/net_alpha/commit/5cce62d72a4a90553622f9b57f8d9e97396662f9))
+
+* feat(audit): full provenance modal template with three sections
+
+Replace placeholder _provenance_modal.html with the complete template
+rendering contributing trades, applied wash-sale adjustments (with rule
+citation), and contributing cash events in styled tables.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3eacc91`](https://github.com/chen-star/net_alpha/commit/3eacc91a5da9888ffcfa3d9ce464774fe355ecb9))
+
+* feat(audit): GET /provenance/{encoded} returns trace fragment with error fallback
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`35b8f8d`](https://github.com/chen-star/net_alpha/commit/35b8f8dd010a915d2219a6fddd15596f2d7ae9ca))
+
+* feat(audit): re-export public API from package root ([`5d62e95`](https://github.com/chen-star/net_alpha/commit/5d62e95af5c7c32a1eae9fc60678b8c27d43c792))
+
+* feat(audit): provenance_for handles CashRef and NetContributedRef variants
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5653357`](https://github.com/chen-star/net_alpha/commit/5653357c7b3c60edf083d72e11956d64fbe7f93c))
+
+* feat(audit): provenance_for handles WashImpactRef variant
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`168e534`](https://github.com/chen-star/net_alpha/commit/168e534c8ccf16f1a184bd43d824c43d2831ff47))
+
+* feat(audit): provenance_for handles UnrealizedPLRef variant
+
+Adds _unrealized_pl dispatcher and _account_id_match helper; refactors
+_trade_account_match to delegate to the new shared helper (DRY).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b8c841f`](https://github.com/chen-star/net_alpha/commit/b8c841fbc1bd8237f778703c82e23300389c52cd))
+
+* feat(audit): provenance_for handles RealizedPLRef variant
+
+Adds the provenance_for dispatcher to provenance.py with the first
+variant _realized_pl, which filters repo.all_trades() by period,
+symbol, and account_id to build a ProvenanceTrace with signed amounts
+and a human-readable metric_label.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`180d1d7`](https://github.com/chen-star/net_alpha/commit/180d1d778072820b2f43869342ec493707ff2c47))
+
+* feat(audit): add ProvenanceTrace, ContributingTrade, AppliedAdjustment types
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f7add98`](https://github.com/chen-star/net_alpha/commit/f7add98055533a6a5b5ae889533ce028f27653d4))
+
+* feat(audit): add MetricRef discriminated union + base64 encoding
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`538422b`](https://github.com/chen-star/net_alpha/commit/538422bf388c91bb357302309b55df094ef4084b))
+
+* feat(audit): scaffold audit package with shared test fixture ([`0384521`](https://github.com/chen-star/net_alpha/commit/03845211d031646418e25d766f22afb547fb6b27))
+
+### Fix
+
+* fix(audit): address final review findings
+
+- Hoist repo.list_accounts() out of per-trade and per-violation loops in
+  _realized_pl and _wash_impact (matches existing _unrealized_pl pattern).
+- POST /audit/set-basis now triggers stitch + recompute_all_violations and
+  invalidates the badge cache so engine state matches the DB immediately.
+- Export reconcile, collect_issues, and related types from audit/__init__.py
+  per the plan&#39;s stable-import-path contract. ([`70973bd`](https://github.com/chen-star/net_alpha/commit/70973bdeb0eb1cc5748d2c0e3a1048b8d0a726dc))
+
+### Refactor
+
+* refactor(audit): DRY account-display dict construction via _accounts_by_id
+
+Eliminates the last N+1 in _unrealized_pl (was iterating list_accounts() per
+open lot). All three dispatcher branches now share one helper.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e6b7507`](https://github.com/chen-star/net_alpha/commit/e6b75077aca12f45a62ea0f541b2bceeec57576d))
+
+* refactor(audit): hoist all_trades lookup + lift Repository/Trade imports to top
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`953be61`](https://github.com/chen-star/net_alpha/commit/953be611663f9400a00cb7c7ec4f803386284eee))
+
+* refactor(audit): lift seed_import helper into conftest for reuse ([`e7bd860`](https://github.com/chen-star/net_alpha/commit/e7bd8603a22f4047268e9563d821c610e2362e8b))
+
+### Style
+
+* style(audit): move pytest import to module top in test_metric_ref_encoding ([`49ed3a6`](https://github.com/chen-star/net_alpha/commit/49ed3a63fa00844c8da1fdd5e683ec48665a0048))
+
+### Test
+
+* test(audit): phase-1 smoke test — provenance + reconciliation + hygiene
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e39cb5b`](https://github.com/chen-star/net_alpha/commit/e39cb5b3cc237977785ec96f6054b7832e8a5394))
+
+### Unknown
+
+* Merge branch &#39;phase1-provenance&#39; — Phase 1 Provenance Layer
+
+Three sub-features delivered behind the audit/ subpackage:
+
+Section 1a — Drillable provenance:
+  audit/provenance.py with MetricRef discriminated union, ProvenanceTrace,
+  provenance_for() dispatcher (5 variants). HTMX route /provenance/{encoded}
+  feeds a 3-section modal mounted in base.html. Provenance triggers wired
+  into Portfolio KPIs and per-symbol Realized P/L on the Ticker page.
+
+Section 1b — Reconciliation strip:
+  audit/brokers/ with BrokerGLProvider ABC + SchwabGLProvider + registry.
+  audit/reconciliation.py with reconcile() (MATCH/NEAR_MATCH/DIFF/UNAVAILABLE
+  + configurable tolerance) and per_lot_diffs() with cause hints. Lazy HTMX
+  strip embedded on the Ticker page.
+
+Section 1c — Data hygiene queue:
+  audit/hygiene.py with 4 category checks (unpriced, basis_unknown,
+  orphan_sell, dup_key). Embedded section on /imports plus inline fix form
+  for basis_unknown. POST /audit/set-basis triggers stitch + recompute
+  immediately. Nav-bar Imports badge with 30s TTL cache.
+
+Smoke test exercises all three end-to-end. 603 passing, 1 skipped, zero
+regressions.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`17ecf85`](https://github.com/chen-star/net_alpha/commit/17ecf85e314342dc203d75ef1c7762ba3d919fd6))
+
+
 ## v0.21.0 (2026-04-27)
 
 ### Feature
