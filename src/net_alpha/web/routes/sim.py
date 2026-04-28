@@ -24,14 +24,21 @@ def sim_form(
     ticker: str | None = None,
     qty: str | None = None,
     harvest: str | None = None,
+    account: str | None = None,
+    action: str | None = None,
 ) -> HTMLResponse:
     """Render the trade-simulator form.
 
-    Pre-fills ticker, quantity, and current-price hint when called from a
-    contextual entry point (e.g. Harvest queue → ``?ticker=X&qty=N&harvest=1``).
+    Pre-fills ticker, quantity, account, action, and current-price hint
+    when called from a contextual entry point (e.g. Positions row →
+    ``?ticker=X&qty=N&account=Y&action=sell``).
     """
     sym = (ticker or "").upper().strip()
     qty_str = (qty or "").strip()
+    account_pref = (account or "").strip()
+    action_pref = (action or "").strip().lower()
+    if action_pref not in ("buy", "sell"):
+        action_pref = ""
     price_hint = ""
     if sym:
         quotes = pricing.get_prices([sym])
@@ -44,6 +51,8 @@ def sim_form(
         {
             "ticker": sym,
             "qty": qty_str,
+            "account_pref": account_pref,
+            "action_pref": action_pref,
             "price_hint": price_hint,
             "harvest_mode": bool(harvest),
             "tickers": repo.list_distinct_tickers(),
