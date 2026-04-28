@@ -41,12 +41,12 @@ class BadgeCache:
 _cache = BadgeCache(ttl_seconds=30.0)
 
 
-def get_imports_badge_count(repo) -> int:
+def get_imports_badge_count(repo, settings=None) -> int:
     """Count of issues that warrant a nav badge: ≥1 error or ≥3 warns."""
     from net_alpha.audit.hygiene import collect_issues
 
     def compute() -> int:
-        issues = collect_issues(repo)
+        issues = collect_issues(repo, settings=settings)
         errors = sum(1 for i in issues if i.severity == "error")
         warns = sum(1 for i in issues if i.severity == "warn")
         if errors >= 1 or warns >= 3:

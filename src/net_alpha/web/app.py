@@ -53,7 +53,7 @@ def create_app(settings: Settings) -> FastAPI:
         from net_alpha.db.repository import Repository as _Repository
 
         _engine = get_engine(settings.db_path)
-        return get_imports_badge_count(_Repository(_engine))
+        return get_imports_badge_count(_Repository(_engine), settings=settings)
 
     templates.env.globals["imports_badge_count"] = _imports_badge_count
     app.state.templates = templates
