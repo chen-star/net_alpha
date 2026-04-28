@@ -2,6 +2,48 @@
 
 
 
+## v0.24.3 (2026-04-28)
+
+### Fix
+
+* fix(web): batch-2 — 9 issues (rename hygiene, tax merge, allocation, sim, etc.)
+
+#1 hygiene orphan-sell: match option closes by digit-stripped ticker base so
+   Schwab corp-action renames (GME → GME1) don&#39;t get falsely flagged.
+
+#2 nav: drop standalone &#34;Sim&#34; entry from top nav. /sim still reachable from
+   Holdings/Ticker &#34;Simulate sale&#34; + Tax/Harvest &#34;Simulate harvest&#34; links.
+
+#3 tax route: read only_harvestable from query string and thread it through
+   compute_harvest_queue. Previous code hardcoded False so the checkbox was
+   visually toggleable but functionally a no-op.
+
+#4 sim form: pre-fill qty + current Yahoo quote when invoked with
+   ?harvest=1, and render a &#34;Harvest mode&#34; banner explaining the pre-fill.
+
+#5 projection placeholder: replace cryptic &#34;tax: section in config.yaml&#34;
+   copy with a one-liner pointing at the Tax → Projection tab. The tab
+   itself now embeds a copy-paste YAML setup snippet with comments.
+
+#6 tax page: collapse &#34;Offset budget&#34; tab into &#34;Harvest&#34; tab (3 tabs total).
+   Budget tile + realized-P/L breakdown render above the harvest queue.
+   ?view=budget aliased to ?view=harvest for back-compat.
+
+#7 hygiene unpriced: drop misleading &#34;go fix → /holdings&#34; link and downgrade
+   severity to info — there&#39;s no in-app price-override UI, so the link was a
+   dead end. Rephrase detail to explain the cause is environmental.
+
+#8 allocation donut: split cash slice into free + pledged with subtly
+   different shades (CSP collateral shown muted vs free cash). New
+   build_allocation cash_pledged param + AllocationSlice.is_pledged_cash.
+
+#9 short options: move panel from Portfolio body to Holdings page (lazy
+   /holdings/short-options fragment). Holdings is the inventory page;
+   Portfolio stays focused on KPIs / allocation / wash watch / cash.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0f271f3`](https://github.com/chen-star/net_alpha/commit/0f271f30f93d9c3a559f039e5df66f54db102d27))
+
+
 ## v0.24.2 (2026-04-28)
 
 ### Fix
