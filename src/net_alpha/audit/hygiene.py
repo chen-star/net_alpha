@@ -139,5 +139,34 @@ def _check_orphan_sells(repo: Repository) -> list[HygieneIssue]:
 
 
 def _check_dup_keys(repo: Repository) -> list[HygieneIssue]:
-    """Same-day repeat clusters of ≥3 identical trades — possible re-import."""
-    return []
+    """Cluster of trades with the same natural-key signature on the same day.
+
+    Same-day repeats with occurrence_index > 0 are normal — most parsers emit
+    them when a single CSV row produces multiple Trades. But ≥3 trades sharing
+    (date, account, ticker, action, quantity) is unusually dense and worth
+    surfacing as info — could be a re-import that escaped dedup.
+    """
+    from collections import defaultdict
+
+    clusters: dict[tuple, int] = defaultdict(int)
+    for t in repo.all_trades():
+        key = (t.date, t.account, t.ticker, t.action, round(t.quantity, 4))
+        clusters[key] += 1
+
+    issues: list[HygieneIssue] = []
+    for (d, acct, ticker, action, qty), count in clusters.items():
+        if count < 3:
+            continue
+        issues.append(
+            HygieneIssue(
+                category="dup_key",
+                severity="info",
+                summary=f"{count} {action} trades for {ticker} on {d.isoformat()}",
+                detail=(
+                    f"Account: {acct} · Qty per trade: {qty}. Same-day repeats are "
+                    "usually normal but ≥3 occurrences suggests a possible re-import."
+                ),
+                fix_url="/imports",
+            )
+        )
+    return issues
