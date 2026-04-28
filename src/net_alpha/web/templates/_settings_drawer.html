@@ -1,0 +1,13 @@
+{# Settings drawer — Phase 0 skeleton.
+
+   Empty. Phase 1 wires the gear-icon trigger and Imports tab content;
+   Phases 2-3 add Profile / Density / ETF pairs / About tabs. Mounted in
+   base.html so the slide-over root is in the DOM ahead of any HTMX swap. #}
+<div id="settings-drawer"
+     class="fixed inset-y-0 right-0 w-[480px] bg-bg z-30 hidden"
+     style="box-shadow: var(--shadow-drawer);"
+     x-data="{ open: false }"
+     x-show="open"
+     x-cloak>
+  {# Phase 1 will populate this with tab strip + tab panels. #}
+</div>
