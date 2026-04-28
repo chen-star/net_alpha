@@ -61,16 +61,20 @@ def test_partial_cache_only_fetches_missing(tmp_path):
     assert out["QQQ"].price == Decimal("390.0")
 
 
-def test_provider_failure_serves_stale_with_flag(tmp_path):
-    """When provider raises, return whatever stale cache exists, marked stale."""
+def test_stale_cache_served_without_provider_call(tmp_path):
+    """Stale cache entries are returned immediately and flagged via
+    stale_symbols — the provider is NOT called on the read path. The
+    refresh button is the only way to force a network fetch."""
     cache = PriceCache(_engine(tmp_path), ttl_seconds=0)  # everything stale immediately
     cache.put_many([_quote("SPY", "460.5")])
     provider = _FakeProvider(raises=PriceFetchError("net down"))
     svc = PricingService(provider=provider, cache=cache, enabled=True)
     out = svc.get_prices(["SPY"])
     assert out["SPY"].price == Decimal("460.5")
+    assert provider.calls == []  # stale serve must not hit the network
     snap = svc.last_snapshot()
-    assert snap.degraded is True
+    assert snap.stale_symbols == ["SPY"]
+    assert snap.degraded is False  # we didn't try to fetch, so no provider failure
 
 
 def test_invalidate_and_refresh(tmp_path):
@@ -83,12 +87,14 @@ def test_invalidate_and_refresh(tmp_path):
     assert len(provider.calls) == 2
 
 
-def test_degraded_resets_on_recovery(tmp_path):
-    cache = PriceCache(_engine(tmp_path), ttl_seconds=0)
-    cache.put_many([_quote("SPY", "460.5")])
+def test_cold_fetch_failure_marks_degraded(tmp_path):
+    """If a symbol has no cache row at all and the provider fails fetching
+    it, the snapshot is marked degraded so the UI can surface the outage."""
+    cache = PriceCache(_engine(tmp_path))
     failing_provider = _FakeProvider(raises=PriceFetchError("net down"))
     svc = PricingService(provider=failing_provider, cache=cache, enabled=True)
-    svc.get_prices(["SPY"])
+    out = svc.get_prices(["SPY"])
+    assert out == {}
     assert svc.last_snapshot().degraded is True
 
     # Swap to a working provider — degraded must reset on next call.

@@ -44,11 +44,14 @@ def test_kpi_order_active(tmp_path):
     client = _seed(tmp_path, "active")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    assert order[:4] == ["ytd_realized", "ytd_unrealized", "wash_impact", "open_position"]
+    # wash_impact moved to the Tax page wash-sales tab.
+    assert order[:4] == ["ytd_realized", "ytd_unrealized", "open_position", "cash"]
+    assert "wash_impact" not in order
 
 
 def test_kpi_order_options(tmp_path):
     client = _seed(tmp_path, "options")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    assert order[:4] == ["ytd_realized", "wash_impact", "open_position", "cash"]
+    assert order[:3] == ["ytd_realized", "open_position", "cash"]
+    assert "wash_impact" not in order

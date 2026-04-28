@@ -32,9 +32,12 @@ _VISIBILITY: dict[str, dict[Profile, bool]] = {
 # list and render the named slot. Unknown groups return [].
 _ORDERING: dict[str, dict[Profile, list[str]]] = {
     "portfolio_kpi_hero": {
+        # Wash impact moved to the Tax page (Phase 2.x) — this hero stays focused on
+        # portfolio metrics only. Users can still surface wash impact via the slot
+        # picker if they want it back.
         "conservative": ["open_position", "lifetime_growth", "cash"],
-        "active": ["ytd_realized", "ytd_unrealized", "wash_impact", "open_position"],
-        "options": ["ytd_realized", "wash_impact", "open_position", "cash"],
+        "active": ["ytd_realized", "ytd_unrealized", "open_position", "cash"],
+        "options": ["ytd_realized", "open_position", "cash"],
     },
 }
 

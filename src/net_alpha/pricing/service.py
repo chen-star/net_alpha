@@ -47,41 +47,45 @@ class PricingService:
         return self._snapshot
 
     def get_prices(self, symbols: list[str]) -> dict[str, Quote]:
-        """Return {symbol: Quote} for every symbol we have a price for (live or stale).
+        """Stale-while-revalidate read: serve cached entries (fresh OR stale)
+        without blocking, and only network-fetch symbols with NO cache row.
 
-        When pricing is disabled, returns {}. When the provider fails, returns
-        whatever stale cache exists.
+        Page renders are dominated by per-symbol Yahoo `.info` calls (serial,
+        ~hundreds of ms each) — refetching every TTL window made every cold
+        page load wait on N HTTP roundtrips. Stale entries are now returned
+        immediately and surfaced via `snapshot.stale_symbols`, so the UI can
+        show a soft hint and the user can hit `POST /prices/refresh` (which
+        invalidates the cache, then re-enters this path) to force a refresh.
+
+        When pricing is disabled, returns {}. When the provider fails for
+        cold-start symbols, those symbols are simply absent from the result.
         """
         if not self._enabled or not symbols:
             self._snapshot = PricingSnapshot()
             return {}
 
         cached = self._cache.get_many(symbols)
-        fresh = {s: cq.quote for s, cq in cached.items() if not cq.stale}
-        stale_only = {s: cq.quote for s, cq in cached.items() if cq.stale}
-        to_fetch = [s for s in symbols if s not in fresh]
+        served = {s: cq.quote for s, cq in cached.items()}
+        stale_symbols = [s for s, cq in cached.items() if cq.stale]
+        to_fetch = [s for s in symbols if s not in served]
 
-        snap = PricingSnapshot(stale_symbols=list(stale_only.keys()))
+        snap = PricingSnapshot(stale_symbols=stale_symbols)
 
         if to_fetch:
             try:
                 fetched = self._provider.get_quotes(to_fetch)
                 self._cache.put_many(list(fetched.values()))
-                fresh.update(fetched)
+                served.update(fetched)
                 snap.fetched_at = max((q.as_of for q in fetched.values()), default=None)
                 if fetched:
                     snap.source = next(iter(fetched.values())).source
             except PriceFetchError as exc:
                 logger.warning("pricing: provider failed: {}", exc)
                 snap.degraded = True
-                # Fall back to stale cache for the requested symbols.
-                for s in to_fetch:
-                    if s in stale_only:
-                        fresh[s] = stale_only[s]
 
-        snap.missing_symbols = [s for s in symbols if s not in fresh]
+        snap.missing_symbols = [s for s in symbols if s not in served]
         self._snapshot = snap
-        return fresh
+        return served
 
     def refresh(self, symbols: list[str]) -> dict[str, Quote]:
         """Invalidate cached entries for symbols and re-fetch from the provider."""

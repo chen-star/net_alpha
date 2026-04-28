@@ -28,15 +28,17 @@ def _seed(tmp_path, profile_label):
 
 
 def test_wash_watch_open_for_active(tmp_path):
+    """Wash-sale watch lives on the Tax page wash-sales tab — open by default
+    for the Active profile."""
     client = _seed(tmp_path, "active")
-    html = client.get("/portfolio/body", params={"account": "Schwab/Tax"}).text
+    html = client.get("/tax", params={"view": "wash-sales", "account": "Schwab/Tax"}).text
     # <details ... open> when active
     assert "<details open" in html
 
 
 def test_wash_watch_collapsed_for_conservative_when_no_violation(tmp_path):
     client = _seed(tmp_path, "conservative")
-    html = client.get("/portfolio/body", params={"account": "Schwab/Tax"}).text
+    html = client.get("/tax", params={"view": "wash-sales", "account": "Schwab/Tax"}).text
     # <details> without "open" attribute
     assert "<details>" in html or "<details \n" in html
     assert "<details open" not in html

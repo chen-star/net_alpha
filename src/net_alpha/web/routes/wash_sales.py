@@ -20,6 +20,7 @@ from net_alpha.portfolio.detail_aggregations import (
     lag_days,
     source_label,
 )
+from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.web.dependencies import get_repository
 
 router = APIRouter()
@@ -92,6 +93,16 @@ def _wash_sales_context(
     years = sorted(year_set, reverse=True)
     selected_year = effective_year or today.year
 
+    # Wash-sale watch lives on this tab now (was on Portfolio). Scope by the
+    # account filter so the rows match the rest of the page.
+    wash_watch_window = 30
+    wash_watch_rows = recent_loss_closes(
+        repo=repo,
+        today=today,
+        window_days=wash_watch_window,
+        account=account or None,
+    )
+
     ctx: dict = {
         "view": view,
         "filter_ticker": ticker or "",
@@ -104,6 +115,9 @@ def _wash_sales_context(
         "accounts": [a.display() for a in repo.list_accounts()],
         "years": years,
         "selected_year": selected_year,
+        # _portfolio_wash_watch.html reads `rows` and `window_days`.
+        "rows": wash_watch_rows,
+        "window_days": wash_watch_window,
     }
 
     if view == "calendar":

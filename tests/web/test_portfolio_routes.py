@@ -61,8 +61,8 @@ def test_equity_curve_fragment_no_data(tmp_path):
     assert "Equity curve" in r.text
 
 
-def test_portfolio_body_fragment_returns_all_panels(tmp_path):
-    """The bundled body fragment renders the four overview panels."""
+def test_portfolio_body_fragment_returns_overview_panels(tmp_path):
+    """The bundled body fragment renders KPIs + equity-curve + allocation."""
     client = _client(tmp_path)
     response = client.get("/portfolio/body?period=ytd&account=")
     assert response.status_code == 200
@@ -72,8 +72,11 @@ def test_portfolio_body_fragment_returns_all_panels(tmp_path):
     assert "Unrealized" in html
     # Equity curve panel.
     assert "Equity curve" in html
-    # Wash-watch panel marker (panel head text or empty-state copy).
-    assert "wash" in html.lower()
+    # Wash-sale watch lives on /tax now — must NOT be in the portfolio body.
+    assert "Wash-sale watch" not in html
+    assert 'id="portfolio-wash-watch"' not in html
+    # Wash impact KPI tile is also gone.
+    assert 'data-kpi-slot="wash_impact"' not in html
     # Positions table is NOT in the body — it lives on /holdings.
     assert "No open positions" not in html
     assert 'id="portfolio-positions"' not in html

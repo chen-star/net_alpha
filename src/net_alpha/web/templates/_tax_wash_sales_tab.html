@@ -72,6 +72,12 @@
      class="px-3 py-1.5 text-sm {% if view == 'calendar' %}seg-active{% endif %}">Calendar</a>
 </div>
 
+{# Wash-sale watch — recent loss closes you shouldn't buy back yet. Lives at
+   the top of both views so it's always visible while reviewing wash sales. #}
+<div class="panel mb-4">
+  {% include "_portfolio_wash_watch.html" %}
+</div>
+
 {% if view == 'calendar' %}
   {% include "_calendar_ribbon.html" %}
   <div id="focus-strip" class="mt-6"></div>

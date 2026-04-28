@@ -112,34 +112,46 @@
   </div>
 
   {# Click-through details modal — full ranked breakdown including small
-     positions normally rolled into the 'rest' aggregate. #}
+     positions normally rolled into the 'rest' aggregate.
+
+     UX: with 50+ holdings the bare table was an undifferentiated wall.
+     Now the modal has a typeahead filter, sticky table header, and a
+     compact row density so the user can find a symbol in two seconds. #}
   <div id="allocation-details-modal"
+       x-data="{ q: '' }"
        class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-       onclick="if (event.target === this) this.classList.add('hidden')">
+       onclick="if (event.target === this) { this.classList.add('hidden'); }">
     <div class="bg-surface rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col"
          style="border:0.5px solid rgba(255,255,255,0.08);">
-      <div class="flex items-baseline justify-between p-4"
+      <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3"
            style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
-        <div>
+        <div class="min-w-0">
           <h2 class="text-lg font-semibold tracking-tightish">Allocation breakdown</h2>
           <div class="text-[11px] text-label-3 mt-1">
             {{ allocation.symbol_count }} priced symbol{% if allocation.symbol_count != 1 %}s{% endif %}
             · ${{ "{:,.2f}".format(allocation.total_market_value|float) }} total
           </div>
         </div>
-        <button type="button"
-                onclick="document.getElementById('allocation-details-modal').classList.add('hidden')"
-                class="text-label-2 hover:text-text text-2xl leading-none">&times;</button>
+        <div class="flex items-center gap-2 shrink-0">
+          <input type="text"
+                 x-model="q"
+                 placeholder="Filter symbol…"
+                 class="bg-surface text-text rounded-md px-2 py-1 text-[12px] font-mono w-36"
+                 style="border:0.5px solid rgba(255,255,255,0.12);"/>
+          <button type="button"
+                  onclick="document.getElementById('allocation-details-modal').classList.add('hidden')"
+                  class="text-label-2 hover:text-text text-2xl leading-none px-1">&times;</button>
+        </div>
       </div>
-      <div class="overflow-y-auto" style="padding:0;">
-        <table class="net-table text-sm">
-          <thead>
-            <tr>
-              <th class="r" style="width:48px;">#</th>
-              <th>Symbol</th>
-              <th>Type</th>
-              <th class="r">Market $</th>
-              <th class="r">% of total</th>
+      <div class="overflow-y-auto flex-1">
+        <table class="net-table w-full" style="font-size:12px;">
+          <thead class="sticky top-0 z-10" style="background:var(--surface, #0b0d10);">
+            <tr style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+              <th class="r" style="width:42px; padding:6px 8px;">#</th>
+              <th style="padding:6px 8px;">Symbol</th>
+              <th style="padding:6px 8px;">Type</th>
+              <th class="r" style="padding:6px 8px;">Market $</th>
+              <th class="r" style="padding:6px 8px;">% of total</th>
             </tr>
           </thead>
           <tbody>
@@ -154,25 +166,30 @@
                 {% set _color = rank_palette[s.rank - 1] if s.rank <= rank_palette|length else 'rgba(255,255,255,0.4)' %}
                 {% set _type = 'Equity' %}
               {% endif %}
-              <tr>
-                <td class="r num text-label-3">{{ s.rank if s.rank > 0 else '—' }}</td>
-                <td>
+              <tr data-symbol="{{ s.symbol|lower }}"
+                  x-show="q === '' || '{{ s.symbol|lower }}'.includes(q.toLowerCase())"
+                  style="border-bottom:0.5px solid rgba(255,255,255,0.04);">
+                <td class="r num text-label-3" style="padding:4px 8px;">{{ s.rank if s.rank > 0 else '—' }}</td>
+                <td style="padding:4px 8px;">
                   <div class="flex items-center gap-2">
-                    <span style="width:8px; height:8px; border-radius:50%; background:{{ _color }};"></span>
+                    <span style="width:7px; height:7px; border-radius:50%; background:{{ _color }};"></span>
                     <span class="font-semibold">{{ s.symbol }}</span>
                   </div>
                 </td>
-                <td class="text-[12px] text-label-2">{{ _type }}</td>
-                <td class="r num">${{ "{:,.2f}".format(s.market_value|float) }}</td>
-                <td class="r num font-semibold">{{ "%.2f"|format(s.pct|float) }}%</td>
+                <td class="text-[11px] text-label-2" style="padding:4px 8px;">{{ _type }}</td>
+                <td class="r num" style="padding:4px 8px;">${{ "{:,.2f}".format(s.market_value|float) }}</td>
+                <td class="r num font-semibold" style="padding:4px 8px;">{{ "%.2f"|format(s.pct|float) }}%</td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-      <div class="px-4 py-2 text-[11px] text-label-3"
+      <div class="px-4 py-2 text-[11px] text-label-3 flex items-center justify-between"
            style="border-top:0.5px solid rgba(255,255,255,0.08);">
-        Click outside or press × to close.
+        <span>Type to filter · click outside or × to close.</span>
+        <span x-show="q !== ''" x-cloak>
+          <button type="button" @click="q = ''" class="underline hover:text-text">clear filter</button>
+        </span>
       </div>
     </div>
   </div>

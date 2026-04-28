@@ -70,7 +70,8 @@ def test_phase3_smoke(tmp_path):
     import re
 
     order = re.findall(r'data-kpi-slot="([^"]+)"', kpis)
-    assert order[:4] == ["ytd_realized", "ytd_unrealized", "wash_impact", "open_position"]
+    # wash_impact moved off the Portfolio hero (now lives on /tax wash-sales tab).
+    assert order[:4] == ["ytd_realized", "ytd_unrealized", "open_position", "cash"]
 
     # 7. Topbar switcher form posts to /preferences with account_id.
     home = client.get("/").text

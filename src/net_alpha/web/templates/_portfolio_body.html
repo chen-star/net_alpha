@@ -24,9 +24,8 @@
   {% include "_portfolio_allocation.html" %}
 </div>
 
-<div id="portfolio-wash-watch" class="panel mb-4">
-  {% include "_portfolio_wash_watch.html" %}
-</div>
+{# Wash-sale watch moved to the Tax page wash-sales tab — that's its natural
+   home. The portfolio panel intentionally stays free of tax-detection UI. #}
 
 {% if (offset_budget is defined and offset_budget) or (has_tax_config is defined) or (projection is defined) %}
   <div class="flex items-baseline justify-between mt-6 mb-2">

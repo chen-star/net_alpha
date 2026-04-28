@@ -573,12 +573,6 @@ def portfolio_body(
         period=period_tuple,
         account=None,  # already filtered above
     )
-    wi = compute_wash_impact(
-        violations=repo.all_violations(),
-        period_label=period_label,
-        period=period_tuple,
-        account=account or None,
-    )
     points = build_equity_curve(trades=scoped_trades, year=year, present_unrealized=kpis.period_unrealized)
     # Hoist gl_option_closures so we don't re-scan the table for both
     # compute_open_positions and compute_open_short_option_positions.
@@ -618,13 +612,6 @@ def portfolio_body(
         events=cash_events,
         trades=scoped_trades,
         account=None,
-    )
-
-    wash_rows = recent_loss_closes(
-        repo=repo,
-        today=today,
-        window_days=30,
-        account=account or None,
     )
 
     open_shorts = compute_open_short_option_positions(
@@ -673,13 +660,9 @@ def portfolio_body(
         {
             "kpis": kpis,
             "snapshot": snap,
-            "wash_impact_total": wi.disallowed_total,
-            "wash_violations": wi.violation_count,
             "points": points,
             "year": year,
             "allocation": allocation,
-            "rows": wash_rows,
-            "window_days": 30,
             "open_shorts": open_shorts,
             "cash_secured_total": cash_secured_total,
             "premium_received_total": premium_received_total,
