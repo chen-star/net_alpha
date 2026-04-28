@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from typing import Literal
 
@@ -9,6 +10,18 @@ from pydantic import BaseModel
 
 from net_alpha.config import Settings, load_tax_config
 from net_alpha.db.repository import Repository
+
+# Schwab appends a numeric suffix to an option's underlying after a corporate
+# action ("GME" → "GME1"). The original BTO and the matching STC may carry
+# different tickers in the trade table — economically the same position. Strip
+# trailing digits when matching option events so the pair nets out. (Same
+# pattern used in net_alpha.portfolio.positions._opt_ticker_base.)
+_OPT_CORP_ACTION_SUFFIX = re.compile(r"\d+$")
+
+
+def _opt_ticker_base(ticker: str) -> str:
+    return _OPT_CORP_ACTION_SUFFIX.sub("", ticker)
+
 
 HygieneCategory = Literal["unpriced", "basis_unknown", "orphan_sell", "dup_key", "tax_config_missing"]
 HygieneSeverity = Literal["info", "warn", "error"]
@@ -62,19 +75,27 @@ def _get_unpriced_symbols(repo: Repository) -> list[str]:
 
 
 def _check_unpriced(repo: Repository) -> list[HygieneIssue]:
-    """Open lots whose ticker has no current price quote."""
+    """Open lots whose ticker has no current price quote.
+
+    Informational only: there's no in-app action to fix a missing Yahoo quote
+    (it's environmental — delisted, OTC, or symbol mismatch). We surface it
+    so the user understands why the symbol's market value reads as zero.
+    """
     issues: list[HygieneIssue] = []
     for sym in _get_unpriced_symbols(repo):
         issues.append(
             HygieneIssue(
                 category="unpriced",
-                severity="warn",
+                severity="info",
                 summary=f"{sym} has no price quote",
                 detail=(
-                    "Unrealized P&L for this symbol is excluded from totals. "
-                    "Common causes: delisted, OTC, or symbol mismatch with Yahoo."
+                    "Yahoo Finance returned no quote for this symbol, so its market "
+                    "value is excluded from Portfolio totals. Common causes: "
+                    "delisted, OTC, or symbol mismatch (Yahoo uses a different "
+                    "ticker — e.g. BRK.B vs BRK-B). Lot-level cost basis and "
+                    "realized P&L are unaffected; this only impacts the "
+                    "Portfolio market-value KPI."
                 ),
-                fix_url=f"/holdings?symbol={sym}",
             )
         )
     return issues
@@ -122,10 +143,19 @@ def _check_orphan_sells(repo: Repository) -> list[HygieneIssue]:
     Excludes option sell-to-open trades (basis_source == "option_short_open*"):
     those create the position rather than close one, so a missing buy lot is
     by design — the matching close (BTC / expiry / assignment) comes later.
+
+    For option closes, matches on the digit-stripped ticker base so that a
+    Schwab corp-action rename (e.g. GME → GME1 BTO followed by STC under
+    GME1) doesn't get falsely flagged.
     """
-    lots_by_ticker: dict[str, bool] = {}
+    eq_lot_tickers: set[str] = set()
+    opt_lot_keys: set[tuple[str, float, object, str]] = set()
     for lot in repo.all_lots():
-        lots_by_ticker[lot.ticker] = True
+        if lot.option_details is None:
+            eq_lot_tickers.add(lot.ticker)
+        else:
+            opt = lot.option_details
+            opt_lot_keys.add((_opt_ticker_base(lot.ticker), opt.strike, opt.expiry, opt.call_put))
 
     issues: list[HygieneIssue] = []
     for t in repo.all_trades():
@@ -134,8 +164,14 @@ def _check_orphan_sells(repo: Repository) -> list[HygieneIssue]:
         # Sell-to-open of an option is not an orphan — it opens a short.
         if t.basis_source.startswith("option_short_open"):
             continue
-        if t.ticker in lots_by_ticker:
-            continue
+        if t.option_details is not None:
+            opt = t.option_details
+            key = (_opt_ticker_base(t.ticker), opt.strike, opt.expiry, opt.call_put)
+            if key in opt_lot_keys:
+                continue
+        else:
+            if t.ticker in eq_lot_tickers:
+                continue
         issues.append(
             HygieneIssue(
                 category="orphan_sell",
@@ -203,11 +239,13 @@ def _check_tax_config_missing(settings: Settings) -> list[HygieneIssue]:
             severity="info",
             summary="Tax bracket configuration not set",
             detail=(
-                "Add a `tax:` section to ~/.net_alpha/config.yaml to enable the "
-                "year-end tax projection card. The harvest queue, offset budget, "
-                "and trade traffic light still work without it."
+                "The year-end tax projection on the Tax page is disabled until "
+                "you fill in your filing status and rates. Open the Tax page "
+                "→ Projection tab for a copy-paste config snippet. The harvest "
+                "queue, offset budget, and trade traffic light still work "
+                "without it."
             ),
-            fix_url="/imports#tax-config",
+            fix_url="/tax?view=projection",
             fix_form=None,
         )
     ]

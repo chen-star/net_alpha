@@ -19,13 +19,10 @@
     <div class="text-[11px] text-label-3 mt-2">Estimate only — single marginal rate.</div>
   {% else %}
     <div class="label-uc">Year-end tax projection</div>
-    <div class="text-[13px] text-label-2 mt-2">
-      Set the <code class="text-[12px] num text-label-1 px-1 py-[1px] rounded" style="background: rgba(255,255,255,0.06);">tax:</code>
-      section in <code class="text-[12px] num text-label-1 px-1 py-[1px] rounded" style="background: rgba(255,255,255,0.06);">~/.net_alpha/config.yaml</code>
-      to enable this projection.
-    </div>
-    <div class="text-[11px] text-label-3 mt-2">
-      <a href="/imports#tax-config" class="text-indigo no-underline hover:underline">Open data hygiene →</a>
+    <div class="text-[12px] text-label-2 mt-2 leading-[1.5]">
+      Tell net-alpha your filing status and tax rates and it'll project this year's tax bill from your realized gains. See the
+      <a href="/tax?view=projection" class="text-indigo no-underline hover:underline">Tax page</a>
+      for the one-time setup snippet.
     </div>
   {% endif %}
 </div>

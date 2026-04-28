@@ -51,7 +51,7 @@
           {% else %}<span class="text-label-3">&#8212;</span>{% endif %}
         </td>
         <td>
-          <a href="/sim?ticker={{ row.symbol }}&amp;qty={{ row.qty }}" class="btn-ghost text-[12px]"
+          <a href="/sim?ticker={{ row.symbol }}&amp;qty={{ row.qty }}&amp;harvest=1" class="btn-ghost text-[12px]"
              title="Run a sale of {{ row.qty }} {{ row.symbol }} through the trade-simulator: shows realized P&L, FIFO lot consumption, wash-sale traps, and the lot-method recommendation.">
             Simulate harvest
           </a>

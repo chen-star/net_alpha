@@ -10,7 +10,8 @@ from net_alpha.db.repository import Repository
 from net_alpha.engine.etf_pairs import load_etf_pairs
 from net_alpha.engine.simulator import simulate_buy, simulate_sell
 from net_alpha.portfolio.tax_planner import PlannedTrade, TaxBrackets, assess_trade
-from net_alpha.web.dependencies import get_repository
+from net_alpha.pricing.service import PricingService
+from net_alpha.web.dependencies import get_pricing_service, get_repository
 
 router = APIRouter()
 
@@ -19,13 +20,32 @@ router = APIRouter()
 def sim_form(
     request: Request,
     repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
     ticker: str | None = None,
+    qty: str | None = None,
+    harvest: str | None = None,
 ) -> HTMLResponse:
+    """Render the trade-simulator form.
+
+    Pre-fills ticker, quantity, and current-price hint when called from a
+    contextual entry point (e.g. Harvest queue → ``?ticker=X&qty=N&harvest=1``).
+    """
+    sym = (ticker or "").upper().strip()
+    qty_str = (qty or "").strip()
+    price_hint = ""
+    if sym:
+        quotes = pricing.get_prices([sym])
+        q = quotes.get(sym)
+        if q is not None and q.price is not None:
+            price_hint = f"{float(q.price):.2f}"
     return request.app.state.templates.TemplateResponse(
         request,
         "sim.html",
         {
-            "ticker": ticker or "",
+            "ticker": sym,
+            "qty": qty_str,
+            "price_hint": price_hint,
+            "harvest_mode": bool(harvest),
             "tickers": repo.list_distinct_tickers(),
             "accounts": [a.display() for a in repo.list_accounts()],
             "today_iso": _date.today().isoformat(),

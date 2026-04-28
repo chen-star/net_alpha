@@ -2,6 +2,25 @@
 <section class="space-y-3">
   {% include "_projection_card.html" with context %}
 
+  {% if not has_tax_config %}
+  <div class="kpi">
+    <div class="label-uc">Enable tax projection</div>
+    <div class="text-[13px] text-label-2 mt-2 leading-[1.55]">
+      The projection above multiplies your <em>realized</em> gains/dividends/interest by your tax rates to estimate this year's bill. To enable it, save the snippet below to <code class="text-[12px] num text-label-1 px-1 py-[1px] rounded" style="background: rgba(255,255,255,0.06);">~/.net_alpha/config.yaml</code> and edit the values to match your situation, then refresh.
+    </div>
+    <pre class="text-[12px] num mt-3 p-3 rounded overflow-x-auto" style="background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.08); line-height: 1.55;"><code>tax:
+  filing_status: single        # single | mfj | mfs | hoh
+  state: CA                    # ISO state code; "" = federal-only
+  federal_marginal_rate: 0.24  # your top federal bracket
+  state_marginal_rate: 0.093   # your top state bracket (or 0)
+  ltcg_rate: 0.15              # 0 / 0.15 / 0.20
+  qualified_div_rate: 0.15     # usually same as LTCG</code></pre>
+    <div class="text-[11px] text-label-3 mt-2 leading-[1.45]">
+      Rates are stored locally — nothing leaves your machine. The harvest queue, offset budget, and wash-sale views all work fine without this section; only the year-end <em>tax</em> projection needs it.
+    </div>
+  </div>
+  {% endif %}
+
   {% if has_tax_config and projection %}
   <div class="kpi">
     <div class="label-uc mb-2">Breakdown</div>

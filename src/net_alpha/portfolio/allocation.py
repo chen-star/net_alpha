@@ -22,7 +22,15 @@ def build_allocation(
     positions: Iterable[PositionRow],
     top_n: int = 10,
     cash: Decimal | None = None,
+    cash_pledged: Decimal | None = None,
 ) -> AllocationView:
+    """Build the donut + leaderboard view.
+
+    ``cash`` is the *total* cash balance for the scope. ``cash_pledged`` is
+    the portion currently securing open short puts (CSP collateral) and is
+    drawn as a separate slice in a slightly muted shade so the user sees the
+    free / pledged split without a second chart.
+    """
     valued = [p for p in positions if p.market_value is not None and p.market_value > 0]
     valued.sort(key=lambda p: p.market_value or Decimal("0"), reverse=True)
 
@@ -30,6 +38,11 @@ def build_allocation(
 
     has_cash = cash is not None and cash > 0
     grand_total = total + (cash if has_cash else Decimal("0"))
+
+    pledged = cash_pledged if (cash_pledged is not None and cash_pledged > 0 and has_cash) else Decimal("0")
+    if has_cash and pledged > cash:
+        pledged = cash  # clamp — never report more pledged than total
+    free_cash = (cash - pledged) if has_cash else Decimal("0")
 
     if total <= 0 and not has_cash:
         return AllocationView(
@@ -72,17 +85,33 @@ def build_allocation(
         )
 
     if has_cash:
-        cash_pct = (cash / grand_total * 100).quantize(Decimal("0.01"))
-        slices.append(
-            AllocationSlice(
-                rank=0,
-                symbol="Cash",
-                market_value=cash,
-                pct=cash_pct,
-                is_rest=False,
-                is_cash=True,
+        # Free cash slice (always present when has_cash, even if value is 0;
+        # we only emit when > 0 to avoid empty entries).
+        if free_cash > 0:
+            free_pct = (free_cash / grand_total * 100).quantize(Decimal("0.01"))
+            slices.append(
+                AllocationSlice(
+                    rank=0,
+                    symbol="Cash",
+                    market_value=free_cash,
+                    pct=free_pct,
+                    is_rest=False,
+                    is_cash=True,
+                )
             )
-        )
+        if pledged > 0:
+            pledged_pct = (pledged / grand_total * 100).quantize(Decimal("0.01"))
+            slices.append(
+                AllocationSlice(
+                    rank=0,
+                    symbol="Pledged",
+                    market_value=pledged,
+                    pct=pledged_pct,
+                    is_rest=False,
+                    is_cash=True,
+                    is_pledged_cash=True,
+                )
+            )
 
     def _share(n: int) -> Decimal:
         s = sum((p.market_value for p in valued[:n]), start=Decimal("0"))

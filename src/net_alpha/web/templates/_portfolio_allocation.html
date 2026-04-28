@@ -4,7 +4,8 @@
   '#64D2FF', '#5AC8FA', '#BF5AF2', 'rgba(181,181,255,0.65)', 'rgba(255,255,255,0.40)'
 ] %}
 {% set rest_color = 'rgba(255,255,255,0.14)' %}
-{% set cash_color = 'rgba(142,142,147,0.6)' %}  {# neutral gray; matches Apple's systemGray #}
+{% set cash_color = 'rgba(142,142,147,0.6)' %}  {# neutral gray; matches Apple's systemGray — free cash #}
+{% set cash_pledged_color = 'rgba(142,142,147,0.32)' %}  {# muted variant — pledged cash (CSP collateral) #}
 
 {% if allocation.symbol_count == 0 %}
   <div class="text-label-3 text-[12px] py-4 text-center">
@@ -23,6 +24,8 @@
           {% set seg_len = circumference * (s.pct|float) / 100.0 %}
           {% if s.is_rest %}
             {% set color = rest_color %}
+          {% elif s.is_pledged_cash %}
+            {% set color = cash_pledged_color %}
           {% elif s.is_cash %}
             {% set color = cash_color %}
           {% else %}
@@ -79,10 +82,14 @@
             <span class="num">{{ "%.1f"|format(s.pct|float) }}%</span>
           </span>
         {% elif s.is_cash %}
+          {% set _color = cash_pledged_color if s.is_pledged_cash else cash_color %}
+          {% set _label = 'Cash · pledged' if s.is_pledged_cash else 'Cash · free' %}
+          {% set _title = 'Cash currently securing open short puts (CSP collateral). Cannot be deployed elsewhere until the puts close, expire, or are bought back.' if s.is_pledged_cash else 'Cash not pledged to any open option position.' %}
           <span class="inline-flex items-center gap-[7px] py-[4px] pl-2 pr-[10px] rounded-full text-[11px]"
-                style="background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.08);">
-            <span style="width:6px; height:6px; border-radius:50%; background:{{ cash_color }};"></span>
-            <span class="font-semibold tracking-tightish text-text">Cash</span>
+                style="background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.08);"
+                title="{{ _title }}">
+            <span style="width:6px; height:6px; border-radius:50%; background:{{ _color }};"></span>
+            <span class="font-semibold tracking-tightish text-text">{{ _label }}</span>
             <span class="num text-label-2">${{ "%.1f"|format(s.market_value|float / 1000) }}k</span>
             <span class="num font-semibold">{{ "%.1f"|format(s.pct|float) }}%</span>
           </span>

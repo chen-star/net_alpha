@@ -397,6 +397,41 @@ def portfolio_allocation_fragment(
     )
 
 
+@router.get("/holdings/short-options", response_class=HTMLResponse)
+def holdings_short_options(
+    request: Request,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """Open short options (CSPs / CCs) panel — rendered on /holdings.
+
+    Pure read of trades + GL closures, scoped by account. Returns the same
+    fragment we previously embedded on Portfolio, now keyed off /holdings so
+    the inventory of "things you owe" lives next to the inventory of "things
+    you own".
+    """
+    today = date.today()
+    trades = repo.all_trades()
+    if account:
+        trades = [t for t in trades if t.account == account]
+    open_shorts = compute_open_short_option_positions(
+        trades,
+        gl_option_closures=repo.get_option_gl_closures(),
+    )
+    cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
+    premium_received_total = sum((s.premium_received for s in open_shorts), start=Decimal("0"))
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_portfolio_short_options.html",
+        {
+            "open_shorts": open_shorts,
+            "cash_secured_total": cash_secured_total,
+            "premium_received_total": premium_received_total,
+            "today": today,
+        },
+    )
+
+
 @router.get("/portfolio/equity-curve", response_class=HTMLResponse)
 def portfolio_equity_curve(
     request: Request,
@@ -536,7 +571,6 @@ def portfolio_body(
         account=None,
     )
 
-    allocation = build_allocation(positions=positions_for_alloc, top_n=10, cash=cash_slice)
     wash_rows = recent_loss_closes(
         repo=repo,
         today=today,
@@ -551,6 +585,12 @@ def portfolio_body(
     cash_secured_total = sum(
         (s.cash_secured for s in open_shorts),
         start=Decimal("0"),
+    )
+    allocation = build_allocation(
+        positions=positions_for_alloc,
+        top_n=10,
+        cash=cash_slice,
+        cash_pledged=cash_secured_total,
     )
     premium_received_total = sum(
         (s.premium_received for s in open_shorts),

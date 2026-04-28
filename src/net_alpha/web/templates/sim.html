@@ -4,8 +4,20 @@
 {% block content %}
   <h1 class="text-2xl mb-4">Simulate a trade</h1>
 
+  {% if harvest_mode and ticker and qty %}
+  <div class="panel mb-4 px-4 py-3" style="border-left: 3px solid #FFD60A;">
+    <div class="text-[12px] label-uc text-warn">Harvest mode</div>
+    <div class="text-[13px] text-label-1 mt-1 leading-[1.5]">
+      Pre-filled to sell <span class="num font-semibold">{{ qty }}</span>
+      <span class="font-semibold">{{ ticker }}</span>
+      {% if price_hint %}at the current quote <span class="num">${{ price_hint }}</span>{% endif %}.
+      Hit <span class="font-semibold">Run sim</span> to preview realized P&amp;L, FIFO lot consumption, and any wash-sale traps before placing the harvest.
+    </div>
+  </div>
+  {% endif %}
+
   <form hx-post="/sim" hx-target="#sim-result" hx-swap="innerHTML"
-        x-data="{ action: 'sell' }"
+        x-data="{ action: '{{ 'sell' if harvest_mode else 'sell' }}' }"
         class="panel mb-6">
     <div class="grid grid-cols-6 gap-3 items-end">
       <div class="col-span-1">
@@ -33,13 +45,13 @@
       </div>
       <div>
         <label class="block label-uc">Quantity</label>
-        <input type="number" name="qty" step="0.01" required
+        <input type="number" name="qty" step="0.01" value="{{ qty or '' }}" required
                class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
       </div>
       <div>
-        <label class="block label-uc">Price</label>
-        <input type="number" name="price" step="0.01" required
+        <label class="block label-uc">Price{% if price_hint %} <span class="text-label-3 text-[10px]">(quote ${{ price_hint }})</span>{% endif %}</label>
+        <input type="number" name="price" step="0.01" value="{{ price_hint }}" required
                class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
       </div>

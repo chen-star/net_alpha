@@ -124,6 +124,7 @@ class AllocationSlice:
     pct: Decimal  # 0..100, of total market value (or account value when cash present)
     is_rest: bool
     is_cash: bool = False
+    is_pledged_cash: bool = False  # cash currently securing a short put (CSP collateral)
 
 
 @dataclass(frozen=True)

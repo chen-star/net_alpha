@@ -33,6 +33,9 @@ def test_projection_card_renders_total_and_breakdown() -> None:
 
 
 def test_projection_card_placeholder_when_config_missing() -> None:
+    """Placeholder explains why the projection is empty and links to Tax setup."""
     out = _env().get_template("_projection_card.html").render(projection=None, has_tax_config=False)
-    assert "tax bracket" in out.lower() or "config" in out.lower()
-    assert "/imports" in out
+    # Placeholder should give the user something actionable to read.
+    assert "filing status" in out.lower() or "tax rates" in out.lower()
+    # And link to where the config snippet lives — the Tax page Projection tab.
+    assert "/tax?view=projection" in out

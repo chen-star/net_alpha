@@ -8,8 +8,7 @@
   <nav class="tabs mb-4" role="tablist">
     {% set tabs = [
       ("wash-sales", "Wash sales"),
-      ("harvest", "Harvest queue"),
-      ("budget", "Offset budget"),
+      ("harvest", "Harvest"),
       ("projection", "Projection"),
     ] %}
     {% set _active_tab = tab_view if tab_view is defined else view %}
@@ -26,9 +25,7 @@
     {% if _active_tab == "wash-sales" %}
       {% include "_tax_wash_sales_tab.html" with context %}
     {% elif _active_tab == "harvest" %}
-      {% include "_harvest_queue.html" with context %}
-    {% elif _active_tab == "budget" %}
-      {% include "_offset_budget_tab.html" with context %}
+      {% include "_harvest_tab.html" with context %}
     {% elif _active_tab == "projection" %}
       {% include "_projection_tab.html" with context %}
     {% endif %}

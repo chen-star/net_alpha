@@ -39,6 +39,7 @@ def get_tax(
     confidence: str | None = None,
     sort: str | None = None,
     order: str = "desc",
+    only_harvestable: str | None = None,
     repo: Repository = Depends(get_repository),
     pricing: PricingService = Depends(get_pricing_service),
     etf_pairs: dict[str, list[str]] = Depends(get_etf_pairs),
@@ -51,9 +52,15 @@ def get_tax(
     today = _date.today()
 
     # Normalise tab-level view key for context / template branching.
-    _TAB_VIEWS = {"wash-sales", "harvest", "budget", "projection"}
+    # "budget" is a back-compat alias for "harvest" — the offset-budget tile
+    # is now rendered above the harvest queue on the harvest tab.
+    _TAB_VIEWS = {"wash-sales", "harvest", "projection"}
+    _VIEW_ALIASES = {"budget": "harvest"}
     # Inner sub-views for the wash-sales tab (table / calendar toggle).
     _WASH_SUB_VIEWS = {"table", "calendar"}
+
+    if view in _VIEW_ALIASES:
+        view = _VIEW_ALIASES[view]
 
     prefs = repo.list_user_preferences()
     filter_id = None
@@ -108,16 +115,18 @@ def get_tax(
         ctx["view"] = inner_view
         ctx["tab_view"] = tab_view
     elif view == "harvest":
+        _falsey = ("", "0", "false", "off")
+        only_harvestable_bool = only_harvestable is not None and only_harvestable.lower() not in _falsey
         rows = compute_harvest_queue(
             repo=repo,
             pricing=pricing,
             as_of=today,
             etf_pairs=etf_pairs,
             etf_replacements=request.app.state.etf_replacements,
+            only_harvestable=only_harvestable_bool,
         )
         ctx["rows"] = rows
-        ctx["only_harvestable"] = False
-    elif view == "budget":
+        ctx["only_harvestable"] = only_harvestable_bool
         ctx["budget"] = compute_offset_budget(repo=repo, year=today.year)
     elif view == "projection":
         cfg = request.app.state.tax_brackets_cfg
