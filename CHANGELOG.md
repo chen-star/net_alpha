@@ -2,6 +2,126 @@
 
 
 
+## v0.27.0 (2026-04-28)
+
+### Build
+
+* build: add snapshot-test/-update targets; exclude from default suite
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`61ab652`](https://github.com/chen-star/net_alpha/commit/61ab65257f60c0d6baf2da4d306af47c69d238bb))
+
+* build: add pytest-playwright + playwright to [dev] extras
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1e7b148`](https://github.com/chen-star/net_alpha/commit/1e7b148c7e7d04684699916a8fe61df8d930d502))
+
+* build: add vendor-lucide Makefile target (§5.4) ([`f8d83d5`](https://github.com/chen-star/net_alpha/commit/f8d83d5ce971000003ba6e5af6ea818af729bf94))
+
+* build(css): rebuild app.css after Phase 0 token additions ([`8092106`](https://github.com/chen-star/net_alpha/commit/8092106b08c7992b5e83510f8a7f3f35abec1e7f))
+
+### Documentation
+
+* docs(plans): Phase 0 — Foundations implementation plan
+
+Bite-sized TDD-first tasks across six sections: centralized format helpers
+(fmt_quantity / fmt_currency / fmt_percent / fmt_date) registered as Jinja
+globals; new design tokens added to app.src.css; 24 vendored Lucide SVGs
+under web/static/icons; empty Settings drawer skeleton mounted in base.html;
+pytest-playwright snapshot-test infrastructure with baselines for every
+page at desktop + tablet widths.
+
+Phases 1–5 each get their own plan after Phase 0 ships.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c234417`](https://github.com/chen-star/net_alpha/commit/c23441794374c3209719d456e3ab2577c68d4fde))
+
+* docs: UI/UX evaluation &amp; redesign spec (Approach B)
+
+Whole-product audit of the web UI across Portfolio, Holdings, Tax, Imports,
+Sim, and Ticker pages, plus a multi-phase redesign that reorganizes the IA
+(Overview/Positions/Tax/Sim + Settings drawer), promotes the Sim page,
+absorbs the harvest queue into Positions, replaces the YAML tax-projection
+setup with an inline form, and lays out a polish pass against ~50 audit
+findings. Stack and visual tokens kept; five-phase sequencing with snapshot
+tests as part of the work.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b4e5b62`](https://github.com/chen-star/net_alpha/commit/b4e5b62e36c4f6dc37b0223bbeca603d3547c316))
+
+### Feature
+
+* feat(web): mount settings drawer skeleton in base.html ([`ccb602a`](https://github.com/chen-star/net_alpha/commit/ccb602a5c8665bd4b7c69bfb70f060e8fe514abe))
+
+* feat(web): add empty settings drawer skeleton (§3.6) ([`3337328`](https://github.com/chen-star/net_alpha/commit/3337328cc0ac667d8ad24c33c38119069b45414a))
+
+* feat(web/static): vendor Lucide icons (§5.4) ([`2522584`](https://github.com/chen-star/net_alpha/commit/252258409722792b0d53461ef5ad01d272af33e7))
+
+* feat(web/css): add Phase 0 design tokens (§5.1) ([`c8725a3`](https://github.com/chen-star/net_alpha/commit/c8725a3996384df5617c34f3292a864e8ec4caf3))
+
+* feat(web): register fmt_* helpers as Jinja globals ([`89faed2`](https://github.com/chen-star/net_alpha/commit/89faed2f7533ac1b828b3e9dd549a8ebaaa75f30))
+
+* feat(web/format): add fmt_date (§5.9) ([`a00849a`](https://github.com/chen-star/net_alpha/commit/a00849a88b74f91cb992446ef9b67be8c8268d3e))
+
+* feat(web/format): add fmt_percent (§5.9) ([`7632746`](https://github.com/chen-star/net_alpha/commit/763274621e6fce79d56bc9eec6e15ec79679448d))
+
+* feat(web/format): add density-aware fmt_currency (§5.9) ([`e77be98`](https://github.com/chen-star/net_alpha/commit/e77be9824b38237c15086139666b01f0875dffcf))
+
+* feat(web/format): add fmt_quantity (§5.9) ([`565cb5f`](https://github.com/chen-star/net_alpha/commit/565cb5fdcecc38b870cadc172d9723a80720c51c))
+
+### Fix
+
+* fix(web): code-review feedback for Phase 0
+
+- Restore the vendor-lucide recipe body and the missing tail of
+  LUCIDE_ICONS (refresh-cw, database, download) — earlier rebase
+  conflict resolution had eaten both. `make vendor-lucide` is now
+  functional and reproducibly fetches all 23 icons.
+- Drop the dead `Density = Literal[...]` alias from web/format.py.
+  A real `Density` literal already exists in models/preferences.py
+  with a different value set (&#34;tax&#34; vs &#34;tax-view&#34;); keeping a second
+  one was a future-confusion trap and the alias was unused.
+- Settings drawer: drop the redundant static `hidden` Tailwind class
+  (Alpine `x-show` + `x-cloak` already handle pre-hydration hide),
+  add a window-level `open-settings-drawer` listener so Phase 1&#39;s
+  gear-icon trigger can $dispatch from outside the drawer&#39;s Alpine
+  scope, and an esc-to-close handler.
+- Add the load-bearing `[x-cloak] { display: none !important; }`
+  rule to app.src.css that four existing templates rely on.
+
+237 tests pass, 16 snapshots pass, lint clean.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`66c8e60`](https://github.com/chen-star/net_alpha/commit/66c8e60162d63d1255a9fc5243997d9df22adba4))
+
+### Style
+
+* style: apply ruff format to Phase 0 test files
+
+Trailing pass over tests touched by Section B/C/E to satisfy
+`ruff format --check` (re-flowed long Path expressions, set literals,
+and an f-string that fit on one line).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b1c26e6`](https://github.com/chen-star/net_alpha/commit/b1c26e6cbdc306c3d3255308262728d8283d74d2))
+
+### Test
+
+* test(web): capture Phase 0 baseline page snapshots
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c299942`](https://github.com/chen-star/net_alpha/commit/c299942000cf17e491aa0561f83f6fd379d2073c))
+
+* test(web): baseline-snapshot test scaffolding (no baselines yet)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`962e61a`](https://github.com/chen-star/net_alpha/commit/962e61a29842c07db591ea7851706e7b8584938b))
+
+* test(web): add Playwright snapshot test scaffolding
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`56203f9`](https://github.com/chen-star/net_alpha/commit/56203f9a3cd87f64cbf8bde01be048b9b1cf3f97))
+
+* test(web): assert vendored Lucide icons present ([`0150602`](https://github.com/chen-star/net_alpha/commit/01506027ce1a3fec71ea8adc23d85d3ede550dda))
+
+### Unknown
+
+* Merge branch &#39;phase0-foundations&#39; — Phase 0 Foundations ([`cb0b7bb`](https://github.com/chen-star/net_alpha/commit/cb0b7bb5381db7fa422bd38d59d410aa248453e1))
+
+* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`73b4be6`](https://github.com/chen-star/net_alpha/commit/73b4be69c37a6c7c9e4d240ac09fede9b42ef97a))
+
+
 ## v0.26.0 (2026-04-28)
 
 ### Feature
