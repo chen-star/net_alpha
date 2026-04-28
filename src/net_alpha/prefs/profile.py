@@ -39,6 +39,30 @@ _ORDERING: dict[str, dict[Profile, list[str]]] = {
 }
 
 
+# Columns table — Section 3b. Each profile's "extra" columns layered on top
+# of the always-present base columns (symbol, qty, market value, P/L). The
+# density "tax" overrides profile defaults and adds tax-specific columns.
+_HOLDINGS_PROFILE_EXTRAS: dict[Profile, list[str]] = {
+    "conservative": [],
+    "active": ["days_held", "lt_st_split"],
+    "options": ["days_held", "lt_st_split", "premium_received", "origin_event"],
+}
+
+_HOLDINGS_TAX_DENSITY_COLS: list[str] = [
+    "lt_st_split",
+    "days_to_ltcg",
+    "harvestable",
+    "premium_offset",
+]
+
+# Default tax tab per profile — Section 3b.
+_DEFAULT_TAX_TAB: dict[Profile, str] = {
+    "conservative": "wash-sales",
+    "active": "harvest",
+    "options": "harvest",
+}
+
+
 class ProfileSettings(BaseModel):
     model_config = {"extra": "ignore"}
 
@@ -63,6 +87,25 @@ class ProfileSettings(BaseModel):
         if rule is None:
             return []
         return list(rule[self.profile])
+
+    def default_columns(self, table: str) -> list[str]:
+        """Default extra columns for a named table.
+
+        - Density "compact": always [] (minimum columns).
+        - Density "tax": overrides profile defaults; returns tax-specific cols.
+        - Density "comfortable": profile-driven extras.
+        """
+        if table != "holdings":
+            return []
+        if self.density == "compact":
+            return []
+        if self.density == "tax":
+            return list(_HOLDINGS_TAX_DENSITY_COLS)
+        return list(_HOLDINGS_PROFILE_EXTRAS[self.profile])
+
+    def default_tax_tab(self) -> str:
+        """Default tab for /tax based on profile."""
+        return _DEFAULT_TAX_TAB[self.profile]
 
 
 DEFAULT_PROFILE_SETTINGS = ProfileSettings(profile="active", density="comfortable")
