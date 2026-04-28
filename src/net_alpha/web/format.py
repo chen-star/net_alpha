@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+from decimal import ROUND_HALF_EVEN, Decimal
+
 from net_alpha.models.domain import OptionDetails, Trade
 
 
@@ -45,3 +48,78 @@ def display_action(t: Trade, *, assigned_from: OptionDetails | None = None) -> s
             return f"Buy to Close {_format_option_suffix(t.option_details)}"
         return f"{t.action} {_format_option_suffix(t.option_details)}"
     return t.action
+
+
+def fmt_quantity(value: Decimal | float | int | None) -> str:
+    """Render a share-quantity-like number.
+
+    Whole values render as integers (``11`` not ``11.0000``). Fractional
+    values render with up to four decimal places, banker's-rounded, with
+    trailing zeros stripped (``1.5`` not ``1.5000``). ``None`` renders as
+    an em dash.
+    """
+    if value is None:
+        return "—"
+    d = value if isinstance(value, Decimal) else Decimal(str(value))
+    quantized = d.quantize(Decimal("0.0001"), rounding=ROUND_HALF_EVEN)
+    if quantized == quantized.to_integral_value():
+        return str(int(quantized))
+    text = format(quantized, "f").rstrip("0").rstrip(".")
+    return text
+
+
+def fmt_currency(
+    amount: Decimal | float | int | None,
+    *,
+    density: str = "comfortable",
+) -> str:
+    """Render a USD amount.
+
+    Default 2dp. In ``compact`` density, amounts whose absolute value is
+    ≥ $10,000 round to whole dollars. ``tax-view`` follows ``comfortable``
+    (always 2dp). Unknown density values fall back to ``comfortable``
+    rather than raising — formatters must never block render.
+    """
+    if amount is None:
+        return "—"
+    d = amount if isinstance(amount, Decimal) else Decimal(str(amount))
+    use_zero_dp = density == "compact" and abs(d) >= Decimal("10000")
+    if use_zero_dp:
+        rounded = d.quantize(Decimal("1"), rounding=ROUND_HALF_EVEN)
+        body = f"{abs(rounded):,}"
+    else:
+        rounded = d.quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+        body = f"{abs(rounded):,.2f}"
+    sign = "-" if d < 0 else ""
+    return f"{sign}${body}"
+
+
+def fmt_percent(value: Decimal | float | int | None) -> str:
+    """Render a fractional value as a percent with one decimal place.
+
+    Input is fractional (``0.354`` → ``"35.4%"``), not basis-points or
+    pre-multiplied. ``None`` renders as an em dash.
+    """
+    if value is None:
+        return "—"
+    d = value if isinstance(value, Decimal) else Decimal(str(value))
+    pct = (d * Decimal("100")).quantize(Decimal("0.1"), rounding=ROUND_HALF_EVEN)
+    return f"{pct:.1f}%"
+
+
+def fmt_date(value: date | datetime | str | None) -> str:
+    """Render any date-like value as ``YYYY-MM-DD``.
+
+    Trade dates round-trip through SQLite as strings already in
+    ``YYYY-MM-DD`` form — those pass through unchanged. ``date`` and
+    ``datetime`` formats are converted with ``strftime``. Invalid strings
+    are returned verbatim so the bad input surfaces in the UI rather than
+    raising mid-render.
+    """
+    if value is None:
+        return "—"
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+    return str(value)

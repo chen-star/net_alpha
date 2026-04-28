@@ -101,6 +101,15 @@
 
   /* Backdrop blur */
   --blur-vibrancy: 20px;
+
+  /* Phase 0 additions (UI/UX redesign §5.1) */
+  --accent-hero: linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%);
+  --font-feature-num: "tnum", "ss01", "cv11";
+  --color-skeleton: rgba(255,255,255,0.04);
+  --color-skeleton-shimmer: rgba(255,255,255,0.08);
+  --shadow-drawer: 0 0 0 1px var(--color-hairline), -24px 0 48px rgba(0,0,0,0.4);
+  --shadow-pane:   0 0 0 0.5px var(--color-hairline), 0 12px 32px rgba(0,0,0,0.3);
+  --ring-focus: 0 0 0 2px rgba(94,92,230,0.6);
 }
 
 @layer base {
@@ -121,6 +130,8 @@
     font-feature-settings: "tnum", "ss01";
     letter-spacing: -0.01em;
   }
+  /* Hide x-cloak'd elements until Alpine hydrates so they don't flash. */
+  [x-cloak] { display: none !important; }
 }
 
 @layer components {
