@@ -111,3 +111,42 @@ def test_close_stock_at_loss_locks_out_new_csp_open(
     )
     assert clear is not None
     assert clear == today + timedelta(days=31)
+
+
+def test_csp_origin_round_trip_through_repo(
+    repo, schwab_account, seed_import,
+) -> None:
+    """End-to-end: CSP chain seeded into repo, premium origin still recoverable."""
+    sto = Trade(
+        account=schwab_account.display(), date=date(2025, 8, 14),
+        ticker="UUUU", action="Sell to Open",
+        quantity=Decimal("1"), proceeds=Decimal("120"), cost_basis=Decimal("0"),
+        option_details=OptionDetails(
+            strike=Decimal("5"), expiry=date(2025, 9, 19), call_put="P",
+        ),
+        basis_source="option_short_open",
+    )
+    btc = Trade(
+        account=schwab_account.display(), date=date(2025, 9, 19),
+        ticker="UUUU", action="Buy to Close",
+        quantity=Decimal("1"), proceeds=Decimal("0"), cost_basis=Decimal("0"),
+        option_details=OptionDetails(
+            strike=Decimal("5"), expiry=date(2025, 9, 19), call_put="P",
+        ),
+        basis_source="option_short_close_assigned",
+    )
+    assigned = Trade(
+        account=schwab_account.display(), date=date(2025, 9, 19),
+        ticker="UUUU", action="Buy",
+        quantity=Decimal("100"), proceeds=Decimal("0"), cost_basis=Decimal("380"),
+        basis_source="option_short_open_assigned",
+    )
+    seed_import(repo, schwab_account, [sto, btc, assigned])
+
+    all_t = repo.all_trades()
+    assigned_buys = [t for t in all_t if t.basis_source == "option_short_open_assigned"]
+    assert len(assigned_buys) == 1
+
+    origin = extract_premium_origin(assigned_buys[0], all_t)
+    assert origin is not None
+    assert origin.premium_received == Decimal("120")
