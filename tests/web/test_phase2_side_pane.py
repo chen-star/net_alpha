@@ -31,3 +31,19 @@ def test_positions_pane_endpoint_returns_fragment(client: TestClient):
 def test_positions_pane_endpoint_404s_on_missing_sym(client: TestClient):
     resp = client.get("/positions/pane")
     assert resp.status_code in (400, 422)
+
+
+def test_at_loss_rows_dispatch_open_pane_on_click(client: TestClient):
+    resp = client.get("/positions?view=at-loss")
+    html = resp.text
+    if 'data-row="lot"' not in html:
+        return  # no fixture
+    assert "$dispatch('open-positions-pane'" in html
+
+
+def test_all_view_rows_dispatch_open_pane_on_click(client: TestClient):
+    resp = client.get("/positions?view=all")
+    html = resp.text
+    if 'data-row="position"' not in html:
+        return  # no fixture
+    assert "$dispatch('open-positions-pane'" in html

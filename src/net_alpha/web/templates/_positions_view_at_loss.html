@@ -57,7 +57,9 @@
           </tr>
         {% else %}
           {% for row in rows %}
-            <tr data-row="lot" class="group">
+            <tr data-row="lot"
+                class="group cursor-pointer hover:bg-surface-2"
+                @click.stop="$dispatch('open-positions-pane', { sym: '{{ row.symbol }}', account_id: {{ row.account_id }} })">
               <td class="font-semibold">{{ row.symbol }}</td>
               <td class="text-label-2">{{ row.account_label }}</td>
               <td class="text-right">{{ fmt_quantity(row.qty) }}</td>

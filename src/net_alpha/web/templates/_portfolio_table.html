@@ -154,8 +154,9 @@
       </thead>
       <tbody>
         {% for r in rows %}
-          <tr data-row="position" class="group cursor-pointer"
-              onclick="window.location='/ticker/{{ r.symbol }}'">
+          <tr data-row="position"
+              class="group cursor-pointer hover:bg-surface-2"
+              @click.stop="$dispatch('open-positions-pane', { sym: '{{ r.symbol }}', account_id: null })">
             <td>
               <div class="flex items-center gap-2 font-semibold tracking-tightish">
                 <span class="w-5 h-5 rounded-md bg-surface-3 grid place-items-center text-[9px] font-bold text-label-1 shrink-0">{{ r.symbol[0] }}</span>
