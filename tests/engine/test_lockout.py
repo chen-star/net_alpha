@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from net_alpha.engine.lockout import compute_lockout_clear_date
-from net_alpha.models.domain import Trade
+from net_alpha.models.domain import OptionDetails, Trade
 
 
 def _buy(account: str, ticker: str, on: date, qty: int = 10) -> Trade:
@@ -77,4 +77,63 @@ def test_old_buy_ignored() -> None:
         as_of=date(2026, 5, 1),
         etf_pairs={},
     )
+    assert clear is None
+
+
+def test_open_csp_locks_out_stock_loss_close() -> None:
+    """Selling a put (CSP open) creates a wash-sale exposure for the underlying.
+
+    Closing the underlying stock at a loss within 30 days of an open short put on
+    the same name is a wash sale. This is the key wheel-strategy pitfall.
+    """
+    sto = Trade(
+        account="Schwab Tax",
+        date=date(2026, 4, 15),
+        ticker="UUUU",
+        action="Sell to Open",
+        quantity=Decimal("1"),
+        proceeds=Decimal("60"),
+        cost_basis=Decimal("0"),
+        option_details=OptionDetails(
+            strike=Decimal("5"),
+            expiry=date(2026, 5, 16),
+            call_put="P",
+        ),
+        basis_source="option_short_open",
+    )
+    clear = compute_lockout_clear_date(
+        symbol="UUUU",
+        account="Schwab Tax",
+        all_trades=[sto],
+        as_of=date(2026, 4, 20),
+        etf_pairs={},
+    )
+    assert clear == date(2026, 5, 16)
+
+
+def test_long_call_open_does_not_lock_out_underlying() -> None:
+    bto = Trade(
+        account="Schwab Tax",
+        date=date(2026, 4, 15),
+        ticker="UUUU",
+        action="Buy to Open",
+        quantity=Decimal("1"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("60"),
+        option_details=OptionDetails(
+            strike=Decimal("8"),
+            expiry=date(2026, 5, 16),
+            call_put="C",
+        ),
+        basis_source="option_long_open",
+    )
+    clear = compute_lockout_clear_date(
+        symbol="UUUU",
+        account="Schwab Tax",
+        all_trades=[bto],
+        as_of=date(2026, 4, 20),
+        etf_pairs={},
+    )
+    # A long call open is NOT substantially identical to the underlying for §1091
+    # purposes (call long is not auto-deemed S/I; we conservatively excluded it).
     assert clear is None
