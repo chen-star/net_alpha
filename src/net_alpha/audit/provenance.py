@@ -137,6 +137,8 @@ def provenance_for(metric: MetricRef, repo: Repository) -> ProvenanceTrace:
     """
     if isinstance(metric, RealizedPLRef):
         return _realized_pl(metric, repo)
+    if isinstance(metric, UnrealizedPLRef):
+        return _unrealized_pl(metric, repo)
     raise KeyError(f"no provenance dispatcher for {metric.kind!r}")
 
 
@@ -144,15 +146,19 @@ def _trade_in_period(t: Trade, period: Period) -> bool:
     return period.start <= t.date < period.end
 
 
-def _trade_account_match(t: Trade, account_id: int | None, repo: Repository) -> bool:
+def _account_id_match(account_display: str, account_id: int | None, repo: Repository) -> bool:
+    """Return True if the display string belongs to account_id (or account_id is None)."""
     if account_id is None:
         return True
-    # Trade.account is the display string; convert to id via repo.list_accounts().
-    accounts = {
-        (f"{a.broker}/{a.label}" if a.label else a.broker): a.id
-        for a in repo.list_accounts()
-    }
-    return accounts.get(t.account) == account_id
+    for a in repo.list_accounts():
+        full = f"{a.broker}/{a.label}" if a.label else a.broker
+        if full == account_display and a.id == account_id:
+            return True
+    return False
+
+
+def _trade_account_match(t: Trade, account_id: int | None, repo: Repository) -> bool:
+    return _account_id_match(t.account, account_id, repo)
 
 
 def _to_contributing(t: Trade, import_id: int | None) -> ContributingTrade:
@@ -186,6 +192,48 @@ def _realized_pl(metric: RealizedPLRef, repo: Repository) -> ProvenanceTrace:
         contributing.append(_to_contributing(t, import_id=None))
 
     label_bits = [metric.period.label, "Realized P/L"]
+    if metric.symbol:
+        label_bits.append(f"· {metric.symbol}")
+    return ProvenanceTrace(
+        metric_label=" ".join(label_bits),
+        total=round(total, 2),
+        trades=contributing,
+    )
+
+
+def _unrealized_pl(metric: UnrealizedPLRef, repo: Repository) -> ProvenanceTrace:
+    """Open lots' contributing buys (cost basis side of unrealized math).
+
+    Note: unrealized P/L = market_value − adjusted_basis. This trace surfaces
+    the adjusted_basis component (the trades) — the price/market component is
+    a single "today" quote and isn't a 'trade' to provenance against.
+    """
+    contributing: list[ContributingTrade] = []
+    total = 0.0
+    for lot in repo.all_lots():
+        if metric.symbol is not None and lot.ticker != metric.symbol:
+            continue
+        if not _account_id_match(lot.account, metric.account_id, repo):
+            continue
+        # The lot was created by the buy trade with id == lot.trade_id.
+        buy = next((t for t in repo.all_trades() if t.id == lot.trade_id), None)
+        if buy is None:
+            continue
+        contributing.append(
+            ContributingTrade(
+                trade_id=buy.id,
+                trade_date=buy.date,
+                account=buy.account,
+                action="Buy",
+                quantity=lot.quantity,
+                amount=-lot.adjusted_basis,
+                symbol=lot.ticker,
+                import_id=None,
+            )
+        )
+        total -= lot.adjusted_basis
+
+    label_bits = ["Unrealized P/L"]
     if metric.symbol:
         label_bits.append(f"· {metric.symbol}")
     return ProvenanceTrace(
