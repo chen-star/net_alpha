@@ -51,6 +51,7 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--ignore=tests/web/snapshots"
 markers = [
     "network: tests that hit external services; run only with --run-network",
 ]

@@ -1,4 +1,4 @@
-.PHONY: test lint format check release build-css vendor-fonts vendor-apex vendor-lucide
+.PHONY: test lint format check release build-css vendor-fonts vendor-apex vendor-lucide snapshot-test snapshot-update
 
 test:
 	uv run pytest
@@ -47,3 +47,9 @@ LUCIDE_ICONS := \
 	triangle-alert info check lock \
 	arrow-up arrow-down move-vertical \
 	search chevron-down x ellipsis \
+
+snapshot-test:
+	uv run pytest tests/web/snapshots -v
+
+snapshot-update:
+	uv run pytest tests/web/snapshots --update-snapshots -v
