@@ -16,3 +16,20 @@ def test_empty_state_cta_targets_settings_imports(client: TestClient):
         return
     # If the CTA is rendered, it should be the new URL
     assert 'href="/settings/imports"' in html
+
+
+def test_legacy_imports_page_does_not_highlight_overview(client: TestClient):
+    """The legacy /imports/_legacy_page is HTMX-only; if a human stumbles
+    onto it the nav shouldn't lie about which page they're on."""
+    resp = client.get("/imports/_legacy_page")
+    assert resp.status_code == 200
+    html = resp.text
+    # Find the Overview anchor; it should NOT have the 'active' class.
+    overview_idx = html.find(">Overview<")
+    if overview_idx < 0:
+        return  # nav not rendered (e.g. no accounts); skip
+    anchor_start = html.rfind("<a", 0, overview_idx)
+    anchor_html = html[anchor_start:overview_idx]
+    assert "active" not in anchor_html, (
+        f"Overview link is highlighted on /imports/_legacy_page: {anchor_html}"
+    )
