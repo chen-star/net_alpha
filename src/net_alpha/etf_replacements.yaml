@@ -23,7 +23,7 @@ VTI:
 DIA:
   - VTV    # value vs Dow 30
 SCHD:
-  - VYM    # different methodology, similar exposure
+  - DGRO   # dividend growth, distinct methodology vs SCHD
 EFA:
   - VEA    # developed-market ex-US, distinct index families
 EEM:
