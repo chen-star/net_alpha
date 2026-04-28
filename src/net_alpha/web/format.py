@@ -45,3 +45,24 @@ def display_action(t: Trade, *, assigned_from: OptionDetails | None = None) -> s
             return f"Buy to Close {_format_option_suffix(t.option_details)}"
         return f"{t.action} {_format_option_suffix(t.option_details)}"
     return t.action
+
+
+from decimal import ROUND_HALF_EVEN, Decimal
+
+
+def fmt_quantity(value: Decimal | float | int | None) -> str:
+    """Render a share-quantity-like number.
+
+    Whole values render as integers (``11`` not ``11.0000``). Fractional
+    values render with up to four decimal places, banker's-rounded, with
+    trailing zeros stripped (``1.5`` not ``1.5000``). ``None`` renders as
+    an em dash.
+    """
+    if value is None:
+        return "—"
+    d = value if isinstance(value, Decimal) else Decimal(str(value))
+    quantized = d.quantize(Decimal("0.0001"), rounding=ROUND_HALF_EVEN)
+    if quantized == quantized.to_integral_value():
+        return str(int(quantized))
+    text = format(quantized, "f").rstrip("0").rstrip(".")
+    return text
