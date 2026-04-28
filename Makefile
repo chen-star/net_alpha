@@ -1,4 +1,4 @@
-.PHONY: test lint format check release build-css vendor-fonts vendor-apex
+.PHONY: test lint format check release build-css vendor-fonts vendor-apex vendor-lucide
 
 test:
 	uv run pytest
@@ -36,3 +36,24 @@ vendor-apex:
 	@mkdir -p src/net_alpha/web/static/vendor/apexcharts
 	curl -sSL -o src/net_alpha/web/static/vendor/apexcharts/apexcharts.min.js  https://cdn.jsdelivr.net/npm/apexcharts@3.51.0/dist/apexcharts.min.js
 	curl -sSL -o src/net_alpha/web/static/vendor/apexcharts/apexcharts.min.css https://cdn.jsdelivr.net/npm/apexcharts@3.51.0/dist/apexcharts.min.css
+
+# UI/UX redesign §5.4 — Lucide v0.469.0 pinned for reproducibility.
+LUCIDE_VERSION := 0.469.0
+LUCIDE_BASE := https://cdn.jsdelivr.net/npm/lucide-static@$(LUCIDE_VERSION)/icons
+LUCIDE_ICONS := \
+	gauge wallet landmark flask-conical \
+	settings \
+	arrow-up-right play pencil trash-2 \
+	triangle-alert info check lock \
+	arrow-up arrow-down move-vertical \
+	search chevron-down x ellipsis \
+	refresh-cw database download
+
+vendor-lucide:
+	@mkdir -p src/net_alpha/web/static/icons
+	@for icon in $(LUCIDE_ICONS); do \
+		echo "fetching $$icon.svg"; \
+		curl -fsSL -o src/net_alpha/web/static/icons/$$icon.svg \
+			$(LUCIDE_BASE)/$$icon.svg; \
+	done
+	@echo "✓ vendored $(words $(LUCIDE_ICONS)) icons to src/net_alpha/web/static/icons/"
