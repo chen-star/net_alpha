@@ -23,3 +23,8 @@ def holdings_redirect(request: Request) -> RedirectResponse:
     if request.url.query:
         target = f"{target}?{request.url.query}"
     return RedirectResponse(url=target, status_code=301)
+
+
+@router.get("/imports", include_in_schema=False)
+def imports_redirect() -> RedirectResponse:
+    return RedirectResponse(url="/settings/imports", status_code=301)

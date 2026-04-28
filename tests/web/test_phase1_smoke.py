@@ -114,7 +114,7 @@ def test_phase1_smoke(tmp_path):
     assert "✓" in r2.text or "match" in r2.text.lower()
 
     # 3) Imports page surfaces 2 issues (basis_unknown error + orphan_sell warn).
-    r3 = client.get("/imports")
+    r3 = client.get("/imports/_legacy_page")
     assert r3.status_code == 200, r3.text
     assert "Data quality" in r3.text
     assert "MSFT" in r3.text  # basis_unknown error

@@ -32,6 +32,6 @@ def test_tax_renders_density_toggle(tmp_path):
 
 def test_imports_renders_density_toggle(tmp_path):
     client = _bootstrap(tmp_path)
-    html = client.get("/imports").text
+    html = client.get("/imports/_legacy_page").text
     assert 'class="density-toggle' in html
     assert 'data-page-key="/imports"' in html

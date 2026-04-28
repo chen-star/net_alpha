@@ -46,3 +46,19 @@ def test_tax_other_views_still_render_normally(client: TestClient):
     for view in ("wash-sales", "projection"):
         resp = client.get(f"/tax?view={view}")
         assert resp.status_code == 200, f"/tax?view={view} regressed"
+
+
+def test_imports_redirects_to_settings_imports(client: TestClient):
+    resp = client.get("/imports", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/settings/imports"
+
+
+def test_settings_imports_renders_base_with_drawer_open_signal(client: TestClient):
+    """`/settings/imports` returns the home page with a payload that tells
+    Alpine to dispatch `open-settings-drawer` on load, focused on the
+    Imports tab. Implementation detail: we look for the dispatch hook in
+    the rendered HTML."""
+    resp = client.get("/settings/imports")
+    assert resp.status_code == 200
+    assert "data-open-settings-tab=\"imports\"" in resp.text

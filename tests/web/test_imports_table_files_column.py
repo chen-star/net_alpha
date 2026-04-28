@@ -40,7 +40,7 @@ def test_imports_table_renders_gl_summary_for_zero_trade_imports(client: TestCli
             ),
         ],
     )
-    resp = client.get("/imports")
+    resp = client.get("/imports/_legacy_page")
     assert resp.status_code == 200
     body = resp.text
     assert "gl.csv" in body

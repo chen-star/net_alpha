@@ -27,7 +27,7 @@ from net_alpha.web.dependencies import get_etf_pairs, get_repository
 router = APIRouter()
 
 
-@router.get("/imports", response_class=HTMLResponse)
+@router.get("/imports/_legacy_page", response_class=HTMLResponse, include_in_schema=False)
 def imports_page(
     request: Request,
     flash: str | None = None,

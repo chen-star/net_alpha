@@ -13,7 +13,8 @@
   <script src="/static/charts.js?v={{ asset_v }}" defer></script>
   <script src="/static/density.js?v={{ asset_v }}" defer></script>
 </head>
-<body class="min-h-screen flex flex-col bg-bg text-text">
+<body class="min-h-screen flex flex-col bg-bg text-text"
+      {% if open_settings_tab %}data-open-settings-tab="{{ open_settings_tab }}"{% endif %}>
   <header class="topbar">
     <div class="flex items-center gap-6">
       <a href="/" class="flex items-center gap-2 no-underline text-text">
