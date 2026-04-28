@@ -19,6 +19,7 @@ from net_alpha.db.tables import (
     RealizedGLLotRow,
     SplitRow,
     TradeRow,
+    UserPreferenceRow,
     WashSaleViolationRow,
 )
 from net_alpha.models.domain import (
@@ -33,6 +34,7 @@ from net_alpha.models.domain import (
     Trade,
     WashSaleViolation,
 )
+from net_alpha.models.preferences import AccountPreference
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.models.splits import LotOverride, Split
 
@@ -66,6 +68,48 @@ class Repository:
         with Session(self.engine) as s:
             rows = s.exec(select(AccountRow)).all()
             return [Account(id=r.id, broker=r.broker, label=r.label) for r in rows]
+
+    def get_user_preference(self, account_id: int) -> AccountPreference | None:
+        with Session(self.engine) as s:
+            row = s.get(UserPreferenceRow, account_id)
+            if row is None:
+                return None
+            return AccountPreference(
+                account_id=row.account_id,
+                profile=row.profile,  # type: ignore[arg-type]
+                density=row.density,  # type: ignore[arg-type]
+                updated_at=row.updated_at,
+            )
+
+    def list_user_preferences(self) -> list[AccountPreference]:
+        with Session(self.engine) as s:
+            rows = s.exec(select(UserPreferenceRow)).all()
+            return [
+                AccountPreference(
+                    account_id=r.account_id,
+                    profile=r.profile,  # type: ignore[arg-type]
+                    density=r.density,  # type: ignore[arg-type]
+                    updated_at=r.updated_at,
+                )
+                for r in rows
+            ]
+
+    def upsert_user_preference(self, pref: AccountPreference) -> None:
+        with Session(self.engine) as s:
+            row = s.get(UserPreferenceRow, pref.account_id)
+            if row is None:
+                row = UserPreferenceRow(
+                    account_id=pref.account_id,
+                    profile=pref.profile,
+                    density=pref.density,
+                    updated_at=pref.updated_at,
+                )
+                s.add(row)
+            else:
+                row.profile = pref.profile
+                row.density = pref.density
+                row.updated_at = pref.updated_at
+            s.commit()
 
     def list_imports(self) -> list[ImportSummary]:
         with Session(self.engine) as s:
@@ -157,9 +201,7 @@ class Repository:
             # in this same call. Two within-file collisions could cascade into
             # hundreds of lost trades. Mirror the cash-event branch below
             # (which already pre-filters for the same reason).
-            existing_keys = set(
-                s.exec(select(TradeRow.natural_key).where(TradeRow.account_id == account.id)).all()
-            )
+            existing_keys = set(s.exec(select(TradeRow.natural_key).where(TradeRow.account_id == account.id)).all())
             new_count = 0
             dup_count = 0
             seen_in_batch: set[str] = set()
