@@ -83,5 +83,17 @@
       {% include "_profile_picker_modal.html" %}
     {% endwith %}
   {% endif %}
+  <script>
+    document.addEventListener("alpine:init", () => {
+      const tab = document.body.dataset.openSettingsTab;
+      if (tab) {
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("open-settings-drawer", { detail: { tab } })
+          );
+        }, 0);
+      }
+    });
+  </script>
 </body>
 </html>

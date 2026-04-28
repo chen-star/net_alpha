@@ -22,3 +22,14 @@ def test_gear_icon_dispatches_open_settings_drawer_event(client: TestClient):
 def test_gear_icon_uses_lucide_settings_svg(client: TestClient):
     resp = client.get("/")
     assert "/static/icons/settings.svg" in resp.text
+
+
+def test_settings_imports_includes_alpine_init_dispatch(client: TestClient):
+    """When `/settings/imports` is loaded, an inline `alpine:init` listener
+    reads the body's `data-open-settings-tab` and dispatches the drawer-
+    open event so the user lands on the Imports tab without a click."""
+    resp = client.get("/settings/imports")
+    html = resp.text
+    assert 'data-open-settings-tab="imports"' in html
+    assert "document.body.dataset.openSettingsTab" in html
+    assert "open-settings-drawer" in html
