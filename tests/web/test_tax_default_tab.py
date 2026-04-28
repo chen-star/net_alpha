@@ -32,13 +32,19 @@ def _seed(tmp_path, profile_label):
 
 
 def test_tax_no_view_active_renders_harvest(tmp_path):
+    """Phase 1 IA: Harvest tab is removed from /tax nav. The active profile still
+    routes to harvest content internally (data-active-tab="harvest") and renders
+    the harvest queue in the content area. The nav tab link is gone — harvest has
+    moved to /positions?view=at-loss."""
     client = _seed(tmp_path, "active")
     html = client.get("/tax", params={"account": "Schwab/Tax"}).text
-    # the harvest tab is "active" in the nav
-    assert 'class="tab tab--active"' in html
-    assert 'href="/tax?view=harvest&amp;account=Schwab/Tax"' in html or "view=harvest" in html
-    # Inner panel renders the harvest queue marker, not the wash-sales table
+    # Phase 1: the Harvest tab link is removed from the nav (moved to /positions).
+    assert 'href="/tax?view=harvest' not in html
+    # The route still resolves the active profile's default (harvest) and renders
+    # the harvest content in the content area.
     assert "Harvest queue" in html
+    # The wrapper div still carries the active-tab marker for JS continuity.
+    assert 'data-active-tab="harvest"' in html
 
 
 def test_tax_no_view_conservative_renders_wash_sales(tmp_path):
