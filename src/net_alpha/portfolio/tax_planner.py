@@ -112,3 +112,18 @@ def extract_premium_origin(
         strike=Decimal(str(sample.strike)),
         assignment_date=lot_trade.date,
     )
+
+
+class HarvestOpportunity(BaseModel):
+    """One open lot at unrealized loss, eligible for tax-loss harvesting."""
+
+    symbol: str
+    account_id: int
+    account_label: str
+    qty: Decimal
+    loss: Decimal  # negative (open_basis - market_value, signed loss)
+    lt_st: Literal["LT", "ST"]
+    lockout_clear: date | None
+    premium_offset: Decimal | None  # absolute amount of premium received from origin event
+    premium_origin_event: PremiumOriginEvent | None
+    suggested_replacements: list[str]
