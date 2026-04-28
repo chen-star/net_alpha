@@ -54,12 +54,13 @@ def test_get_tax_default_view_renders_wash_sales_tab(client, repo, schwab_accoun
     assert "Wash sales" in body or "wash-sales" in body.lower()
 
 
-def test_get_tax_view_harvest_renders_harvest_queue(client, repo, schwab_account):
+def test_get_tax_view_harvest_redirects_to_positions_at_loss(client, repo, schwab_account):
+    """/tax?view=harvest is a permanent 301 to /positions?view=at-loss (Phase 1 IA)."""
     today = date.today()
     _seed_uuuu_buy(repo, schwab_account, today - timedelta(days=10))
-    resp = client.get("/tax?view=harvest")
-    assert resp.status_code == 200
-    assert "harvest" in resp.text.lower()
+    resp = client.get("/tax?view=harvest", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/positions?view=at-loss"
 
 
 def test_get_tax_view_budget_renders_offset_budget(client, repo, schwab_account):

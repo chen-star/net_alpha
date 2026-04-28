@@ -22,3 +22,27 @@ def test_holdings_redirected_then_followed_returns_200(client: TestClient):
     assert resp.status_code == 200
     # The page chrome is the new positions page; verify the page-key marker
     assert 'data-page-key="/positions"' in resp.text or "Holdings" in resp.text or "Positions" in resp.text
+
+
+def test_tax_harvest_redirects_to_positions_at_loss(client: TestClient):
+    resp = client.get("/tax?view=harvest", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/positions?view=at-loss"
+
+
+def test_tax_harvest_with_extra_params_preserves_them(client: TestClient):
+    resp = client.get("/tax?view=harvest&period=ytd&account=schwab%2Flt", follow_redirects=False)
+    assert resp.status_code == 301
+    loc = resp.headers["location"]
+    assert loc.startswith("/positions?")
+    assert "view=at-loss" in loc
+    assert "period=ytd" in loc
+    assert "account=schwab%2Flt" in loc
+    assert "view=harvest" not in loc
+
+
+def test_tax_other_views_still_render_normally(client: TestClient):
+    """Make sure the redirect didn't accidentally catch wash-sales / projection."""
+    for view in ("wash-sales", "projection"):
+        resp = client.get(f"/tax?view={view}")
+        assert resp.status_code == 200, f"/tax?view={view} regressed"

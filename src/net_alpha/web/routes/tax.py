@@ -6,9 +6,10 @@ Views: wash-sales | harvest | budget | projection
 from __future__ import annotations
 
 from datetime import date as _date
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.tax_planner import (
@@ -29,7 +30,7 @@ from net_alpha.web.dependencies import (
 router = APIRouter()
 
 
-@router.get("/tax", response_class=HTMLResponse)
+@router.get("/tax", response_class=HTMLResponse, response_model=None)
 def get_tax(
     request: Request,
     view: str | None = None,
@@ -43,12 +44,19 @@ def get_tax(
     repo: Repository = Depends(get_repository),
     pricing: PricingService = Depends(get_pricing_service),
     etf_pairs: dict[str, list[str]] = Depends(get_etf_pairs),
-) -> HTMLResponse:
+) -> HTMLResponse | RedirectResponse:
     """Tabbed tax page. Replaces /wash-sales — preserves existing wash-sales UI as default tab.
 
     Accepted ``view`` values: wash-sales | table | calendar | harvest | budget | projection.
     ``table`` and ``calendar`` are synonyms for the wash-sales tab sub-views.
     """
+    if view == "harvest":
+        params = dict(request.query_params)
+        params.pop("view", None)
+        params["view"] = "at-loss"
+        target = f"/positions?{urlencode(params)}"
+        return RedirectResponse(url=target, status_code=301)
+
     today = _date.today()
 
     # Normalise tab-level view key for context / template branching.
