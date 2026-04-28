@@ -8,7 +8,9 @@ from fastapi.responses import HTMLResponse
 from net_alpha.audit import decode_metric_ref, provenance_for
 from net_alpha.audit.reconciliation import per_lot_diffs, reconcile
 from net_alpha.db.repository import Repository
-from net_alpha.web.dependencies import get_repository
+from net_alpha.engine.recompute import recompute_all_violations
+from net_alpha.engine.stitch import stitch_account
+from net_alpha.web.dependencies import get_etf_pairs, get_repository
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -66,12 +68,22 @@ def set_basis(
     trade_id: str = Form(...),
     cost_basis: float = Form(...),
     repo: Repository = Depends(get_repository),
+    etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
     repo.update_trade_basis(
         trade_id=trade_id,
         cost_basis=cost_basis,
         basis_source="user_set",
     )
+    # Re-stitch every account (cheap) so any sell with the now-set buy basis
+    # gets correctly hydrated, then recompute wash-sale violations.
+    for acct in repo.list_accounts():
+        if acct.id is not None:
+            stitch_account(repo, acct.id)
+    recompute_all_violations(repo, etf_pairs)
+    # Invalidate the badge cache so the nav updates after the fix.
+    from net_alpha.audit._badge_cache import _cache
+    _cache.invalidate()
     return request.app.state.templates.TemplateResponse(
         request,
         "_data_hygiene_set_basis.html",

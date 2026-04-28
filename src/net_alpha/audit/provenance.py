@@ -163,10 +163,6 @@ def _account_id_match(account_display: str, account_id: int | None, repo: Reposi
     return False
 
 
-def _trade_account_match(t: Trade, account_id: int | None, repo: Repository) -> bool:
-    return _account_id_match(t.account, account_id, repo)
-
-
 def _to_contributing(t: Trade, import_id: int | None) -> ContributingTrade:
     amount = (t.proceeds or 0.0) if t.action.lower() == "sell" else -(t.cost_basis or 0.0)
     return ContributingTrade(
@@ -184,6 +180,8 @@ def _to_contributing(t: Trade, import_id: int | None) -> ContributingTrade:
 def _realized_pl(metric: RealizedPLRef, repo: Repository) -> ProvenanceTrace:
     contributing: list[ContributingTrade] = []
     total = 0.0
+    accounts = {a.id: f"{a.broker}/{a.label}" if a.label else a.broker for a in repo.list_accounts()}
+    target_display = accounts.get(metric.account_id) if metric.account_id is not None else None
     for t in repo.all_trades():
         if t.action.lower() != "sell":
             continue
@@ -191,7 +189,7 @@ def _realized_pl(metric: RealizedPLRef, repo: Repository) -> ProvenanceTrace:
             continue
         if metric.symbol is not None and t.ticker != metric.symbol:
             continue
-        if not _trade_account_match(t, metric.account_id, repo):
+        if target_display is not None and t.account != target_display:
             continue
         realized = (t.proceeds or 0.0) - (t.cost_basis or 0.0)
         total += realized
@@ -297,14 +295,9 @@ def _net_contributed(metric: NetContributedRef, repo: Repository) -> ProvenanceT
     )
 
 
-def _account_display_for_id(account_id: int, repo: Repository) -> str:
-    for a in repo.list_accounts():
-        if a.id == account_id:
-            return f"{a.broker}/{a.label}" if a.label else a.broker
-    return ""
-
-
 def _wash_impact(metric: WashImpactRef, repo: Repository) -> ProvenanceTrace:
+    accounts = {a.id: f"{a.broker}/{a.label}" if a.label else a.broker for a in repo.list_accounts()}
+    scoped_display = accounts.get(metric.account_id) if metric.account_id is not None else None
     adjustments: list[AppliedAdjustment] = []
     total = 0.0
     for v in repo.all_violations():
@@ -312,11 +305,8 @@ def _wash_impact(metric: WashImpactRef, repo: Repository) -> ProvenanceTrace:
             metric.period.start <= v.loss_sale_date < metric.period.end
         ):
             continue
-        if metric.account_id is not None:
-            # Either side of the violation must belong to the scoped account.
-            scoped = _account_display_for_id(metric.account_id, repo)
-            if scoped not in (v.loss_account, v.buy_account):
-                continue
+        if scoped_display is not None and scoped_display not in (v.loss_account, v.buy_account):
+            continue
         total += v.disallowed_loss
         adjustments.append(
             AppliedAdjustment(
