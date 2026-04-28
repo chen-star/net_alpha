@@ -2,6 +2,27 @@
 
 
 
+## v0.24.2 (2026-04-28)
+
+### Fix
+
+* fix(web): address 9 UX issues across portfolio/holdings/tax/imports
+
+- portfolio: replace bleed-out templates with .kpi panels (offset budget tile, projection card)
+- portfolio: add CSP free/pledged stacked progress bar, csp_count to body ctx
+- portfolio: hoist gl_option_closures to single repo call (perf)
+- portfolio: rewrite offset_budget_tab and projection_tab as .kpi panels
+- holdings: add column-header tooltips and tax-view footnote in _portfolio_table
+- tax: rewrite _harvest_queue with intro paragraph + tooltips on Lockout/Premium/Simulate
+- tax: wash sales default year = current year; All years opt-in (value=0)
+- imports: hygiene basis_unknown now links to /ticker/&lt;sym&gt;#trade-affordance-&lt;id&gt;
+- imports: skip orphan-sell warning when basis_source startswith option_short_open
+- imports: dup-cluster key includes price-per-share to allow average-down trades
+- repo: add _acct_display_cache to Repository __init__ to eliminate N+1
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0cf15d9`](https://github.com/chen-star/net_alpha/commit/0cf15d9396761054b758e4bb059d84e40369af12))
+
+
 ## v0.24.1 (2026-04-28)
 
 ### Fix
