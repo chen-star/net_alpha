@@ -11,7 +11,7 @@ account (the "all accounts" shortcut from the first-visit modal).
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Response
 
@@ -44,7 +44,7 @@ def post_preferences(
             raise HTTPException(status_code=404, detail="account not found")
         targets = [account_id]
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for aid in targets:
         repo.upsert_user_preference(
             AccountPreference(
