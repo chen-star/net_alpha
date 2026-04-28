@@ -30,9 +30,7 @@ def test_legacy_imports_page_does_not_highlight_overview(client: TestClient):
         return  # nav not rendered (e.g. no accounts); skip
     anchor_start = html.rfind("<a", 0, overview_idx)
     anchor_html = html[anchor_start:overview_idx]
-    assert "active" not in anchor_html, (
-        f"Overview link is highlighted on /imports/_legacy_page: {anchor_html}"
-    )
+    assert "active" not in anchor_html, f"Overview link is highlighted on /imports/_legacy_page: {anchor_html}"
 
 
 def test_drawer_placeholder_tabs_say_coming_soon(client: TestClient):
@@ -43,7 +41,7 @@ def test_drawer_placeholder_tabs_say_coming_soon(client: TestClient):
     drawer_idx = html.find('id="settings-drawer-root"')
     if drawer_idx < 0:
         return  # drawer not mounted (no accounts state); skip
-    drawer_html = html[drawer_idx:drawer_idx + 12_000]
+    drawer_html = html[drawer_idx : drawer_idx + 12_000]
     assert "Coming soon" in drawer_html
     assert "Phase 2" not in drawer_html
     assert "Phase 3" not in drawer_html
