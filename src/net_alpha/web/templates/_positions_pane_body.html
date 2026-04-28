@@ -6,7 +6,12 @@
 
 <div class="space-y-4">
   <div class="text-label-2 text-[13px]">
-    {{ sym }}{% if last_price %} · last <span class="font-mono text-text">{{ fmt_currency(last_price) }}</span>{% endif %}
+    <strong class="text-text font-semibold">{{ sym }}</strong>
+    {% if qty %} · {{ fmt_quantity(qty) }} sh{% endif %}
+    {% if account_label %} · {{ account_label }}{% endif %}
+    {% if last_price %} · last <span class="font-mono text-text">{{ fmt_currency(last_price) }}</span>{% endif %}
+    {% if open_basis %} · basis <span class="font-mono">{{ fmt_currency(open_basis) }}</span>{% endif %}
+    {% if loss is not none and loss < 0 %} · <span class="text-loss">{{ fmt_currency(loss) }}</span>{% endif %}
   </div>
 
   <div class="panel p-3">
