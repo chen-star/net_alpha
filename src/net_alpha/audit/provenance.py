@@ -118,3 +118,78 @@ class ProvenanceTrace(BaseModel):
     trades: list[ContributingTrade] = Field(default_factory=list)
     adjustments: list[AppliedAdjustment] = Field(default_factory=list)
     cash_events: list[ContributingCashEvent] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Dispatcher — extend by adding elif isinstance(metric, XxxRef) branches
+# ---------------------------------------------------------------------------
+
+from net_alpha.db.repository import Repository  # noqa: E402
+from net_alpha.models.domain import Trade  # noqa: E402
+
+
+def provenance_for(metric: MetricRef, repo: Repository) -> ProvenanceTrace:
+    """Return the trades / adjustments / cash events that produced ``metric``.
+
+    Dispatches on the discriminator field. Raises ``KeyError`` if a new
+    MetricRef variant is added without a matching dispatch — caller surfaces
+    this as the modal's failure block.
+    """
+    if isinstance(metric, RealizedPLRef):
+        return _realized_pl(metric, repo)
+    raise KeyError(f"no provenance dispatcher for {metric.kind!r}")
+
+
+def _trade_in_period(t: Trade, period: Period) -> bool:
+    return period.start <= t.date < period.end
+
+
+def _trade_account_match(t: Trade, account_id: int | None, repo: Repository) -> bool:
+    if account_id is None:
+        return True
+    # Trade.account is the display string; convert to id via repo.list_accounts().
+    accounts = {
+        (f"{a.broker}/{a.label}" if a.label else a.broker): a.id
+        for a in repo.list_accounts()
+    }
+    return accounts.get(t.account) == account_id
+
+
+def _to_contributing(t: Trade, import_id: int | None) -> ContributingTrade:
+    amount = (t.proceeds or 0.0) if t.action.lower() == "sell" else -(t.cost_basis or 0.0)
+    return ContributingTrade(
+        trade_id=t.id,
+        trade_date=t.date,
+        account=t.account,
+        action=t.action,
+        quantity=t.quantity,
+        amount=amount,
+        symbol=t.ticker,
+        import_id=import_id,
+    )
+
+
+def _realized_pl(metric: RealizedPLRef, repo: Repository) -> ProvenanceTrace:
+    contributing: list[ContributingTrade] = []
+    total = 0.0
+    for t in repo.all_trades():
+        if t.action.lower() != "sell":
+            continue
+        if not _trade_in_period(t, metric.period):
+            continue
+        if metric.symbol is not None and t.ticker != metric.symbol:
+            continue
+        if not _trade_account_match(t, metric.account_id, repo):
+            continue
+        realized = (t.proceeds or 0.0) - (t.cost_basis or 0.0)
+        total += realized
+        contributing.append(_to_contributing(t, import_id=None))
+
+    label_bits = [metric.period.label, "Realized P/L"]
+    if metric.symbol:
+        label_bits.append(f"· {metric.symbol}")
+    return ProvenanceTrace(
+        metric_label=" ".join(label_bits),
+        total=round(total, 2),
+        trades=contributing,
+    )
