@@ -52,6 +52,42 @@ class TaxProjection(BaseModel):
     bracket_warnings: list[str] = []
 
 
+def _classify_st_lt_gains(repo: Repository, year: int) -> tuple[Decimal, Decimal]:
+    """Return (st_gain, lt_gain) — both signed, by sell-trade holding period."""
+    st = Decimal("0")
+    lt = Decimal("0")
+    buys: dict[tuple[str, str], list[Trade]] = {}
+    for t in repo.all_trades():
+        if t.action.lower() in {"buy", "buy to open"} and t.option_details is None:
+            buys.setdefault((t.account, t.ticker), []).append(t)
+    for chain in buys.values():
+        chain.sort(key=lambda x: x.date)
+
+    for sell in repo.all_trades():
+        if sell.action.lower() not in {"sell"}:
+            continue
+        if sell.option_details is not None:
+            continue
+        if sell.date.year != year:
+            continue
+        chain = buys.get((sell.account, sell.ticker), [])
+        pnl = Decimal(str(sell.proceeds)) - Decimal(str(sell.cost_basis))
+        if not chain:
+            st += pnl
+            continue
+        oldest_buy_date = chain[0].date
+        days_held = (sell.date - oldest_buy_date).days
+        if days_held > LT_HOLDING_DAYS:
+            lt += pnl
+        else:
+            st += pnl
+    return st, lt
+
+
+def _quantize(d: Decimal) -> Decimal:
+    return d.quantize(Decimal("0.01"))
+
+
 def project_year_end_tax(
     repo: Repository,
     year: int,
@@ -60,7 +96,80 @@ def project_year_end_tax(
 ) -> TaxProjection:
     if brackets is None:
         raise MissingTaxConfig("TaxBrackets required; set tax: section in config.yaml")
-    raise NotImplementedError  # filled in Task 16
+
+    st, lt = _classify_st_lt_gains(repo, year)
+
+    # Apply planned trades (conservative: all planned trades default to ST).
+    if planned_trades:
+        for p in planned_trades:
+            if p.action != "Sell":
+                continue
+            lots = repo.get_lots_for_ticker(p.symbol)
+            total_qty = sum((Decimal(str(lot.quantity)) for lot in lots), Decimal("0"))
+            if total_qty <= 0:
+                continue
+            total_basis = sum((Decimal(str(lot.adjusted_basis)) for lot in lots), Decimal("0"))
+            avg_basis = total_basis / total_qty
+            pnl = (p.price - avg_basis) * p.qty
+            st += pnl
+
+    qualified_div = Decimal("0")
+    ordinary_div = Decimal("0")
+    interest_income = Decimal("0")
+    for ev in repo.list_cash_events():
+        # CashEvent uses .event_date (confirmed from domain.py)
+        ev_date = ev.event_date
+        if ev_date is None or ev_date.year != year:
+            continue
+        kind = (ev.kind or "").lower()
+        amt = Decimal(str(ev.amount))
+        if amt <= 0:
+            continue
+        if "qualified" in kind:
+            qualified_div += amt
+        elif "dividend" in kind:
+            ordinary_div += amt
+        elif "interest" in kind:
+            interest_income += amt
+
+    federal = Decimal("0")
+    state = Decimal("0")
+    if st > 0:
+        federal += st * brackets.federal_marginal_rate
+        state += st * brackets.state_marginal_rate
+    if lt > 0:
+        federal += lt * brackets.ltcg_rate
+        state += lt * brackets.state_marginal_rate
+    federal += qualified_div * brackets.qualified_div_rate
+    state += qualified_div * brackets.state_marginal_rate
+    federal += ordinary_div * brackets.federal_marginal_rate
+    state += ordinary_div * brackets.state_marginal_rate
+    federal += interest_income * brackets.federal_marginal_rate
+    state += interest_income * brackets.state_marginal_rate
+
+    BRACKET_PUSH_THRESHOLD = Decimal("20000")
+    warnings_list: list[str] = []
+    if st >= BRACKET_PUSH_THRESHOLD:
+        warnings_list.append(
+            f"Short-term gain of ${st:,.0f} may push you into a higher federal bracket."
+        )
+    if lt >= BRACKET_PUSH_THRESHOLD:
+        warnings_list.append(
+            f"Long-term gain of ${lt:,.0f} may approach the 20% LTCG bracket boundary."
+        )
+
+    return TaxProjection(
+        year=year,
+        realized_st_gain=st,
+        realized_lt_gain=lt,
+        qualified_div=qualified_div,
+        ordinary_div=ordinary_div,
+        interest_income=interest_income,
+        federal_tax=_quantize(federal),
+        state_tax=_quantize(state),
+        total_tax=_quantize(federal + state),
+        bracket_warnings=warnings_list,
+    )
 
 LT_HOLDING_DAYS = 365  # tax long-term threshold (>365 days held)
 
