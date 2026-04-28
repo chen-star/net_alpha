@@ -1,19 +1,98 @@
-{# Settings drawer — Phase 0 skeleton.
+{# Settings drawer — Phase 1 shell with tabs.
 
-   Empty. Phase 1 wires the gear-icon trigger and Imports tab content;
-   Phases 2-3 add Profile / Density / ETF pairs / About tabs. Mounted in
-   base.html so the slide-over root is in the DOM ahead of any HTMX swap.
+   Five tabs: Imports / Profile / Density / ETF pairs / About.
+   Phase 1 ships Imports + Density as functional; the other three are
+   placeholder panels showing "Coming in Phase 2/3" copy. Phase 2-3 will
+   replace those placeholders with real content.
 
-   Phase 1 triggers from outside this Alpine scope by dispatching a window
-   event:  $dispatch('open-settings-drawer'). This keeps state self-contained
-   instead of requiring base.html to host a wrapping x-data. #}
-<div id="settings-drawer"
-     class="fixed inset-y-0 right-0 w-[480px] bg-bg z-30"
-     style="box-shadow: var(--shadow-drawer);"
-     x-data="{ open: false }"
+   Open events come from outside this scope via:
+     window.dispatchEvent(new CustomEvent('open-settings-drawer', { detail: { tab: 'density' } }))
+
+   `tab` is optional; defaults to 'imports' if not set or unknown. #}
+<div id="settings-drawer-root"
+     class="fixed inset-0 z-30"
+     x-data="{
+       open: false,
+       tab: 'imports',
+       openTab(name) { this.tab = name; this.open = true; }
+     }"
      x-show="open"
-     x-on:open-settings-drawer.window="open = true"
+     x-on:open-settings-drawer.window="openTab($event.detail?.tab || 'imports')"
      x-on:keydown.window.escape="open = false"
      x-cloak>
-  {# Phase 1 will populate this with tab strip + tab panels. #}
+  {# Backdrop #}
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+       @click="open = false"
+       aria-hidden="true"></div>
+
+  {# Drawer panel #}
+  <aside id="settings-drawer"
+         class="absolute inset-y-0 right-0 w-[480px] bg-bg flex flex-col"
+         style="box-shadow: var(--shadow-drawer);"
+         role="dialog"
+         aria-modal="true"
+         aria-label="Settings">
+    <header class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--color-hairline);">
+      <h2 class="text-[16px] font-semibold tracking-tight m-0">Settings</h2>
+      <button data-testid="settings-drawer-close"
+              type="button"
+              class="text-label-2 hover:text-text"
+              @click="open = false"
+              aria-label="Close">
+        <img src="/static/icons/x.svg?v={{ asset_v }}" class="w-5 h-5 invert opacity-80" alt="">
+      </button>
+    </header>
+
+    <nav class="flex gap-1 px-4 pt-2" role="tablist">
+      <button type="button"
+              role="tab"
+              data-tab="imports"
+              :class="tab === 'imports' ? 'tab tab--active' : 'tab'"
+              @click="tab = 'imports'">Imports</button>
+      <button type="button"
+              role="tab"
+              data-tab="profile"
+              :class="tab === 'profile' ? 'tab tab--active' : 'tab'"
+              @click="tab = 'profile'">Profile</button>
+      <button type="button"
+              role="tab"
+              data-tab="density"
+              :class="tab === 'density' ? 'tab tab--active' : 'tab'"
+              @click="tab = 'density'">Density</button>
+      <button type="button"
+              role="tab"
+              data-tab="etf-pairs"
+              :class="tab === 'etf-pairs' ? 'tab tab--active' : 'tab'"
+              @click="tab = 'etf-pairs'">ETF pairs</button>
+      <button type="button"
+              role="tab"
+              data-tab="about"
+              :class="tab === 'about' ? 'tab tab--active' : 'tab'"
+              @click="tab = 'about'">About</button>
+    </nav>
+
+    <div class="flex-1 overflow-y-auto px-4 py-4">
+      <div x-show="tab === 'imports'" x-cloak>
+        {% include "_settings_drawer_imports_tab.html" %}
+      </div>
+      <div x-show="tab === 'profile'" x-cloak>
+        {% with phase="2", what="Profile preferences (default tax tab, default account)" %}
+          {% include "_settings_drawer_placeholder_tab.html" %}
+        {% endwith %}
+      </div>
+      <div x-show="tab === 'density'" x-cloak>
+        {% include "_settings_drawer_density_tab.html" %}
+      </div>
+      <div x-show="tab === 'etf-pairs'" x-cloak>
+        {% with phase="2", what="ETF substantially-identical pairs viewer + extender" %}
+          {% include "_settings_drawer_placeholder_tab.html" %}
+        {% endwith %}
+      </div>
+      <div x-show="tab === 'about'" x-cloak>
+        {% with phase="3", what="Version, disclaimer, privacy guarantees" %}
+          {% include "_settings_drawer_placeholder_tab.html" %}
+        {% endwith %}
+      </div>
+    </div>
+  </aside>
 </div>
