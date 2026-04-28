@@ -2,6 +2,216 @@
 
 
 
+## v0.23.0 (2026-04-28)
+
+### Feature
+
+* feat(web): rename nav &#39;Wash sales&#39; to &#39;Tax&#39;
+
+Update base.html nav link from /wash-sales (active_page=&#39;wash_sales&#39;)
+to /tax (active_page=&#39;tax&#39;). The /tax route sets active_page=&#39;tax&#39; in
+context so the nav link highlights correctly.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cf6792e`](https://github.com/chen-star/net_alpha/commit/cf6792ecdd351562b7fdaa1f7269c92c444a5630))
+
+* feat(web): /wash-sales -&gt; /tax 301 redirect (preserves query string)
+
+The wash_sales_legacy handler redirects all /wash-sales requests to /tax.
+Old sub-views ?view=table|calendar are normalised to view=wash-sales.
+Update test_calendar.py and test_wash_sales_route.py to follow redirects
+or target /tax directly. Add test_tax_redirects.py (3 tests).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cfebaca`](https://github.com/chen-star/net_alpha/commit/cfebacad2ba502f05e25f05aae9fd25b76a183a2))
+
+* feat(web): tax.html 4-tab page (wash-sales | harvest | budget | projection)
+
+Create tax.html wrapper template extending base.html with tab nav.
+Extract wash-sales tab inner content into _tax_wash_sales_tab.html
+(mirror of wash_sales.html inner body, links updated to /tax).
+Add _offset_budget_tab.html and _projection_tab.html for budget and
+projection tabs.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`40c3d03`](https://github.com/chen-star/net_alpha/commit/40c3d03c55998f9c42a2c246772d1623ca3cc1b1))
+
+* feat(web): add /tax route with tabbed view dispatcher
+
+Extract _wash_sales_context helper from wash_sales.py and wire up new
+/tax route supporting wash-sales | harvest | budget | projection tabs.
+Register tax_routes.router in app.py. Add test_tax_route.py (4 tests).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b6cd07b`](https://github.com/chen-star/net_alpha/commit/b6cd07bcade9f5d38deda11d62290fd08c1d595e))
+
+* feat(web): load etf_replacements into app.state at startup
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3f74e29`](https://github.com/chen-star/net_alpha/commit/3f74e293cf19404a31fc667728a81e7939171f3e))
+
+* feat(web): pre-trade traffic-light on /sim result
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b9bc9ac`](https://github.com/chen-star/net_alpha/commit/b9bc9ac61e61b8d549015c82840e57862301ffac))
+
+* feat(tax): assess_trade — bracket-push yellow + lot-method hint
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b4550e9`](https://github.com/chen-star/net_alpha/commit/b4550e90fca37c6a62ca5d510ca952ccad226a21))
+
+* feat(tax): assess_trade — wash-sale red verdict
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c264f74`](https://github.com/chen-star/net_alpha/commit/c264f74d2899179356b7821bf2e36da67c3a87c6))
+
+* feat(tax): TaxLightSignal model
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e07b632`](https://github.com/chen-star/net_alpha/commit/e07b632b1a77586a5c7d7774c3fb297b763f7d3d))
+
+* feat(web): year-end projection card on portfolio (with config-missing placeholder)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eac368f`](https://github.com/chen-star/net_alpha/commit/eac368fa7d6acdd32c85f14adbd2c5285ba54262))
+
+* feat(tax): year-end tax projection (single marginal rate) + planned trades + bracket-push warnings
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`86e9d43`](https://github.com/chen-star/net_alpha/commit/86e9d4367beb47ce78b9a84a7350439245d32954))
+
+* feat(tax): TaxBrackets, TaxProjection, MissingTaxConfig
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eda2ca9`](https://github.com/chen-star/net_alpha/commit/eda2ca9fbf83f5e9e9b87557c6fe8c717612d848))
+
+* feat(web): offset-budget tile on portfolio KPI strip
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7fce1c1`](https://github.com/chen-star/net_alpha/commit/7fce1c14829258921bf10fe89a20187e1c59f17a))
+
+* feat(tax): compute_offset_budget with $3K cap + carryforward + planned delta
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9c5b33d`](https://github.com/chen-star/net_alpha/commit/9c5b33d434bfa65a27f3391c27e1dc71af0e7f7b))
+
+* feat(tax): OffsetBudget and PlannedTrade models
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0da2f70`](https://github.com/chen-star/net_alpha/commit/0da2f70cb29490fec9626aa5cd1fc6bf79b801ab))
+
+* feat(web): _harvest_queue.html template
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a32bb05`](https://github.com/chen-star/net_alpha/commit/a32bb05257a141fbe752a694d31be72869027986))
+
+* feat(tax): compute_harvest_queue with LT/ST split + account filter
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5bd4543`](https://github.com/chen-star/net_alpha/commit/5bd4543c8e6abc6debf3b625cbc2ae173e47c0f5))
+
+* feat(tax): HarvestOpportunity model + portfolio test conftest ([`6bb47f6`](https://github.com/chen-star/net_alpha/commit/6bb47f63a98a21d57bb00f55b971abc0935df42f))
+
+* feat(engine): cross-asset lockout — open CSP locks out underlying
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bc98513`](https://github.com/chen-star/net_alpha/commit/bc98513c86d9662477181d62d6e736002be90596))
+
+* feat(engine): same-symbol lockout-clear date computation
+
+Adds compute_lockout_clear_date in engine/lockout.py: given a symbol, all trades,
+and an as-of date, returns the first wash-sale-safe sale date (most recent buy + 31
+days) or None when no buy is in the 30-day window. Handles cross-account buys and
+substantially-identical ETF pairs. Structured for Task 6 cross-asset extension.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`02a11d9`](https://github.com/chen-star/net_alpha/commit/02a11d99ef751766339a23c7cbb0965da1811879))
+
+* feat(tax): premium origin extraction for CSP-assigned lots
+
+Adds CSPAssigned / CCAssigned / PremiumOriginEvent models and
+extract_premium_origin() to portfolio/tax_planner.py; recovers the
+put premium from the STO→BTC-assigned chain for wheel-strategy lots.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9d7dd8c`](https://github.com/chen-star/net_alpha/commit/9d7dd8cba16bf4788138b696e385c2f8d0ba5bd4))
+
+* feat(engine): bundled etf_replacements.yaml + loader with consistency check
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`51a8df5`](https://github.com/chen-star/net_alpha/commit/51a8df50034f451ddbaf7555a88bd2086b8dcd0e))
+
+* feat(audit): hygiene category &#39;tax_config_missing&#39;
+
+Adds a new `tax_config_missing` info-level hygiene issue that surfaces
+when no `tax:` section exists in config.yaml. Threads `settings` through
+`collect_issues` and `get_imports_badge_count` as an optional kwarg so
+all existing callers remain backwards-compatible.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ca23b10`](https://github.com/chen-star/net_alpha/commit/ca23b10f97395fee5ad512adf936dcabd695c3ff))
+
+* feat(config): add TaxConfig model and loader
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bd7539e`](https://github.com/chen-star/net_alpha/commit/bd7539ee2dd1a642ed02417029ee699d0836055d))
+
+### Fix
+
+* fix(engine): bundled SCHD replacement DGRO to avoid etf_pairs conflict
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fb045a7`](https://github.com/chen-star/net_alpha/commit/fb045a772aa679cd1304b857127f48860ee19783))
+
+### Refactor
+
+* refactor(test): promote seed_lots to portfolio conftest fixture
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`88a3048`](https://github.com/chen-star/net_alpha/commit/88a30485948a4ef2143b22cedcfe8eccc9b290ce))
+
+### Style
+
+* style: ruff import sort + drop unused TaxProjection test import
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fe822ec`](https://github.com/chen-star/net_alpha/commit/fe822ec2234097c12b70d42c7106785bc8f01759))
+
+### Test
+
+* test(tax): phase-2 smoke — /tax tabs, portfolio embeds, /sim traffic light
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`27877cf`](https://github.com/chen-star/net_alpha/commit/27877cf0ac1701d233a7b1a951ab09ff54dc81bb))
+
+* test(tax): CSP origin round-trips through Repository
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6fc8e53`](https://github.com/chen-star/net_alpha/commit/6fc8e538bc1a9d9a528dc7c7019bbd54eaa55c94))
+
+* test(tax): cross-asset wheel-strategy lockout coverage
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bb41be9`](https://github.com/chen-star/net_alpha/commit/bb41be9db347615ada732eb5314e29b4ea7500d4))
+
+* test(tax): replacement-suggestion wiring in harvest queue
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8b70a01`](https://github.com/chen-star/net_alpha/commit/8b70a0140d6daf2ed6a81e24095ea3bd54790399))
+
+* test(tax): premium offset and only_harvestable filter coverage
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e23ab52`](https://github.com/chen-star/net_alpha/commit/e23ab525fa02be980f30baef9b720beebe510884))
+
+### Unknown
+
+* Merge branch &#39;phase2-tax-planner&#39; — Phase 2 Forward Tax Planner
+
+Adds a forward-looking tax planner: harvest queue, $3K offset budget gauge,
+single-marginal-rate year-end projection, and pre-trade traffic light. Renames
+/wash-sales to /tax with a 4-tab page (Wash sales | Harvest queue | Offset
+budget | Projection); /wash-sales returns 301 to /tax. Wheel-strategy
+awareness: extracts CSP-assigned premium offsets from existing synthetic
+trade chains, and treats open short puts as substantially identical to the
+underlying for cross-asset wash-sale lockout. Bundled etf_replacements.yaml
+suggests harvest replacements with consistency check against etf_pairs.yaml.
+
+Read-only — no DB schema changes, no migrations. New optional `tax:` config
+section in ~/.net_alpha/config.yaml; absence renders a placeholder card on
+/portfolio. Tax-bracket data never leaves the box.
+
+30 TDD tasks, 31 commits + plan + 2 small fixups. 672 tests pass (up from
+603 on master); 1 skipped; ruff clean.
+
+Plan: docs/superpowers/plans/2026-04-27-tax-planner.md
+Spec: docs/superpowers/specs/2026-04-27-provenance-tax-planner-density-design.md (Section 2)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4428486`](https://github.com/chen-star/net_alpha/commit/4428486ea26979f10b41d5b3a26703c970045be1))
+
+* plan: phase 2 — forward tax planner
+
+30 TDD tasks covering harvest queue, offset budget, year-end projection,
+pre-trade traffic light, wheel-strategy awareness, etf_replacements, and
+the /wash-sales -&gt; /tax route rename.
+
+Follows the spec at docs/superpowers/specs/2026-04-27-provenance-tax-
+planner-density-design.md (Section 2). No DB schema changes — wheel
+awareness is computed on read from the existing synthetic
+option_short_open_assigned trade chain.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6499768`](https://github.com/chen-star/net_alpha/commit/6499768ec3c84bae12f70515fe3ec213f52bc4d8))
+
+
 ## v0.22.0 (2026-04-28)
 
 ### Documentation
