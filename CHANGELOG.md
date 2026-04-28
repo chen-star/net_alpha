@@ -2,6 +2,155 @@
 
 
 
+## v0.24.0 (2026-04-28)
+
+### Chore
+
+* chore: ruff format fixes on Section F test files ([`1cad1bf`](https://github.com/chen-star/net_alpha/commit/1cad1bfbf4337d490413386df9186b96a9881783))
+
+* chore(web): ruff UP017 fix — use datetime.UTC alias in Section D files
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`48eb0b1`](https://github.com/chen-star/net_alpha/commit/48eb0b18058add81fdc1c1200307107dee5d9c0c))
+
+### Documentation
+
+* docs: phase 3 implementation plan ([`cd5c2c1`](https://github.com/chen-star/net_alpha/commit/cd5c2c13dadadf2add800ba45295fa746bf28628))
+
+### Feature
+
+* feat(web): switcher label reflects current request&#39;s account filter
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a6aa566`](https://github.com/chen-star/net_alpha/commit/a6aa566aa88ff692f82dd2e078e4ac039afcb02b))
+
+* feat(web): /tax default tab from ProfileSettings.default_tax_tab
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bc6588b`](https://github.com/chen-star/net_alpha/commit/bc6588b8ba9ee425f4ff8b5eb32dd143ec8e9298))
+
+* feat(web): density toggle on /holdings, /tax, /imports ([`0c0d6a3`](https://github.com/chen-star/net_alpha/commit/0c0d6a34634407d054ef57d02e331ab3fabf2257))
+
+* feat(web): localStorage density override shim ([`d61f59b`](https://github.com/chen-star/net_alpha/commit/d61f59be27efc1f709588206b8ad2570f7312ac3))
+
+* feat(web): density toggle template (Compact / Comfortable / Tax-view) ([`08bd159`](https://github.com/chen-star/net_alpha/commit/08bd159c76b68fe9c290cf97f4911cc8e5838f73))
+
+* feat(web): profile-driven extra columns in holdings table ([`092a714`](https://github.com/chen-star/net_alpha/commit/092a714492414633eeb886f7aa19d58091fcebe4))
+
+* feat(portfolio): premium_received per position for options profile ([`6719116`](https://github.com/chen-star/net_alpha/commit/67191163c3135c0e23723cdbec9eeff005afe4c8))
+
+* feat(portfolio): position rows expose days_held + lt/st split ([`434544c`](https://github.com/chen-star/net_alpha/commit/434544cfa3800da796c04a122bc598f6783cad96))
+
+* feat(web): KPI hero ordering driven by ProfileSettings.order
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`732f1c3`](https://github.com/chen-star/net_alpha/commit/732f1c3d1aa949697fcd57942a00d1a5cdc52398))
+
+* feat(web): conservative profile collapses wash-watch by default
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2ef4b29`](https://github.com/chen-star/net_alpha/commit/2ef4b291559f2b49da50dbbe5658c12710de2f9e))
+
+* feat(web): pass ProfileSettings into /portfolio context
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`194fe9d`](https://github.com/chen-star/net_alpha/commit/194fe9d09b1aede7ad42c16d6c5b82ede76724b9))
+
+* feat(web): first-visit profile picker modal
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a1d8378`](https://github.com/chen-star/net_alpha/commit/a1d8378dac9bd2bdb170f6e53ccd6a04ac3a42af))
+
+* feat(web): render profile switcher in base topbar
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eab81ab`](https://github.com/chen-star/net_alpha/commit/eab81ab73df1ee7b6719ae614763005a8612d814))
+
+* feat(web): toolbar profile switcher template
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`aa4966f`](https://github.com/chen-star/net_alpha/commit/aa4966fdb829b5d38642ae8ac3164a8ceaeeca5b))
+
+* feat(web): POST /preferences writes per-account or all-account prefs
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`642062f`](https://github.com/chen-star/net_alpha/commit/642062f3d293abbfa45cd2156987301bc48dd197))
+
+* feat(web): get_profile_settings FastAPI dependency
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bd79a7c`](https://github.com/chen-star/net_alpha/commit/bd79a7c9a4dc77969a00636f4e79d04f18541a8c))
+
+* feat(prefs): resolve_effective_profile across single/all-account views
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`df3d989`](https://github.com/chen-star/net_alpha/commit/df3d989fa96eaba65a4dbc457eefbeeb9156aeb7))
+
+* feat(prefs): default_columns() and default_tax_tab() ([`213a077`](https://github.com/chen-star/net_alpha/commit/213a077c68d459445fbb04095dfe83289c26bfab))
+
+* feat(prefs): ProfileSettings.order() for KPI hero slots ([`8678f45`](https://github.com/chen-star/net_alpha/commit/8678f454e9cd3560270c5af59ef0d65078a91b32))
+
+* feat(prefs): ProfileSettings.shows() rule table ([`5119abd`](https://github.com/chen-star/net_alpha/commit/5119abd4966371d312548752067616ddc5f890e5))
+
+* feat(db): repository methods for user preferences
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cbf5acf`](https://github.com/chen-star/net_alpha/commit/cbf5acffd8fe764d4ae59db594c281b7f6dcd35a))
+
+* feat(db): v8 -&gt; v9 migration adds user_preferences
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8376221`](https://github.com/chen-star/net_alpha/commit/83762217872f7dd9641784ca8a95ec1a508c7f6e))
+
+* feat(db): add UserPreferenceRow for v9 schema
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f0ed016`](https://github.com/chen-star/net_alpha/commit/f0ed0169a36d10410d551766ba47139b5d7158ae))
+
+### Fix
+
+* fix(portfolio): premium_received skips assigned-put chain to avoid double-count
+
+Assigned-put STO/synthetic-close trade pairs (basis_source in
+{option_short_open_assigned, option_short_close_assigned}) already fold
+their premium into the underlying stock&#39;s adjusted basis. Counting them
+again in premium_received would double-credit the user-visible figure.
+
+Move the premium accumulator below the existing _SKIP_AGG_SOURCES guard
+so the same skip applies. Adds a regression test exercising the
+assigned-put chain.
+
+Caught in Phase 3 final code review. ([`81881bf`](https://github.com/chen-star/net_alpha/commit/81881bf6b2d0c098ccbbd564169523346bdc53f4))
+
+* fix: emit data-col markers in holdings.html wrapper for empty-state path
+
+The _portfolio_table.html cols-meta span only renders when rows exist.
+In the no-imports (empty-state) path the holdings page skips the table
+fragment entirely, so data-col attributes never appeared in the HTML.
+
+Add a hidden cols-meta span directly in holdings.html so column markers
+are always present in the page regardless of import state.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4ff9ac4`](https://github.com/chen-star/net_alpha/commit/4ff9ac4568df8979698dd3b5ea932665cd327bd5))
+
+### Style
+
+* style: ruff format
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6195963`](https://github.com/chen-star/net_alpha/commit/61959636e7a976f9197b82580bdcdce377e1269a))
+
+### Unknown
+
+* Merge branch &#39;phase3-density&#39; — Phase 3 Style-Aware Density
+
+Adds the per-account profile (Conservative/Active/Options) and per-page
+density toggle (Compact/Comfortable/Tax-view) per spec Section 3.
+
+- v8 → v9 schema migration adds user_preferences table.
+- prefs/profile.py encapsulates the visibility/ordering/columns rule
+  table (Section 3b) so templates ask profile.shows() / order() /
+  default_columns() / default_tax_tab() instead of branching on profile
+  strings.
+- POST /preferences route + toolbar switcher (request-aware) +
+  first-visit modal (3a).
+- /portfolio: KPI hero ordering by profile, wash-watch
+  collapsed-by-default for Conservative.
+- /holdings: profile-driven extra columns (days_held, lt_st_split,
+  premium_received, origin_event placeholders) + density toggle.
+- /tax: default tab from profile.default_tax_tab().
+- /imports: density toggle.
+- density.js localStorage transient override.
+
+Phase 3d (smart suggestion) is explicitly deferred per spec.
+
+29 commits, +78 tests (672 → 750 pass + 1 skip). ([`5576c2a`](https://github.com/chen-star/net_alpha/commit/5576c2a0642731436feb38620611db9951bcafaf))
+
+
 ## v0.23.0 (2026-04-28)
 
 ### Feature
