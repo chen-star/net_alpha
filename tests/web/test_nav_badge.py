@@ -43,8 +43,9 @@ def test_imports_nav_shows_badge_count_when_errors(tmp_path):
     client = TestClient(create_app(settings))
     resp = client.get("/")
     assert resp.status_code == 200
-    # Imports nav-link should show a count badge.
-    assert 'data-testid="imports-badge"' in resp.text
+    # Phase 1: Imports nav-link badge moved to gear icon (Section C).
+    # The badge no longer appears in the top nav — assert it is absent here.
+    assert 'data-testid="imports-badge"' not in resp.text
 
 
 def test_imports_nav_hides_badge_when_clean(tmp_path):
