@@ -40,7 +40,7 @@ def test_holdings_page_active_in_nav(tmp_path):
     client = _client(tmp_path)
     response = client.get("/positions")
     assert response.status_code == 200
-    assert ">Holdings<" in response.text
+    assert ">Positions<" in response.text
     assert 'class="nav-link active"' in response.text
 
 
@@ -48,7 +48,7 @@ def test_holdings_link_appears_on_other_pages(tmp_path):
     client = _client(tmp_path)
     response = client.get("/")
     assert response.status_code == 200
-    assert ">Holdings<" in response.text
+    assert ">Positions<" in response.text
 
 
 def test_holdings_renders_symbol_multiselect_trigger(tmp_path):
