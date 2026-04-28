@@ -1,7 +1,9 @@
 # src/net_alpha/config.py
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError
@@ -50,3 +52,34 @@ def load_pricing_config(path: Path) -> PricingConfig:
         return PricingConfig(**(data.get("prices") or {}))
     except (yaml.YAMLError, ValidationError):
         return PricingConfig()
+
+
+class TaxConfig(BaseModel):
+    """Optional tax configuration loaded from `~/.net_alpha/config.yaml` `tax:` section."""
+
+    model_config = {"extra": "ignore"}
+
+    filing_status: Literal["single", "mfj", "mfs", "hoh"] = "single"
+    state: str = ""  # ISO state code; "" = federal-only
+    federal_marginal_rate: Decimal = Decimal("0")
+    state_marginal_rate: Decimal = Decimal("0")
+    ltcg_rate: Decimal = Decimal("0.15")
+    qualified_div_rate: Decimal = Decimal("0.15")
+    reconciliation_tolerance: Decimal = Decimal("0.50")
+
+
+def load_tax_config(path: Path) -> TaxConfig | None:
+    """Load TaxConfig from a YAML file's ``tax:`` section. None if missing/invalid/absent."""
+    if not path.exists():
+        return None
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except yaml.YAMLError:
+        return None
+    section = data.get("tax")
+    if not section:
+        return None
+    try:
+        return TaxConfig(**section)
+    except ValidationError:
+        return None
