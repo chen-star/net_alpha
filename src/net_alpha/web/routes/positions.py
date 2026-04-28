@@ -82,6 +82,14 @@ def positions_page(
         )
         ctx["only_harvestable"] = only_harvestable_bool
         ctx["budget"] = compute_offset_budget(repo=repo, year=today.year)
+        ctx["harvest_form_action"] = "/positions?view=at-loss"
+        ctx["harvest_form_target"] = "#positions-tab-content"
+        if request.headers.get("hx-request"):
+            return request.app.state.templates.TemplateResponse(
+                request,
+                "_positions_view_at_loss.html",
+                ctx,
+            )
 
     return request.app.state.templates.TemplateResponse(
         request,

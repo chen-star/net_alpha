@@ -63,10 +63,11 @@ def test_get_tax_view_harvest_redirects_to_positions_at_loss(client, repo, schwa
     assert resp.headers["location"] == "/positions?view=at-loss"
 
 
-def test_get_tax_view_budget_renders_offset_budget(client, repo, schwab_account):
-    resp = client.get("/tax?view=budget")
-    assert resp.status_code == 200
-    assert "harvested" in resp.text.lower() or "cap" in resp.text.lower()
+def test_get_tax_view_budget_redirects_to_positions_at_loss(client, repo, schwab_account):
+    """/tax?view=budget is a permanent 301 to /positions?view=at-loss (Phase 1 IA critical fix #2)."""
+    resp = client.get("/tax?view=budget", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/positions?view=at-loss"
 
 
 def test_get_tax_view_projection_renders_card_or_placeholder(client):

@@ -9,7 +9,7 @@
   <div class="flex items-center gap-3">
     <label class="text-[12px] text-label-1 inline-flex items-center gap-2">
       <input type="checkbox" name="only_harvestable" {% if only_harvestable %}checked{% endif %}
-        hx-get="/tax?view=harvest" hx-target="#tab-content" hx-trigger="change"
+        hx-get="{{ harvest_form_action|default('/tax?view=harvest') }}" hx-target="{{ harvest_form_target|default('#tab-content') }}" hx-trigger="change"
         class="accent-indigo">
       Currently harvestable only
       <span class="text-label-3" title="Hide rows whose lockout window hasn't cleared yet (i.e. selling today would still trigger a wash sale).">&#9432;</span>

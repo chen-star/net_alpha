@@ -62,3 +62,11 @@ def test_settings_imports_renders_base_with_drawer_open_signal(client: TestClien
     resp = client.get("/settings/imports")
     assert resp.status_code == 200
     assert 'data-open-settings-tab="imports"' in resp.text
+
+
+def test_tax_view_budget_also_redirects_to_positions_at_loss(client: TestClient):
+    """The `budget` alias for `harvest` should also redirect to the new
+    at-loss home (Phase 1 IA, Critical #2 review fix)."""
+    resp = client.get("/tax?view=budget", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/positions?view=at-loss"

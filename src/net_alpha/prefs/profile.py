@@ -59,10 +59,12 @@ _HOLDINGS_TAX_DENSITY_COLS: list[str] = [
 ]
 
 # Default tax tab per profile — Section 3b.
+# "harvest" view was removed from /tax in Phase 1 IA (moved to /positions?view=at-loss).
+# All profiles now default to "wash-sales".
 _DEFAULT_TAX_TAB: dict[Profile, str] = {
     "conservative": "wash-sales",
-    "active": "harvest",
-    "options": "harvest",
+    "active": "wash-sales",
+    "options": "wash-sales",
 }
 
 

@@ -38,9 +38,9 @@ def test_phase3_smoke(tmp_path):
     # 1. The first-visit modal is gone (prefs exist).
     assert "Pick a default profile per account" not in client.get("/").text
 
-    # 2. /tax with active filter -> default tab harvest.
+    # 2. /tax with active filter -> default tab wash-sales (Phase 1 IA: harvest moved to /positions?view=at-loss).
     tax_resp = client.get("/tax", params={"account": "Schwab/Tax"}).text
-    assert 'data-active-tab="harvest"' in tax_resp
+    assert 'data-active-tab="wash-sales"' in tax_resp
 
     # 3. /tax with conservative would default to wash-sales — but we don't have
     #    a conservative account, so flip Roth temporarily.

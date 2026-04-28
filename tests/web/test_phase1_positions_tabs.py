@@ -66,3 +66,31 @@ def test_tax_page_no_longer_has_harvest_tab(client: TestClient):
     assert ">Harvest<" not in html, "Tax page still has Harvest tab"
     assert "Wash sales" in html
     assert "Projection" in html
+
+
+def test_at_loss_harvestable_toggle_uses_positions_url(client: TestClient):
+    """The 'currently harvestable only' checkbox on /positions?view=at-loss
+    must POST to /positions, not /tax (which would 301-redirect and lose
+    the only_harvestable param)."""
+    resp = client.get("/positions?view=at-loss")
+    html = resp.text
+    # The form's hx-get should target the positions URL
+    assert 'hx-get="/positions?view=at-loss"' in html
+    # And NOT the legacy tax URL
+    assert 'hx-get="/tax?view=harvest"' not in html
+
+
+def test_at_loss_hx_request_returns_panel_only(client: TestClient):
+    """An HX-Request to /positions?view=at-loss returns just the at-loss
+    panel content, not the full positions page chrome."""
+    resp = client.get(
+        "/positions?view=at-loss&only_harvestable=1",
+        headers={"HX-Request": "true"},
+    )
+    assert resp.status_code == 200
+    # The full positions.html sets the page H1; the panel partial doesn't.
+    # The harvest queue is present in both, so we look for the absence of
+    # the page chrome.
+    assert "<h1" not in resp.text or ">Positions<" not in resp.text
+    # The panel itself is present
+    assert 'id="positions-tab-content"' in resp.text or "harvest" in resp.text.lower()
