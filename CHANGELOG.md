@@ -2,6 +2,199 @@
 
 
 
+## v0.29.0 (2026-04-28)
+
+### Documentation
+
+* docs(web): document /imports/_legacy_page is drawer-fetched only (review nit #12) ([`d822355`](https://github.com/chen-star/net_alpha/commit/d822355401aa93cc90d897a8df48289801af5d1e))
+
+* docs(web): _density_toggle docstring no longer references /holdings (review nit #11) ([`e3884e8`](https://github.com/chen-star/net_alpha/commit/e3884e8dec29194adeb4c54704e6fed3ba7495f8))
+
+* docs(plans): Phase 2 — Positions canvas implementation plan
+
+Covers the at-loss column redesign (Lockout-clear, Replacement); the
+row-action menu (⋯ on hover with Open ticker / Sim sell / Set basis /
+Copy ticker); the non-modal #positions-pane side pane with sim-sell
+preview, set-basis form, and open-ticker link; Sim pre-fill from row
+action URL params; and the Phase 1 review-backlog cleanup items.
+
+Approximately 24 tasks across 7 sections (A–G). Section A clears the
+Phase 1 nits as a warmup; Section G is the verification gate.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2152afd`](https://github.com/chen-star/net_alpha/commit/2152afd97f159955ed7ca5a4b1bea02d1664a418))
+
+### Feature
+
+* feat(web): /sim accepts ?account= and ?action= for row-action pre-fill
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5df6b49`](https://github.com/chen-star/net_alpha/commit/5df6b495b76dfe30f706696a97c3aa945e75d5ea))
+
+* feat(web): pane set-basis form block (single-lot inline; multi-lot links out) ([`b9996bf`](https://github.com/chen-star/net_alpha/commit/b9996bf666e041248bab09a077bdd68532d5247b))
+
+* feat(web): pane sim-sell preview block + run-full-sim deep link ([`8f69209`](https://github.com/chen-star/net_alpha/commit/8f69209428cff820005f4cb6ddea28559965f615))
+
+* feat(web): pane header — qty · account · last · basis · loss ([`df779b2`](https://github.com/chen-star/net_alpha/commit/df779b29fdc9d42347d6bb0e8baaafa4ab0030dc))
+
+* feat(web): row click opens positions side pane (Alpine \$dispatch)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`935f75a`](https://github.com/chen-star/net_alpha/commit/935f75a48a87c130af8338b7a25e974f3595e0d6))
+
+* feat(web): /positions/pane returns side-pane body fragment
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e25b592`](https://github.com/chen-star/net_alpha/commit/e25b59218507515b63860c4600e0d030901767ab))
+
+* feat(web): mount positions side pane skeleton (Alpine + HTMX)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1043808`](https://github.com/chen-star/net_alpha/commit/1043808555d10c1dd352d13ce5e467de05fbf7cd))
+
+* feat(web): drop &#39;click row to drill down&#39; hint (audit H9)
+
+The row action menu (§3.4) now provides explicit affordance for row
+interaction; the inline hint copy is redundant and adds visual noise.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`06e8d86`](https://github.com/chen-star/net_alpha/commit/06e8d866b30ad7ae8726dc1b1a77b607fa015c85))
+
+* feat(web): mount row action menu on All / Stocks tab rows
+
+Adds data-row=&#34;position&#34; + group class to each portfolio table row,
+appends a matching w-10 header cell, and includes _row_actions.html
+in the trailing cell. Uses r.accounts[0] as account label and none
+for account_id (PositionRow is account-aggregated, not lot-scoped).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`dcdd678`](https://github.com/chen-star/net_alpha/commit/dcdd6785ea7f96292820a28e9be8425d9542bdbe))
+
+* feat(web): row action menu — Open ticker / Sim sell / Set basis / Copy
+
+Adds _row_actions.html partial with four-item Alpine dropdown, hover-
+revealed ⋯ button, and aria-keyshortcuts for future Phase 4 bindings.
+Mounts on at-loss table rows. Vendors external-link.svg (Lucide 0.469.0).
+Adds .row-actions CSS utility. Adds test_phase2_row_actions.py.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e2a34c1`](https://github.com/chen-star/net_alpha/commit/e2a34c12f34a4c7fce6d5c2a4273f0028a11551f))
+
+* feat(web): at-loss sorts clear rows first; renders &#39;clear&#39; for past dates
+
+Adds _lockout_sort_key so rows with lockout_clear=None or in the past
+sort before future-locked rows (ascending date within each group). Passes
+`today` into template context so the lockout cell can compare
+`row.lockout_clear &gt; today` and display &#39;clear&#39; for past/None dates.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`42007a9`](https://github.com/chen-star/net_alpha/commit/42007a97e9adea68c5f62652978696f8f0c73eb9))
+
+* feat(portfolio): HarvestOpportunity exposes open_basis for at-loss UI
+
+Adds required `open_basis: Decimal` field between `qty` and `loss`.
+Wires it at the single construction site in compute_harvest_queue using
+the loop variable `basis`. Tightens the MKT/BASIS template guards from
+`is defined` to direct access. Updates 4 tests that construct
+HarvestOpportunity directly (test_harvest_opportunity_minimal ×1,
+test_harvest_queue_render.py ×3).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a2e8dad`](https://github.com/chen-star/net_alpha/commit/a2e8dad292a80760f0161780712d99084af94ca2))
+
+* feat(web): at-loss table — new Lockout-clear + Replacement columns
+
+Replaces the _harvest_queue.html include with a dedicated table that
+always renders column headers (SYM/ACCT/QTY/MKT/BASIS/UNREAL/
+LOCKOUT-CLEAR/REPLACEMENT). Also fixes budget field names (net_realized,
+cap_against_ordinary) and updates the stale Phase 1 test that expected
+the old &#34;Harvest queue&#34; heading.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`876e4a9`](https://github.com/chen-star/net_alpha/commit/876e4a986ce103eafba5a74bd12da311780b8826))
+
+### Fix
+
+* fix(web): set-basis form success state stays inside the pane
+
+The pane&#39;s set-basis form had hx-target=&#34;#positions-pane-body&#34; with
+hx-swap=&#34;innerHTML&#34;, which replaced the entire pane body with the
+data-hygiene endpoint&#39;s bare &lt;li&gt; response (&#34;Reload the page to recompute
+totals&#34;). Free-floating &lt;li&gt; outside a &lt;ul&gt; is invalid HTML and the
+copy directs the user out of the pane.
+
+Form now uses hx-target=&#34;this&#34; / hx-swap=&#34;outerHTML&#34; and posts to
+/audit/set-basis?caller=pane. The route branches on the caller param
+to return _positions_pane_set_basis_saved.html — an inline confirmation
+with a &#34;Refresh pane&#34; button that fetches /positions/pane to surface
+the updated totals.
+
+Existing data-hygiene callers don&#39;t pass ?caller=pane, so they continue
+to receive the legacy _data_hygiene_set_basis.html response unchanged.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5e59074`](https://github.com/chen-star/net_alpha/commit/5e59074a79002b7007f2503b2b67c200fa8327d5))
+
+* fix(web): row action menu — Alpine binding + None handling
+
+C1: aria-expanded was rendered as literal &#34;open ? &#39;true&#39; : &#39;false&#39;&#34;
+because the attribute wasn&#39;t prefixed with `:` (or x-bind:). Screen
+readers got the source expression; WCAG 4.1.2 violation. Switched to
+`:aria-expanded=&#34;open&#34;` so Alpine evaluates and stringifies correctly.
+
+C2: account_id from the All-view&#39;s _portfolio_table.html arrives as
+Jinja&#39;s None (the table is symbol-aggregated, no per-row account_id).
+Jinja&#39;s |default(&#39;null&#39;) filter only fires when undefined, not None,
+so the rendered Alpine handler emitted `account_id: None` — a
+ReferenceError that broke the Set-basis menu item silently. Switched
+to explicit `account_id is not none` check.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cf993b4`](https://github.com/chen-star/net_alpha/commit/cf993b498afde8086196325c2819442061adb33e))
+
+* fix(web): /settings/* shows polite hint when drawer closed (review nit #6) ([`21a71a2`](https://github.com/chen-star/net_alpha/commit/21a71a27ad53748e6e0a3c219916bd38c4144bc5))
+
+* fix(web): drawer placeholders say &#39;Coming soon&#39; not specific phase (review nit #9) ([`1856518`](https://github.com/chen-star/net_alpha/commit/1856518eaf9ce06b0d8efb241d0e87bfdf116c97))
+
+* fix(web): legacy imports page does not highlight Overview nav (review nit #7) ([`8eec5bb`](https://github.com/chen-star/net_alpha/commit/8eec5bbfb679092c79d0053458e32791124b5dba))
+
+* fix(web): empty-state CTA targets /settings/imports directly (review nit #8) ([`40c409c`](https://github.com/chen-star/net_alpha/commit/40c409c89c376af8ad7bd9b8b7098c4fba28c858))
+
+### Style
+
+* style: ruff format fixes for B1/B2 test files
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3c1f1db`](https://github.com/chen-star/net_alpha/commit/3c1f1db85938ddb6290884c834e82b0951997a4d))
+
+* style: ruff format test_phase2_review_backlog.py ([`978b012`](https://github.com/chen-star/net_alpha/commit/978b01215c028593e03ad59470db5ce12a5f451a))
+
+### Test
+
+* test(web): re-capture snapshot baselines for Phase 2 canvas
+
+Phase 2 changes:
+- positions-all: row-action menu (⋯) column added; row-click semantics
+  changed from window.location to side pane $dispatch
+- positions-at-loss: complete rewrite — Lockout-clear + Replacement
+  columns, sorted with clear lots first
+- sim: hidden &lt;select name=&#34;action&#34;&gt; added so the segmented control&#39;s
+  value participates in the form contract
+- settings-imports: &#39;polite hint&#39; copy added when drawer is closed
+- minor pixel diffs across other pages from .row-actions CSS additions
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d0eb698`](https://github.com/chen-star/net_alpha/commit/d0eb6987b8d5cf77a2c17da4513bb9f1eeae9d1d))
+
+### Unknown
+
+* Merge branch &#39;phase2-positions-canvas&#39; — Phase 2 Positions Canvas
+
+The §3.3/§3.4/§3.5 Positions canvas lands: at-loss tab gets dedicated
+Lockout-clear and Replacement columns; every positions row gains a
+hover-revealed action menu (⋯) with Open ticker / Sim sell / Set basis /
+Copy ticker; a non-modal #positions-pane side pane opens on row click
+with sim-sell preview, set-basis form, and open-ticker link; the Sim
+page pre-fills from row-action URL params.
+
+24 commits across sections A (Phase 1 review backlog cleanup), B
+(at-loss column redesign + HarvestOpportunity.open_basis), C (row
+action menu), D (side pane skeleton + /positions/pane route), E
+(side pane content), F (sim pre-fill), G (snapshot baselines), plus
+review-feedback fixes for the aria-expanded Alpine binding, the
+None-handling JS ReferenceError on All-view Set-basis, and the
+set-basis form success state.
+
+Phase 2 stays structural — page interiors of Overview, Tax, Imports,
+and Ticker are untouched. Phase 3 polishes those; Phase 5 makes the
+side pane and drawer responsive at &lt;1024px. ([`60233af`](https://github.com/chen-star/net_alpha/commit/60233af62ef50b8dbaf826b3cdf88be2747e1b31))
+
+
 ## v0.28.0 (2026-04-28)
 
 ### Documentation
