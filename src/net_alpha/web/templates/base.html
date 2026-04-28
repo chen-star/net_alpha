@@ -23,7 +23,13 @@
         <a href="/" class="nav-link{% if active_page == 'portfolio' %} active{% endif %}">Portfolio</a>
         <a href="/holdings" class="nav-link{% if active_page == 'holdings' %} active{% endif %}">Holdings</a>
         <a href="/wash-sales" class="nav-link{% if active_page == 'wash_sales' %} active{% endif %}">Wash sales</a>
-        <a href="/imports" class="nav-link{% if active_page == 'imports' %} active{% endif %}">Imports</a>
+        <a href="/imports" class="nav-link{% if active_page == 'imports' %} active{% endif %}">
+          Imports
+          {% set _badge = imports_badge_count() %}
+          {% if _badge > 0 %}
+            <span data-testid="imports-badge" class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[10px] rounded bg-warn text-bg">{{ _badge }}</span>
+          {% endif %}
+        </a>
         <a href="/sim" class="nav-link{% if active_page == 'sim' %} active{% endif %}">Sim</a>
       </nav>
     </div>

@@ -47,6 +47,15 @@ def create_app(settings: Settings) -> FastAPI:
     # the server-restart cadence is the right TTL for static assets.
     templates.env.globals["asset_v"] = str(int(time.time()))
     templates.env.globals["encode_metric_ref"] = _encode_metric_ref
+
+    def _imports_badge_count() -> int:
+        from net_alpha.audit._badge_cache import get_imports_badge_count
+        from net_alpha.db.repository import Repository as _Repository
+
+        _engine = get_engine(settings.db_path)
+        return get_imports_badge_count(_Repository(_engine))
+
+    templates.env.globals["imports_badge_count"] = _imports_badge_count
     app.state.templates = templates
 
     @app.get("/healthz")
