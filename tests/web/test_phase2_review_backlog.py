@@ -47,3 +47,13 @@ def test_drawer_placeholder_tabs_say_coming_soon(client: TestClient):
     assert "Coming soon" in drawer_html
     assert "Phase 2" not in drawer_html
     assert "Phase 3" not in drawer_html
+
+
+def test_settings_entry_has_polite_main_copy(client: TestClient):
+    """If the user closes the drawer on /settings/imports they see at minimum
+    a polite explanation, not an empty <main>."""
+    resp = client.get("/settings/imports")
+    assert resp.status_code == 200
+    html = resp.text
+    # Look for the polite hint copy.
+    assert "Settings open in the panel" in html or "panel on the right" in html
