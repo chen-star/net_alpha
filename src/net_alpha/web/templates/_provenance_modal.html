@@ -1,0 +1,95 @@
+{# src/net_alpha/web/templates/_provenance_modal.html #}
+<div class="provenance-modal" data-testid="provenance-modal">
+  {% if error %}
+    <div class="panel p-4">
+      <div class="text-neg font-medium">Couldn't reconstruct trace — file a bug.</div>
+      <div class="text-label-3 text-xs mt-1">{{ error }}</div>
+      <a class="text-xs underline mt-2 inline-block"
+         href="https://github.com/anthropics/net-alpha/issues" target="_blank" rel="noopener">
+        Open an issue
+      </a>
+    </div>
+  {% else %}
+    <div class="panel p-4 space-y-4">
+      <header class="flex items-baseline justify-between gap-3 pb-3"
+              style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+        <h3 class="text-lg font-semibold">{{ trace.metric_label }}</h3>
+        <div class="num text-2xl font-bold">${{ "%.2f"|format(trace.total) }}</div>
+      </header>
+
+      {% if trace.trades %}
+      <section>
+        <h4 class="label-uc">Contributing trades</h4>
+        <table class="net-table text-sm w-full">
+          <thead>
+            <tr><th>Date</th><th>Account</th><th>Action</th><th class="r">Qty</th>
+                <th class="r">Amount</th><th>Symbol</th></tr>
+          </thead>
+          <tbody>
+            {% for t in trace.trades %}
+              <tr>
+                <td class="font-mono">{{ t.trade_date.isoformat() }}</td>
+                <td>{{ t.account }}</td>
+                <td>{{ t.action }}</td>
+                <td class="r num font-mono">{{ "%.4f"|format(t.quantity) }}</td>
+                <td class="r num font-mono {% if t.amount < 0 %}text-neg{% else %}text-pos{% endif %}">
+                  ${{ "%.2f"|format(t.amount|abs) }}
+                </td>
+                <td class="font-mono">{{ t.symbol }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+      {% endif %}
+
+      {% if trace.adjustments %}
+      <section>
+        <h4 class="label-uc">Applied adjustments</h4>
+        <table class="net-table text-sm w-full">
+          <thead>
+            <tr><th>Loss trade</th><th>Replacement</th><th class="r">Rolled $</th>
+                <th>Confidence</th><th>Rule</th></tr>
+          </thead>
+          <tbody>
+            {% for a in trace.adjustments %}
+              <tr>
+                <td class="font-mono text-xs">{{ a.loss_trade_id[:8] }}…</td>
+                <td class="font-mono text-xs">{{ a.replacement_trade_id[:8] }}…</td>
+                <td class="r num font-mono">${{ "%.2f"|format(a.rolled_amount) }}</td>
+                <td>{{ a.confidence }}</td>
+                <td class="text-xs text-label-3">{{ a.rule_citation }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+      {% endif %}
+
+      {% if trace.cash_events %}
+      <section>
+        <h4 class="label-uc">Contributing cash events</h4>
+        <table class="net-table text-sm w-full">
+          <thead>
+            <tr><th>Date</th><th>Account</th><th>Kind</th>
+                <th class="r">Amount</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            {% for e in trace.cash_events %}
+              <tr>
+                <td class="font-mono">{{ e.event_date.isoformat() }}</td>
+                <td>{{ e.account }}</td>
+                <td>{{ e.kind }}</td>
+                <td class="r num font-mono {% if e.amount < 0 %}text-neg{% else %}text-pos{% endif %}">
+                  ${{ "%.2f"|format(e.amount|abs) }}
+                </td>
+                <td class="text-xs text-label-3">{{ e.description }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>

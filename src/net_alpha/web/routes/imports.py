@@ -9,6 +9,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from net_alpha.audit.hygiene import collect_issues
 from net_alpha.brokers.registry import detect_broker
 from net_alpha.brokers.schwab import SchwabParser
 from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
@@ -32,10 +33,11 @@ def imports_page(
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     records = repo.list_imports()
+    issues = collect_issues(repo)
     return request.app.state.templates.TemplateResponse(
         request,
         "imports.html",
-        {"imports": records, "flash": flash},
+        {"imports": records, "flash": flash, "issues": issues},
     )
 
 

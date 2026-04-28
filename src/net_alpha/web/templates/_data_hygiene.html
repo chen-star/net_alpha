@@ -1,0 +1,44 @@
+{# src/net_alpha/web/templates/_data_hygiene.html #}
+{% if issues %}
+  <section class="panel mb-4" data-testid="data-hygiene">
+    <div class="px-4 py-3" style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+      <h2 class="text-lg">Data quality</h2>
+      <p class="text-xs text-label-3 mt-1">
+        {{ issues|length }} item{{ "s" if issues|length != 1 else "" }} need attention from your imports.
+      </p>
+    </div>
+    <ul class="divide-y" style="border-color: rgba(255,255,255,0.06);">
+      {% for issue in issues %}
+        <li class="px-4 py-3 flex items-start gap-3" data-category="{{ issue.category }}">
+          <span class="badge badge-{{ issue.severity }}">{{ issue.severity }}</span>
+          <div class="flex-1">
+            <div class="text-sm font-medium">{{ issue.summary }}</div>
+            <div class="text-xs text-label-3 mt-1">{{ issue.detail }}</div>
+            {% if issue.fix_url %}
+              <a class="text-xs underline mt-2 inline-block" href="{{ issue.fix_url }}">go fix →</a>
+            {% endif %}
+            {% if issue.fix_form %}
+              <form class="mt-2 flex gap-2 items-center"
+                    hx-post="{{ issue.fix_form.action }}"
+                    hx-target="closest li"
+                    hx-swap="outerHTML">
+                {% for k, v in issue.fix_form.hidden.items() %}
+                  <input type="hidden" name="{{ k }}" value="{{ v }}">
+                {% endfor %}
+                {% for name, ftype in issue.fix_form.fields.items() %}
+                  <label class="text-xs">
+                    {{ name|replace("_", " ") }}:
+                    <input type="{{ ftype }}" name="{{ name }}"
+                           class="border border-label-3 px-1 py-0.5 text-xs ml-1"
+                           required>
+                  </label>
+                {% endfor %}
+                <button type="submit" class="text-xs px-2 py-0.5 bg-pos text-bg rounded">save</button>
+              </form>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}

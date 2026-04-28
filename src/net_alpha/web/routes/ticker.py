@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import date
+from datetime import date as _date
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
+from net_alpha.audit import Period, RealizedPLRef
 from net_alpha.db.repository import Repository
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.portfolio.positions import open_lots_view
@@ -46,10 +48,31 @@ def ticker_drilldown(
     accounts = sorted({lot.account for lot in lots})
     last_trade = trades[-1] if trades else None
 
+    # Use all accounts that have any trade for this symbol (not just open lots,
+    # so the strip appears even when all lots have been closed or not yet built).
+    trade_displays = {t.account for t in trades}
+    account_ids: list[int] = []
+    for a in repo.list_accounts():
+        display = f"{a.broker}/{a.label}" if a.label else a.broker
+        if display in trade_displays and a.id is not None:
+            account_ids.append(a.id)
+    account_ids.sort()
+
     # Load G/L lots for this ticker across all accounts that have any
     gl_lots: list[RealizedGLLot] = []
     for account in repo.list_accounts():
         gl_lots.extend(repo.get_gl_lots_for_ticker(account.id, symbol))
+
+    realized_ref = RealizedPLRef(
+        kind="realized_pl",
+        period=Period(
+            start=_date(today.year, 1, 1),
+            end=_date(today.year + 1, 1, 1),
+            label=f"YTD {today.year}",
+        ),
+        account_id=None,  # ticker page is account-aggregated
+        symbol=symbol,
+    )
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -66,7 +89,9 @@ def ticker_drilldown(
             "kpi_disallowed_ytd": disallowed_ytd,
             "kpi_accounts": accounts,
             "kpi_last_trade": last_trade,
+            "account_ids": account_ids,
             "display_action": display_action,
+            "realized_ref": realized_ref,
         },
     )
 

@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 from datetime import date
+from datetime import date as _date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
+from net_alpha.audit import (
+    CashRef,
+    NetContributedRef,
+    Period,
+    RealizedPLRef,
+    UnrealizedPLRef,
+    WashImpactRef,
+)
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.portfolio.cash_flow import (
@@ -34,6 +43,66 @@ def _parse_period(period: str | None, current_year: int) -> tuple[tuple[int, int
         return ((y, y + 1), str(y))
     except ValueError:
         return ((current_year, current_year + 1), f"YTD {current_year}")
+
+
+def _resolve_account_id(account: str | None, repo: Repository) -> int | None:
+    """Resolve an account display string (e.g. 'Schwab/Tax') to its DB id, or None for all."""
+    if not account:
+        return None
+    for a in repo.list_accounts():
+        if f"{a.broker}/{a.label}" == account:
+            return a.id
+    return None
+
+
+def _build_metric_refs(
+    period_tuple: tuple[int, int] | None,
+    period_label: str,
+    account_id: int | None,
+) -> dict[str, object]:
+    """Pre-compute one MetricRef per KPI cell on the Portfolio dashboard."""
+    refs: dict[str, object] = {
+        "lifetime_realized": RealizedPLRef(
+            kind="realized_pl",
+            period=Period(start=_date(1970, 1, 1), end=_date(2100, 1, 1), label="Lifetime"),
+            account_id=account_id,
+            symbol=None,
+        ),
+        "lifetime_unrealized": UnrealizedPLRef(
+            kind="unrealized_pl",
+            account_id=account_id,
+            symbol=None,
+        ),
+        "period_unrealized": UnrealizedPLRef(
+            kind="unrealized_pl",
+            account_id=account_id,
+            symbol=None,
+        ),
+        "cash": CashRef(kind="cash", account_id=account_id),
+    }
+    if period_tuple is not None:
+        period = Period(
+            start=_date(period_tuple[0], 1, 1),
+            end=_date(period_tuple[1], 1, 1),
+            label=period_label,
+        )
+        refs["realized_period"] = RealizedPLRef(
+            kind="realized_pl",
+            period=period,
+            account_id=account_id,
+            symbol=None,
+        )
+        refs["wash_impact_period"] = WashImpactRef(
+            kind="wash_impact",
+            period=period,
+            account_id=account_id,
+        )
+        refs["net_contributed_period"] = NetContributedRef(
+            kind="net_contributed",
+            period=period,
+            account_id=account_id,
+        )
+    return refs
 
 
 @router.post("/splits/sync")
@@ -144,6 +213,7 @@ def portfolio_kpis(
         account=account or None,
     )
     snap = svc.last_snapshot()
+    account_id = _resolve_account_id(account, repo)
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_kpis.html",
@@ -152,6 +222,7 @@ def portfolio_kpis(
             "snapshot": snap,
             "wash_impact_total": wi.disallowed_total,
             "wash_violations": wi.violation_count,
+            "metric_refs": _build_metric_refs(period_tuple, period_label, account_id),
         },
     )
 
@@ -419,6 +490,7 @@ def portfolio_body(
         account=account or None,
     )
 
+    account_id = _resolve_account_id(account, repo)
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_body.html",
@@ -435,5 +507,6 @@ def portfolio_body(
             "cash_kpis": cash_kpis,
             "cash_points": cash_points,
             "cash_slice": cash_slice,
+            "metric_refs": _build_metric_refs(period_tuple, period_label, account_id),
         },
     )

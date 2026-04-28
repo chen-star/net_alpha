@@ -1,0 +1,15 @@
+{# Reusable macro: emit a small "ⓘ" affordance next to a number that opens
+   the provenance modal. Caller supplies a MetricRef instance. #}
+
+{% macro provenance_link(ref) -%}
+  {%- set encoded = encode_metric_ref(ref) -%}
+  <button type="button"
+          class="provenance-trigger ml-1 text-label-3 hover:text-text"
+          aria-label="Why is this number what it is?"
+          hx-get="/provenance/{{ encoded }}"
+          hx-target="#provenance-dialog-body"
+          hx-swap="innerHTML"
+          onclick="document.getElementById('provenance-dialog').showModal()">
+    ⓘ
+  </button>
+{%- endmacro %}
