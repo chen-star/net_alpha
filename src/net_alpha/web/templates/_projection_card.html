@@ -1,0 +1,23 @@
+{# Year-end tax projection card. Shows placeholder if tax config absent. #}
+<div class="kpi-card projection-card">
+  {% if has_tax_config and projection %}
+    <div class="kpi-label">Projected {{ projection.year }} tax (Dec 31)</div>
+    <div class="kpi-value">${{ "{:,.0f}".format(projection.total_tax) }}</div>
+    <div class="breakdown">
+      Federal: ${{ "{:,.0f}".format(projection.federal_tax) }}
+      &middot; State: ${{ "{:,.0f}".format(projection.state_tax) }}
+    </div>
+    {% if projection.bracket_warnings %}
+      <ul class="bracket-warnings">
+        {% for w in projection.bracket_warnings %}<li>{{ w }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    <div class="caveat muted">Estimate only &mdash; single marginal rate.</div>
+  {% else %}
+    <div class="kpi-label">Year-end tax projection</div>
+    <p class="placeholder">
+      Set the <code>tax:</code> section in <code>~/.net_alpha/config.yaml</code>
+      to enable the projection. <a href="/imports#tax-config">Open data hygiene</a>.
+    </p>
+  {% endif %}
+</div>
