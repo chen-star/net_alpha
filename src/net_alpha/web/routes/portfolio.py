@@ -32,8 +32,8 @@ from net_alpha.portfolio.tax_planner import (
     project_year_end_tax,
 )
 from net_alpha.portfolio.wash_watch import recent_loss_closes
-from net_alpha.pricing.service import PricingService
 from net_alpha.prefs.profile import resolve_effective_profile
+from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 
 router = APIRouter()

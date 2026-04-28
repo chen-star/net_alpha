@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
@@ -21,7 +21,7 @@ def test_portfolio_kpis_passes_profile_into_template(tmp_path):
             account_id=a.id,
             profile="options",
             density="comfortable",
-            updated_at=datetime(2026, 4, 27, tzinfo=timezone.utc),
+            updated_at=datetime(2026, 4, 27, tzinfo=UTC),
         )
     )
     app = create_app(settings)
