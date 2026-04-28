@@ -1,0 +1,30 @@
+{# Set-basis sub-block. Posts to the existing /audit/set-basis endpoint
+   for the single open lot, or links out to the ticker page when there
+   are multiple lots. The endpoint contract is unchanged from Phase 1. #}
+
+<div class="panel p-3">
+  <h3 class="m-0 text-[13px] font-semibold mb-2">Set basis &amp; date</h3>
+  {% if trade_id %}
+    <form hx-post="/audit/set-basis"
+          hx-target="#positions-pane-body"
+          hx-swap="innerHTML"
+          class="space-y-2">
+      <input type="hidden" name="trade_id" value="{{ trade_id }}">
+      <label class="block text-[12px] text-label-2">
+        Cost basis ($)
+        <input type="number" name="cost_basis" step="0.01" required
+               class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded"
+               style="border-color: var(--color-hairline);">
+      </label>
+      <button type="submit"
+              class="btn w-full text-[13px] py-1.5">
+        Save
+      </button>
+    </form>
+  {% else %}
+    <p class="text-label-2 m-0 text-[12px]">
+      Multiple lots —
+      <a href="/ticker/{{ sym }}" class="text-accent hover:underline">set basis on the ticker page →</a>
+    </p>
+  {% endif %}
+</div>
