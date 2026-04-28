@@ -1,2 +1,15 @@
-{# Phase 1 stub — D2 will populate with the actual imports content. #}
-<div class="text-label-2 text-[13px]">Imports tab content lands in task D2.</div>
+{# Imports tab — lazy-loads drop zone, data hygiene, and past imports
+   table from the legacy /imports page. Further tightening (one-explanation
+   card, inline set-basis form per row) lands in Phase 3 (audit I1, I2).
+
+   `intersect once` fires when the drawer's Imports panel becomes visible
+   (Alpine's x-show toggles display: none ↔ block). `hx-select="main > *"`
+   strips the legacy page chrome and grabs only the body content. #}
+
+<div hx-get="/imports/_legacy_page"
+     hx-trigger="intersect once"
+     hx-swap="innerHTML"
+     hx-select="main > *"
+     class="text-label-2 text-[13px]">
+  Loading imports…
+</div>

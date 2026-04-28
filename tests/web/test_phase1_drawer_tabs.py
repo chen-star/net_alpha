@@ -25,3 +25,10 @@ def test_drawer_active_tab_starts_as_imports(client: TestClient):
     btn_start = html.rfind("<button", 0, imp_idx)
     btn_html = html[btn_start:imp_idx]
     assert "data-tab=\"imports\"" in btn_html
+
+
+def test_drawer_imports_tab_lazy_loads_from_legacy_endpoint(client: TestClient):
+    """The drawer's Imports tab pulls content from /imports/_legacy_page
+    via HTMX so the home page doesn't pay the imports DB cost on every load."""
+    resp = client.get("/")
+    assert 'hx-get="/imports/_legacy_page"' in resp.text
