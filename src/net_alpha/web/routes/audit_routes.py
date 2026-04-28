@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.audit import decode_metric_ref, provenance_for
@@ -57,4 +57,23 @@ def reconciliation_strip(
         request,
         template,
         {"result": result, "diffs": diffs},
+    )
+
+
+@router.post("/audit/set-basis", response_class=HTMLResponse)
+def set_basis(
+    request: Request,
+    trade_id: str = Form(...),
+    cost_basis: float = Form(...),
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    repo.update_trade_basis(
+        trade_id=trade_id,
+        cost_basis=cost_basis,
+        basis_source="user_set",
+    )
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_data_hygiene_set_basis.html",
+        {"trade_id": trade_id, "cost_basis": cost_basis},
     )

@@ -803,6 +803,8 @@ class Repository:
                 raise LookupError(f"Trade id {trade_id} not found")
             row.cost_basis = cost_basis
             row.basis_source = basis_source
+            if cost_basis is not None:
+                row.basis_unknown = False
             s.add(row)
             s.commit()
 
