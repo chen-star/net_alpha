@@ -18,7 +18,7 @@
           class="inline-flex items-center justify-center w-7 h-7 rounded-md text-label-2 hover:text-text hover:bg-surface-2"
           aria-label="Row actions"
           aria-haspopup="menu"
-          aria-expanded="open ? 'true' : 'false'"
+          :aria-expanded="open"
           @click.stop="open = !open"
           @keydown.escape.stop="open = false">
     <img src="/static/icons/ellipsis.svg?v={{ asset_v }}" class="w-4 h-4 invert opacity-80" alt="">
@@ -51,7 +51,7 @@
             class="w-full text-left flex items-center justify-between px-3 py-2 text-[13px] hover:bg-surface-2"
             aria-keyshortcuts="B"
             role="menuitem"
-            @click="$dispatch('open-positions-pane', { sym: '{{ sym }}', account_id: {{ account_id|default('null') }} }); open = false">
+            @click="$dispatch('open-positions-pane', { sym: '{{ sym }}', account_id: {{ account_id if account_id is not none else 'null' }} }); open = false">
       <span>Set basis &amp; date</span>
       <kbd class="text-label-3 text-[11px] font-mono">B</kbd>
     </button>
