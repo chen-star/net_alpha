@@ -76,6 +76,8 @@ def test_topbar_no_redundant_period_or_account_pills(client: TestClient):
     ],
 )
 def test_nav_link_round_trip(client: TestClient, label: str, path: str):
+    """B4 smoke: every nav link href is present on the home page and each
+    destination returns HTTP 200 with the nav label in the rendered HTML."""
     home = client.get("/")
     assert f'href="{path}"' in home.text, f"{label} link missing from /"
     page = client.get(path)
