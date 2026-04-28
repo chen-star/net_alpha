@@ -24,7 +24,7 @@ def test_drawer_active_tab_starts_as_imports(client: TestClient):
     assert imp_idx > 0
     btn_start = html.rfind("<button", 0, imp_idx)
     btn_html = html[btn_start:imp_idx]
-    assert "data-tab=\"imports\"" in btn_html
+    assert 'data-tab="imports"' in btn_html
 
 
 def test_drawer_imports_tab_lazy_loads_from_legacy_endpoint(client: TestClient):
@@ -65,7 +65,7 @@ def test_drawer_density_tab_renders_inside_drawer(tmp_path):
     drawer_idx = html.find('id="settings-drawer-root"')
     assert drawer_idx > 0, "drawer root not found in HTML"
     # Use a generous window — density tab content sits ~4KB into the drawer
-    drawer_html = html[drawer_idx:drawer_idx + 12000]
+    drawer_html = html[drawer_idx : drawer_idx + 12000]
     # Check data-density attributes (unambiguous, no whitespace variation)
     assert 'data-density="compact"' in drawer_html
     assert 'data-density="comfortable"' in drawer_html

@@ -71,10 +71,7 @@ def positions_page(
 
     if selected_view == "at-loss":
         _falsey = ("", "0", "false", "off")
-        only_harvestable_bool = (
-            only_harvestable is not None
-            and only_harvestable.lower() not in _falsey
-        )
+        only_harvestable_bool = only_harvestable is not None and only_harvestable.lower() not in _falsey
         ctx["rows"] = compute_harvest_queue(
             repo=repo,
             pricing=pricing,

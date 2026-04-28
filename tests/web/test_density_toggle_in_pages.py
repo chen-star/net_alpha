@@ -26,7 +26,7 @@ def _drawer_html(html: str) -> str:
     """Return the portion of the page inside the settings drawer root."""
     idx = html.find('id="settings-drawer-root"')
     assert idx > 0, "settings-drawer-root not found in HTML"
-    return html[idx:idx + 12000]
+    return html[idx : idx + 12000]
 
 
 def test_holdings_renders_density_toggle(tmp_path):
