@@ -14,6 +14,7 @@
   <script src="/static/density.js?v={{ asset_v }}" defer></script>
 </head>
 <body class="min-h-screen flex flex-col bg-bg text-text"
+      x-data
       {% if open_settings_tab %}data-open-settings-tab="{{ open_settings_tab }}"{% endif %}>
   <header class="topbar">
     <div class="flex items-center gap-6">
@@ -36,6 +37,21 @@
         {% endwith %}
       {% endif %}
       {% block topbar_right %}{% endblock %}
+      <button
+        data-testid="settings-gear"
+        type="button"
+        class="relative inline-flex items-center justify-center w-8 h-8 rounded-md text-label-2 hover:text-text hover:bg-surface-2 transition-colors"
+        @click="$dispatch('open-settings-drawer', { tab: 'imports' })"
+        aria-label="Settings"
+        aria-keyshortcuts=",">
+        <img src="/static/icons/settings.svg?v={{ asset_v }}" class="w-5 h-5 invert opacity-80" alt="" aria-hidden="true">
+        {% set _badge = imports_badge_count() %}
+        {% if _badge > 0 %}
+          <span data-testid="settings-gear-dot"
+                class="absolute top-1 right-1 w-2 h-2 rounded-full bg-warn"
+                aria-hidden="true"></span>
+        {% endif %}
+      </button>
     </div>
   </header>
 
