@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from net_alpha.audit import encode_metric_ref as _encode_metric_ref
 from net_alpha.config import Settings, load_pricing_config
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.engine.etf_pairs import load_etf_pairs
@@ -45,6 +46,7 @@ def create_app(settings: Settings) -> FastAPI:
     # Bust browser cache on every server start — local dev tool, not a CDN, so
     # the server-restart cadence is the right TTL for static assets.
     templates.env.globals["asset_v"] = str(int(time.time()))
+    templates.env.globals["encode_metric_ref"] = _encode_metric_ref
     app.state.templates = templates
 
     @app.get("/healthz")
