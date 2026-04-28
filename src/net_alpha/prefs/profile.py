@@ -11,7 +11,7 @@ import logging
 
 from pydantic import BaseModel
 
-from net_alpha.models.preferences import Density, Profile
+from net_alpha.models.preferences import AccountPreference, Density, Profile
 
 log = logging.getLogger(__name__)
 
@@ -109,3 +109,31 @@ class ProfileSettings(BaseModel):
 
 
 DEFAULT_PROFILE_SETTINGS = ProfileSettings(profile="active", density="comfortable")
+
+
+def resolve_effective_profile(
+    *,
+    prefs: list[AccountPreference],
+    filter_account_id: int | None,
+) -> ProfileSettings:
+    """Compute the rendering profile for the current page request.
+
+    - filter_account_id is set: use that account's pref, else default.
+    - filter_account_id is None (All accounts):
+        - all prefs share the same profile -> use it; else 'active'.
+        - same rule applies to density independently.
+    """
+    if filter_account_id is not None:
+        match = next((p for p in prefs if p.account_id == filter_account_id), None)
+        if match is None:
+            return DEFAULT_PROFILE_SETTINGS
+        return ProfileSettings(profile=match.profile, density=match.density)
+
+    if not prefs:
+        return DEFAULT_PROFILE_SETTINGS
+
+    profile_set = {p.profile for p in prefs}
+    density_set = {p.density for p in prefs}
+    profile = next(iter(profile_set)) if len(profile_set) == 1 else "active"
+    density = next(iter(density_set)) if len(density_set) == 1 else "comfortable"
+    return ProfileSettings(profile=profile, density=density)
