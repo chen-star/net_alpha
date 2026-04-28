@@ -18,6 +18,7 @@ from net_alpha.portfolio.tax_planner import (
     compute_offset_budget,
     project_year_end_tax,
 )
+from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import (
     get_etf_pairs,
@@ -64,12 +65,24 @@ def get_tax(
         inner_view = "table"
         tab_view = "wash-sales"
 
+    prefs = repo.list_user_preferences()
+    filter_id = None
+    if account:
+        for a in repo.list_accounts():
+            if f"{a.broker}/{a.label}" == account:
+                filter_id = a.id
+                break
+    profile = resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
+
     ctx: dict = {
         "request": request,
         "view": tab_view,
         "active_page": "tax",
-        "selected_account": account,
+        "selected_account": account or "",
         "selected_year": year,
+        "profile": profile,
+        "page_key": "/tax",
+        "account_id": filter_id,
     }
 
     if tab_view == "wash-sales":
