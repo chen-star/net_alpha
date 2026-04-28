@@ -249,6 +249,72 @@ def compute_harvest_queue(
     return rows
 
 
+def _realized_in_year(repo: Repository, year: int) -> tuple[Decimal, Decimal]:
+    """Return (gross_losses_ytd_signed_negative, gross_gains_ytd_positive)."""
+    losses = Decimal("0")
+    gains = Decimal("0")
+    for t in repo.all_trades():
+        if t.action.lower() not in {"sell", "sell to close"}:
+            continue
+        if t.date.year != year:
+            continue
+        pnl = Decimal(str(t.proceeds)) - Decimal(str(t.cost_basis))
+        if pnl < 0:
+            losses += pnl
+        else:
+            gains += pnl
+    return losses, gains
+
+
+def _planned_pnl(planned_trades: list[PlannedTrade], repo: Repository) -> Decimal:
+    """Best-effort realized delta for planned sells using avg basis from open lots."""
+    delta = Decimal("0")
+    for p in planned_trades:
+        if p.action != "Sell":
+            continue
+        lots = repo.get_lots_for_ticker(p.symbol)
+        total_qty = sum((Decimal(str(lot.quantity)) for lot in lots), Decimal("0"))
+        if total_qty <= 0:
+            continue
+        total_basis = sum(
+            (Decimal(str(lot.adjusted_basis)) for lot in lots), Decimal("0"),
+        )
+        avg_basis = total_basis / total_qty
+        delta += (p.price - avg_basis) * p.qty
+    return delta
+
+
+def compute_offset_budget(
+    repo: Repository,
+    year: int,
+    planned_trades: list[PlannedTrade] | None = None,
+) -> OffsetBudget:
+    """YTD realized P&L vs the $3,000-against-ordinary cap, optionally with planned trades.
+
+    Pure read. Cap is fixed at $3,000.
+    """
+    losses, gains = _realized_in_year(repo, year)
+    net = losses + gains
+    cap = Decimal("3000")
+    used = Decimal("0")
+    carry = Decimal("0")
+    if net < 0:
+        used = min(-net, cap)
+        carry = max(-net - cap, Decimal("0"))
+    planned_delta = _planned_pnl(planned_trades or [], repo)
+
+    return OffsetBudget(
+        year=year,
+        realized_losses_ytd=losses,
+        realized_gains_ytd=gains,
+        net_realized=net,
+        cap_against_ordinary=cap,
+        used_against_ordinary=used,
+        carryforward_projection=carry,
+        planned_delta=planned_delta,
+    )
+
+
 class PlannedTrade(BaseModel):
     """Transient struct: a hypothetical sell/buy that hasn't been imported yet.
 
