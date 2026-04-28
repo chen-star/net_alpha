@@ -227,6 +227,15 @@ def portfolio_kpis(
     )
     snap = svc.last_snapshot()
     account_id = _resolve_account_id(account, repo)
+    # Open shorts (CSPs) — used for cash-secured / pledged-cash badges in the
+    # Cash KPI tile so the user can see how much of their cash is collateral.
+    scoped_trades_for_shorts = [t for t in trades if t.account == account] if account else trades
+    open_shorts = compute_open_short_option_positions(
+        scoped_trades_for_shorts,
+        gl_option_closures=repo.get_option_gl_closures(),
+    )
+    cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
+    csp_count = sum(1 for s in open_shorts if s.call_put == "P")
     offset_budget = compute_offset_budget(repo=repo, year=today.year)
     cfg = request.app.state.tax_brackets_cfg
     projection = None
@@ -259,6 +268,8 @@ def portfolio_kpis(
             "projection": projection,
             "has_tax_config": has_tax_config,
             "profile": profile,
+            "cash_secured_total": cash_secured_total,
+            "csp_count": csp_count,
         },
     )
 
@@ -485,6 +496,9 @@ def portfolio_body(
         account=account or None,
     )
     points = build_equity_curve(trades=scoped_trades, year=year, present_unrealized=kpis.period_unrealized)
+    # Hoist gl_option_closures so we don't re-scan the table for both
+    # compute_open_positions and compute_open_short_option_positions.
+    gl_option_closures = repo.get_option_gl_closures()
     positions_for_alloc = compute_open_positions(
         trades=scoped_trades,
         lots=scoped_lots,
@@ -492,7 +506,7 @@ def portfolio_body(
         period=(today.year, today.year + 1),
         account=None,
         gl_closures=repo.get_equity_gl_closures(),
-        gl_option_closures=repo.get_option_gl_closures(),
+        gl_option_closures=gl_option_closures,
     )
 
     # --- Cash flow ---
@@ -532,7 +546,7 @@ def portfolio_body(
 
     open_shorts = compute_open_short_option_positions(
         scoped_trades,
-        gl_option_closures=repo.get_option_gl_closures(),
+        gl_option_closures=gl_option_closures,
     )
     cash_secured_total = sum(
         (s.cash_secured for s in open_shorts),
@@ -542,6 +556,7 @@ def portfolio_body(
         (s.premium_received for s in open_shorts),
         start=Decimal("0"),
     )
+    csp_count = sum(1 for s in open_shorts if s.call_put == "P")
 
     account_id = _resolve_account_id(account, repo)
     offset_budget = compute_offset_budget(repo=repo, year=today.year)
@@ -579,6 +594,7 @@ def portfolio_body(
             "open_shorts": open_shorts,
             "cash_secured_total": cash_secured_total,
             "premium_received_total": premium_received_total,
+            "csp_count": csp_count,
             "today": today,
             "cash_kpis": cash_kpis,
             "cash_points": cash_points,

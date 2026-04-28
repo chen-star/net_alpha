@@ -81,7 +81,12 @@ def _check_unpriced(repo: Repository) -> list[HygieneIssue]:
 
 
 def _check_basis_unknown(repo: Repository) -> list[HygieneIssue]:
-    """Buy trades flagged ``basis_unknown=True`` (transfer-in without basis)."""
+    """Buy trades flagged ``basis_unknown=True`` (transfer-in without basis).
+
+    Link out to the ticker detail page where the basis editor lives — the same
+    "set basis & date" affordance the timeline already shows for transfer rows.
+    Keeping a single edit point avoids the two-place-edit confusion.
+    """
     issues: list[HygieneIssue] = []
     for t in repo.all_trades():
         if not t.basis_unknown:
@@ -98,13 +103,10 @@ def _check_basis_unknown(repo: Repository) -> list[HygieneIssue]:
                 summary=f"{t.ticker} buy on {t.date.isoformat()} has unknown basis",
                 detail=(
                     f"Account: {t.account} · Qty: {t.quantity:.4f} · Source: {t.basis_source}. "
-                    "Until basis is set, realized P&L for this lot can't be computed."
+                    "Until basis is set, realized P&L for this lot can't be computed. "
+                    "Edit it on the ticker detail page (the timeline 'set basis & date' link)."
                 ),
-                fix_form=HygieneFixForm(
-                    action="/audit/set-basis",
-                    fields={"cost_basis": "number"},
-                    hidden={"trade_id": t.id},
-                ),
+                fix_url=f"/ticker/{t.ticker}#trade-affordance-{t.id}",
             )
         )
     return issues
@@ -116,6 +118,10 @@ def _check_orphan_sells(repo: Repository) -> list[HygieneIssue]:
     The wash-sale engine already tracks buy lots; if a Sell has no
     corresponding Lot row at all, the basis came from somewhere outside
     net-alpha's view (most often a missing prior-year import).
+
+    Excludes option sell-to-open trades (basis_source == "option_short_open*"):
+    those create the position rather than close one, so a missing buy lot is
+    by design — the matching close (BTC / expiry / assignment) comes later.
     """
     lots_by_ticker: dict[str, bool] = {}
     for lot in repo.all_lots():
@@ -124,6 +130,9 @@ def _check_orphan_sells(repo: Repository) -> list[HygieneIssue]:
     issues: list[HygieneIssue] = []
     for t in repo.all_trades():
         if t.action.lower() != "sell":
+            continue
+        # Sell-to-open of an option is not an orphan — it opens a short.
+        if t.basis_source.startswith("option_short_open"):
             continue
         if t.ticker in lots_by_ticker:
             continue
@@ -143,30 +152,41 @@ def _check_orphan_sells(repo: Repository) -> list[HygieneIssue]:
 
 
 def _check_dup_keys(repo: Repository) -> list[HygieneIssue]:
-    """Cluster of trades with the same natural-key signature on the same day.
+    """Cluster of trades that look like a re-import duplicate, not averaging-down.
 
-    Same-day repeats with occurrence_index > 0 are normal — most parsers emit
-    them when a single CSV row produces multiple Trades. But ≥3 trades sharing
-    (date, account, ticker, action, quantity) is unusually dense and worth
-    surfacing as info — could be a re-import that escaped dedup.
+    Trades sharing (date, account, ticker, action, quantity, price-per-share)
+    are very likely a re-import that escaped dedup. Same date+ticker+action with
+    *different* prices (averaging down/up) is normal trading — we don't warn.
     """
+
+    def _price_key(t) -> str:
+        # Use rounded price per share so true duplicates collide while
+        # different-price legs (averaging) stay separate.
+        if t.quantity == 0:
+            return ""
+        amt = t.cost_basis if t.action.lower() == "buy" else t.proceeds
+        if amt is None:
+            return ""
+        return f"{round(amt / t.quantity, 4)}"
+
     clusters: dict[tuple, int] = defaultdict(int)
     for t in repo.all_trades():
-        key = (t.date, t.account, t.ticker, t.action, round(t.quantity, 4))
+        key = (t.date, t.account, t.ticker, t.action, round(t.quantity, 4), _price_key(t))
         clusters[key] += 1
 
     issues: list[HygieneIssue] = []
-    for (d, acct, ticker, action, qty), count in clusters.items():
+    for (d, acct, ticker, action, qty, _ppk), count in clusters.items():
         if count < 3:
             continue
         issues.append(
             HygieneIssue(
                 category="dup_key",
                 severity="info",
-                summary=f"{count} {action} trades for {ticker} on {d.isoformat()}",
+                summary=f"{count} identical {action} trades for {ticker} on {d.isoformat()}",
                 detail=(
-                    f"Account: {acct} · Qty per trade: {qty}. Same-day repeats are "
-                    "usually normal but ≥3 occurrences suggests a possible re-import."
+                    f"Account: {acct} · Qty per trade: {qty}. Same-day repeats at the same "
+                    "price (≥3) usually indicate a re-import that escaped dedup. "
+                    "Different prices on the same day are normal averaging and aren't flagged."
                 ),
                 fix_url="/imports",
             )

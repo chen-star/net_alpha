@@ -1,23 +1,31 @@
 {# Year-end tax projection card. Shows placeholder if tax config absent. #}
-<div class="kpi-card projection-card">
+<div class="kpi">
   {% if has_tax_config and projection %}
-    <div class="kpi-label">Projected {{ projection.year }} tax (Dec 31)</div>
-    <div class="kpi-value">${{ "{:,.0f}".format(projection.total_tax) }}</div>
-    <div class="breakdown">
-      Federal: ${{ "{:,.0f}".format(projection.federal_tax) }}
-      &middot; State: ${{ "{:,.0f}".format(projection.state_tax) }}
+    <div class="flex items-baseline justify-between">
+      <div class="label-uc">Year-end tax projection</div>
+      <div class="text-[11px] text-label-3">Dec 31, {{ projection.year }}</div>
+    </div>
+    <div class="num text-[22px] font-bold mt-2">${{ "{:,.0f}".format(projection.total_tax) }}</div>
+    <div class="text-[11px] text-label-2 mt-1">
+      Federal <span class="num text-label-1">${{ "{:,.0f}".format(projection.federal_tax) }}</span>
+      <span class="text-label-3 mx-1">·</span>
+      State <span class="num text-label-1">${{ "{:,.0f}".format(projection.state_tax) }}</span>
     </div>
     {% if projection.bracket_warnings %}
-      <ul class="bracket-warnings">
-        {% for w in projection.bracket_warnings %}<li>{{ w }}</li>{% endfor %}
-      </ul>
+    <div class="mt-2 text-[11px] text-warn">
+      {% for w in projection.bracket_warnings %}<div>{{ w }}</div>{% endfor %}
+    </div>
     {% endif %}
-    <div class="caveat muted">Estimate only &mdash; single marginal rate.</div>
+    <div class="text-[11px] text-label-3 mt-2">Estimate only — single marginal rate.</div>
   {% else %}
-    <div class="kpi-label">Year-end tax projection</div>
-    <p class="placeholder">
-      Set the <code>tax:</code> section in <code>~/.net_alpha/config.yaml</code>
-      to enable the projection. <a href="/imports#tax-config">Open data hygiene</a>.
-    </p>
+    <div class="label-uc">Year-end tax projection</div>
+    <div class="text-[13px] text-label-2 mt-2">
+      Set the <code class="text-[12px] num text-label-1 px-1 py-[1px] rounded" style="background: rgba(255,255,255,0.06);">tax:</code>
+      section in <code class="text-[12px] num text-label-1 px-1 py-[1px] rounded" style="background: rgba(255,255,255,0.06);">~/.net_alpha/config.yaml</code>
+      to enable this projection.
+    </div>
+    <div class="text-[11px] text-label-3 mt-2">
+      <a href="/imports#tax-config" class="text-indigo no-underline hover:underline">Open data hygiene →</a>
+    </div>
   {% endif %}
 </div>

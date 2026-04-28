@@ -43,7 +43,8 @@ def test_imports_page_shows_hygiene_section_when_issues_exist(tmp_path):
     assert resp.status_code == 200
     assert "Data quality" in resp.text
     assert "AAPL" in resp.text
-    assert "set-basis" in resp.text  # the inline form action
+    # Now links to the ticker page edit affordance instead of an inline form.
+    assert "/ticker/AAPL" in resp.text
 
 
 def test_imports_page_hides_hygiene_section_when_clean(tmp_path):

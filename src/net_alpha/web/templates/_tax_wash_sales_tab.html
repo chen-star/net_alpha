@@ -31,14 +31,19 @@
     {% if view == 'calendar' %}
       <select name="year" class="bg-surface text-text rounded-md px-2 py-1 text-[13px] font-mono"
               style="border:0.5px solid rgba(255,255,255,0.08);">
+        <option value="0" {% if all_years %}selected{% endif %}>All years</option>
         {% for y in years %}
-          <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+          <option value="{{ y }}" {% if (not all_years) and y == selected_year %}selected{% endif %}>{{ y }}</option>
         {% endfor %}
       </select>
     {% else %}
-      <input type="number" name="year" value="{{ filter_year }}"
-             class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-24"
-             style="border:0.5px solid rgba(255,255,255,0.08);"/>
+      <select name="year" class="bg-surface text-text rounded-md px-2 py-1 text-[13px] font-mono"
+              style="border:0.5px solid rgba(255,255,255,0.08);">
+        <option value="0" {% if all_years %}selected{% endif %}>All years</option>
+        {% for y in years %}
+          <option value="{{ y }}" {% if (not all_years) and y == selected_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
     {% endif %}
   </div>
   <div>
@@ -58,7 +63,8 @@
 </form>
 
 {# View toggle — segmented control. Preserve filters when toggling. #}
-{% set qs_no_view %}ticker={{ filter_ticker|urlencode }}&account={{ filter_account|urlencode }}&year={{ filter_year }}&confidence={{ filter_confidence|urlencode }}{% endset %}
+{% set _year_qs = 0 if all_years else (filter_year or selected_year) %}
+{% set qs_no_view %}ticker={{ filter_ticker|urlencode }}&account={{ filter_account|urlencode }}&year={{ _year_qs }}&confidence={{ filter_confidence|urlencode }}{% endset %}
 <div class="seg mb-4 inline-flex">
   <a href="/tax?view=table&{{ qs_no_view }}"
      class="px-3 py-1.5 text-sm {% if view == 'table' %}seg-active{% endif %}">Table</a>

@@ -2,6 +2,8 @@ from datetime import date
 
 from net_alpha.models.domain import WashSaleViolation
 
+_YR = date.today().year
+
 
 def _seed_violations(repo, items: list[dict]) -> None:
     repo.get_or_create_account("schwab", "personal")
@@ -16,13 +18,13 @@ def _seed_violations(repo, items: list[dict]) -> None:
             ticker=item.get("ticker", "TSLA"),
             loss_account=item.get("loss_account", "schwab/personal"),
             buy_account=item.get("buy_account", "schwab/personal"),
-            loss_sale_date=item.get("loss_sale_date", date(2025, 6, 1)),
-            triggering_buy_date=item.get("triggering_buy_date", date(2025, 6, 13)),
+            loss_sale_date=item.get("loss_sale_date", date(_YR, 6, 1)),
+            triggering_buy_date=item.get("triggering_buy_date", date(_YR, 6, 13)),
             source=item.get("source", "engine"),
         )
         for i, item in enumerate(items)
     ]
-    repo.replace_violations_in_window(date(2025, 1, 1), date(2025, 12, 31), vs)
+    repo.replace_violations_in_window(date(_YR, 1, 1), date(_YR, 12, 31), vs)
 
 
 def test_detail_renders_totals_bar(client, repo):
@@ -45,9 +47,9 @@ def test_detail_groups_by_ticker_and_renders_lag(client, repo):
     _seed_violations(
         repo,
         [
-            {"ticker": "TSLA", "loss_sale_date": date(2025, 6, 1), "triggering_buy_date": date(2025, 6, 13)},
-            {"ticker": "TSLA", "loss_sale_date": date(2025, 6, 5), "triggering_buy_date": date(2025, 6, 20)},
-            {"ticker": "AAPL", "loss_sale_date": date(2025, 7, 1), "triggering_buy_date": date(2025, 7, 5)},
+            {"ticker": "TSLA", "loss_sale_date": date(_YR, 6, 1), "triggering_buy_date": date(_YR, 6, 13)},
+            {"ticker": "TSLA", "loss_sale_date": date(_YR, 6, 5), "triggering_buy_date": date(_YR, 6, 20)},
+            {"ticker": "AAPL", "loss_sale_date": date(_YR, 7, 1), "triggering_buy_date": date(_YR, 7, 5)},
         ],
     )
     resp = client.get("/wash-sales")
@@ -66,7 +68,7 @@ def test_detail_renders_source_badges(client, repo, builders):
         repo,
         "schwab",
         "personal",
-        [builders.make_sell("schwab/personal", "TSLA", date(2025, 6, 1), qty=10, proceeds=1500, cost=2000)],
+        [builders.make_sell("schwab/personal", "TSLA", date(_YR, 6, 1), qty=10, proceeds=1500, cost=2000)],
     )
     _seed_violations(
         repo,
@@ -105,8 +107,8 @@ def test_detail_sort_by_lag_changes_order(client, repo):
     _seed_violations(
         repo,
         [
-            {"ticker": "TSLA", "loss_sale_date": date(2025, 6, 1), "triggering_buy_date": date(2025, 6, 13)},  # lag 12
-            {"ticker": "TSLA", "loss_sale_date": date(2025, 7, 1), "triggering_buy_date": date(2025, 7, 3)},  # lag 2
+            {"ticker": "TSLA", "loss_sale_date": date(_YR, 6, 1), "triggering_buy_date": date(_YR, 6, 13)},  # lag 12
+            {"ticker": "TSLA", "loss_sale_date": date(_YR, 7, 1), "triggering_buy_date": date(_YR, 7, 3)},  # lag 2
         ],
     )
     resp_desc = client.get("/wash-sales?sort=lag&order=desc")

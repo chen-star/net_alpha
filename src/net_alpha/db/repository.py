@@ -44,6 +44,12 @@ class Repository:
 
     def __init__(self, engine: Engine):
         self.engine = engine
+        # Per-Repository cache of account_id -> "broker/label". Repository is
+        # one-per-request in the web layer, so this never goes stale within a
+        # single page render — but bulk list_* methods used to issue one
+        # `s.get(AccountRow, account_id)` per row (N+1). Cached here, the
+        # entire page render does at most one lookup per distinct account.
+        self._acct_display_cache: dict[int, str] = {}
 
     # --- Account / import management ---
 
@@ -381,8 +387,13 @@ class Repository:
         )
 
     def _account_display_for_id(self, s: Session, account_id: int) -> str:
+        cached = self._acct_display_cache.get(account_id)
+        if cached is not None:
+            return cached
         a = s.get(AccountRow, account_id)
-        return f"{a.broker}/{a.label}"
+        display = f"{a.broker}/{a.label}"
+        self._acct_display_cache[account_id] = display
+        return display
 
     def all_trades(self) -> list[Trade]:
         with Session(self.engine) as s:

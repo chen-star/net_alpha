@@ -66,13 +66,22 @@ def _wash_sales_context(
     today = _date.today()
     all_v = repo.all_violations()
 
+    # Year filter UX: default to current year on first load.
+    # Sentinel year=0 means "All years" (explicit user override).
+    if year is None:
+        effective_year = today.year
+    elif year == 0:
+        effective_year = None
+    else:
+        effective_year = year
+
     violations = list(all_v)
     if ticker:
         violations = [v for v in violations if v.ticker == ticker.upper()]
     if account:
         violations = [v for v in violations if account in (v.loss_account, v.buy_account)]
-    if year:
-        violations = [v for v in violations if v.loss_sale_date and v.loss_sale_date.year == year]
+    if effective_year is not None:
+        violations = [v for v in violations if v.loss_sale_date and v.loss_sale_date.year == effective_year]
     if confidence:
         violations = [v for v in violations if v.confidence.lower() == confidence.lower()]
 
@@ -81,13 +90,15 @@ def _wash_sales_context(
     year_set.update(t.date.year for t in repo.all_trades())
     year_set.add(today.year)
     years = sorted(year_set, reverse=True)
-    selected_year = year or today.year
+    selected_year = effective_year or today.year
 
     ctx: dict = {
         "view": view,
         "filter_ticker": ticker or "",
         "filter_account": account or "",
-        "filter_year": year or "",
+        # filter_year reflects what's pre-filled in the input. None / 0 => effective default.
+        "filter_year": effective_year if effective_year is not None else "",
+        "all_years": effective_year is None,
         "filter_confidence": confidence or "",
         "tickers": repo.list_distinct_tickers(),
         "accounts": [a.display() for a in repo.list_accounts()],
@@ -96,10 +107,11 @@ def _wash_sales_context(
     }
 
     if view == "calendar":
-        # Calendar additionally needs a per-year filter applied if no `year` was passed.
+        # Calendar already filters by selected_year by the time we get here
+        # (effective_year was applied above), so just pass violations through.
         cal_violations = (
             violations
-            if year is not None
+            if effective_year is not None
             else [v for v in violations if v.loss_sale_date and v.loss_sale_date.year == selected_year]
         )
         markers = [

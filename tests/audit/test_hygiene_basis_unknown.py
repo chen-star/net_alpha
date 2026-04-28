@@ -5,7 +5,7 @@ from net_alpha.models.domain import Trade
 from tests.audit.conftest import seed_import
 
 
-def test_basis_unknown_trade_surfaces_with_fix_form(repo, schwab_account):
+def test_basis_unknown_trade_links_to_ticker_page(repo, schwab_account):
     seed_import(
         repo,
         schwab_account,
@@ -32,7 +32,8 @@ def test_basis_unknown_trade_surfaces_with_fix_form(repo, schwab_account):
     issue = issues[0]
     assert issue.severity == "error"
     assert "AAPL" in issue.summary
-    assert issue.fix_form is not None
-    assert issue.fix_form.action == "/audit/set-basis"
-    assert "trade_id" in issue.fix_form.hidden
-    assert issue.fix_form.hidden["trade_id"] == actual_trade_id
+    assert issue.fix_form is None
+    # Link goes to the ticker detail page (single edit point).
+    assert issue.fix_url is not None
+    assert issue.fix_url.startswith("/ticker/AAPL")
+    assert actual_trade_id in issue.fix_url

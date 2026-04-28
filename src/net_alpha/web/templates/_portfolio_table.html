@@ -122,13 +122,13 @@
           <th class="r" title="(Total Buys − Total Sells, including option premium) ÷ current Qty. Your true per-share cash exposure on the position right now (independent of basis).">Cash Sunk/sh</th>
           <th class="r" title="Mkt $ − Open Cost on currently open lots. — when no price is available.">Unrealized</th>
           {% if extra_columns is defined %}
-            {% if 'days_held' in extra_columns %}<th data-col="days_held" class="r">Days held</th>{% endif %}
-            {% if 'lt_st_split' in extra_columns %}<th data-col="lt_st_split" class="r">LT / ST</th>{% endif %}
-            {% if 'premium_received' in extra_columns %}<th data-col="premium_received" class="r">Prem.</th>{% endif %}
-            {% if 'origin_event' in extra_columns %}<th data-col="origin_event">Origin</th>{% endif %}
-            {% if 'days_to_ltcg' in extra_columns %}<th data-col="days_to_ltcg" class="r">&rarr;LTCG</th>{% endif %}
-            {% if 'harvestable' in extra_columns %}<th data-col="harvestable" class="r">Harv.</th>{% endif %}
-            {% if 'premium_offset' in extra_columns %}<th data-col="premium_offset" class="r">Prem.&nbsp;off</th>{% endif %}
+            {% if 'days_held' in extra_columns %}<th data-col="days_held" class="r" title="Days since the oldest open lot was acquired.">Days held</th>{% endif %}
+            {% if 'lt_st_split' in extra_columns %}<th data-col="lt_st_split" class="r" title="Quantity split between long-term (held > 365d) and short-term lots. Affects whether a sale realizes LTCG (favored rate) vs STCG.">LT / ST</th>{% endif %}
+            {% if 'premium_received' in extra_columns %}<th data-col="premium_received" class="r" title="Net option premium received on this underlying (sells minus buys). Income from selling calls/puts.">Prem.</th>{% endif %}
+            {% if 'origin_event' in extra_columns %}<th data-col="origin_event" title="The basis-creating event for the open lot — e.g., open-market buy, transfer-in, put assignment. (Not yet computed.)">Origin</th>{% endif %}
+            {% if 'days_to_ltcg' in extra_columns %}<th data-col="days_to_ltcg" class="r" title="Days until the oldest short-term lot crosses the 1-year LTCG threshold. (Not yet computed.)">&rarr;LTCG</th>{% endif %}
+            {% if 'harvestable' in extra_columns %}<th data-col="harvestable" class="r" title="Harvestable loss available on this position right now (capital loss the unrealized P&L would realize if you sold today). (Not yet computed.)">Harv.</th>{% endif %}
+            {% if 'premium_offset' in extra_columns %}<th data-col="premium_offset" class="r" title="Premium received this year on this underlying that offsets cost basis when assignment occurs. (Not yet computed.)">Prem.&nbsp;off</th>{% endif %}
           {% endif %}
         </tr>
       </thead>
@@ -194,4 +194,12 @@
     </table>
   </div>
   <p class="text-label-3 text-[11px] mt-1">Click row to drill down</p>
+  {% if extra_columns is defined and ('days_to_ltcg' in extra_columns or 'harvestable' in extra_columns or 'premium_offset' in extra_columns or 'origin_event' in extra_columns) %}
+    <p class="text-label-3 text-[11px] mt-1">
+      <span class="num">→LTCG</span>, <span class="num">Harv.</span>,
+      <span class="num">Prem.&nbsp;off</span>, and <span class="num">Origin</span>
+      are tax-view placeholders &mdash; not yet wired to live data, so they show
+      <span class="num">—</span> for every row. Hover any column header for what it will show.
+    </p>
+  {% endif %}
 {% endif %}

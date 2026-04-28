@@ -1,10 +1,18 @@
 {# Harvest queue tab: open lots at unrealized loss with lockout-clear + premium offset. #}
-<section class="harvest-queue">
-  <div class="filters">
-    <label>
+<section class="space-y-3">
+  <div class="text-[12px] text-label-2 leading-[1.55]">
+    Each row is an open position currently sitting at a loss &mdash; a candidate for
+    <strong class="text-text">tax-loss harvesting</strong>. Selling realizes the loss to offset gains
+    (and up to $3,000 of ordinary income); the IRS wash-sale rule then blocks
+    re-purchase of the same / substantially-identical security for 30 days.
+  </div>
+  <div class="flex items-center gap-3">
+    <label class="text-[12px] text-label-1 inline-flex items-center gap-2">
       <input type="checkbox" name="only_harvestable" {% if only_harvestable %}checked{% endif %}
-        hx-get="/tax?view=harvest" hx-target="#tab-content" hx-trigger="change">
+        hx-get="/tax?view=harvest" hx-target="#tab-content" hx-trigger="change"
+        class="accent-indigo">
       Currently harvestable only
+      <span class="text-label-3" title="Hide rows whose lockout window hasn't cleared yet (i.e. selling today would still trigger a wash sale).">&#9432;</span>
     </label>
   </div>
   {% if rows %}
@@ -12,42 +20,47 @@
     <thead>
       <tr>
         <th>Symbol</th>
-        <th>Loss</th>
-        <th>LT/ST</th>
+        <th class="r" title="Unrealized loss the position would realize if sold today.">Loss</th>
+        <th title="Long-term (held > 1y) loss is more valuable for offsetting LT gains; short-term loss offsets ordinary-rate STCG.">LT/ST</th>
         <th>Account</th>
-        <th>Lockout-clear</th>
-        <th>Premium offset</th>
-        <th>Actions</th>
+        <th title="Earliest date a sale here would NOT be a wash sale. ‘clear’ means selling today is safe; a date means a recent buy of the same security still falls inside the 30-day wash window.">Lockout-clear</th>
+        <th class="r" title="Option premium received this year on this underlying that has already been counted as income — it reduces the harvestable loss by that amount when the put assigns.">Premium offset</th>
+        <th title="Run a what-if sale through the simulator to preview realized P&L, lot consumption (FIFO), and any wash-sale traps before placing the trade.">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for row in rows %}
       <tr>
-        <td>{{ row.symbol }}</td>
-        <td class="loss">${{ "%.2f"|format(row.loss) }}</td>
-        <td><span class="badge badge-{{ row.lt_st|lower }}">{{ row.lt_st }}</span></td>
-        <td>{{ row.account_label }}</td>
+        <td class="font-semibold">{{ row.symbol }}</td>
+        <td class="r num text-neg">−${{ "%.2f"|format(row.loss|abs) }}</td>
+        <td><span class="chip-{% if row.lt_st|lower == 'lt' %}unclear{% else %}probable{% endif %}">{{ row.lt_st }}</span></td>
+        <td class="text-[12px]">{{ row.account_label }}</td>
         <td>
-          {% if row.lockout_clear %}<span class="locked">{{ row.lockout_clear }}</span>
-          {% else %}<span class="clear">clear</span>{% endif %}
+          {% if row.lockout_clear %}
+            <span class="chip-confirm" title="Recent buy of this (or a substantially-identical) security puts the sale inside the 30-day wash window. Selling before this date triggers a wash sale.">{{ row.lockout_clear }}</span>
+          {% else %}
+            <span class="chip-unclear" style="color: var(--color-pos); background: rgba(48,209,88,0.14);">clear</span>
+          {% endif %}
         </td>
-        <td>
+        <td class="r num">
           {% if row.premium_offset %}
-            <span class="premium">&#8722;${{ "%.2f"|format(row.premium_offset) }}
-              {% if row.premium_origin_event %}
-                <span class="muted">CSP premium received {{ row.premium_origin_event.assignment_date }}</span>
-              {% endif %}
-            </span>
-          {% else %}<span class="muted">&#8212;</span>{% endif %}
+            <span class="text-warn">&#8722;${{ "%.2f"|format(row.premium_offset) }}</span>
+            {% if row.premium_origin_event %}
+              <div class="text-[11px] text-label-3">CSP premium received {{ row.premium_origin_event.assignment_date }}</div>
+            {% endif %}
+          {% else %}<span class="text-label-3">&#8212;</span>{% endif %}
         </td>
         <td>
-          <a href="/sim?ticker={{ row.symbol }}&amp;qty={{ row.qty }}" class="btn">Simulate harvest</a>
+          <a href="/sim?ticker={{ row.symbol }}&amp;qty={{ row.qty }}" class="btn-ghost text-[12px]"
+             title="Run a sale of {{ row.qty }} {{ row.symbol }} through the trade-simulator: shows realized P&L, FIFO lot consumption, wash-sale traps, and the lot-method recommendation.">
+            Simulate harvest
+          </a>
           {% if row.suggested_replacements %}
-            <details class="replacements">
-              <summary>Replacements</summary>
-              <ul>
+            <details class="mt-1">
+              <summary class="text-[11px] text-label-2 cursor-pointer">Replacements</summary>
+              <ul class="text-[11px] text-label-2 mt-1 ml-4 list-disc">
                 {% for r in row.suggested_replacements %}
-                  <li>{{ r }} <span class="muted">&#8212; discuss with CPA</span></li>
+                  <li>{{ r }} <span class="text-label-3">&#8212; discuss with CPA</span></li>
                 {% endfor %}
               </ul>
             </details>
@@ -58,6 +71,6 @@
     </tbody>
   </table>
   {% else %}
-  <p class="empty">No harvest opportunities &#8212; all open positions are at gain or flat.</p>
+  <p class="text-label-2 text-[13px]">No harvest opportunities &#8212; all open positions are at gain or flat.</p>
   {% endif %}
 </section>
