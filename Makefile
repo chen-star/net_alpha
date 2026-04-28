@@ -47,13 +47,3 @@ LUCIDE_ICONS := \
 	triangle-alert info check lock \
 	arrow-up arrow-down move-vertical \
 	search chevron-down x ellipsis \
-	refresh-cw database download
-
-vendor-lucide:
-	@mkdir -p src/net_alpha/web/static/icons
-	@for icon in $(LUCIDE_ICONS); do \
-		echo "fetching $$icon.svg"; \
-		curl -fsSL -o src/net_alpha/web/static/icons/$$icon.svg \
-			$(LUCIDE_BASE)/$$icon.svg; \
-	done
-	@echo "✓ vendored $(words $(LUCIDE_ICONS)) icons to src/net_alpha/web/static/icons/"
