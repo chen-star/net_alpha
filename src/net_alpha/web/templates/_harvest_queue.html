@@ -1,0 +1,63 @@
+{# Harvest queue tab: open lots at unrealized loss with lockout-clear + premium offset. #}
+<section class="harvest-queue">
+  <div class="filters">
+    <label>
+      <input type="checkbox" name="only_harvestable" {% if only_harvestable %}checked{% endif %}
+        hx-get="/tax?view=harvest" hx-target="#tab-content" hx-trigger="change">
+      Currently harvestable only
+    </label>
+  </div>
+  {% if rows %}
+  <table class="harvest-table">
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th>Loss</th>
+        <th>LT/ST</th>
+        <th>Account</th>
+        <th>Lockout-clear</th>
+        <th>Premium offset</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.symbol }}</td>
+        <td class="loss">${{ "%.2f"|format(row.loss) }}</td>
+        <td><span class="badge badge-{{ row.lt_st|lower }}">{{ row.lt_st }}</span></td>
+        <td>{{ row.account_label }}</td>
+        <td>
+          {% if row.lockout_clear %}<span class="locked">{{ row.lockout_clear }}</span>
+          {% else %}<span class="clear">clear</span>{% endif %}
+        </td>
+        <td>
+          {% if row.premium_offset %}
+            <span class="premium">&#8722;${{ "%.2f"|format(row.premium_offset) }}
+              {% if row.premium_origin_event %}
+                <span class="muted">CSP premium received {{ row.premium_origin_event.assignment_date }}</span>
+              {% endif %}
+            </span>
+          {% else %}<span class="muted">&#8212;</span>{% endif %}
+        </td>
+        <td>
+          <a href="/sim?ticker={{ row.symbol }}&amp;qty={{ row.qty }}" class="btn">Simulate harvest</a>
+          {% if row.suggested_replacements %}
+            <details class="replacements">
+              <summary>Replacements</summary>
+              <ul>
+                {% for r in row.suggested_replacements %}
+                  <li>{{ r }} <span class="muted">&#8212; discuss with CPA</span></li>
+                {% endfor %}
+              </ul>
+            </details>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No harvest opportunities &#8212; all open positions are at gain or flat.</p>
+  {% endif %}
+</section>
