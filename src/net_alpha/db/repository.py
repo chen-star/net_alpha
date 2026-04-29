@@ -25,6 +25,7 @@ from net_alpha.db.tables import (
     UserPreferenceRow,
     WashSaleViolationRow,
 )
+from net_alpha.section_1256.universe import load_universe
 from net_alpha.models.domain import (
     Account,
     AddImportResult,
@@ -1520,6 +1521,18 @@ class Repository:
                 stmt = stmt.where(RealizedGLLotRow.account_id == acct_id)
             if period.kind != "lifetime":
                 stmt = stmt.where(RealizedGLLotRow.closed_date.startswith(f"{period.year}-"))
+            # Exclude broad-based index option lots (§1256 contracts) — these are
+            # accounted for separately via section_1256_pnl. Both sides of the AND
+            # must hold to be excluded: (a) ticker is in the §1256 universe, and
+            # (b) the row represents an option (option_strike is not None).
+            universe = load_universe()
+            if universe:
+                stmt = stmt.where(
+                    ~(
+                        RealizedGLLotRow.ticker.in_(universe)
+                        & RealizedGLLotRow.option_strike.is_not(None)
+                    )
+                )
             rows = session.exec(stmt).all()
             for r in rows:
                 pnl = Decimal(str(r.proceeds)) - Decimal(str(r.cost_basis))

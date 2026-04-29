@@ -1,6 +1,14 @@
 """compute_after_tax math correctness, all paths."""
+from datetime import datetime
 from decimal import Decimal
 
+import pytest
+from sqlmodel import Session, SQLModel, create_engine
+
+import net_alpha.db.tables  # noqa: F401 — register SQLModel metadata
+from net_alpha.db.migrations import migrate
+from net_alpha.db.repository import Repository
+from net_alpha.db.tables import AccountRow, ImportRecordRow, RealizedGLLotRow
 from net_alpha.portfolio.after_tax import Period, compute_after_tax
 from net_alpha.portfolio.tax_planner import TaxBrackets
 
@@ -116,3 +124,75 @@ def test_caveats_includes_capital_loss_limitation_note():
     repo = _StubRepo(st=Decimal("-100"))
     r = compute_after_tax(repo, _ytd(), None, _brackets())
     assert any("$3" in c or "capital loss" in c.lower() for c in r.caveats)
+
+
+def test_realized_pnl_split_excludes_1256_at_repo_level(tmp_path):
+    """Regression: §1256 contracts must be excluded from realized_pnl_split
+    so they're not double-counted alongside section_1256_pnl."""
+    engine = create_engine(f"sqlite:///{tmp_path}/repo.db")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        migrate(session)
+        # Plant a single §1256 row (SPX option) and a single regular row (TSLA stock).
+        # Need an account + import record first.
+        acct = AccountRow(broker="schwab", label="personal")
+        session.add(acct)
+        session.commit()
+        session.refresh(acct)
+        imp = ImportRecordRow(
+            account_id=acct.id,
+            csv_filename="x.csv",
+            csv_sha256="abc123",
+            imported_at=datetime(2026, 1, 1, 0, 0, 0),
+            trade_count=2,
+        )
+        session.add(imp)
+        session.commit()
+        session.refresh(imp)
+        # SPX option (§1256 contract) — should be excluded
+        session.add(
+            RealizedGLLotRow(
+                import_id=imp.id,
+                account_id=acct.id,
+                symbol_raw="SPX 4500C",
+                ticker="SPX",
+                closed_date="2024-09-15",
+                opened_date="2024-08-15",
+                quantity=1.0,
+                proceeds=100.0,
+                cost_basis=200.0,
+                unadjusted_cost_basis=200.0,
+                wash_sale=False,
+                disallowed_loss=0.0,
+                term="Short Term",
+                option_strike=4500.0,
+                option_expiry="2025-12-19",
+                natural_key="spx_4500c_20240915",
+            )
+        )
+        # TSLA stock (regular equity) — should be included
+        session.add(
+            RealizedGLLotRow(
+                import_id=imp.id,
+                account_id=acct.id,
+                symbol_raw="TSLA",
+                ticker="TSLA",
+                closed_date="2024-09-15",
+                opened_date="2024-08-15",
+                quantity=10.0,
+                proceeds=1000.0,
+                cost_basis=2000.0,
+                unadjusted_cost_basis=2000.0,
+                wash_sale=False,
+                disallowed_loss=0.0,
+                term="Short Term",
+                natural_key="tsla_20240915",
+            )
+        )
+        session.commit()
+
+    repo = Repository(engine)
+    pnl = repo.realized_pnl_split(Period.ytd(2024), None)
+    # Only TSLA should be counted (-1000); SPX excluded.
+    assert pnl["short_term"] == Decimal("-1000")
+    assert pnl["long_term"] == Decimal("0")
