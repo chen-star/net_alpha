@@ -16,3 +16,6 @@ private/
 # Audit screenshots — captured during UI/UX evaluation 2026-04-28; transient
 .audit-screenshots/
 .playwright-mcp/
+
+# Snapshot diff artifacts — produced by --update-snapshots, transient
+tests/web/snapshots/baseline/**/*.diff.png
