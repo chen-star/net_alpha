@@ -2,6 +2,35 @@
 
 
 
+## v0.32.1 (2026-04-29)
+
+### Fix
+
+* fix(web): Closed positions tab renders historical realized lots
+
+The Positions → Closed tab was a hard-coded &#34;Coming in Phase 2&#34; placeholder.
+The data layer (RealizedGLLot model, get_gl_lots_for_account) was already
+in place; the view, route branch, and aggregator were never wired up.
+
+- Add Repository.list_all_gl_lots() returning every lot across accounts,
+  sorted by close date desc.
+- Add ClosedLotRow dataclass + compute_closed_lots() aggregator with
+  period (YTD/year/lifetime) + account filtering. Realized P/L =
+  proceeds − cost_basis.
+- Branch routes/positions.py on selected_view == &#34;closed&#34; mirroring the
+  at-loss pattern, including HTMX fragment response.
+- Replace _positions_view_closed.html placeholder with a real table:
+  Symbol · Acct · Qty · Basis · Proceeds · Realized · Opened · Closed ·
+  Holding (LT/ST). Wash-sale lots show a &#34;W&#34; chip with disallowed-loss
+  tooltip. Empty state nudges the user toward Settings → Imports.
+
+Tests: 14 new (11 aggregator unit + 3 route smoke) covering realized P/L
+sign, period filter, account filter, sort order, term passthrough, wash-sale
+fields, option vs equity display_symbol, empty input.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d93e226`](https://github.com/chen-star/net_alpha/commit/d93e226792a2b8c2673277ae1804cc2568398526))
+
+
 ## v0.32.0 (2026-04-29)
 
 ### Feature
