@@ -34,8 +34,10 @@ PAGES = [
 ]
 
 WIDTHS = [
-    ("desktop", 1440, 900),
     ("tablet", 768, 1024),
+    ("laptop", 1024, 768),
+    ("desktop", 1280, 800),
+    ("desktop-wide", 1440, 900),
 ]
 
 
