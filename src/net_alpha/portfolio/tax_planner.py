@@ -35,6 +35,7 @@ class TaxBrackets(BaseModel):
     state_marginal_rate: Decimal
     ltcg_rate: Decimal
     qualified_div_rate: Decimal
+    niit_enabled: bool = True
 
 
 class TaxProjection(BaseModel):
