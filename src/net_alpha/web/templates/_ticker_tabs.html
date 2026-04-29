@@ -7,10 +7,6 @@
   ] %}
   {% for key, label in _tabs %}
     <a href="/ticker/{{ symbol }}?view={{ key }}"
-       hx-get="/ticker/{{ symbol }}?view={{ key }}"
-       hx-target="#ticker-tab-content"
-       hx-swap="innerHTML"
-       hx-push-url="true"
        class="tab{% if (selected_view|default('timeline')) == key %} tab--active{% endif %}"
        role="tab"
        aria-selected="{{ 'true' if (selected_view|default('timeline')) == key else 'false' }}">
