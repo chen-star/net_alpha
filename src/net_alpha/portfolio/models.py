@@ -37,6 +37,12 @@ class PositionRow:
     # signals "provably missing" (e.g. transferred-in lots without user-set basis)
     # so the renderer can show a "basis missing" chip instead of $0.00.
     basis_known: bool = True
+    # Sub-account suffixes (e.g. ["lt", "st"]) and the full display labels for
+    # the Account column chip. Single-account rows render the label directly;
+    # multi-account rows show a single "lt+st" chip with a tooltip listing
+    # every label.
+    account_chip: str = ""
+    account_displays: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

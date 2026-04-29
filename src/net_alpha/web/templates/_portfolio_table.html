@@ -173,10 +173,11 @@
               </div>
             </td>
             <td class="text-[11px] text-label-2">
-              {% if r.accounts|length <= 3 %}
-                {{ r.accounts|join(' · ') }}
+              {% set _displays = r.account_displays if r.account_displays else r.accounts %}
+              {% if _displays|length <= 1 %}
+                <span class="font-mono">{{ r.account_chip or (_displays[0] if _displays else '—') }}</span>
               {% else %}
-                {{ r.accounts[0] }} +{{ r.accounts|length - 1 }} more
+                <span class="chip" title="{{ _displays|join(', ') }}">{{ r.account_chip or (_displays|join('+')) }}</span>
               {% endif %}
             </td>
             <td class="r num">{{ fmt_quantity(r.qty) }}</td>
