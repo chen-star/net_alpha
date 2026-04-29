@@ -119,3 +119,77 @@ def set_basis(
         "_data_hygiene_set_basis.html",
         {"trade_id": trade_id, "cost_basis": cost_basis},
     )
+
+
+@router.post("/audit/set-basis/single", response_class=HTMLResponse)
+def set_basis_single(
+    request: Request,
+    trade_id: str = Form(...),
+    cost_basis: float = Form(...),
+    acquisition_date: str = Form(...),
+    caller: str | None = Query(None),
+    repo: Repository = Depends(get_repository),
+    etf_pairs: dict = Depends(get_etf_pairs),
+) -> HTMLResponse:
+    """Single-lot inline save: cost_basis + acquisition_date on one transfer row."""
+    from datetime import date as _date
+
+    if cost_basis < 0:
+        return HTMLResponse(
+            '<div class="text-neg text-[12px]">Cost basis must be ≥ 0.</div>',
+            status_code=400,
+        )
+
+    try:
+        acq_date = _date.fromisoformat(acquisition_date)
+    except ValueError:
+        return HTMLResponse(
+            '<div class="text-neg text-[12px]">Invalid date format. Use YYYY-MM-DD.</div>',
+            status_code=400,
+        )
+
+    today = _date.today()
+    if acq_date > today:
+        return HTMLResponse(
+            '<div class="text-neg text-[12px]">Acquisition date cannot be in the future.</div>',
+            status_code=400,
+        )
+
+    trade = repo.get_trade_by_id(int(trade_id))
+    if trade is None:
+        return HTMLResponse(
+            '<div class="text-neg text-[12px]">Trade not found.</div>',
+            status_code=404,
+        )
+
+    if acq_date > trade.date:
+        xfer_iso = trade.date.isoformat()
+        return HTMLResponse(
+            f'<div class="text-neg text-[12px]">Acquisition date must be before transfer date ({xfer_iso}).</div>',
+            status_code=400,
+        )
+
+    repo.update_trade_basis(
+        trade_id=trade_id,
+        cost_basis=cost_basis,
+        basis_source="user_set",
+        trade_date=acq_date,
+    )
+    for acct in repo.list_accounts():
+        if acct.id is not None:
+            stitch_account(repo, acct.id)
+    recompute_all_violations(repo, etf_pairs)
+
+    from net_alpha.audit._badge_cache import _cache
+
+    _cache.invalidate()
+
+    if caller == "pane":
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_positions_pane_set_basis_saved.html",
+            {"sym": trade.ticker},
+        )
+    return HTMLResponse(
+        '<div class="text-pos text-[12px]">Saved.</div>'
+    )

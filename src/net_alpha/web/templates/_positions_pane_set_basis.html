@@ -1,19 +1,27 @@
-{# Set-basis sub-block. Posts to /audit/set-basis/single for the single
-   open lot. Multi-lot UI swap is wired in Task 5+. #}
+{# Single-lot variant of the inline "set basis & date" form. Posts to
+   /audit/set-basis/single. The "+ Split into multiple lots" link
+   swaps the panel via HTMX in Task 5. #}
 
 <div class="panel p-3"
      {% if transfer_qty is not none %}data-transfer-qty="{{ transfer_qty }}"{% endif %}
      {% if transfer_date is not none %}data-transfer-date="{{ transfer_date.isoformat() }}"{% endif %}>
   <h3 class="m-0 text-[13px] font-semibold mb-2">Set basis &amp; date</h3>
   {% if trade_id %}
-    <form hx-post="/audit/set-basis?caller=pane"
+    <form hx-post="/audit/set-basis/single?caller=pane"
           hx-target="this"
           hx-swap="outerHTML"
           class="space-y-2">
       <input type="hidden" name="trade_id" value="{{ trade_id }}">
       <label class="block text-[12px] text-label-2">
+        Acquisition date
+        <input type="date" name="acquisition_date" required
+               {% if transfer_date is not none %}max="{{ transfer_date.isoformat() }}"{% endif %}
+               class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded"
+               style="border-color: var(--color-hairline);">
+      </label>
+      <label class="block text-[12px] text-label-2">
         Cost basis ($)
-        <input type="number" name="cost_basis" step="0.01" required
+        <input type="number" name="cost_basis" step="0.01" min="0" required
                class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded"
                style="border-color: var(--color-hairline);">
       </label>
