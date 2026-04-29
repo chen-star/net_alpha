@@ -5,7 +5,6 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-
 from loguru import logger
 
 from net_alpha.db.repository import Repository
@@ -93,14 +92,8 @@ def positions_page(
         rows = sorted(rows, key=_lockout_sort_key)
 
         total_unrealized = sum((row.loss for row in rows), Decimal("0"))
-        harvest_clear_count = sum(
-            1 for row in rows
-            if row.lockout_clear is None or row.lockout_clear <= today
-        )
-        replacements_count = sum(
-            1 for row in rows
-            if row.suggested_replacements
-        )
+        harvest_clear_count = sum(1 for row in rows if row.lockout_clear is None or row.lockout_clear <= today)
+        replacements_count = sum(1 for row in rows if row.suggested_replacements)
         ctx["total_unrealized"] = total_unrealized
         ctx["harvest_clear_count"] = harvest_clear_count
         ctx["replacements_count"] = replacements_count
