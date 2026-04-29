@@ -1,0 +1,63 @@
+{# Inline projection form (§6.2 Pr1). Posts to /tax/projection-config; HTMX
+   swaps the result back into #projection-tab-content. #}
+
+<form data-testid="projection-form"
+      hx-post="/tax/projection-config"
+      hx-target="#projection-tab-content"
+      hx-swap="innerHTML"
+      class="grid grid-cols-2 gap-3 max-w-xl">
+  <label class="block text-[12px] text-label-2">
+    Filing status
+    <select name="filing_status" required class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded" style="border-color: var(--color-hairline);">
+      {% set _fs = (tax_brackets_cfg.filing_status if tax_brackets_cfg else 'single') %}
+      <option value="single" {% if _fs == 'single' %}selected{% endif %}>Single</option>
+      <option value="mfj" {% if _fs == 'mfj' %}selected{% endif %}>Married, filing jointly</option>
+      <option value="mfs" {% if _fs == 'mfs' %}selected{% endif %}>Married, filing separately</option>
+      <option value="hoh" {% if _fs == 'hoh' %}selected{% endif %}>Head of household</option>
+    </select>
+  </label>
+
+  <label class="block text-[12px] text-label-2">
+    State (2-letter)
+    <input type="text" name="state" required maxlength="2" pattern="[A-Za-z]{2}"
+           value="{{ tax_brackets_cfg.state if tax_brackets_cfg else 'CA' }}"
+           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded uppercase"
+           style="border-color: var(--color-hairline);">
+  </label>
+
+  <label class="block text-[12px] text-label-2">
+    Federal marginal rate
+    <input type="number" name="federal_marginal_rate" required step="0.001" min="0" max="1"
+           value="{{ tax_brackets_cfg.federal_marginal_rate if tax_brackets_cfg else 0.32 }}"
+           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded font-mono"
+           style="border-color: var(--color-hairline);">
+  </label>
+
+  <label class="block text-[12px] text-label-2">
+    State marginal rate
+    <input type="number" name="state_marginal_rate" required step="0.001" min="0" max="1"
+           value="{{ tax_brackets_cfg.state_marginal_rate if tax_brackets_cfg else 0.093 }}"
+           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded font-mono"
+           style="border-color: var(--color-hairline);">
+  </label>
+
+  <label class="block text-[12px] text-label-2">
+    LTCG rate
+    <input type="number" name="ltcg_rate" required step="0.001" min="0" max="1"
+           value="{{ tax_brackets_cfg.ltcg_rate if tax_brackets_cfg else 0.15 }}"
+           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded font-mono"
+           style="border-color: var(--color-hairline);">
+  </label>
+
+  <label class="block text-[12px] text-label-2">
+    Qualified-dividend rate
+    <input type="number" name="qualified_div_rate" required step="0.001" min="0" max="1"
+           value="{{ tax_brackets_cfg.qualified_div_rate if tax_brackets_cfg else 0.15 }}"
+           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded font-mono"
+           style="border-color: var(--color-hairline);">
+  </label>
+
+  <div class="col-span-2">
+    <button type="submit" class="btn">Save &amp; recompute</button>
+  </div>
+</form>
