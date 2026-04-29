@@ -30,6 +30,13 @@
         Save
       </button>
     </form>
+    <a href="#"
+       hx-get="/audit/set-basis/multi/{{ trade_id }}"
+       hx-target="closest .panel"
+       hx-swap="outerHTML"
+       class="block mt-2 text-accent text-[12px] hover:underline">
+      + Split into multiple lots
+    </a>
   {% else %}
     <p class="text-label-2 m-0 text-[12px]">
       Multiple lots —

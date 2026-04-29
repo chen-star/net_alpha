@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import datetime as dt
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -128,7 +127,6 @@ def test_get_set_basis_multi_renders_row_table(client: TestClient, seed_transfer
     assert "Back to single lot" in html
 
 
-@pytest.mark.xfail(reason="Split link added in Task 5", strict=True)
 def test_get_set_basis_single_renders_default_fragment(client: TestClient, seed_transfer_in) -> None:
     """The "Back" link in the multi-lot fragment GETs this route."""
     sym, _, trade_id, _, _ = seed_transfer_in
@@ -138,3 +136,11 @@ def test_get_set_basis_single_renders_default_fragment(client: TestClient, seed_
     assert 'name="acquisition_date"' in html
     assert 'name="cost_basis"' in html
     assert "Split into multiple lots" in html
+
+
+def test_single_lot_fragment_includes_split_link(client: TestClient, seed_transfer_in) -> None:
+    sym, _, trade_id, _, _ = seed_transfer_in
+    resp = client.get(f"/audit/set-basis/single/{trade_id}")
+    html = resp.text
+    assert "Split into multiple lots" in html
+    assert f"/audit/set-basis/multi/{trade_id}" in html
