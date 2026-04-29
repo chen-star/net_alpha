@@ -17,12 +17,12 @@ from net_alpha.audit import (
 )
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.allocation import build_allocation
+from net_alpha.portfolio.benchmark import build_benchmark_series
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
     cash_allocation_slice,
     compute_cash_kpis,
 )
-from net_alpha.portfolio.benchmark import build_benchmark_series
 from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.freshness import compute_price_freshness
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact

@@ -96,16 +96,13 @@ class PriceCache:
 
     def historical_get(self, symbol: str, on: dt.date) -> Decimal | None | _Sentinel:
         """Return the cached close price for (symbol, on). Returns:
-          - Decimal      → cached value
-          - None         → cached negative (provider previously couldn't fetch)
-          - _MISS        → no row at all (caller should fetch)
+        - Decimal      → cached value
+        - None         → cached negative (provider previously couldn't fetch)
+        - _MISS        → no row at all (caller should fetch)
         """
         with self._engine.connect() as conn:
             row = conn.execute(
-                text(
-                    "SELECT close_price FROM historical_price_cache "
-                    "WHERE symbol = :s AND on_date = :d"
-                ),
+                text("SELECT close_price FROM historical_price_cache WHERE symbol = :s AND on_date = :d"),
                 {"s": symbol, "d": on.isoformat()},
             ).first()
         if row is None:

@@ -25,9 +25,14 @@ def test_modal_get_with_symbol_prefills(client: TestClient, repo: Repository):
 
 
 def test_post_creates_target(client: TestClient, repo: Repository):
-    r = client.post("/positions/plan/target", data={
-        "symbol": "HIMS", "target_unit": "usd", "target_amount": "1000",
-    })
+    r = client.post(
+        "/positions/plan/target",
+        data={
+            "symbol": "HIMS",
+            "target_unit": "usd",
+            "target_amount": "1000",
+        },
+    )
     assert r.status_code == 200
     saved = repo.get_target("HIMS")
     assert saved is not None
@@ -35,16 +40,26 @@ def test_post_creates_target(client: TestClient, repo: Repository):
 
 
 def test_post_rejects_empty_symbol(client: TestClient):
-    r = client.post("/positions/plan/target", data={
-        "symbol": "", "target_unit": "usd", "target_amount": "1000",
-    })
+    r = client.post(
+        "/positions/plan/target",
+        data={
+            "symbol": "",
+            "target_unit": "usd",
+            "target_amount": "1000",
+        },
+    )
     assert r.status_code == 422 or "Symbol is required" in r.text
 
 
 def test_post_rejects_zero_amount(client: TestClient):
-    r = client.post("/positions/plan/target", data={
-        "symbol": "HIMS", "target_unit": "usd", "target_amount": "0",
-    })
+    r = client.post(
+        "/positions/plan/target",
+        data={
+            "symbol": "HIMS",
+            "target_unit": "usd",
+            "target_amount": "0",
+        },
+    )
     assert r.status_code == 422 or "must be positive" in r.text
 
 

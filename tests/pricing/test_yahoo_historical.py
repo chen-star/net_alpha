@@ -2,8 +2,6 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from net_alpha.pricing.yahoo import YahooPriceProvider
 
 
@@ -11,6 +9,7 @@ from net_alpha.pricing.yahoo import YahooPriceProvider
 def test_get_historical_close_returns_decimal(mock_yf):
     # yfinance returns a DataFrame with a 'Close' column indexed by date
     import pandas as pd
+
     df = pd.DataFrame(
         {"Close": [490.50]},
         index=pd.DatetimeIndex([pd.Timestamp("2026-01-15")]),
@@ -28,6 +27,7 @@ def test_get_historical_close_returns_decimal(mock_yf):
 @patch("net_alpha.pricing.yahoo.yf")
 def test_get_historical_close_returns_none_when_no_row(mock_yf):
     import pandas as pd
+
     mock_ticker = MagicMock()
     mock_ticker.history.return_value = pd.DataFrame()
     mock_yf.Ticker.return_value = mock_ticker

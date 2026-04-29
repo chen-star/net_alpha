@@ -22,9 +22,7 @@ def test_v12_creates_position_targets_table():
     engine = _v11_engine()
     with Session(engine) as s:
         migrate(s)
-        row = s.exec(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='position_targets'"
-        )).first()
+        row = s.exec(text("SELECT name FROM sqlite_master WHERE type='table' AND name='position_targets'")).first()
         assert row is not None
         # Columns are correct.
         cols = {r[1] for r in s.exec(text("PRAGMA table_info(position_targets)")).all()}
@@ -35,28 +33,33 @@ def test_v12_creates_historical_price_cache_table():
     engine = _v11_engine()
     with Session(engine) as s:
         migrate(s)
-        row = s.exec(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='historical_price_cache'"
-        )).first()
+        row = s.exec(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='historical_price_cache'")
+        ).first()
         assert row is not None
 
 
 def test_v12_unique_symbol_constraint():
     from datetime import datetime
+
     engine = _v11_engine()
     with Session(engine) as s:
         migrate(s)
         now = datetime.utcnow().isoformat()
-        s.exec(text(
-            "INSERT INTO position_targets(symbol, target_amount, target_unit, created_at, updated_at) "
-            "VALUES ('HIMS', 1000, 'usd', :n, :n)"
-        ).bindparams(n=now))
+        s.exec(
+            text(
+                "INSERT INTO position_targets(symbol, target_amount, target_unit, created_at, updated_at) "
+                "VALUES ('HIMS', 1000, 'usd', :n, :n)"
+            ).bindparams(n=now)
+        )
         s.commit()
         try:
-            s.exec(text(
-                "INSERT INTO position_targets(symbol, target_amount, target_unit, created_at, updated_at) "
-                "VALUES ('HIMS', 2000, 'usd', :n, :n)"
-            ).bindparams(n=now))
+            s.exec(
+                text(
+                    "INSERT INTO position_targets(symbol, target_amount, target_unit, created_at, updated_at) "
+                    "VALUES ('HIMS', 2000, 'usd', :n, :n)"
+                ).bindparams(n=now)
+            )
             s.commit()
             raise AssertionError("Should have raised IntegrityError")
         except Exception as exc:

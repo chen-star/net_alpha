@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from net_alpha.portfolio.models import PositionRow
-from net_alpha.portfolio.top_movers import MoverRow, TopMoversView, build_top_movers
+from net_alpha.portfolio.top_movers import TopMoversView, build_top_movers
 
 
 def _row(symbol: str, unrealized: Decimal | None, mv: Decimal | None = Decimal("100")) -> PositionRow:
@@ -56,10 +56,15 @@ def test_empty_returns_empty_view():
 
 def test_unrealized_pct_uses_open_cost_when_present():
     row = PositionRow(
-        symbol="Z", accounts=("Schwab",), qty=Decimal("10"),
-        market_value=Decimal("150"), open_cost=Decimal("100"),
-        avg_basis=Decimal("10"), cash_sunk_per_share=Decimal("10"),
-        realized_pl=Decimal("0"), unrealized_pl=Decimal("50"),
+        symbol="Z",
+        accounts=("Schwab",),
+        qty=Decimal("10"),
+        market_value=Decimal("150"),
+        open_cost=Decimal("100"),
+        avg_basis=Decimal("10"),
+        cash_sunk_per_share=Decimal("10"),
+        realized_pl=Decimal("0"),
+        unrealized_pl=Decimal("50"),
     )
     view = build_top_movers([row], k=3)
     assert view.winners[0].unrealized_pct == Decimal("50.0")  # 50 / 100 * 100
@@ -67,10 +72,15 @@ def test_unrealized_pct_uses_open_cost_when_present():
 
 def test_unrealized_pct_is_none_when_open_cost_zero():
     row = PositionRow(
-        symbol="Z", accounts=("Schwab",), qty=Decimal("10"),
-        market_value=Decimal("150"), open_cost=Decimal("0"),
-        avg_basis=Decimal("0"), cash_sunk_per_share=Decimal("0"),
-        realized_pl=Decimal("0"), unrealized_pl=Decimal("50"),
+        symbol="Z",
+        accounts=("Schwab",),
+        qty=Decimal("10"),
+        market_value=Decimal("150"),
+        open_cost=Decimal("0"),
+        avg_basis=Decimal("0"),
+        cash_sunk_per_share=Decimal("0"),
+        realized_pl=Decimal("0"),
+        unrealized_pl=Decimal("50"),
     )
     view = build_top_movers([row], k=3)
     assert view.winners[0].unrealized_pct is None

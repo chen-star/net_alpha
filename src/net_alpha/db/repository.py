@@ -26,7 +26,6 @@ from net_alpha.db.tables import (
     UserPreferenceRow,
     WashSaleViolationRow,
 )
-from net_alpha.targets.models import PositionTarget, TargetUnit
 from net_alpha.models.domain import (
     Account,
     AddImportResult,
@@ -46,6 +45,7 @@ from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.models.splits import LotOverride, Split
 from net_alpha.section_1256.universe import is_section_1256 as _is_section_1256
 from net_alpha.section_1256.universe import load_universe
+from net_alpha.targets.models import PositionTarget, TargetUnit
 
 
 class Repository:

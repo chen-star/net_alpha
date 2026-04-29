@@ -9,10 +9,9 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 from loguru import logger
-
-from decimal import Decimal
 
 from net_alpha.pricing.cache import _MISS, PriceCache
 from net_alpha.pricing.provider import PriceFetchError, PriceProvider, Quote

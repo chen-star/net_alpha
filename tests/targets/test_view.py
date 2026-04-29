@@ -1,9 +1,9 @@
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 
 from net_alpha.portfolio.models import PositionRow
 from net_alpha.targets.models import PositionTarget, TargetUnit
-from net_alpha.targets.view import PlanRow, PlanView, build_plan_view
+from net_alpha.targets.view import build_plan_view
 
 
 def _target(sym: str, amount: str, unit: TargetUnit) -> PositionTarget:
@@ -18,11 +18,15 @@ def _target(sym: str, amount: str, unit: TargetUnit) -> PositionTarget:
 
 def _pos(sym: str, qty: str, mv: str) -> PositionRow:
     return PositionRow(
-        symbol=sym, accounts=("Schwab",),
-        qty=Decimal(qty), market_value=Decimal(mv),
+        symbol=sym,
+        accounts=("Schwab",),
+        qty=Decimal(qty),
+        market_value=Decimal(mv),
         open_cost=Decimal("0"),
-        avg_basis=Decimal("0"), cash_sunk_per_share=Decimal("0"),
-        realized_pl=Decimal("0"), unrealized_pl=Decimal("0"),
+        avg_basis=Decimal("0"),
+        cash_sunk_per_share=Decimal("0"),
+        realized_pl=Decimal("0"),
+        unrealized_pl=Decimal("0"),
     )
 
 
@@ -96,7 +100,9 @@ def test_alphabetical_order():
         _target("MSFT", "5000", TargetUnit.USD),
     ]
     view = build_plan_view(
-        targets=targets, positions_by_symbol={}, quotes_by_symbol={},
+        targets=targets,
+        positions_by_symbol={},
+        quotes_by_symbol={},
         free_cash=Decimal("0"),
     )
     assert [r.symbol for r in view.rows] == ["AAPL", "MSFT", "VOO"]
@@ -109,7 +115,7 @@ def test_total_to_fill_excludes_over_target_rows():
     ]
     positions = {
         "HIMS": _pos("HIMS", "26.6", "800"),
-        "VOO":  _pos("VOO", "24", "11200"),
+        "VOO": _pos("VOO", "24", "11200"),
     }
     view = build_plan_view(
         targets=targets,
@@ -118,13 +124,15 @@ def test_total_to_fill_excludes_over_target_rows():
         free_cash=Decimal("5000"),
     )
     assert view.total_to_fill_dollar == Decimal("200")  # over-target excluded
-    assert view.coverage_pct == Decimal("2500.00")      # 5000/200*100 = uncapped
+    assert view.coverage_pct == Decimal("2500.00")  # 5000/200*100 = uncapped
 
 
 def test_missing_quote_keeps_native_unit_only():
     target = _target("OBSCURE", "1000", TargetUnit.USD)
     view = build_plan_view(
-        targets=[target], positions_by_symbol={}, quotes_by_symbol={},
+        targets=[target],
+        positions_by_symbol={},
+        quotes_by_symbol={},
         free_cash=Decimal("0"),
     )
     row = view.rows[0]
@@ -137,7 +145,8 @@ def test_coverage_none_when_total_to_fill_is_zero():
     target = _target("SPY", "50", TargetUnit.SHARES)
     pos = _pos("SPY", "50", "24500")  # exactly at target
     view = build_plan_view(
-        targets=[target], positions_by_symbol={"SPY": pos},
+        targets=[target],
+        positions_by_symbol={"SPY": pos},
         quotes_by_symbol={"SPY": Decimal("490")},
         free_cash=Decimal("5000"),
     )

@@ -57,6 +57,7 @@ class YahooPriceProvider(PriceProvider):
         error (no row, network failure, parse error). yfinance fetches a
         single-day window via [start, end+1)."""
         import datetime as _dt
+
         end = on + _dt.timedelta(days=1)
         try:
             ticker = yf.Ticker(symbol)

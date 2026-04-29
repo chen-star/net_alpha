@@ -252,6 +252,6 @@ class PositionTargetRow(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     symbol: str = Field(index=True, unique=True)
     target_amount: Decimal
-    target_unit: str          # 'usd' | 'shares'
-    created_at: str           # ISO datetime
-    updated_at: str           # ISO datetime
+    target_unit: str  # 'usd' | 'shares'
+    created_at: str  # ISO datetime
+    updated_at: str  # ISO datetime

@@ -13,14 +13,14 @@ from net_alpha.targets.models import PositionTarget, TargetUnit
 class PlanRow:
     symbol: str
     target_unit: TargetUnit
-    target_amount: Decimal              # raw input (the unit the user picked)
-    target_dollar_equiv: Decimal | None # populated when conversion possible
+    target_amount: Decimal  # raw input (the unit the user picked)
+    target_dollar_equiv: Decimal | None  # populated when conversion possible
     target_share_equiv: Decimal | None
-    current_dollar: Decimal             # 0 if not held
-    current_shares: Decimal             # 0 if not held
-    gap_dollar: Decimal                 # positive = buy more, negative = trim
-    gap_shares: Decimal | None          # None when share equiv unknown
-    pct_filled: Decimal | None          # None when target = 0 or undefined
+    current_dollar: Decimal  # 0 if not held
+    current_shares: Decimal  # 0 if not held
+    gap_dollar: Decimal  # positive = buy more, negative = trim
+    gap_shares: Decimal | None  # None when share equiv unknown
+    pct_filled: Decimal | None  # None when target = 0 or undefined
     last_price: Decimal | None
     is_held: bool
 
@@ -28,9 +28,9 @@ class PlanRow:
 @dataclass(frozen=True)
 class PlanView:
     rows: list[PlanRow]
-    total_to_fill_dollar: Decimal       # sum of max(0, gap_dollar) — buys only
+    total_to_fill_dollar: Decimal  # sum of max(0, gap_dollar) — buys only
     free_cash: Decimal
-    coverage_pct: Decimal | None        # free_cash / total_to_fill * 100; None when total = 0
+    coverage_pct: Decimal | None  # free_cash / total_to_fill * 100; None when total = 0
 
 
 _TWO = Decimal("0.01")
@@ -90,20 +90,22 @@ def build_plan_view(
         else:
             pct_filled = None
 
-        rows.append(PlanRow(
-            symbol=t.symbol,
-            target_unit=t.target_unit,
-            target_amount=t.target_amount,
-            target_dollar_equiv=_quantize(target_dollar_equiv),
-            target_share_equiv=target_share_equiv,
-            current_dollar=_quantize(current_dollar) or Decimal("0"),
-            current_shares=current_shares,
-            gap_dollar=_quantize(gap_dollar) or Decimal("0"),
-            gap_shares=gap_shares,
-            pct_filled=pct_filled,
-            last_price=last_price,
-            is_held=pos is not None,
-        ))
+        rows.append(
+            PlanRow(
+                symbol=t.symbol,
+                target_unit=t.target_unit,
+                target_amount=t.target_amount,
+                target_dollar_equiv=_quantize(target_dollar_equiv),
+                target_share_equiv=target_share_equiv,
+                current_dollar=_quantize(current_dollar) or Decimal("0"),
+                current_shares=current_shares,
+                gap_dollar=_quantize(gap_dollar) or Decimal("0"),
+                gap_shares=gap_shares,
+                pct_filled=pct_filled,
+                last_price=last_price,
+                is_held=pos is not None,
+            )
+        )
 
     total_to_fill = sum(
         (r.gap_dollar for r in rows if r.gap_dollar > Decimal("0")),

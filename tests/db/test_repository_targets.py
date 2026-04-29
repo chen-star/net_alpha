@@ -1,4 +1,3 @@
-from datetime import datetime
 from decimal import Decimal
 
 import pytest
@@ -32,7 +31,7 @@ def test_upsert_creates_then_updates(repo: Repository):
     assert t2.target_amount == Decimal("2000")
     assert t2.target_unit == TargetUnit.SHARES
     assert t2.created_at == first_created  # preserved
-    assert t2.updated_at >= first_created   # bumped
+    assert t2.updated_at >= first_created  # bumped
 
 
 def test_get_target_returns_none_for_unknown(repo: Repository):

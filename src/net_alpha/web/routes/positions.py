@@ -154,7 +154,9 @@ def positions_page(
         ctx["plan_view"] = plan_view
         if request.headers.get("hx-request"):
             return request.app.state.templates.TemplateResponse(
-                request, "_positions_view_plan.html", ctx,
+                request,
+                "_positions_view_plan.html",
+                ctx,
             )
 
     return request.app.state.templates.TemplateResponse(
@@ -246,11 +248,7 @@ def positions_pane(
             transfer_lots = []
             for lot in equity_open:
                 parent = repo.get_trade_by_id(int(lot.trade_id))
-                if (
-                    parent is not None
-                    and parent.basis_source == "transfer_in"
-                    and not parent.transfer_basis_user_set
-                ):
+                if parent is not None and parent.basis_source == "transfer_in" and not parent.transfer_basis_user_set:
                     transfer_lots.append((lot, parent))
             if transfer_lots:
                 primary_lot, primary_trade = transfer_lots[0]
@@ -308,9 +306,14 @@ def _build_plan_view_for_request(
     prices = pricing.get_prices(quote_symbols)
 
     pos_rows = compute_open_positions(
-        trades=trades, lots=lots, prices=prices,
-        period=None, account=account or None, include_closed=False,
-        gl_closures=gl_closures, gl_option_closures=gl_option_closures,
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period=None,
+        account=account or None,
+        include_closed=False,
+        gl_closures=gl_closures,
+        gl_option_closures=gl_option_closures,
     )
     pos_by_sym = {r.symbol: r for r in pos_rows}
     quotes_by_sym = {sym: q.price for sym, q in prices.items()}
@@ -323,8 +326,11 @@ def _build_plan_view_for_request(
         start=Decimal("0"),
     )
     cash_kpis = compute_cash_kpis(
-        events=cash_events, trades=trades, holdings_value=holdings_value,
-        account=None, period=None,
+        events=cash_events,
+        trades=trades,
+        holdings_value=holdings_value,
+        account=None,
+        period=None,
     )
 
     scoped_trades_for_shorts = [t for t in trades if t.account == account] if account else trades
@@ -345,7 +351,8 @@ def _build_plan_view_for_request(
 
 def _modal_error(request: Request, msg: str, status: int) -> HTMLResponse:
     response = request.app.state.templates.TemplateResponse(
-        request, "_positions_plan_modal.html",
+        request,
+        "_positions_plan_modal.html",
         {"_target": None, "error": msg},
     )
     response.status_code = status
@@ -360,7 +367,8 @@ def _render_plan_body(
 ) -> HTMLResponse:
     plan_view = _build_plan_view_for_request(repo, pricing, account)
     return request.app.state.templates.TemplateResponse(
-        request, "_positions_view_plan.html",
+        request,
+        "_positions_view_plan.html",
         {"plan_view": plan_view},
     )
 
@@ -373,7 +381,8 @@ def plan_modal(
 ) -> HTMLResponse:
     target = repo.get_target(symbol) if symbol else None
     return request.app.state.templates.TemplateResponse(
-        request, "_positions_plan_modal.html",
+        request,
+        "_positions_plan_modal.html",
         {"_target": target, "error": None},
     )
 
