@@ -117,44 +117,11 @@
    page (see _portfolio_body.html). Portfolio KPIs stay focused on portfolio. #}
 
 {% if cash_kpis is defined %}
-{% set _csp_total = (cash_secured_total|float) if cash_secured_total is defined and cash_secured_total else 0 %}
-{% set _csp_n = csp_count if csp_count is defined and csp_count else 0 %}
-{% set _cash_v = cash_kpis.cash_balance|float %}
-{% set _free_v = _cash_v - _csp_total %}
 <div class="grid grid-cols-12 gap-[10px] mt-[10px]">
 
-  {# --- Cash --- #}
-  <div class="kpi col-span-4">
-    <div class="label-uc"
-         title="{% if _csp_total > 0 %}Total liquid cash. {{ "{:,.0f}".format(_csp_total) }} is pledged as collateral for {{ _csp_n }} cash-secured put{% if _csp_n != 1 %}s{% endif %} — free cash is what's left.{% else %}Total liquid cash in this scope. No CSP collateral pledged.{% endif %}">
-      Cash {% if _csp_total > 0 %}<span class="text-label-3 normal-case">(free / pledged)</span>{% endif %}
-    </div>
-    <div class="num text-[22px] font-bold mt-2">
-      {% if _cash_v < 0 %}
-        <span class="text-neg">−${{ "%.2f"|format(_cash_v|abs) }}</span>
-      {% else %}
-        ${{ "%.2f"|format(_cash_v) }}
-      {% endif %}{% if metric_refs is defined and metric_refs.cash is defined %}{{ provenance_link(metric_refs.cash) }}{% endif %}
-    </div>
-    {% if _csp_total > 0 %}
-      {% set _pledged_pct = (_csp_total / _cash_v * 100) if _cash_v > 0 else 0 %}
-      <div class="mt-2 h-[5px] rounded-full overflow-hidden flex" style="background: rgba(255,255,255,0.06);">
-        <div style="width: {{ (100 - _pledged_pct)|round(0,'floor')|int }}%; background: #30D158; height: 100%;"></div>
-        <div style="width: {{ _pledged_pct|round(0,'ceil')|int }}%; background: #FF9F0A; height: 100%;"></div>
-      </div>
-      <div class="flex items-center justify-between mt-1 text-[11px]">
-        <span class="text-label-2"><span class="num text-label-1">${{ "{:,.0f}".format(_free_v) }}</span> free</span>
-        <span class="text-label-2"><span class="num" style="color:#FF9F0A;">${{ "{:,.0f}".format(_csp_total) }}</span> pledged · {{ _csp_n }} CSP{% if _csp_n != 1 %}s{% endif %}</span>
-      </div>
-    {% else %}
-    <div class="text-[11px] text-label-3 mt-1">
-      {{ "%.0f"|format((cash_kpis.cash_share_pct|float) * 100) }}% of account
-    </div>
-    {% endif %}
-  </div>
-
   {# --- Net contributed --- #}
-  <div class="kpi col-span-4">
+  {# Cash balance is shown once via slot_cash in the hero KPI grid (P3 — no dup). #}
+  <div class="kpi col-span-6">
     <div class="label-uc">Net contributed</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if cash_kpis.net_contributions < 0 %}
@@ -167,7 +134,7 @@
   </div>
 
   {# --- Growth --- #}
-  <div class="kpi col-span-4">
+  <div class="kpi col-span-6">
     <div class="label-uc">Growth</div>
     <div class="num text-[22px] font-bold mt-2 {% if cash_kpis.growth < 0 %}text-neg{% else %}text-pos{% endif %}">
       {% if cash_kpis.growth < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(cash_kpis.growth|float|abs) }}
