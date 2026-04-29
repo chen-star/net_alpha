@@ -22,6 +22,7 @@ from net_alpha.portfolio.cash_flow import (
     cash_allocation_slice,
     compute_cash_kpis,
 )
+from net_alpha.portfolio.benchmark import build_benchmark_series
 from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.freshness import compute_price_freshness
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
@@ -664,6 +665,21 @@ def portfolio_body(
         account=None,
     )
 
+    # Benchmark shadow series for the same date axis. Best-effort: a missing
+    # benchmark must NOT break the chart, so we wrap the call in try/except
+    # and pass empty list on any failure.
+    benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
+    try:
+        eq_dates = [p.on for p in points]
+        benchmark_points = build_benchmark_series(
+            symbol=benchmark_symbol,
+            eq_dates=eq_dates,
+            cash_points=cash_points,
+            get_close=svc.get_historical_close,
+        )
+    except Exception:
+        benchmark_points = []
+
     open_shorts = compute_open_short_option_positions(
         scoped_trades,
         gl_option_closures=gl_option_closures,
@@ -740,5 +756,7 @@ def portfolio_body(
             "today_change": kpis.today_change,
             "today_pct": kpis.today_pct,
             "top_movers": top_movers,
+            "benchmark_points": benchmark_points,
+            "benchmark_symbol": benchmark_symbol,
         },
     )

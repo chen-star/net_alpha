@@ -41,6 +41,7 @@ class PricingConfig(BaseModel):
     enable_remote: bool = True
     source: str = "yahoo"
     cache_ttl_seconds: int = 900
+    benchmark_symbol: str = "SPY"  # overlay symbol on the equity curve
 
 
 def load_pricing_config(path: Path) -> PricingConfig:

@@ -37,24 +37,56 @@
         ],
       });
     }
+    {% if benchmark_points and benchmark_points|length > 0 %}
+      series.push({
+        name: "{{ benchmark_symbol|default('SPY') }} (buy & hold)",
+        type: "line",
+        data: [
+          {% for p in benchmark_points %}
+            { x: "{{ p.on.isoformat() }}", y: {{ (p.value|float) if p.value is not none else 'null' }} }{% if not loop.last %},{% endif %}
+          {% endfor %}
+        ],
+      });
+    {% endif %}
+
+    const hasBenchmark = {{ "true" if benchmark_points and benchmark_points|length > 0 else "false" }};
+
+    const colors = [window.netAlphaChartTheme.colors.pos];
+    const widths = [2];
+    const dashArr = [0];
+    const fillTypes = ["gradient"];
+    const fillOps = [1];
+    if (hasTotal) {
+      colors.push(window.netAlphaChartTheme.colors.violet);
+      widths.push(2);
+      dashArr.push(4);
+      fillTypes.push("solid");
+      fillOps.push(1);
+    }
+    if (hasBenchmark) {
+      colors.push(window.netAlphaChartTheme.colors.label3 || "#9aa1a8");
+      widths.push(2);
+      dashArr.push(6);
+      fillTypes.push("solid");
+      fillOps.push(1);
+    }
+    const showLegend = hasTotal || hasBenchmark;
 
     const opts = window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
       chart: { type: "line", height: 218 },
-      colors: hasTotal
-        ? [window.netAlphaChartTheme.colors.pos, window.netAlphaChartTheme.colors.violet]
-        : [window.netAlphaChartTheme.colors.pos],
+      colors: colors,
       stroke: {
-        width: hasTotal ? [2, 2] : 2,
+        width: widths,
         curve: "smooth",
         lineCap: "round",
-        dashArray: hasTotal ? [0, 4] : 0,
+        dashArray: dashArr,
       },
       fill: {
-        type: hasTotal ? ["gradient", "solid"] : "gradient",
+        type: fillTypes,
         gradient: { shade: "dark", type: "vertical", opacityFrom: 0.30, opacityTo: 0, stops: [0, 100] },
-        opacity: hasTotal ? [1, 1] : 1,
+        opacity: fillOps,
       },
-      legend: { show: hasTotal },
+      legend: { show: showLegend },
       xaxis: {
         type: "datetime",
         labels: {
