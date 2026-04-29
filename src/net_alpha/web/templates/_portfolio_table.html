@@ -179,7 +179,7 @@
                 {{ r.accounts[0] }} +{{ r.accounts|length - 1 }} more
               {% endif %}
             </td>
-            <td class="r num">{{ "%.4f"|format(r.qty|float) }}</td>
+            <td class="r num">{{ fmt_quantity(r.qty) }}</td>
             <td class="r num">
               {% if r.market_value is none %}<span class="text-label-3">—</span>
               {% else %}${{ "%.2f"|format(r.market_value|float) }}{% endif %}
@@ -214,7 +214,7 @@
             </td>
             {% if extra_columns is defined %}
               {% if 'days_held' in extra_columns %}<td class="r num">{{ r.days_held if r.days_held is not none else '—' }}{% if r.days_held is not none %}d{% endif %}</td>{% endif %}
-              {% if 'lt_st_split' in extra_columns %}<td class="r num">{{ "%g"|format(r.lt_qty|float) }}LT / {{ "%g"|format(r.st_qty|float) }}ST</td>{% endif %}
+              {% if 'lt_st_split' in extra_columns %}<td class="r num">{{ fmt_quantity(r.lt_qty) }}LT / {{ fmt_quantity(r.st_qty) }}ST</td>{% endif %}
               {% if 'premium_received' in extra_columns %}<td class="r num">${{ "%.0f"|format(r.premium_received|float) }}</td>{% endif %}
               {% if 'origin_event' in extra_columns %}<td>—</td>{% endif %}
               {% if 'days_to_ltcg' in extra_columns %}<td class="r num">—</td>{% endif %}
