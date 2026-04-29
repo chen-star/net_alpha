@@ -9,11 +9,19 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
+from decimal import Decimal
 
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from net_alpha.pricing.provider import Quote
+
+
+class _Sentinel:
+    pass
+
+
+_MISS: _Sentinel = _Sentinel()
 
 
 @dataclass(frozen=True)
@@ -85,3 +93,41 @@ class PriceCache:
         params = {f"s{i}": s for i, s in enumerate(symbols)}
         with self._engine.begin() as conn:
             conn.execute(text(f"DELETE FROM price_cache WHERE symbol IN ({placeholders})"), params)
+
+    def historical_get(self, symbol: str, on: dt.date) -> Decimal | None | _Sentinel:
+        """Return the cached close price for (symbol, on). Returns:
+          - Decimal      → cached value
+          - None         → cached negative (provider previously couldn't fetch)
+          - _MISS        → no row at all (caller should fetch)
+        """
+        with self._engine.connect() as conn:
+            row = conn.execute(
+                text(
+                    "SELECT close_price FROM historical_price_cache "
+                    "WHERE symbol = :s AND on_date = :d"
+                ),
+                {"s": symbol, "d": on.isoformat()},
+            ).first()
+        if row is None:
+            return _MISS
+        if row[0] is None:
+            return None
+        return Decimal(str(row[0]))
+
+    def historical_put(self, symbol: str, on: dt.date, close: Decimal | None) -> None:
+        """Insert or replace the cached close (None means negative cache)."""
+        with self._engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO historical_price_cache(symbol, on_date, close_price, fetched_at) "
+                    "VALUES (:s, :d, :c, :f) "
+                    "ON CONFLICT(symbol, on_date) DO UPDATE SET "
+                    "close_price = excluded.close_price, fetched_at = excluded.fetched_at"
+                ),
+                {
+                    "s": symbol,
+                    "d": on.isoformat(),
+                    "c": str(close) if close is not None else None,
+                    "f": dt.datetime.now(dt.UTC).isoformat(),
+                },
+            )
