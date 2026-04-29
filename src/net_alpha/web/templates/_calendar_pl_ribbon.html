@@ -1,6 +1,9 @@
 {% set max_abs = (monthly_pl|map(attribute='net_pl')|map('abs')|max) if monthly_pl else 0 %}
 <div class="panel mb-3">
-  <div class="text-xs text-label-3 uppercase mb-2">{{ selected_year }} — monthly realized P&amp;L</div>
+  <div class="text-xs text-label-2 uppercase mb-2">
+    {{ selected_year }} — monthly realized P&amp;L
+    {% if event_count %}<span class="text-label-3 normal-case">· {{ event_count }} event{{ '' if event_count == 1 else 's' }} YTD</span>{% endif %}
+  </div>
   <div class="grid grid-cols-12 gap-1 h-16 items-end">
     {% for m in monthly_pl %}
       {% if max_abs and m.net_pl != 0 %}
