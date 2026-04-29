@@ -311,7 +311,7 @@ def set_basis_multi(
             d = _date.fromisoformat(d_str)
         except ValueError:
             return HTMLResponse(
-                f'<div class="text-neg text-[12px]">Invalid date: {d_str}</div>',
+                '<div class="text-neg text-[12px]">Invalid date format. Use YYYY-MM-DD.</div>',
                 status_code=400,
             )
         if d > today:
