@@ -80,6 +80,7 @@ class Trade(BaseModel):
     # rows keep the legacy key and existing DB rows continue to dedup
     # against re-imports.
     occurrence_index: int = 0
+    is_section_1256: bool = False
 
     def is_buy(self) -> bool:
         return self.action.lower() == "buy"
@@ -181,12 +182,40 @@ class WashSaleViolation(BaseModel):
     source: str = "engine"  # "schwab_g_l" | "engine"
 
 
+class ExemptMatch(BaseModel):
+    """A would-have-been wash-sale that's exempt under a named rule (e.g., §1256)."""
+
+    loss_trade_id: str
+    triggering_buy_id: str
+    exempt_reason: str  # enum: "section_1256" (extensible)
+    rule_citation: str  # e.g., "IRC §1256(c)"
+    notional_disallowed: Decimal
+    confidence: str
+    matched_quantity: float
+    loss_account: str
+    buy_account: str
+    loss_sale_date: date
+    triggering_buy_date: date
+    ticker: str
+
+
+class Section1256Classification(BaseModel):
+    """60/40 LT/ST split for a closed §1256 contract trade. Statutory under §1256(a)(3)."""
+
+    trade_id: str
+    realized_pnl: Decimal
+    long_term_portion: Decimal
+    short_term_portion: Decimal
+    underlying: str
+
+
 class DetectionResult(BaseModel):
     """Output of the wash sale detection engine."""
 
     violations: list[WashSaleViolation]
     lots: list[Lot]
-    basis_unknown_count: int
+    basis_unknown_count: int = 0
+    exempt_matches: list[ExemptMatch] = []  # NEW
 
 
 # v2 additions ----------------------------------------------------------------
