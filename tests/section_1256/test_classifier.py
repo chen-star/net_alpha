@@ -1,8 +1,6 @@
 from datetime import date
 from decimal import Decimal
 
-import pytest
-
 from net_alpha.models.domain import Lot, OptionDetails, Trade
 from net_alpha.section_1256.classifier import classify_closed_trades
 
@@ -13,7 +11,7 @@ def _spx_buy(d: date, premium: Decimal) -> Trade:
         date=d,
         account="test/personal",
         ticker="SPX",
-        action="buy",
+        action="Buy",
         quantity=1,
         proceeds=premium,
         cost_basis=premium,
@@ -28,7 +26,7 @@ def _spx_sell(d: date, premium: Decimal) -> Trade:
         date=d,
         account="test/personal",
         ticker="SPX",
-        action="sell",
+        action="Sell",
         quantity=1,
         proceeds=premium,
         cost_basis=Decimal("0"),
@@ -43,7 +41,7 @@ def _aapl_buy(d: date) -> Trade:
         date=d,
         account="test/personal",
         ticker="AAPL",
-        action="buy",
+        action="Buy",
         quantity=10,
         proceeds=Decimal("1000"),
         cost_basis=Decimal("1000"),
@@ -91,7 +89,7 @@ def test_non_1256_trades_skipped():
         date=date(2024, 6, 15),
         account="test/personal",
         ticker="AAPL",
-        action="sell",
+        action="Sell",
         quantity=10,
         proceeds=Decimal("1100"),
         cost_basis=Decimal("0"),

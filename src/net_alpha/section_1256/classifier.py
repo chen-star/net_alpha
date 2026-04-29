@@ -52,8 +52,9 @@ def classify_closed_trades(
     for sell in trades:
         if not sell.is_section_1256:
             continue
-        if sell.action != "sell":
+        if not sell.is_sell():
             continue
+        # If sell qty exceeds matched lot qty, basis is partial; v1 accepts under-attribution.
         basis = _matched_basis_fifo(sell, lots)
         proceeds = Decimal(str(sell.proceeds))
         realized = proceeds - basis
