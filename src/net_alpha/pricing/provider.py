@@ -62,3 +62,11 @@ class PriceProvider(ABC):
     def fetch_splits(self, symbol: str) -> list[SplitEvent]:
         """Optional: providers without split data return [] (default)."""
         return []
+
+    def get_historical_close(self, symbol: str, on: _date) -> Decimal | None:
+        """Return the close price for `symbol` on `on`, or None if unavailable.
+
+        Default returns None — providers that don't support historical lookups
+        can leave this as a no-op.
+        """
+        return None

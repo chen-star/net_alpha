@@ -52,6 +52,23 @@ class YahooPriceProvider(PriceProvider):
             raise PriceFetchError(str(exc), symbols=symbols) from exc
         return out
 
+    def get_historical_close(self, symbol: str, on: _date) -> Decimal | None:
+        """Fetch the close price for `symbol` on `on`. Returns None on any
+        error (no row, network failure, parse error). yfinance fetches a
+        single-day window via [start, end+1)."""
+        import datetime as _dt
+        end = on + _dt.timedelta(days=1)
+        try:
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(start=on.isoformat(), end=end.isoformat(), auto_adjust=False)
+            if hist is None or hist.empty:
+                return None
+            close = hist["Close"].iloc[0]
+            return Decimal(str(round(float(close), 4)))
+        except Exception as exc:
+            logger.debug("yahoo: historical close fetch error for {} on {}: {}", symbol, on, exc)
+            return None
+
     def fetch_splits(self, symbol: str) -> list[SplitEvent]:
         """Fetch all known splits for a symbol from yfinance. Returns [] on any error."""
         try:
