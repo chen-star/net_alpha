@@ -218,12 +218,19 @@ def positions_pane(
                 loss = market_value - open_basis  # positive = gain, negative = loss
 
             # For the set-basis form: pick the single open transfer_in lot if
-            # one exists. `Lot` doesn't carry basis_source, so look up the
-            # parent Trade by trade_id to filter.
+            # one exists and its basis has not yet been set by the user.
+            # `Lot` doesn't carry basis_source, so look up the parent Trade
+            # by trade_id to filter. We exclude rows where
+            # transfer_basis_user_set=True so that after a multi-lot split
+            # the "Set basis & date" panel no longer renders.
             transfer_lots = []
             for lot in equity_open:
                 parent = repo.get_trade_by_id(int(lot.trade_id))
-                if parent is not None and parent.basis_source == "transfer_in":
+                if (
+                    parent is not None
+                    and parent.basis_source == "transfer_in"
+                    and not parent.transfer_basis_user_set
+                ):
                     transfer_lots.append((lot, parent))
             if transfer_lots:
                 primary_lot, primary_trade = transfer_lots[0]
