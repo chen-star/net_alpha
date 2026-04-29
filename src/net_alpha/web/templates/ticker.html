@@ -2,17 +2,21 @@
 {% from "_provenance_macros.html" import provenance_link %}
 {% block title %}{{ symbol }} · net-alpha{% endblock %}
 {% block content %}
-  <div class="flex justify-between items-baseline mb-4">
-    <h1 class="text-2xl font-mono text-primary">{{ symbol }}</h1>
+  <div class="flex items-end justify-between flex-wrap gap-3 mb-4">
+    <div>
+      <h1>{{ symbol }}</h1>
+      <div class="text-[13px] text-label-2 mt-[3px]">
+        {{ company_name|default('—') }} · {{ instrument_kind|default('stock') }}
+      </div>
+    </div>
     <div class="flex gap-2">
-      <button type="button" class="btn"
+      <a href="/sim?ticker={{ symbol }}" class="btn">Sim sell</a>
+      <button type="button" class="btn btn-ghost"
               onclick="
                 fetch('/ticker/{{ symbol }}/add-form').then(r => r.text()).then(html => {
                   document.getElementById('trade-modal-content').innerHTML = html;
                   document.getElementById('trade-modal').classList.remove('hidden');
-                });
-              ">Add trade</button>
-      <a href="/sim?ticker={{ symbol }}" class="btn">Simulate sale</a>
+                });">⋯ More</button>
     </div>
   </div>
 
