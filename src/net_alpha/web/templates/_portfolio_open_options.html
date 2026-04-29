@@ -27,7 +27,7 @@
   <div class="text-label-2 text-[13px] py-3">No open option positions.</div>
 {% else %}
   {% if options_summary is defined and options_summary %}
-    <div class="grid grid-cols-3 gap-2 mb-3">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
       <div class="kpi kpi-numeric">
         <div class="label-uc">Open contracts</div>
         <div class="num text-base font-bold">{{ fmt_quantity(options_summary.open_contracts) }}</div>
