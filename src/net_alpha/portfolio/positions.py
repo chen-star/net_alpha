@@ -496,6 +496,7 @@ def compute_open_positions(
     qty_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     open_cost_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     accounts_by_sym: dict[str, set[str]] = defaultdict(set)
+    basis_known_by_sym: dict[str, bool] = defaultdict(bool)
     for lot, rem_qty, rem_basis in consumed:
         if lot.option_details is not None:
             continue
@@ -504,6 +505,10 @@ def compute_open_positions(
         qty_by_sym[lot.ticker] += rem_qty
         open_cost_by_sym[lot.ticker] += rem_basis
         accounts_by_sym[lot.ticker].add(lot.account)
+        # Provably-known basis: any open lot has a non-null, non-zero cost_basis.
+        # Transferred-in lots default to None/0 until the user fills them in.
+        if lot.cost_basis is not None and lot.cost_basis != 0:
+            basis_known_by_sym[lot.ticker] = True
 
     # Phase 3 density extras: oldest-lot age and LT/ST split.
     LT_DAYS = 365
@@ -589,6 +594,7 @@ def compute_open_positions(
                 lt_qty=lt_qty_by_sym[sym],
                 st_qty=st_qty_by_sym[sym],
                 premium_received=premium_by_sym[sym].quantize(Decimal("0.01")),
+                basis_known=basis_known_by_sym.get(sym, False),
             )
         )
     # Tickers with only open option exposure (no equity lot): emit a qty=0 row

@@ -33,6 +33,10 @@ class PositionRow:
     lt_qty: Decimal = Decimal("0")  # qty held > 365 days
     st_qty: Decimal = Decimal("0")  # qty held <= 365 days
     premium_received: Decimal = Decimal("0")  # net option premium captured on this underlying
+    # True iff at least one open lot has a non-zero, non-null cost_basis. False
+    # signals "provably missing" (e.g. transferred-in lots without user-set basis)
+    # so the renderer can show a "basis missing" chip instead of $0.00.
+    basis_known: bool = True
 
 
 @dataclass(frozen=True)

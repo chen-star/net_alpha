@@ -184,9 +184,21 @@
               {% if r.market_value is none %}<span class="text-label-3">—</span>
               {% else %}${{ "%.2f"|format(r.market_value|float) }}{% endif %}
             </td>
-            <td class="r num">${{ "%.2f"|format(r.open_cost|float) }}</td>
-            <td class="r num">${{ "%.2f"|format(r.avg_basis|float) }}</td>
-            <td class="r num">${{ "%.2f"|format(r.cash_sunk_per_share|float) }}</td>
+            <td class="r num">
+              {% if (r.open_cost is none or r.open_cost == 0) and not r.basis_known and r.qty and r.qty != 0 %}
+                {% include "_basis_missing_chip.html" %}
+              {% else %}
+                {{ fmt_currency(r.open_cost) }}
+              {% endif %}
+            </td>
+            <td class="r num">
+              {% if (r.avg_basis is none or r.avg_basis == 0) and not r.basis_known and r.qty and r.qty != 0 %}
+                {% include "_basis_missing_chip.html" %}
+              {% else %}
+                {{ fmt_currency(r.avg_basis) }}
+              {% endif %}
+            </td>
+            <td class="r num">{{ fmt_currency(r.cash_sunk_per_share) }}</td>
             <td class="r num {% if r.unrealized_pl is not none and r.unrealized_pl < 0 %}text-neg{% elif r.unrealized_pl is not none and r.unrealized_pl > 0 %}text-pos{% endif %}">
               {% if r.unrealized_pl is none %}
                 <span class="text-label-3">—</span>
