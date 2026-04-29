@@ -10,11 +10,12 @@ from datetime import date as _date
 from decimal import Decimal
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.config import TaxConfig, write_tax_config
 from net_alpha.db.repository import Repository
+from net_alpha.explain import explain_exempt, explain_violation
 from net_alpha.portfolio.tax_planner import (
     MissingTaxConfig,
     TaxBrackets,
@@ -208,4 +209,40 @@ def post_projection_config(
         request,
         "_projection_tab.html",
         ctx,
+    )
+
+
+@router.get("/tax/violation/{vid}/explain", response_class=HTMLResponse, response_model=None)
+def get_violation_explain(
+    request: Request,
+    vid: int,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """HTMX fragment: inline explain panel for a wash-sale violation."""
+    v = repo.get_violation(vid)
+    if v is None:
+        raise HTTPException(status_code=404, detail="violation not found")
+    e = explain_violation(v, repo=repo)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_violation_explain.html",
+        {"e": e},
+    )
+
+
+@router.get("/tax/exempt/{eid}/explain", response_class=HTMLResponse, response_model=None)
+def get_exempt_explain(
+    request: Request,
+    eid: int,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """HTMX fragment: inline explain panel for an exempt match."""
+    em = repo.get_exempt_match(eid)
+    if em is None:
+        raise HTTPException(status_code=404, detail="exempt match not found")
+    e = explain_exempt(em, repo=repo)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_violation_explain.html",
+        {"e": e},
     )

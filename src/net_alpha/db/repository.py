@@ -1488,6 +1488,16 @@ class Repository:
                 stmt = select(Section1256ClassificationRow)
             return list(session.exec(stmt).all())
 
+    def get_violation(self, vid: int):
+        """Return WashSaleViolationRow by primary key, or None."""
+        with Session(self.engine) as session:
+            return session.get(WashSaleViolationRow, vid)
+
+    def get_exempt_match(self, eid: int):
+        """Return ExemptMatchRow by primary key, or None."""
+        with Session(self.engine) as session:
+            return session.get(ExemptMatchRow, eid)
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility
