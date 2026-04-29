@@ -73,3 +73,24 @@ def test_classifications_unique_per_trade(repo):
     rows = repo.list_section_1256_classifications()
     assert len(rows) == 1
     assert rows[0].realized_pnl == Decimal("200")
+
+
+def test_list_exempt_matches_filtered_by_account_returns_subset(repo):
+    repo.save_exempt_matches([
+        _exempt(loss_id="1", buy_id="2"),  # account schwab/personal
+    ])
+    # Sanity: default returns 1
+    assert len(repo.list_exempt_matches()) == 1
+    # Filter to a non-existent account: 0
+    assert repo.list_exempt_matches(account="schwab/nonexistent") == []
+    # Filter by the actual account: 1 (matches loss_account or buy_account)
+    rows = repo.list_exempt_matches(account="schwab/personal")
+    assert len(rows) == 1
+
+
+def test_list_section_1256_classifications_unknown_account_returns_empty(repo):
+    repo.save_section_1256_classifications([_classification()])
+    # Sanity: default returns 1
+    assert len(repo.list_section_1256_classifications()) == 1
+    # Unknown account: returns [] (RuntimeError caught)
+    assert repo.list_section_1256_classifications(account="schwab/nonexistent") == []

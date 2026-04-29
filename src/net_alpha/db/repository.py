@@ -528,6 +528,17 @@ class Repository:
                     )
                 )
                 s.exec(LotOverrideRow.__table__.delete().where(LotOverrideRow.trade_id.in_(trade_ids)))
+                s.exec(
+                    ExemptMatchRow.__table__.delete().where(
+                        (ExemptMatchRow.loss_trade_id.in_(trade_ids))
+                        | (ExemptMatchRow.triggering_buy_id.in_(trade_ids))
+                    )
+                )
+                s.exec(
+                    Section1256ClassificationRow.__table__.delete().where(
+                        Section1256ClassificationRow.trade_id.in_(trade_ids)
+                    )
+                )
             s.exec(TradeRow.__table__.delete().where(TradeRow.import_id == import_id))
             # Delete G/L lots tied to this import (added in schema v2)
             s.exec(RealizedGLLotRow.__table__.delete().where(RealizedGLLotRow.import_id == import_id))
@@ -1391,7 +1402,7 @@ class Repository:
     ) -> list[ExemptMatchRow]:
         with Session(self.engine) as session:
             stmt = select(ExemptMatchRow)
-            if account:
+            if account is not None:
                 stmt = stmt.where(
                     (ExemptMatchRow.loss_account == account) | (ExemptMatchRow.buy_account == account)
                 )
@@ -1439,11 +1450,11 @@ class Repository:
                     TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id
                 )
                 if account is not None:
-                    acct_id = self._account_id_for_display(session, account)
-                    if acct_id is not None:
-                        stmt = stmt.where(TradeRow.account_id == acct_id)
-                    else:
+                    try:
+                        acct_id = self._account_id_for_display(session, account)
+                    except RuntimeError:
                         return []
+                    stmt = stmt.where(TradeRow.account_id == acct_id)
                 if year is not None:
                     stmt = stmt.where(TradeRow.trade_date.startswith(f"{year}-"))
             else:
