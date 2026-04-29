@@ -50,9 +50,16 @@ def reconciliation_strip(
     request: Request,
     account_id: int = Query(...),
     expanded: bool = Query(False),
+    variant: str = Query("full"),  # "full" | "badge"
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     result = reconcile(symbol=symbol.upper(), account_id=account_id, repo=repo)
+    if variant == "badge":
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_reconciliation_badge.html",
+            {"result": result},
+        )
     diffs = per_lot_diffs(symbol=symbol.upper(), account_id=account_id, repo=repo) if expanded else []
     template = "_reconciliation_diff.html" if expanded else "_reconciliation_strip.html"
     return request.app.state.templates.TemplateResponse(
