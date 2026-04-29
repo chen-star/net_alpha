@@ -36,6 +36,7 @@ from net_alpha.portfolio.tax_planner import (
     compute_offset_budget,
     project_year_end_tax,
 )
+from net_alpha.portfolio.top_movers import build_top_movers
 from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
@@ -634,6 +635,8 @@ def portfolio_body(
         gl_option_closures=gl_option_closures,
     )
 
+    top_movers = build_top_movers(positions_for_alloc)
+
     # --- Cash flow ---
     cash_events = repo.list_cash_events(account_id=None)
     if account:
@@ -736,5 +739,6 @@ def portfolio_body(
             "vs_contributed_delta": body_vs_contributed_delta,
             "today_change": kpis.today_change,
             "today_pct": kpis.today_pct,
+            "top_movers": top_movers,
         },
     )

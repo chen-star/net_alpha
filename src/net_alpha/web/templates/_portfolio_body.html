@@ -21,6 +21,13 @@
   {% include "_portfolio_allocation.html" %}
 </div>
 
+{# Top Movers panel — only render when at least one mover exists. #}
+{% if top_movers and (top_movers.winners or top_movers.losers) %}
+  <div id="portfolio-top-movers" class="panel mb-4">
+    {% include "_portfolio_top_movers.html" %}
+  </div>
+{% endif %}
+
 {# Wash-sale watch moved to the Tax page wash-sales tab — that's its natural
    home. The portfolio panel intentionally stays free of tax-detection UI. #}
 {# Tax planning panels (offset budget + year-end projection) moved to /tax (P9). #}

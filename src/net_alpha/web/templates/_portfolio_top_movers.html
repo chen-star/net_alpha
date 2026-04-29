@@ -1,0 +1,51 @@
+{# Top Movers panel — renders top-3 unrealized $ winners and losers among
+   open positions. `top_movers: TopMoversView` is required. The panel is
+   omitted (caller-side) when the view has no winners and no losers. #}
+
+<div class="panel-head flex items-center justify-between">
+  <h4>Top movers</h4>
+  <span class="meta">Unrealized $ change vs cost basis · open positions</span>
+</div>
+
+{% if not top_movers.winners and not top_movers.losers %}
+  <div class="text-label-2 text-[13px] py-4">No priced open positions in scope.</div>
+{% else %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+    <div>
+      <div class="label-uc text-pos mb-2">▲ Winners</div>
+      {% if top_movers.winners %}
+        {% for r in top_movers.winners %}
+          <div class="flex items-baseline justify-between py-[5px]"
+               style="border-bottom: 0.5px solid rgba(255,255,255,0.06);">
+            <span class="font-semibold text-[13px]">{{ r.symbol }}</span>
+            <span class="num text-pos text-[13px]">
+              +${{ "%.2f"|format(r.unrealized_dollar|float) }}{% if r.unrealized_pct is not none %}
+                <span class="text-label-2 text-[11px] ml-1">({% if r.unrealized_pct > 0 %}+{% endif %}{{ "%.1f"|format(r.unrealized_pct|float) }}%)</span>
+              {% endif %}
+            </span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-label-3 text-[12px] py-1">—</div>
+      {% endif %}
+    </div>
+    <div>
+      <div class="label-uc text-neg mb-2">▼ Losers</div>
+      {% if top_movers.losers %}
+        {% for r in top_movers.losers %}
+          <div class="flex items-baseline justify-between py-[5px]"
+               style="border-bottom: 0.5px solid rgba(255,255,255,0.06);">
+            <span class="font-semibold text-[13px]">{{ r.symbol }}</span>
+            <span class="num text-neg text-[13px]">
+              −${{ "%.2f"|format(r.unrealized_dollar|float|abs) }}{% if r.unrealized_pct is not none %}
+                <span class="text-label-2 text-[11px] ml-1">({{ "%.1f"|format(r.unrealized_pct|float) }}%)</span>
+              {% endif %}
+            </span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-label-3 text-[12px] py-1">—</div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
