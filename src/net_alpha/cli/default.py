@@ -24,6 +24,39 @@ from net_alpha.splits.sync import _post_import_autosync_splits
 ETF_PAIRS = load_etf_pairs(user_path=str(Path.home() / ".net_alpha" / "etf_pairs.yaml"))
 
 
+def _print_detail(repo) -> None:
+    """Per-violation breakdown for --detail."""
+    from net_alpha.explain import explain_exempt, explain_violation
+    from net_alpha.explain.cli_renderer import render_explanation
+
+    typer.echo("\nWASH SALE DETAILS")
+    typer.echo("=" * 60)
+    for v in repo.all_violations():
+        # all_violations() returns domain WashSaleViolation (str IDs).
+        # explain_violation requires WashSaleViolationRow (int IDs) — fetch it.
+        row = repo.get_violation(int(v.id))
+        if row is None:
+            continue
+        try:
+            e = explain_violation(row, repo=repo)
+        except ValueError:
+            continue  # missing referenced trades — skip
+        typer.echo(render_explanation(e))
+        typer.echo("")
+
+    exempts = repo.list_exempt_matches()
+    if exempts:
+        typer.echo("SECTION 1256 EXEMPT MATCHES")
+        typer.echo("=" * 60)
+        for em in exempts:
+            try:
+                e = explain_exempt(em, repo=repo)
+            except ValueError:
+                continue
+            typer.echo(render_explanation(e))
+            typer.echo("")
+
+
 def _engine():
     home = Path.home() / ".net_alpha"
     home.mkdir(parents=True, exist_ok=True)
@@ -139,6 +172,7 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
 
         typer.echo("")
         typer.echo(detail_mod.render(repo.all_violations()))
+        _print_detail(repo)
     typer.echo("")
     typer.echo(disclaimer.render())
     return 0
