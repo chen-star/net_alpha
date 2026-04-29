@@ -79,3 +79,33 @@ def test_post_set_basis_legacy_path_still_works(client: TestClient, seed_transfe
         data={"trade_id": trade_id, "cost_basis": "999.99"},
     )
     assert resp.status_code == 200
+
+
+def test_post_set_basis_single_rejects_invalid_date_format(client, seed_transfer_in) -> None:
+    _, _, trade_id, _, _ = seed_transfer_in
+    resp = client.post(
+        "/audit/set-basis/single",
+        params={"caller": "pane"},
+        data={
+            "trade_id": trade_id,
+            "cost_basis": "1000.00",
+            "acquisition_date": "not-a-date",
+        },
+    )
+    assert resp.status_code == 400
+    assert "invalid date" in resp.text.lower()
+
+
+def test_post_set_basis_single_returns_404_when_trade_missing(client, seed_transfer_in) -> None:
+    # Using a numeric id that won't exist in this fresh test DB.
+    resp = client.post(
+        "/audit/set-basis/single",
+        params={"caller": "pane"},
+        data={
+            "trade_id": "999999",
+            "cost_basis": "1000.00",
+            "acquisition_date": "2024-03-12",
+        },
+    )
+    assert resp.status_code == 404
+    assert "not found" in resp.text.lower()

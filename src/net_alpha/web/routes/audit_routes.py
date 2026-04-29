@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date as _date
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse
@@ -132,8 +133,6 @@ def set_basis_single(
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
     """Single-lot inline save: cost_basis + acquisition_date on one transfer row."""
-    from datetime import date as _date
-
     if cost_basis < 0:
         return HTMLResponse(
             '<div class="text-neg text-[12px]">Cost basis must be ≥ 0.</div>',
@@ -155,7 +154,15 @@ def set_basis_single(
             status_code=400,
         )
 
-    trade = repo.get_trade_by_id(int(trade_id))
+    try:
+        parsed_id = int(trade_id)
+    except ValueError:
+        return HTMLResponse(
+            '<div class="text-neg text-[12px]">Invalid trade id.</div>',
+            status_code=400,
+        )
+
+    trade = repo.get_trade_by_id(parsed_id)
     if trade is None:
         return HTMLResponse(
             '<div class="text-neg text-[12px]">Trade not found.</div>',
