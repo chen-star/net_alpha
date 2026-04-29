@@ -365,8 +365,8 @@
   }
 }
 
-/* Positions side pane (§3.5). Phase 2 ships fixed 480px on ≥1024px;
-   responsive full-screen at <1024px lands in Phase 5. */
+/* Positions side pane (§3.5). Fixed 480px ≥ 1024px; full-width below
+   (Phase 5, §3.9). */
 .positions-pane {
   z-index: 20;
 }

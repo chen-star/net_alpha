@@ -40,8 +40,8 @@
      pane body from /positions/pane?sym=…&account_id=…. Closing zeros the
      state; clicking another row swaps content via @click on each <tr>. #}
   <aside id="positions-pane"
-         class="positions-pane fixed inset-y-0 right-0 bg-bg border-l flex flex-col"
-         style="border-color: var(--color-hairline); box-shadow: var(--shadow-pane); width: 480px;"
+         class="positions-pane fixed inset-y-0 right-0 bg-bg border-l flex flex-col w-full lg:w-[480px]"
+         style="border-color: var(--color-hairline); box-shadow: var(--shadow-pane);"
          x-data="{ open: false, sym: null, accountId: null }"
          x-show="open"
          x-on:open-positions-pane.window="
