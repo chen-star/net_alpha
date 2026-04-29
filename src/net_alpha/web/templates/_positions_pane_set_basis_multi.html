@@ -11,10 +11,12 @@
      x-data='{
        qty: 0,
        targetQty: {{ transfer_qty|float }},
+       qtySatisfied: false,
        update() {
          this.qty = Array.from(this.$el.querySelectorAll("input[name=quantities]"))
            .map(i => parseFloat(i.value) || 0)
            .reduce((a, b) => a + b, 0);
+         this.qtySatisfied = Math.abs(this.qty - this.targetQty) < 0.0001;
        }
      }'
      x-init="update()">
@@ -56,10 +58,13 @@
             @click="
               const tpl = $el.previousElementSibling.cloneNode(true);
               tpl.querySelectorAll('input').forEach(i => { i.value = ''; });
-              tpl.querySelector('button[type=button]').disabled = false;
-              tpl.querySelector('button[type=button]').setAttribute(
-                '@click', 'this.parentElement.remove(); update();'
-              );
+              const removeBtn = tpl.querySelector('button[type=button]');
+              removeBtn.disabled = false;
+              removeBtn.title = 'Remove this lot';
+              removeBtn.addEventListener('click', () => {
+                tpl.remove();
+                update();
+              });
               $el.before(tpl);
               update();
             ">
@@ -67,10 +72,10 @@
     </button>
 
     <div class="text-[11px] flex items-center gap-2"
-         :class="qty == targetQty ? 'text-pos' : 'text-neg'">
+         :class="qtySatisfied ? 'text-pos' : 'text-neg'">
       Sum of qty: <span class="font-mono" x-text="qty"></span> /
       <span class="font-mono" x-text="targetQty"></span>
-      <span x-show="qty == targetQty">✓</span>
+      <span x-show="qtySatisfied">✓</span>
     </div>
 
     <div class="flex items-center justify-between pt-1">
@@ -80,18 +85,17 @@
          hx-swap="outerHTML"
          class="text-accent text-[12px] hover:underline"
          @click.prevent="
-           const filled = Array.from($el.closest('form').querySelectorAll('input[name=dates], input[name=quantities], input[name=basises]'))
+           const filled = Array.from($el.closest('form')
+             .querySelectorAll('input[name=dates], input[name=quantities], input[name=basises]'))
              .some(i => i.value);
-           if (filled && !confirm('Discard multi-lot rows and switch back to single-lot form?')) {
-             event.stopImmediatePropagation();
-             event.preventDefault();
-           }
+           if (!filled || confirm('Discard multi-lot rows and switch back to single-lot form?')) return;
+           event.stopPropagation();
          ">
         ← Back to single lot
       </a>
       <button type="submit"
-              :disabled="qty != targetQty"
-              :class="qty == targetQty ? '' : 'opacity-50 cursor-not-allowed'"
+              :disabled="!qtySatisfied"
+              :class="qtySatisfied ? '' : 'opacity-50 cursor-not-allowed'"
               class="btn text-[13px] py-1.5 px-4">
         Save
       </button>
