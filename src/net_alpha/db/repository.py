@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from datetime import date
+from decimal import Decimal
 from uuid import uuid4
 
 from sqlalchemy import func
@@ -1497,6 +1498,87 @@ class Repository:
         """Return ExemptMatchRow by primary key, or None."""
         with Session(self.engine) as session:
             return session.get(ExemptMatchRow, eid)
+
+    # ---- After-tax helpers (Task 17) ----
+
+    def realized_pnl_split(self, period, account: str | None) -> dict[str, Decimal]:
+        """Return {'short_term': Decimal, 'long_term': Decimal} for closed non-§1256 lots.
+
+        Draws from RealizedGLLotRow (broker-sourced Realized G/L CSV).
+        Term is determined by the broker-supplied `term` column ("Short Term" / "Long Term").
+        P&L per lot = proceeds - cost_basis (uses the wash-sale-adjusted cost_basis column).
+        """
+        st = Decimal("0")
+        lt = Decimal("0")
+        with Session(self.engine) as session:
+            stmt = select(RealizedGLLotRow)
+            if account:
+                try:
+                    acct_id = self._account_id_for_display(session, account)
+                except RuntimeError:
+                    return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+                stmt = stmt.where(RealizedGLLotRow.account_id == acct_id)
+            if period.kind != "lifetime":
+                stmt = stmt.where(RealizedGLLotRow.closed_date.startswith(f"{period.year}-"))
+            rows = session.exec(stmt).all()
+            for r in rows:
+                pnl = Decimal(str(r.proceeds)) - Decimal(str(r.cost_basis))
+                if r.term == "Long Term":
+                    lt += pnl
+                else:
+                    st += pnl
+        return {"short_term": st, "long_term": lt}
+
+    def section_1256_pnl(self, period, account: str | None) -> Decimal:
+        """Total realized P&L for §1256 contracts in the period.
+
+        Draws from Section1256ClassificationRow (engine-derived). The realized_pnl
+        field is the net gain/loss already; 60/40 LT/ST split is applied by
+        compute_after_tax, not here.
+        """
+        with Session(self.engine) as session:
+            stmt = select(Section1256ClassificationRow).join(
+                TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id
+            )
+            if account:
+                try:
+                    acct_id = self._account_id_for_display(session, account)
+                except RuntimeError:
+                    return Decimal("0")
+                stmt = stmt.where(TradeRow.account_id == acct_id)
+            if period.kind != "lifetime":
+                stmt = stmt.where(TradeRow.trade_date.startswith(f"{period.year}-"))
+            rows = session.exec(stmt).all()
+            total = Decimal("0")
+            for r in rows:
+                total += Decimal(str(r.realized_pnl))
+        return total
+
+    def wash_sale_disallowed_total(self, period, account: str | None) -> Decimal:
+        """Total disallowed loss amount for wash-sale violations in the period.
+
+        Draws from WashSaleViolationRow. Account filter matches violations where
+        the loss account OR the triggering buy account is the specified account.
+        """
+        with Session(self.engine) as session:
+            stmt = select(WashSaleViolationRow.disallowed_loss)
+            if account:
+                try:
+                    acct_id = self._account_id_for_display(session, account)
+                except RuntimeError:
+                    return Decimal("0")
+                stmt = stmt.where(
+                    (WashSaleViolationRow.loss_account_id == acct_id)
+                    | (WashSaleViolationRow.buy_account_id == acct_id)
+                )
+            if period.kind != "lifetime":
+                stmt = stmt.where(
+                    WashSaleViolationRow.loss_sale_date.startswith(f"{period.year}-")
+                )
+            total = Decimal("0")
+            for v in session.exec(stmt).all():
+                total += Decimal(str(v))
+        return total
 
 
 # ---------------------------------------------------------------------------
