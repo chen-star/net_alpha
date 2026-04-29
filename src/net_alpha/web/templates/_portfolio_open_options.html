@@ -26,6 +26,22 @@
 {% if not open_options %}
   <div class="text-label-2 text-[13px] py-3">No open option positions.</div>
 {% else %}
+  {% if options_summary is defined and options_summary %}
+    <div class="grid grid-cols-3 gap-2 mb-3">
+      <div class="kpi kpi-numeric">
+        <div class="label-uc">Open contracts</div>
+        <div class="num text-base font-bold">{{ fmt_quantity(options_summary.open_contracts) }}</div>
+      </div>
+      <div class="kpi kpi-numeric">
+        <div class="label-uc">Net premium</div>
+        <div class="num text-base font-bold {% if options_summary.net_premium >= 0 %}text-pos{% else %}text-neg{% endif %}">{{ fmt_currency(options_summary.net_premium) }}</div>
+      </div>
+      <div class="kpi kpi-numeric">
+        <div class="label-uc">Avg DTE</div>
+        <div class="num text-base font-bold">{{ options_summary.avg_dte|round(0)|int }}d</div>
+      </div>
+    </div>
+  {% endif %}
   <div class="flex flex-col">
     {% for s in open_options %}
       {% set dte = (s.expiry - today).days %}
