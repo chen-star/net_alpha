@@ -161,9 +161,7 @@ def compute_kpis(
     # Today tile: per-lot (price - prev_close) * qty, skipping lots with no prev close.
     quotes_with_prev = {sym: (q.price, q.previous_close) for sym, q in prices.items()}
     open_lots_by_sym: list[tuple[str, Decimal]] = [
-        (lot.ticker, Decimal(str(lot.quantity)))
-        for lot in lots
-        if lot.option_details is None
+        (lot.ticker, Decimal(str(lot.quantity))) for lot in lots if lot.option_details is None
     ]
     today_change, prev_value = compute_today_change(open_lots_by_sym, quotes_with_prev)
     today_pct: Decimal | None = (today_change / prev_value) if prev_value else None
