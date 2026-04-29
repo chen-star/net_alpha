@@ -2,6 +2,278 @@
 
 
 
+## v0.30.0 (2026-04-29)
+
+### Chore
+
+* chore(web): delete dead _harvest_tab.html (Phase 1 redirected away; Phase 2 review #I6)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cbbd3f8`](https://github.com/chen-star/net_alpha/commit/cbbd3f8bce234d65e5d224d3a7309e97c951c59e))
+
+### Documentation
+
+* docs(plans): Phase 3 — Page polish implementation plan
+
+Covers Overview clutter removal + chart fixes + KPI restructure with
+Today tile; Tax page polish (mini-bar, budget bar, watch/violations
+labels, affirmative empty copy, filter chips, calendar strip); inline
+tax-projection form replacing the YAML snippet; Imports drawer
+one-explanation card + per-row inline form + drop-zone preview; Sim
+account-required validation + recent-sims-this-session panel; plus
+the Phase 2 review backlog (at-loss summary enrichment, bare-except
+removal, dead _harvest_tab.html, realized_delta dedup).
+
+Approximately 17 tasks across 8 sections (A–H). Section H is the
+verification gate; sections A–G ship working features incrementally.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5fea57a`](https://github.com/chen-star/net_alpha/commit/5fea57ae7b89f029ca061ebfe72c03d2a7ba9d53))
+
+### Feature
+
+* feat(web): /sim — recent sims this-session panel (S2)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`98e75f5`](https://github.com/chen-star/net_alpha/commit/98e75f5964389494a1fa22ad872bedd22be21125))
+
+* feat(web): /sim — account required for action=Sell with inline error (S3)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`84266ec`](https://github.com/chen-star/net_alpha/commit/84266ecf3ecac619175efa5e4d46a28e18ed0a85))
+
+* feat(web): drop-zone preview on drag-over (I4)
+
+Adds drop_zone.js (vanilla JS) that listens to dragenter/dragover on any
+element wrapping a [data-drop-zone] file input and shows a sibling
+[data-testid=&#34;drop-zone-preview&#34;] element with the incoming file count.
+Wires data-drop-zone onto the CSV upload input and adds the preview div
+to _drop_zone.html; loads the script via base.html.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0d6862b`](https://github.com/chen-star/net_alpha/commit/0d6862b605b156c1139c1fb4c29581c434c34726))
+
+* feat(web): drawer Imports — one-explanation card + per-row inline form (I1, I2)
+
+Restructures the data-hygiene section: basis_unknown rows now render a
+single shared explanation card (I1) and one compact HTMX inline form each
+(I2, caller=drawer).  Adds MissingBasisRow helper to hygiene.py and wires
+collect_missing_basis_rows into the imports route context.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f3bbf81`](https://github.com/chen-star/net_alpha/commit/f3bbf81e985a490e3fe1ef9a6b6f11ea43db9955))
+
+* feat(web): inline tax-projection form replaces YAML snippet (Pr1, Pr2)
+
+Add write_tax_config() to config.py, POST /tax/projection-config route
+that persists to config.yaml and hot-reloads app.state, _projection_form.html
+with HTMX-wired form, and updated _projection_tab.html / _projection_card.html
+to remove the manual YAML-snippet copy.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3e8e6f0`](https://github.com/chen-star/net_alpha/commit/3e8e6f062f639c36e3ceacc32fa3aba5a6fd4ded))
+
+* feat(web): tax filter chips with reset (W2); calendar strip always visible (W3)
+
+- _tax_wash_sales_tab.html: add filter chip summary row with
+  data-testid=&#34;filter-reset&#34; (W2) and always-visible compact month-header
+  strip with data-testid=&#34;calendar-strip&#34; (W3)
+- app.src.css: add .chip utility class for filter-bar chips
+- app.css: rebuilt
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0c6fd84`](https://github.com/chen-star/net_alpha/commit/0c6fd846edeac5246c7f3770983f9b8a72dca0d3))
+
+* feat(web): wash-watch labeled forward; violations labeled backward, affirmative empty (W1, W1b)
+
+- _portfolio_wash_watch.html: heading now reads &#34;Wash-sale watch ·
+  forward-looking 30d&#34;
+- _tax_wash_sales_tab.html: violations section gets &#34;Violations ·
+  backward-looking detected&#34; heading before the detail table
+- _detail_table.html: empty state replaced with affirmative &#34;✓ No
+  wash-sale violations detected&#34; copy instead of generic &#34;No violations
+  match these filters.&#34;
+- test_detail_routes.py: updated to match new empty-state copy
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ae288a9`](https://github.com/chen-star/net_alpha/commit/ae288a9e988f9de55cd0a02fb6f79a06461384b6))
+
+* feat(web): tax realized-P/L stacked mini-bar (T5)
+
+Add realized_kpis (OffsetBudget) to _wash_sales_context so the tax
+wash-sales tab can render a split loss/gain mini-bar. The bar shows
+realized_losses_ytd vs realized_gains_ytd; degrades to an empty-state
+message when no P/L has been realized this period.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3ff413d`](https://github.com/chen-star/net_alpha/commit/3ff413d7bd7b03aff761d92cbbd11949943fd407))
+
+* feat(web): loss-harvest budget bar (T4)
+
+Add data-testid=&#34;offset-budget&#34; to the tile wrapper and
+data-testid=&#34;offset-budget-bar&#34; to the existing progress bar in
+_offset_budget_tile.html so tests can assert the bar is present.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9269df3`](https://github.com/chen-star/net_alpha/commit/9269df30c87f95e8861f8747da860dd93034b141))
+
+* feat(web): Overview KPI grid — hero + today + cash (3 large) over 4 small (P2/P4/NEW)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`395e813`](https://github.com/chen-star/net_alpha/commit/395e8136418a6a19f8c4a6300095e0dd33265bc3))
+
+* feat(portfolio): compute_today_change for the Overview Today tile (P3 prep)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f5e1722`](https://github.com/chen-star/net_alpha/commit/f5e17223ac71ce72222344b938ba8e22df085465))
+
+* feat(pricing): Quote exposes previous_close for the Today tile (Phase 3 prep)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`95a837c`](https://github.com/chen-star/net_alpha/commit/95a837c5620c42f1816fae547b6a39e108085b43))
+
+* feat(web): freshness chip in toolbar — drop in-tile cached-prices copy (P5)
+
+Add compute_price_freshness helper (portfolio/freshness.py) that maps a
+PricingSnapshot to a green/amber/red tier and label (&lt; 15m / 15m–24h /
+&gt; 24h). Wire it into the / route and render a data-testid=&#34;freshness-chip&#34;
+button in the toolbar. Remove the inline &#34;Cached prices…refresh&#34; copy from
+the KPI tile footer — the chip is now the single freshness surface.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a7d594a`](https://github.com/chen-star/net_alpha/commit/a7d594a07e038e4a1ac796f451821da0fea293ea))
+
+* feat(web): drop Portfolio section header and Tax planning footer (P1, P9)
+
+Remove redundant &#34;Portfolio&#34; section-header div from the body fragment
+and drop the Tax planning footer panel (offset budget + year-end
+projection) from the Overview page — those panels belong on /tax.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`08ac60c`](https://github.com/chen-star/net_alpha/commit/08ac60c83a578db93a8738a74f8c85266d412ccb))
+
+* feat(web): at-loss summary strip — total unrealized, harvestable count, replacements count (Phase 2 review #I3)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`19d1706`](https://github.com/chen-star/net_alpha/commit/19d1706e501683b10c803b23cf2e968abef7d224))
+
+### Fix
+
+* fix(web): sim error swap targets sibling div, not #sim-result; refresh stale hygiene copy
+
+C3: G1&#39;s account-required validation re-rendered the entire sim.html
+into HTMX&#39;s #sim-result target, producing nested &lt;html&gt;/&lt;body&gt; and
+double navbars. Switched to an OOB swap into a new #sim-form-error
+sibling of the account select; #sim-result clears via the empty
+main-response. Removed the old {% if form_error %} block from inside
+the form that is now superseded by the OOB swap.
+
+I3: hygiene.py&#39;s _check_tax_config_missing still pointed users to a
+&#34;copy-paste config snippet&#34; — the YAML flow Phase 3 replaced with the
+inline form. Updated the copy.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f536a7c`](https://github.com/chen-star/net_alpha/commit/f536a7c4bd20048c2e3caa6860b13b2d7d649ee7))
+
+* fix(web): negative-sign rendering on Today tile + hero, plus text-loss/gain/success aliases
+
+C1: Today tile and the hero tile&#39;s vs-contributed subhead were stripping
+the leading minus on negative values via |abs in the template, so
+loss days rendered as gains. Removed the |abs and let fmt_currency emit
+the sign. The + prefix now fires only on strict positives.
+
+C2: text-loss / text-gain / text-success classes were used across at
+least 8 templates (T5 mini-bar, at-loss summary, sim form_error,
+harvest-clear status, etc.) but never defined in app.src.css — the
+compiled bundle had only .text-neg / .text-pos / .text-warn /
+.text-info. Added aliases so the existing markup colors correctly.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`504e1b8`](https://github.com/chen-star/net_alpha/commit/504e1b8419f0a3f2290bc24332199320f3d4b5d0))
+
+* fix(web): equity x-axis tick density (P6); cash chart line semantics (P7)
+
+Add hideOverlappingLabels: true + tickAmount: 12 to the equity-curve x-axis
+so month labels don&#39;t pile up on dense date ranges.
+
+Add data-series-solid=&#34;cash_balance&#34; and data-series-dashed=&#34;net_contributed&#34;
+attributes to the cash chart container — stable semantic hooks that confirm
+series ordering (cash balance = solid, net contributed = dashed, per §5.12).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`532d0e8`](https://github.com/chen-star/net_alpha/commit/532d0e8cd187c77bc4cab0e727a772e9ce995fb2))
+
+* fix(web): CASH KPI rendered exactly once on Overview (P3 bug fix)
+
+Remove the duplicate Cash balance tile from the secondary cash-flow row
+in _portfolio_kpis.html. Cash is already shown via the slot_cash macro
+in the hero KPI grid; the second block now shows only Net contributed
+and Growth (unique data). Resize those two tiles from col-span-4 to
+col-span-6 to fill the 12-column grid.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`80d80f3`](https://github.com/chen-star/net_alpha/commit/80d80f3bf56e01f35f149d84feac2d57a678cb0b))
+
+* fix(web): positions_pane logs lookup failures instead of silent swallow (Phase 2 review #I4)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`83ac2c9`](https://github.com/chen-star/net_alpha/commit/83ac2c98a110d0abe596de5eeb765c4bd40feff8))
+
+### Refactor
+
+* refactor(web): realized_delta is loss — drop the duplicate compute (Phase 2 review #I5)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`50aff42`](https://github.com/chen-star/net_alpha/commit/50aff42a7f41d6f87b9301032d80b1022f6adc5f))
+
+### Style
+
+* style: fix import block sort order in positions.py (ruff I001)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ff50849`](https://github.com/chen-star/net_alpha/commit/ff508492a7e163a8e4f9f31d177c345d057284e1))
+
+### Test
+
+* test(web): re-capture snapshot baselines after C1/C2 color fixes
+
+The C1 negative-sign fix and C2 .text-loss/.text-gain/.text-success
+class definitions land real color on previously-uncolored markup:
+- positions-at-loss: per-row loss column + summary unrealized now red
+- settings-imports: triangle-alert tone change
+- tax-wash: T5 mini-bar totals now red
+- overview: Today tile + hero negative-vs-contributed render correctly
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1b58bac`](https://github.com/chen-star/net_alpha/commit/1b58bac9328b82f74bca5f882a43bfc24251fd59))
+
+* test(web): re-capture snapshot baselines for Phase 3 page polish
+
+Phase 3 changes:
+- overview: KPI grid restructured (1 hero + 2 large + 4 small),
+  Today tile added, freshness chip in toolbar, Portfolio H2 +
+  Tax planning footer dropped, CASH dedup
+- tax-wash: realized-P/L stacked mini-bar, watch/violations panel
+  labels, affirmative empty copy, filter chips with reset, calendar
+  strip
+- tax-proj: inline projection form replacing the YAML snippet
+- sim: action-required-for-Sell inline error layout, Recent sims
+  this-session panel
+- settings-imports: one-explanation card + per-row inline form
+- positions-* / ticker-nvda: minor pixel diffs from app.css regeneration
+
+Plus ruff-format cleanups in pnl.py + test_provider.py picked up
+during the snapshot run.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5e008c1`](https://github.com/chen-star/net_alpha/commit/5e008c1120feebf2dfd0190ca16e3bb77d77345c))
+
+### Unknown
+
+* Merge branch &#39;phase3-page-polish&#39; — Phase 3 Page Polish
+
+The §4.1, §4.3, §4.4, §4.6 page-interior polish lands. Overview gets
+the new KPI grid (1 hero + 2 large + 4 small) with Total Account Value
+as the hero, the Today tile (NEW), single-emit CASH (P3 bug fix),
+corrected chart semantics (P6, P7), a freshness chip in the toolbar,
+and the dropped Portfolio H2 + Tax planning footer. Tax gets a
+realized-P/L stacked mini-bar, loss-harvest budget bar, explicit
+forward/backward panel labels, affirmative empty-state copy, filter
+chips with reset, and an always-visible calendar strip. The YAML-
+snippet projection UI is replaced by an inline form that POSTs to
+/tax/projection-config and persists to ~/.net_alpha/config.yaml. The
+Settings drawer&#39;s Imports tab gets a one-explanation card + per-row
+inline forms (caller=drawer) and a drop-zone preview on drag-over.
+Sim grows the recent-sims-this-session panel and account-required
+validation that returns an OOB-swap fragment instead of a full-page
+clobber.
+
+25 commits across sections A (Phase 2 review backlog), B (Overview
+clutter + charts), C (KPI restructure + Today tile), D (Tax polish),
+E (inline projection form), F (Imports drawer), G (Sim recents +
+validation), H (verification), plus review-feedback fixes for
+negative-sign rendering, .text-loss/gain/success CSS aliases, sim
+error response shape, and stale hygiene copy.
+
+Phase 3 polishes page interiors. Phase 4 is the visual sweep
+(Ticker page mono → sans, KPI variants, label-3 → label-2 contrast,
+keyboard shortcuts). Phase 5 is responsive (drop viewport=1024). ([`ca87af4`](https://github.com/chen-star/net_alpha/commit/ca87af4f5e7a477ca1f5159bdd6c93a4e74b3ebd))
+
+
 ## v0.29.0 (2026-04-28)
 
 ### Documentation
