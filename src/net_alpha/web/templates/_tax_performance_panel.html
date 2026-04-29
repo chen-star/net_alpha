@@ -1,0 +1,17 @@
+{# Performance panel — minimal placeholder for Task 19 to flesh out. #}
+{% if not has_tax_config %}
+  <div class="panel p-4">
+    <p class="text-label-2">
+      Tax bracket configuration is required to compute after-tax performance.
+      Configure your tax rates in the <a href="/tax?view=projection">Projection</a> tab.
+    </p>
+  </div>
+{% else %}
+  <div class="panel p-4">
+    <h2 class="text-lg mb-3">Tax-Adjusted Performance ({{ breakdown.period_label }})</h2>
+    <div>Pre-tax realized: ${{ '{:,.2f}'.format(breakdown.pre_tax_realized_pnl) }}</div>
+    <div>Estimated tax bill: ${{ '{:,.2f}'.format(breakdown.estimated_tax_bill) }}</div>
+    <div>After-tax realized: ${{ '{:,.2f}'.format(breakdown.after_tax_realized_pnl) }}</div>
+    <div>Tax drag: ${{ '{:,.2f}'.format(breakdown.tax_drag_dollar) }}</div>
+  </div>
+{% endif %}

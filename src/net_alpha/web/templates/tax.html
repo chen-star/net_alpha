@@ -8,6 +8,7 @@
     {% set tabs = [
       ("wash-sales", "Wash sales"),
       ("projection", "Projection"),
+      ("performance", "Performance"),
     ] %}
     {% set _active_tab = tab_view if tab_view is defined else view %}
     {% for slug, label in tabs %}
@@ -24,6 +25,8 @@
       {% include "_tax_wash_sales_tab.html" with context %}
     {% elif _active_tab == "projection" %}
       {% include "_projection_tab.html" with context %}
+    {% elif _active_tab == "performance" %}
+      {% include "_tax_performance_panel.html" with context %}
     {% endif %}
   </div>
 </div>
