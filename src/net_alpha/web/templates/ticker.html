@@ -85,7 +85,9 @@
   </div>
 
   {% include "_ticker_tabs.html" %}
-  <div id="ticker-tab-content">
+  <div id="ticker-tab-content"
+       role="tabpanel"
+       aria-labelledby="ticker-tab-{{ selected_view|default('timeline') }}">
     {% if selected_view == 'lots' %}
       {% include "_ticker_view_lots.html" %}
     {% elif selected_view == 'recon' %}
