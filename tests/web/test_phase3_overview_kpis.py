@@ -8,7 +8,7 @@ is rendered eagerly in portfolio.html (only when imports exist, so we seed).
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,17 +16,39 @@ from fastapi.testclient import TestClient
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.repository import Repository
+from net_alpha.models.domain import ImportRecord, Trade
 from net_alpha.web.app import create_app
 
 
 @pytest.fixture
 def seeded_client(tmp_path):
-    """Client with one import so the toolbar + body both render."""
+    """Client with one import so the toolbar + body both render.
+
+    The import is necessary because portfolio.html gates the toolbar on
+    `{% if imports %}` — without it, the freshness chip never renders.
+    """
     settings = Settings(data_dir=tmp_path)
     engine = get_engine(settings.db_path)
     init_db(engine)
     repo = Repository(engine)
-    repo.get_or_create_account("Schwab", "Tax")
+    account = repo.get_or_create_account("Schwab", "Tax")
+    trade = Trade(
+        account="Schwab/Tax",
+        date=date(2026, 1, 2),
+        ticker="AAPL",
+        action="Buy",
+        quantity=10.0,
+        proceeds=None,
+        cost_basis=1800.0,
+    )
+    record = ImportRecord(
+        account_id=account.id,
+        csv_filename="seed.csv",
+        csv_sha256="sha-seed",
+        imported_at=datetime(2026, 1, 2, tzinfo=UTC),
+        trade_count=1,
+    )
+    repo.add_import(account, record, [trade])
     return TestClient(create_app(settings), raise_server_exceptions=False)
 
 

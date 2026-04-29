@@ -151,17 +151,10 @@
 </div>
 {% endif %}
 
+{# Global price freshness is shown in the toolbar freshness chip (§5.11 / P5).
+   Only tile-specific data-quality warnings (e.g. partial sum) remain here. #}
 {% if snapshot is defined and snapshot.degraded %}
   <div class="text-[11px] text-warn mt-2">Quote provider unavailable — some prices may be missing.</div>
-{% elif snapshot is defined and snapshot.stale_symbols %}
-  <div class="text-[11px] text-label-3 mt-2">
-    Cached prices ({{ snapshot.stale_symbols|length }} symbol{% if snapshot.stale_symbols|length != 1 %}s{% endif %} past freshness window) —
-    <button type="button"
-            class="underline hover:text-text"
-            onclick="fetch('/prices/refresh?symbols=ALL', {method: 'POST'}).then(() => location.reload())">
-      refresh
-    </button>
-  </div>
 {% endif %}
 {% if kpis.missing_symbols %}
   <div class="text-[11px] text-warn mt-2">

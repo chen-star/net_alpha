@@ -31,10 +31,18 @@
             hx-target="body" hx-swap="none"
             onclick="window.location.reload()"
             class="btn-ghost">&#8645; Sync splits</button>
+    {# Freshness chip (§5.11). One chip per page; replaces the inline "cached prices" copy
+       that previously decorated KPI tiles (§6.2 P5). Click → POST /prices/refresh?symbols=ALL. #}
     <button type="button"
+            data-testid="freshness-chip"
+            class="freshness-chip inline-flex items-center gap-1 px-2 py-1 rounded text-[12px] {% if price_freshness == 'green' %}text-pos{% elif price_freshness == 'amber' %}text-warn{% elif price_freshness == 'red' %}text-neg{% else %}text-label-3{% endif %}"
             hx-post="/prices/refresh?symbols=ALL"
-            hx-target="body" hx-swap="none"
+            hx-target="body"
+            hx-swap="none"
             onclick="window.location.reload()"
-            class="btn-ghost">&#8635; Refresh</button>
+            title="{% if price_freshness == 'green' %}Prices are fresh — click to force refresh{% elif price_freshness == 'amber' %}Some prices are from cache — click to refresh{% elif price_freshness == 'red' %}Prices are stale — click to refresh{% else %}No price data yet — click to fetch{% endif %}">
+      <span class="rounded-full w-1.5 h-1.5 {% if price_freshness == 'green' %}bg-pos{% elif price_freshness == 'amber' %}bg-warn{% elif price_freshness == 'red' %}bg-neg{% else %}bg-label-3{% endif %}"></span>
+      Prices {{ price_freshness_label|default('—') }}
+    </button>
   </div>
 </form>

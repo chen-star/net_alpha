@@ -23,6 +23,7 @@ from net_alpha.portfolio.cash_flow import (
     compute_cash_kpis,
 )
 from net_alpha.portfolio.equity_curve import build_equity_curve
+from net_alpha.portfolio.freshness import compute_price_freshness
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import (
     compute_open_option_positions,
@@ -175,6 +176,7 @@ def portfolio_page(
     account: str | None = None,
     group_options: str = "merge",
     repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
     imports = repo.list_imports()
     accounts = sorted({imp.account_display for imp in imports})
@@ -185,6 +187,8 @@ def portfolio_page(
     available_years = sorted(import_years | {current_year}, reverse=True)
 
     selected_period = period or "ytd"
+    snap = svc.last_snapshot()
+    price_freshness, price_freshness_label = compute_price_freshness(snap)
     return request.app.state.templates.TemplateResponse(
         request,
         "portfolio.html",
@@ -197,6 +201,8 @@ def portfolio_page(
             "selected_account": account or "",
             "group_options": group_options,
             "toolbar_action": "/",
+            "price_freshness": price_freshness,
+            "price_freshness_label": price_freshness_label,
         },
     )
 
