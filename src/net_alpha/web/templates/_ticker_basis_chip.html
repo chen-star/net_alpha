@@ -1,0 +1,31 @@
+{# Inline basis-set affordance for /ticker Timeline rows with missing basis (Tk5).
+   Posts to /audit/set-basis?caller=timeline; on success swaps the row's
+   affordance cell with a confirmation fragment.
+   `trade_id` and `symbol` are required in the calling context. #}
+<span x-data="{ open: false }" class="relative inline-block">
+  <button type="button"
+          @click="open = !open"
+          class="chip text-warn"
+          aria-haspopup="true"
+          :aria-expanded="open">
+    ⚠ — <span class="text-[10px]">Set basis ▾</span>
+  </button>
+  <form x-show="open" x-cloak
+        x-on:click.outside="open = false"
+        x-on:keydown.escape="open = false"
+        hx-post="/audit/set-basis?caller=timeline"
+        hx-target="#trade-affordance-{{ trade_id }}"
+        hx-swap="outerHTML"
+        class="absolute z-30 mt-1 right-0 panel px-3 py-2 flex flex-col gap-2 min-w-[220px]"
+        style="box-shadow: var(--shadow-pane);">
+    <input type="hidden" name="trade_id" value="{{ trade_id }}">
+    <label class="text-[11px] label-uc">Cost basis / share</label>
+    <input type="number" name="cost_basis" step="0.0001" required
+           class="px-2 py-1 bg-bg border rounded text-[12px] font-mono"
+           style="border-color: var(--color-hairline);">
+    <div class="flex gap-2 justify-end">
+      <button type="button" @click="open = false" class="btn-ghost text-[11px]">Cancel</button>
+      <button type="submit" class="btn text-[11px] py-1 px-2">Save</button>
+    </div>
+  </form>
+</span>

@@ -41,7 +41,15 @@
           </td>
           <td class="px-2 py-1">{{ display_action(t, assigned_from=row.assigned_from) }}</td>
           <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
-          <td class="px-2 py-1 num font-mono">{{ t.cost_basis if t.cost_basis is not none else "-" }}</td>
+          <td class="px-2 py-1 num font-mono">
+            {% if t.cost_basis is not none %}
+              {{ fmt_currency(t.cost_basis) }}
+            {% elif t.basis_source in ('transfer_in', 'transfer_out') and not t.is_manual %}
+              {% with trade_id=t.id %}{% include "_ticker_basis_chip.html" %}{% endwith %}
+            {% else %}
+              <span class="text-label-3">—</span>
+            {% endif %}
+          </td>
           <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
           <td class="px-2 py-1 num font-mono r">
             {% if row.gain_loss is not none %}

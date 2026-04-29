@@ -93,6 +93,11 @@ def set_basis(
     from net_alpha.audit._badge_cache import _cache
 
     _cache.invalidate()
+    if caller == "timeline":
+        return HTMLResponse(
+            f'<td class="px-2 py-1 num font-mono" id="trade-affordance-{trade_id}">'
+            f'<span class="text-pos text-[11px]">✓ saved</span></td>'
+        )
     if caller == "drawer":
         # Return a compact saved-row fragment for the Imports drawer inline form.
         return request.app.state.templates.TemplateResponse(
