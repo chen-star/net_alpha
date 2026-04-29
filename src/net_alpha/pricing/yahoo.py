@@ -30,7 +30,9 @@ class YahooPriceProvider(PriceProvider):
             for symbol in symbols:
                 try:
                     ticker = yf.Ticker(symbol)
-                    price = ticker.info.get("regularMarketPrice")
+                    info = ticker.info
+                    price = info.get("regularMarketPrice")
+                    prev = info.get("regularMarketPreviousClose")
                 except Exception as per_symbol_exc:
                     logger.warning("yahoo: fetch error for {}: {}", symbol, per_symbol_exc)
                     continue
@@ -42,6 +44,7 @@ class YahooPriceProvider(PriceProvider):
                 out[symbol] = Quote(
                     symbol=symbol,
                     price=Decimal(str(price)),
+                    previous_close=Decimal(str(prev)) if prev is not None else None,
                     as_of=now,
                     source=self.source_name,
                 )

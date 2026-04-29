@@ -18,6 +18,7 @@ class Quote(BaseModel):
     model_config = {"frozen": True}
     symbol: str
     price: Decimal
+    previous_close: Decimal | None = None  # used by the Today tile
     as_of: datetime
     source: str
 
