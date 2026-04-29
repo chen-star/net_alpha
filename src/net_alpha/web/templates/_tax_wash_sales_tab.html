@@ -67,13 +67,25 @@
 <div class="flex items-center gap-2 flex-wrap mb-3 text-[12px]">
   <span class="text-label-3">Filters:</span>
   {% if filter_ticker %}
-    <span class="chip">ticker: {{ filter_ticker }}</span>
+    <span class="chip">ticker: {{ filter_ticker }}
+      <button type="button" aria-label="Remove ticker filter"
+              hx-get="{{ chips_clear_urls.ticker }}" hx-target="body" hx-push-url="true"
+              class="ml-1 hover:text-text">&#10007;</button>
+    </span>
   {% endif %}
   {% if filter_account %}
-    <span class="chip">account: {{ filter_account }}</span>
+    <span class="chip">account: {{ filter_account }}
+      <button type="button" aria-label="Remove account filter"
+              hx-get="{{ chips_clear_urls.account }}" hx-target="body" hx-push-url="true"
+              class="ml-1 hover:text-text">&#10007;</button>
+    </span>
   {% endif %}
   {% if filter_confidence %}
-    <span class="chip">confidence: {{ filter_confidence }}</span>
+    <span class="chip">confidence: {{ filter_confidence }}
+      <button type="button" aria-label="Remove confidence filter"
+              hx-get="{{ chips_clear_urls.confidence }}" hx-target="body" hx-push-url="true"
+              class="ml-1 hover:text-text">&#10007;</button>
+    </span>
   {% endif %}
   <a data-testid="filter-reset" href="/tax?view={{ view }}" class="ml-auto text-label-3 hover:text-text" title="Reset filters">&#10007; reset</a>
 </div>

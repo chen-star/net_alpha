@@ -115,12 +115,24 @@ def get_tax(
         # Override the view key in ctx with the inner view so the template toggles correctly.
         ctx["view"] = inner_view
         ctx["tab_view"] = tab_view
+        ctx["chips_clear_urls"] = _build_chips_clear_urls(request)
     elif view == "projection":
         cfg = request.app.state.tax_brackets_cfg
         proj_ctx = _build_projection_ctx(request, repo, cfg)
         ctx.update(proj_ctx)
 
     return request.app.state.templates.TemplateResponse(request, "tax.html", ctx)
+
+
+def _build_chips_clear_urls(request: Request) -> dict[str, str]:
+    """Per-chip URLs that drop one filter key from the current query string."""
+    params = dict(request.query_params)
+    urls: dict[str, str] = {}
+    for key in ("ticker", "account", "confidence"):
+        if key in params:
+            remaining = {k: v for k, v in params.items() if k != key}
+            urls[key] = f"/tax?{urlencode(remaining)}" if remaining else "/tax"
+    return urls
 
 
 def _build_projection_ctx(
