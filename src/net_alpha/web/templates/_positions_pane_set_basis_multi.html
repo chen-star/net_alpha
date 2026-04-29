@@ -1,0 +1,100 @@
+{# Multi-lot variant of the inline "set basis & dates" form. Reused by
+   POST /audit/set-basis/multi which calls Repository.split_imported_transfer.
+
+   Validation:
+     - sum of quantities must equal transfer_qty (live, via Alpine)
+     - each row must have date <= transfer_date (server-enforced)
+     - each cost_basis >= 0 (server-enforced)
+#}
+
+<div class="panel p-3"
+     x-data='{
+       qty: 0,
+       targetQty: {{ transfer_qty|float }},
+       update() {
+         this.qty = Array.from(this.$el.querySelectorAll("input[name=quantities]"))
+           .map(i => parseFloat(i.value) || 0)
+           .reduce((a, b) => a + b, 0);
+       }
+     }'
+     x-init="update()">
+  <h3 class="m-0 text-[13px] font-semibold mb-1">Set basis &amp; dates</h3>
+  <div class="text-[11px] text-label-2 mb-2">
+    Total transferred quantity: <span class="font-mono">{{ transfer_qty }}</span> shares
+  </div>
+  <form hx-post="/audit/set-basis/multi?caller=pane"
+        hx-target="closest .panel"
+        hx-swap="outerHTML"
+        class="space-y-2"
+        @input="update()">
+    <input type="hidden" name="trade_id" value="{{ trade_id }}">
+
+    <div class="grid grid-cols-[1fr_auto_1fr_auto] gap-1 text-[11px] text-label-2">
+      <span>Date</span><span>Qty</span><span>Cost basis ($)</span><span></span>
+    </div>
+
+    <div data-lot-row class="grid grid-cols-[1fr_auto_1fr_auto] gap-1 items-center">
+      <input type="date" name="dates" required
+             max="{{ transfer_date.isoformat() }}"
+             class="px-2 py-1 text-[12px] bg-bg border rounded"
+             style="border-color: var(--color-hairline);">
+      <input type="number" name="quantities" step="0.0001" min="0.0001" required
+             value="{{ transfer_qty }}"
+             class="w-20 px-2 py-1 text-[12px] bg-bg border rounded font-mono"
+             style="border-color: var(--color-hairline);">
+      <input type="number" name="basises" step="0.01" min="0" required
+             class="px-2 py-1 text-[12px] bg-bg border rounded font-mono"
+             style="border-color: var(--color-hairline);">
+      <button type="button"
+              class="text-label-3 text-[14px] px-1"
+              disabled
+              title="Need at least one row">×</button>
+    </div>
+
+    <button type="button"
+            class="text-accent text-[12px] hover:underline"
+            @click="
+              const tpl = $el.previousElementSibling.cloneNode(true);
+              tpl.querySelectorAll('input').forEach(i => { i.value = ''; });
+              tpl.querySelector('button[type=button]').disabled = false;
+              tpl.querySelector('button[type=button]').setAttribute(
+                '@click', 'this.parentElement.remove(); update();'
+              );
+              $el.before(tpl);
+              update();
+            ">
+      + Add lot
+    </button>
+
+    <div class="text-[11px] flex items-center gap-2"
+         :class="qty == targetQty ? 'text-pos' : 'text-neg'">
+      Sum of qty: <span class="font-mono" x-text="qty"></span> /
+      <span class="font-mono" x-text="targetQty"></span>
+      <span x-show="qty == targetQty">✓</span>
+    </div>
+
+    <div class="flex items-center justify-between pt-1">
+      <a href="#"
+         hx-get="/audit/set-basis/single/{{ trade_id }}"
+         hx-target="closest .panel"
+         hx-swap="outerHTML"
+         class="text-accent text-[12px] hover:underline"
+         @click.prevent="
+           const filled = Array.from($el.closest('form').querySelectorAll('input[name=dates], input[name=quantities], input[name=basises]'))
+             .some(i => i.value);
+           if (filled && !confirm('Discard multi-lot rows and switch back to single-lot form?')) {
+             event.stopImmediatePropagation();
+             event.preventDefault();
+           }
+         ">
+        ← Back to single lot
+      </a>
+      <button type="submit"
+              :disabled="qty != targetQty"
+              :class="qty == targetQty ? '' : 'opacity-50 cursor-not-allowed'"
+              class="btn text-[13px] py-1.5 px-4">
+        Save
+      </button>
+    </div>
+  </form>
+</div>

@@ -200,3 +200,69 @@ def set_basis_single(
     return HTMLResponse(
         '<div class="text-pos text-[12px]">Saved.</div>'
     )
+
+
+@router.get("/audit/set-basis/multi/{trade_id}", response_class=HTMLResponse)
+def set_basis_multi_fragment(
+    trade_id: str,
+    request: Request,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """HTMX swap target: render the multi-lot row-table fragment for one
+    transfer-in trade."""
+    try:
+        parsed_id = int(trade_id)
+    except ValueError:
+        return HTMLResponse(
+            '<div class="text-neg text-[12px]">Invalid trade id.</div>',
+            status_code=400,
+        )
+    trade = repo.get_trade_by_id(parsed_id)
+    if trade is None or trade.basis_source != "transfer_in":
+        return HTMLResponse(
+            '<div class="text-neg text-[12px]">Not a transfer-in trade.</div>',
+            status_code=400,
+        )
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_positions_pane_set_basis_multi.html",
+        {
+            "trade_id": trade_id,
+            "sym": trade.ticker,
+            "transfer_qty": trade.quantity,
+            "transfer_date": trade.date,
+        },
+    )
+
+
+@router.get("/audit/set-basis/single/{trade_id}", response_class=HTMLResponse)
+def set_basis_single_fragment(
+    trade_id: str,
+    request: Request,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """HTMX swap target: render the single-lot fragment (used by the
+    "Back to single lot" link in the multi-lot fragment)."""
+    try:
+        parsed_id = int(trade_id)
+    except ValueError:
+        return HTMLResponse(
+            '<div class="text-neg text-[12px]">Invalid trade id.</div>',
+            status_code=400,
+        )
+    trade = repo.get_trade_by_id(parsed_id)
+    if trade is None:
+        return HTMLResponse(
+            '<div class="text-neg text-[12px]">Trade not found.</div>',
+            status_code=404,
+        )
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_positions_pane_set_basis.html",
+        {
+            "trade_id": trade_id,
+            "sym": trade.ticker,
+            "transfer_qty": trade.quantity,
+            "transfer_date": trade.date,
+        },
+    )

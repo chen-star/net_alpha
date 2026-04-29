@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -109,3 +110,31 @@ def test_post_set_basis_single_returns_404_when_trade_missing(client, seed_trans
     )
     assert resp.status_code == 404
     assert "not found" in resp.text.lower()
+
+
+def test_get_set_basis_multi_renders_row_table(client: TestClient, seed_transfer_in) -> None:
+    sym, _, trade_id, qty, xfer_date = seed_transfer_in
+    resp = client.get(f"/audit/set-basis/multi/{trade_id}")
+    assert resp.status_code == 200
+    html = resp.text
+    # Header showing the constraint:
+    assert f"{qty}" in html
+    # At least one row of inputs:
+    assert 'name="dates"' in html or 'name="dates[]"' in html
+    assert 'name="quantities"' in html or 'name="quantities[]"' in html
+    assert 'name="basises"' in html or 'name="basises[]"' in html
+    # "Add lot" link and "Back to single lot" link:
+    assert "Add lot" in html
+    assert "Back to single lot" in html
+
+
+@pytest.mark.xfail(reason="Split link added in Task 5", strict=True)
+def test_get_set_basis_single_renders_default_fragment(client: TestClient, seed_transfer_in) -> None:
+    """The "Back" link in the multi-lot fragment GETs this route."""
+    sym, _, trade_id, _, _ = seed_transfer_in
+    resp = client.get(f"/audit/set-basis/single/{trade_id}")
+    assert resp.status_code == 200
+    html = resp.text
+    assert 'name="acquisition_date"' in html
+    assert 'name="cost_basis"' in html
+    assert "Split into multiple lots" in html
