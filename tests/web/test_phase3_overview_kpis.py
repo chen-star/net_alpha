@@ -128,7 +128,7 @@ def test_overview_kpi_grid_has_three_large_and_three_small_slots(seeded_client):
         assert f'data-kpi-slot="{removed}"' not in html, f"removed slot={removed} still present"
 
 
-def test_today_tile_renders_negative_sign_for_loss_days():
+def test_fmt_currency_prepends_minus_for_negatives():
     """Today tile shows ``-$50.00`` (with leading minus), not ``$50.00``,
     when the day's net change is negative (review C1 regression)."""
     from decimal import Decimal
