@@ -200,10 +200,7 @@ def positions_pane(
         logger.warning("positions_pane lookup failed for sym={}, account_id={}: {!r}", sym, account_id, exc)
 
     # --- Sim-sell realized delta ---
-    realized_delta: Decimal | None = None
-    if qty is not None and last_price is not None and open_basis is not None:
-        realized_delta = (qty * Decimal(str(last_price))) - open_basis
-
+    # realized_delta == loss when both are computed (qty * price − open_basis).
     ctx = {
         "sym": sym,
         "account_id": account_id,
@@ -212,7 +209,7 @@ def positions_pane(
         "open_basis": open_basis,
         "loss": loss,
         "account_label": account_label,
-        "realized_delta": realized_delta,
+        "realized_delta": loss,
         "trade_id": trade_id,
     }
 
