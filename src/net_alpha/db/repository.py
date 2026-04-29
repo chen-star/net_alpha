@@ -242,6 +242,7 @@ class Repository:
                     option_expiry=(t.option_details.expiry.isoformat() if t.option_details else None),
                     option_call_put=(t.option_details.call_put if t.option_details else None),
                     transfer_date=(t.date.isoformat() if _is_transfer else None),
+                    is_section_1256=t.is_section_1256,
                 )
                 s.add(tr)
                 s.flush()
@@ -395,6 +396,7 @@ class Repository:
             option_details=opt,
             transfer_date=(date.fromisoformat(row.transfer_date) if row.transfer_date else None),
             transfer_group_id=row.transfer_group_id,
+            is_section_1256=row.is_section_1256,
         )
 
     def _account_display_for_id(self, s: Session, account_id: int) -> str:
