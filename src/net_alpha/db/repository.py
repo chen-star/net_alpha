@@ -895,8 +895,20 @@ class Repository:
             account_display = self._account_display_for_id(s, account_id)
         return [self._row_to_trade(r, account_display) for r in rows]
 
-    def update_trade_basis(self, trade_id: str, cost_basis: float | None, basis_source: str) -> None:
-        """Persist hydrated cost_basis and basis_source on a Trade row."""
+    def update_trade_basis(
+        self,
+        trade_id: str,
+        cost_basis: float | None,
+        basis_source: str,
+        trade_date: date | None = None,
+    ) -> None:
+        """Persist hydrated cost_basis and basis_source on a Trade row.
+
+        When ``trade_date`` is provided, the row's acquisition date is updated
+        too — used by the inline "set basis & date" form on the positions pane
+        so transfer-in lots get a real acquisition date instead of the
+        broker-statement receipt date.
+        """
         with Session(self.engine) as s:
             row = s.exec(select(TradeRow).where(TradeRow.id == int(trade_id))).first()
             if row is None:
@@ -905,6 +917,22 @@ class Repository:
             row.basis_source = basis_source
             if cost_basis is not None:
                 row.basis_unknown = False
+            if trade_date is not None:
+                row.trade_date = trade_date.isoformat()
+            s.add(row)
+            s.commit()
+
+    def _set_is_manual_for_test(self, trade_id: int, value: bool) -> None:
+        """Test-only helper: flip is_manual on a trade row.
+
+        create_manual_trade() forces is_manual=True; tests need to simulate
+        imported (non-manual) transfer rows to exercise transfer-only code paths.
+        """
+        with Session(self.engine) as s:
+            row = s.exec(select(TradeRow).where(TradeRow.id == trade_id)).first()
+            if row is None:
+                raise LookupError(f"Trade id {trade_id} not found")
+            row.is_manual = value
             s.add(row)
             s.commit()
 
