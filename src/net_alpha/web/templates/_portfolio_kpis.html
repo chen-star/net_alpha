@@ -55,7 +55,7 @@
     </div>
     <div class="text-[11px] text-label-3 mt-1">
       {% if vs_contributed_delta is defined and vs_contributed_delta is not none %}
-        {% if vs_contributed_delta >= 0 %}+{% endif %}${{ "%.2f"|format(vs_contributed_delta|float|abs) }}{% if vs_contributed_delta < 0 %}−{% endif %} vs contributed
+        {% if vs_contributed_delta > 0 %}+{% endif %}{{ fmt_currency(vs_contributed_delta) }} vs contributed
       {% endif %}
     </div>
   </div>

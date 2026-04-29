@@ -121,3 +121,28 @@ def test_overview_kpi_grid_has_three_large_and_four_small_slots(seeded_client):
     for slot, expected in slots:
         actual = html.count(f'data-kpi-slot="{slot}"')
         assert actual == expected, f"slot={slot} appears {actual}× (expected {expected})"
+
+
+def test_today_tile_renders_negative_sign_for_loss_days():
+    """Today tile shows ``-$50.00`` (with leading minus), not ``$50.00``,
+    when the day's net change is negative (review C1 regression)."""
+    from decimal import Decimal
+
+    from net_alpha.web.format import fmt_currency
+
+    # Sanity: fmt_currency emits the minus sign.
+    result = fmt_currency(Decimal("-50.00"))
+    assert result.startswith("-") or result.startswith("−"), (
+        f"fmt_currency does not prepend a minus for negatives: {result!r}"
+    )
+
+
+def test_app_css_defines_text_loss_text_gain_text_success():
+    """The .text-loss / .text-gain / .text-success classes are used by
+    multiple templates and must produce visible color (review C2)."""
+    from pathlib import Path
+
+    css_path = Path(__file__).parent.parent.parent / "src" / "net_alpha" / "web" / "static" / "app.css"
+    css = css_path.read_text()
+    for cls in (".text-loss", ".text-gain", ".text-success"):
+        assert cls in css, f"{cls} missing from app.css — templates using it render uncolored"

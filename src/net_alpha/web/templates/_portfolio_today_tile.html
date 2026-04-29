@@ -6,7 +6,7 @@
   <div class="num text-[22px] font-bold mt-2">
     {% if today_change is not none %}
       <span class="{% if today_change > 0 %}text-pos{% elif today_change < 0 %}text-neg{% else %}text-label-1{% endif %}">
-        {% if today_change >= 0 %}+{% endif %}${{ "%.2f"|format(today_change|float|abs) }}
+        {% if today_change > 0 %}+{% endif %}{{ fmt_currency(today_change) }}
       </span>
     {% else %}
       <span class="text-label-3">—</span>
