@@ -4,7 +4,7 @@ Regression tests verify TSLA→TSLA and SPY↔VOO ETF-pair behavior is unchanged
 from datetime import date
 from decimal import Decimal
 
-from net_alpha.engine.detector import detect_wash_sales
+from net_alpha.engine.detector import detect_in_window, detect_wash_sales
 from net_alpha.models.domain import OptionDetails, Trade
 
 
@@ -81,12 +81,22 @@ def test_etf_pair_match_still_works():
     assert result.exempt_matches == []
 
 
-def test_mixed_spx_loss_spy_buy_emits_exempt_match():
+def test_candidate_only_section_1256_still_emits_exempt():
+    """Either side §1256 → exempt. This exercises the candidate-only arm of the
+    `or`: same ticker on both sides (so the matcher links them), but is_section_1256
+    is True only on the candidate buy.
+    Note: cross-ticker mixed cases (e.g., SPY loss → SPX buy) are not reachable
+    via the existing matcher (which doesn't link SPY and SPX), so we exercise the
+    candidate-arm of the `or` via a same-ticker pair with asymmetric flags."""
     loss = _opt_loss("SPX", date(2024, 9, 15))
-    buy = _opt_buy("SPX", date(2024, 9, 22))
+    loss = loss.model_copy(update={"is_section_1256": False})  # force loss flag off
+    buy = _opt_buy("SPX", date(2024, 9, 22))  # buy still has is_section_1256=True
+    assert loss.is_section_1256 is False
+    assert buy.is_section_1256 is True
     result = detect_wash_sales([buy, loss], etf_pairs={})
     assert result.violations == []
     assert len(result.exempt_matches) == 1
+    assert result.exempt_matches[0].exempt_reason == "section_1256"
 
 
 def test_exempt_match_preserves_confidence():
@@ -94,3 +104,30 @@ def test_exempt_match_preserves_confidence():
     buy = _opt_buy("SPX", date(2024, 9, 22))
     result = detect_wash_sales([buy, loss], etf_pairs={})
     assert result.exempt_matches[0].confidence in {"Confirmed", "Probable", "Unclear"}
+
+
+def test_detect_in_window_includes_section_1256_exempt_inside_window():
+    loss = _opt_loss("SPX", date(2024, 9, 15))
+    buy = _opt_buy("SPX", date(2024, 9, 22))
+    # Window covers both trades
+    result = detect_in_window(
+        [buy, loss],
+        window_start=date(2024, 9, 1),
+        window_end=date(2024, 9, 30),
+        etf_pairs={},
+    )
+    assert len(result.exempt_matches) == 1
+    assert result.exempt_matches[0].ticker == "SPX"
+
+
+def test_detect_in_window_excludes_section_1256_exempt_outside_window():
+    loss = _opt_loss("SPX", date(2024, 9, 15))
+    buy = _opt_buy("SPX", date(2024, 9, 22))
+    # Window does NOT include the trade dates
+    result = detect_in_window(
+        [buy, loss],
+        window_start=date(2025, 1, 1),
+        window_end=date(2025, 1, 31),
+        etf_pairs={},
+    )
+    assert result.exempt_matches == []
