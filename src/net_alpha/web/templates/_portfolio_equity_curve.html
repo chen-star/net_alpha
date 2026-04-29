@@ -57,7 +57,11 @@
       legend: { show: hasTotal },
       xaxis: {
         type: "datetime",
-        labels: { format: "MMM" },
+        labels: {
+          format: "MMM",
+          hideOverlappingLabels: true,
+        },
+        tickAmount: 12,
       },
       yaxis: {
         labels: {
