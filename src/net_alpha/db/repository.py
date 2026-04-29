@@ -42,6 +42,7 @@ from net_alpha.models.domain import (
 from net_alpha.models.preferences import AccountPreference
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.models.splits import LotOverride, Split
+from net_alpha.section_1256.universe import is_section_1256 as _is_section_1256
 from net_alpha.section_1256.universe import load_universe
 
 
@@ -227,6 +228,9 @@ class Repository:
                 # populate transfer_date with the same value so the user can
                 # later edit `date` (acquisition) without losing the original.
                 _is_transfer = t.basis_source in ("transfer_in", "transfer_out")
+                # C1: auto-detect §1256 status if the caller (broker parser) did
+                # not set it explicitly. Respects any True already on the trade.
+                flag_1256 = t.is_section_1256 or _is_section_1256(t)
                 tr = TradeRow(
                     import_id=ir.id,
                     account_id=account.id,
@@ -244,7 +248,7 @@ class Repository:
                     option_expiry=(t.option_details.expiry.isoformat() if t.option_details else None),
                     option_call_put=(t.option_details.call_put if t.option_details else None),
                     transfer_date=(t.date.isoformat() if _is_transfer else None),
-                    is_section_1256=t.is_section_1256,
+                    is_section_1256=flag_1256,
                 )
                 s.add(tr)
                 s.flush()
