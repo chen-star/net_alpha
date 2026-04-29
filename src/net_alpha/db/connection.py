@@ -21,16 +21,20 @@ def get_engine(db_path: Path):
 def _migration_1256_done(engine) -> bool:
     """True iff the one-shot §1256 migration has already run on this DB."""
     with Session(engine) as s:
-        row = s.exec(text(f"SELECT value FROM meta WHERE key='{_MIGRATION_1256_DONE_KEY}'")).first()
+        row = s.exec(
+            text("SELECT value FROM meta WHERE key=:k").bindparams(k=_MIGRATION_1256_DONE_KEY)
+        ).first()
         return row is not None
 
 
 def _stamp_migration_1256_done(engine) -> None:
     with Session(engine) as s:
-        s.exec(text(
-            f"INSERT INTO meta(key, value) VALUES ('{_MIGRATION_1256_DONE_KEY}', '1') "
-            f"ON CONFLICT(key) DO UPDATE SET value='1'"
-        ))
+        s.exec(
+            text(
+                "INSERT INTO meta(key, value) VALUES (:k, '1') "
+                "ON CONFLICT(key) DO UPDATE SET value='1'"
+            ).bindparams(k=_MIGRATION_1256_DONE_KEY)
+        )
         s.commit()
 
 
@@ -55,14 +59,14 @@ def init_db(engine) -> None:
     # and runs the classifier over closed §1256 trades.
     if not _migration_1256_done(engine):
         from net_alpha.engine.recompute import migrate_existing_violations
-        import typer
 
         summary = migrate_existing_violations(repo)
         _stamp_migration_1256_done(engine)
 
         if summary.reclassified_count > 0 or summary.classifications_count > 0:
-            typer.echo(
-                f"\n[§1256 upgrade] Reclassified {summary.reclassified_count} stale wash-sale "
-                f"violation(s) as exempt and saved {summary.classifications_count} "
-                f"60/40 classification(s). No action needed.\n"
+            print(
+                "\nTax engine upgraded."
+                f"\n  • {summary.reclassified_count} prior wash-sale violations reclassified as §1256 exempt"
+                f"\n  • {summary.classifications_count} closed §1256 trades classified for 60/40 split"
+                "\nRun with --detail or open the web UI for the full list.\n"
             )

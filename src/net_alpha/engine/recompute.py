@@ -146,10 +146,11 @@ def migrate_existing_violations(repo: Repository) -> MigrationRecomputeSummary:
     Idempotent: a second run finds no stale §1256 violations (they were already
     converted or never existed) and returns zero counts.
     """
+    from sqlmodel import select as _select
+
     from net_alpha.db.tables import WashSaleViolationRow as _VRow
     from net_alpha.models.domain import ExemptMatch
     from net_alpha.section_1256.universe import is_section_1256 as _is_1256
-    from sqlmodel import select as _select
 
     # ---- Step 1: Backfill is_section_1256 flag --------------------------------
     # Old DBs added the column with DEFAULT 0; trades that were §1256 contracts
@@ -158,7 +159,7 @@ def migrate_existing_violations(repo: Repository) -> MigrationRecomputeSummary:
     all_trades = repo.all_trades()
     to_backfill = [t for t in all_trades if not t.is_section_1256 and _is_1256(t)]
     if to_backfill:
-        repo.set_section_1256_flag([t.id for t in to_backfill])
+        repo.set_section_1256_flag([int(t.id) for t in to_backfill])
         # Reload so subsequent steps see the updated flag values.
         all_trades = repo.all_trades()
 
@@ -204,12 +205,19 @@ def migrate_existing_violations(repo: Repository) -> MigrationRecomputeSummary:
         ))
 
     repo.delete_violations_by_id(stale_ids)
+    # NOTE: We do NOT call clear_exempt_matches() before save here. The migration
+    # is one-shot (gated by section_1256_migration_done meta key); on second run,
+    # new_exempts is empty because the stale violations were already removed.
+    # If the meta key is manually reset and stale violations re-injected, duplicates
+    # could result — accepted as outside the supported recovery path.
     if new_exempt_matches:
         repo.save_exempt_matches(new_exempt_matches)
 
     # ---- Step 3: Run §1256 classifier ----------------------------------------
     all_lots = repo.all_lots()
     classifications = classify_closed_trades(all_trades, all_lots)
+    # NOTE: save_section_1256_classifications is upsert-by-trade_id, so re-running
+    # on the same trade list overwrites cleanly — no clear needed.
     if classifications:
         repo.save_section_1256_classifications(classifications)
 

@@ -1451,15 +1451,17 @@ class Repository:
             )
             s.commit()
 
-    def set_section_1256_flag(self, trade_ids: list[str]) -> None:
-        """Backfill is_section_1256=True for the given trade IDs (stringified ints)."""
+    def set_section_1256_flag(self, trade_ids: list[int]) -> None:
+        """Backfill is_section_1256=True on the given trades. Used by migrations.
+        Accepts integer trade IDs (matches delete_violations_by_id signature)."""
         if not trade_ids:
             return
-        int_ids = [int(tid) for tid in trade_ids]
         with Session(self.engine) as s:
-            from sqlalchemy import text as _text
-            placeholders = ",".join(str(i) for i in int_ids)
-            s.exec(_text(f"UPDATE trades SET is_section_1256=1 WHERE id IN ({placeholders})"))
+            s.exec(
+                TradeRow.__table__.update()
+                .where(TradeRow.id.in_(trade_ids))
+                .values(is_section_1256=True)
+            )
             s.commit()
 
     def list_section_1256_classifications(
