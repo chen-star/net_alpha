@@ -72,7 +72,9 @@
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
       </div>
       <div>
-        <label class="block label-uc">Account (optional)</label>
+        <label class="block label-uc">
+          Account <span class="text-label-3" x-text="action === 'sell' ? '(required)' : '(optional)'"></span>
+        </label>
         <select name="account" class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
                 style="border:0.5px solid rgba(255,255,255,0.08);">
           <option value="">All</option>
