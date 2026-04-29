@@ -284,9 +284,7 @@ def portfolio_kpis(
         (kpis.open_position_value + cash_kpis.cash_balance) if kpis.open_position_value is not None else None
     )
     vs_contributed_delta: Decimal | None = (
-        (kpis.period_realized + (kpis.period_unrealized or Decimal("0")))
-        if kpis.period_unrealized is not None
-        else None
+        (total_account_value - cash_kpis.net_contributions) if total_account_value is not None else None
     )
 
     return request.app.state.templates.TemplateResponse(
@@ -695,9 +693,7 @@ def portfolio_body(
         (kpis.open_position_value + cash_kpis.cash_balance) if kpis.open_position_value is not None else None
     )
     body_vs_contributed_delta: Decimal | None = (
-        (kpis.period_realized + (kpis.period_unrealized or Decimal("0")))
-        if kpis.period_unrealized is not None
-        else None
+        (body_total_account_value - cash_kpis.net_contributions) if body_total_account_value is not None else None
     )
 
     return request.app.state.templates.TemplateResponse(
