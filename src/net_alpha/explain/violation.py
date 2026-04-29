@@ -83,12 +83,12 @@ def _classify_match_kind(loss, buy) -> tuple[str, dict]:
 def explain_violation(v: WashSaleViolationRow, *, repo) -> ExplanationModel:
     """Build an ExplanationModel for a real WashSaleViolation.
 
-    Calls repo.get_trade(str(id)) to handle the int FK → str-id convention.
+    Calls repo.get_trade_by_id(int) to resolve trade IDs.
     Cross-account detection compares Trade.account fields (not account_id ints),
     so no account-id resolution is needed.
     """
-    loss = repo.get_trade(str(v.loss_trade_id))
-    buy = repo.get_trade(str(v.replacement_trade_id))
+    loss = repo.get_trade_by_id(v.loss_trade_id)
+    buy = repo.get_trade_by_id(v.replacement_trade_id)
     if loss is None or buy is None:
         raise ValueError(f"violation {v.id} references missing trades")
 
@@ -110,12 +110,12 @@ def explain_violation(v: WashSaleViolationRow, *, repo) -> ExplanationModel:
         cross = AccountPair(loss_account=loss.account, buy_account=buy.account)
 
     lot_ref = None
-    lot = repo.get_lot_for_trade(buy.id)
-    if lot is not None:
+    lot_dict = repo.get_lot_row_dict_by_trade_id(buy.id)
+    if lot_dict is not None:
         lot_ref = LotRef(
-            lot_id=str(lot.trade_id),
-            acquired_date=lot.acquired_date,
-            adjusted_basis=Decimal(str(lot.adjusted_basis)),
+            lot_id=str(lot_dict['trade_id']),
+            acquired_date=_date.fromisoformat(lot_dict['trade_date']),
+            adjusted_basis=Decimal(str(lot_dict['adjusted_basis'])),
         )
 
     summary = (

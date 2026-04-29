@@ -8,15 +8,15 @@ from net_alpha.models.domain import OptionDetails, Trade
 
 
 class _FakeRepo:
-    """Minimal stub: resolves trade ids to Trade pydantic models. Accepts int or str ids."""
+    """Minimal stub: resolves trade ids to Trade pydantic models."""
 
     def __init__(self, trades):
-        self._by_id = {str(t.id): t for t in trades}
+        self._by_id = {int(t.id): t for t in trades}
 
-    def get_trade(self, tid):
-        return self._by_id.get(str(tid)) if tid is not None else None
+    def get_trade_by_id(self, tid):
+        return self._by_id.get(int(tid)) if tid is not None else None
 
-    def get_lot_for_trade(self, tid):
+    def get_lot_row_dict_by_trade_id(self, tid):
         return None
 
 
