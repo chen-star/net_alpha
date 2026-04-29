@@ -14,3 +14,11 @@ def test_offset_budget_tile_renders_progress_bar(client: TestClient):
     if 'data-testid="offset-budget"' not in html:
         return  # no fixture realized_pl, skip
     assert 'data-testid="offset-budget-bar"' in html
+
+
+def test_tax_kpi_strip_includes_stacked_mini_bar(client: TestClient):
+    """T5: realized-P/L breakdown rendered as a stacked mini-bar under the
+    KPI strip — losses below 0, gains above."""
+    resp = client.get("/tax")
+    html = resp.text
+    assert 'data-testid="realized-mini-bar"' in html or "no realized p/l this period" in html.lower()

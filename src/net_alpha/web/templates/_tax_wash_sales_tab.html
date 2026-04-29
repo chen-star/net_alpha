@@ -62,6 +62,33 @@
   <a href="/tax?view={{ view }}" class="btn-ghost">Reset</a>
 </form>
 
+{# T5: realized-P/L stacked mini-bar — losses left of midpoint, gains right.
+   Uses realized_kpis (OffsetBudget) from the wash-sales context. #}
+{% if realized_kpis is defined %}
+  {% set _losses = realized_kpis.realized_losses_ytd|abs %}
+  {% set _gains  = realized_kpis.realized_gains_ytd|abs %}
+  {% set _max    = (_losses if _losses > _gains else _gains) %}
+  {% if _max > 0 %}
+    <div data-testid="realized-mini-bar" class="mb-4 flex items-center gap-2 text-[11px] text-label-2">
+      <div class="flex-1 grid grid-cols-2 h-4 rounded overflow-hidden" style="background: rgba(255,255,255,0.06);">
+        <div class="flex justify-end">
+          <div class="h-full" style="width: {{ ((_losses / _max) * 100)|int }}%; background: var(--color-neg);"
+               title="Losses {{ fmt_currency(realized_kpis.realized_losses_ytd) }}"></div>
+        </div>
+        <div class="flex justify-start">
+          <div class="h-full" style="width: {{ ((_gains / _max) * 100)|int }}%; background: var(--color-pos);"
+               title="Gains {{ fmt_currency(realized_kpis.realized_gains_ytd) }}"></div>
+        </div>
+      </div>
+      <span class="text-loss tabular-nums">{{ fmt_currency(realized_kpis.realized_losses_ytd) }}</span>
+      <span class="text-label-3">/</span>
+      <span class="text-pos tabular-nums">{{ fmt_currency(realized_kpis.realized_gains_ytd) }}</span>
+    </div>
+  {% else %}
+    <div data-testid="realized-mini-bar" class="mb-4 text-[12px] text-label-3">No realized P/L this period.</div>
+  {% endif %}
+{% endif %}
+
 {# View toggle — segmented control. Preserve filters when toggling. #}
 {% set _year_qs = 0 if all_years else (filter_year or selected_year) %}
 {% set qs_no_view %}ticker={{ filter_ticker|urlencode }}&account={{ filter_account|urlencode }}&year={{ _year_qs }}&confidence={{ filter_confidence|urlencode }}{% endset %}

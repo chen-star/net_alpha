@@ -20,6 +20,7 @@ from net_alpha.portfolio.detail_aggregations import (
     lag_days,
     source_label,
 )
+from net_alpha.portfolio.tax_planner import compute_offset_budget
 from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.web.dependencies import get_repository
 
@@ -118,6 +119,8 @@ def _wash_sales_context(
         # _portfolio_wash_watch.html reads `rows` and `window_days`.
         "rows": wash_watch_rows,
         "window_days": wash_watch_window,
+        # T5: realized P/L kpis for the stacked mini-bar.
+        "realized_kpis": compute_offset_budget(repo=repo, year=selected_year),
     }
 
     if view == "calendar":
