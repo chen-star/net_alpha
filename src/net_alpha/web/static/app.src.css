@@ -333,6 +333,23 @@
   .text-loss    { color: var(--color-neg); }
   .text-gain    { color: var(--color-pos); }
   .text-success { color: var(--color-pos); }
+
+  /* §5.14: keyboard-focus ring on every interactive primitive. Uses the
+     --ring-focus token so the indigo halo is consistent across buttons,
+     chips, tabs, nav links, and form inputs. */
+  .btn:focus-visible,
+  .btn-ghost:focus-visible,
+  .tab:focus-visible,
+  .chip:focus-visible,
+  .nav-link:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  button:focus-visible {
+    outline: none;
+    box-shadow: var(--ring-focus);
+    border-radius: 4px;
+  }
 }
 
 /* Positions side pane (§3.5). Phase 2 ships fixed 480px on ≥1024px;
