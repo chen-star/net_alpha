@@ -2,6 +2,80 @@
 
 
 
+## v0.32.0 (2026-04-29)
+
+### Feature
+
+* feat(snapshots): expand WIDTHS to 4 viewports; recapture 32 baselines (§F1)
+
+Add laptop (1024×768) and desktop-wide (1440×900); refit desktop to
+1280×800.  Rewrite tablet/desktop baselines in place; add 16 new
+laptop/desktop-wide PNGs.  32 pass in verify mode, 0 diff leaks.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bbd1e0a`](https://github.com/chen-star/net_alpha/commit/bbd1e0ab5a96db9fc1eae319fef8eab0ed3f6b16))
+
+* feat(web): ticker tabs gain aria-controls + role=tabpanel (I4)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0bbca74`](https://github.com/chen-star/net_alpha/commit/0bbca7422b5779c9a772b6c770ee560a3852df15))
+
+* feat(web): side pane + Settings drawer go full-width at narrow widths (§3.9)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a367995`](https://github.com/chen-star/net_alpha/commit/a3679950020a8abafdafe01f3239fbdca612e4cc))
+
+* feat(web): wide tables get overflow-x-auto wrapper at narrow widths (§3.9)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c4e83f9`](https://github.com/chen-star/net_alpha/commit/c4e83f96261cc153cc48c16258df1d260f043f92))
+
+* feat(web): KPI grids reflow at 768/1024 (§3.9)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1253863`](https://github.com/chen-star/net_alpha/commit/1253863b12277d9539641b4d362b8b6c7571e8b4))
+
+* feat(web): drop width=1024 viewport, add &lt; 768 banner (§3.9) ([`8b5cfca`](https://github.com/chen-star/net_alpha/commit/8b5cfcacfd9e616c3e7ddb5756c869dd3fbfe7bf))
+
+### Fix
+
+* fix(web): Phase 5 review fix-pack
+
+- Wrap 4 missed tables in overflow-x-auto (_schwab_lot_detail,
+  _reconciliation_diff, _detail_table, _provenance_modal)
+- Hide topbar below md (banner-only at &lt; 768 per spec §3.9)
+- Update test_baseline_screens.py docstring for 4-width matrix
+- Recapture tablet snapshots affected by topbar visibility
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9fd2a72`](https://github.com/chen-star/net_alpha/commit/9fd2a72e19280e6e08966c395b9747ec94fd9151))
+
+### Test
+
+* test(web): smoke every page returns 200 (Phase 5) ([`9afcd9c`](https://github.com/chen-star/net_alpha/commit/9afcd9c10a7ed33b4b9eee5e097a80b9e8a12276))
+
+### Unknown
+
+* Merge branch &#39;phase5-responsive&#39; — Phase 5 Responsive (iPad-width usable)
+
+Phase 5 of the UI/UX redesign (spec §3.9, §7).
+
+- Drop width=1024 viewport, add &lt; 768 banner
+- KPI grids reflow at 768/1024 (12-col → stacked → 4-col)
+- Wide tables get overflow-x-auto wrappers
+- Side pane and Settings drawer go full-width below md/lg
+- Ticker tabs gain aria-controls + role=tabpanel (I4 carry-over)
+- Hide topbar below md (banner-only at &lt; 768)
+- Snapshot suite expanded to 768/1024/1280/1440 (32 baselines)
+- 768 smoke tests for every page
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`32d8f6c`](https://github.com/chen-star/net_alpha/commit/32d8f6ccb45a98504865a0d50a9790bb286aa4c7))
+
+* plan(web): Phase 5 — Responsive (iPad-width usable)
+
+Sections A-F: viewport drop, KPI grid reflow, table overflow-x,
+side pane/drawer full-width, ticker a11y polish, snapshot suite
+at 768/1024/1280/1440 + 768 smoke tests.
+
+Refs: docs/superpowers/specs/2026-04-28-ui-ux-evaluation-design.md §3.9, §7.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a22edc7`](https://github.com/chen-star/net_alpha/commit/a22edc71b4f953ec4c2afc77acab660e86a11802))
+
+
 ## v0.31.0 (2026-04-29)
 
 ### Feature
