@@ -13,7 +13,7 @@ def test_positions_pane_renders_transfer_context_for_transfer_in(client: TestCli
     pane HTML must contain the trade_id, the transferred qty, and the
     transfer date so the multi-lot fragment can validate against them."""
     sym, account_id, trade_id, qty, xfer_date = seed_transfer_in
-    resp = client.get(f"/portfolio/positions-pane/{sym}", params={"account_id": account_id})
+    resp = client.get("/positions/pane", params={"sym": sym, "account_id": account_id})
     assert resp.status_code == 200
     html = resp.text
     assert f'value="{trade_id}"' in html, "single-lot form should expose trade_id"

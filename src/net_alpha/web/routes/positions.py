@@ -257,23 +257,3 @@ def positions_pane(
         "_positions_pane_body.html",
         ctx,
     )
-
-
-@router.get("/portfolio/positions-pane/{sym}", response_class=HTMLResponse)
-def portfolio_positions_pane(
-    sym: str,
-    request: Request,
-    account_id: int | None = None,
-    repo: Repository = Depends(get_repository),
-    pricing: PricingService = Depends(get_pricing_service),
-) -> HTMLResponse:
-    """Path-parameter variant of the positions pane fragment, used by the
-    portfolio page.  Delegates to the same render logic as
-    ``/positions/pane``."""
-    return positions_pane(
-        request=request,
-        sym=sym,
-        account_id=account_id,
-        repo=repo,
-        pricing=pricing,
-    )
