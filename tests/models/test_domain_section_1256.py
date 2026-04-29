@@ -1,7 +1,5 @@
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
-
-import pytest
 
 from net_alpha.models.domain import (
     DetectionResult,
@@ -9,7 +7,6 @@ from net_alpha.models.domain import (
     OptionDetails,
     Section1256Classification,
     Trade,
-    WashSaleViolation,
 )
 
 
