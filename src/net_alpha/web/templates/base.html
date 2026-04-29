@@ -13,6 +13,7 @@
   <script src="/static/charts.js?v={{ asset_v }}" defer></script>
   <script src="/static/density.js?v={{ asset_v }}" defer></script>
   <script src="/static/drop_zone.js?v={{ asset_v }}" defer></script>
+  <script src="/static/keyboard.js?v={{ asset_v }}" defer></script>
 </head>
 <body class="min-h-screen flex flex-col bg-bg text-text"
       x-data
@@ -24,10 +25,10 @@
         <span class="font-semibold tracking-tight text-[14px]">net-alpha</span>
       </a>
       <nav class="flex gap-1">
-        <a href="/" class="nav-link{% if active_page == 'overview' %} active{% endif %}">Overview</a>
-        <a href="/positions" class="nav-link{% if active_page == 'positions' %} active{% endif %}">Positions</a>
-        <a href="/tax" class="nav-link{% if active_page == 'tax' %} active{% endif %}">Tax</a>
-        <a href="/sim" class="nav-link{% if active_page == 'sim' %} active{% endif %}">Sim</a>
+        <a href="/" class="nav-link{% if active_page == 'overview' %} active{% endif %}" aria-keyshortcuts="g o">Overview</a>
+        <a href="/positions" class="nav-link{% if active_page == 'positions' %} active{% endif %}" aria-keyshortcuts="g p">Positions</a>
+        <a href="/tax" class="nav-link{% if active_page == 'tax' %} active{% endif %}" aria-keyshortcuts="g t">Tax</a>
+        <a href="/sim" class="nav-link{% if active_page == 'sim' %} active{% endif %}" aria-keyshortcuts="g s">Sim</a>
       </nav>
     </div>
     <div class="flex gap-2 items-center">
@@ -78,6 +79,7 @@
     </div>
   </dialog>
   {% include "_settings_drawer.html" %}
+  {% include "_keyboard_cheatsheet.html" %}
   {% set _fvm = first_visit_modal_data() %}
   {% if _fvm.show_modal %}
     {% with accounts=_fvm.accounts %}

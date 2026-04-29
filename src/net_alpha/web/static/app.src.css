@@ -350,6 +350,18 @@
     box-shadow: var(--ring-focus);
     border-radius: 4px;
   }
+
+  /* §3.7: cheatsheet kbd token style. */
+  .kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 14px;
+    background: var(--color-surface-2, rgba(255,255,255,0.08));
+    border: 0.5px solid var(--color-hairline);
+    border-radius: 3px;
+  }
 }
 
 /* Positions side pane (§3.5). Phase 2 ships fixed 480px on ≥1024px;
