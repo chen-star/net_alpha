@@ -61,11 +61,11 @@
   </main>
 
   <footer class="py-3 border-t" style="border-color: rgba(255,255,255,0.06);">
-    <div class="max-w-screen-2xl mx-auto px-5 text-[11px] text-label-3">
+    <div class="max-w-screen-2xl mx-auto px-5 text-[11px] text-label-2">
       {{ disclaimer }}
     </div>
     {% if price_disclosure %}
-      <div class="text-[11px] text-label-3 text-center mt-1 opacity-70">{{ price_disclosure }}</div>
+      <div class="text-[11px] text-label-2 text-center mt-1 opacity-70">{{ price_disclosure }}</div>
     {% endif %}
   </footer>
   <dialog id="provenance-dialog"
@@ -74,7 +74,7 @@
       <button class="text-label-3 hover:text-text">close ✕</button>
     </form>
     <div id="provenance-dialog-body" class="px-4 pb-4 min-w-[640px]">
-      <div class="text-label-3 text-sm">Loading…</div>
+      <div class="text-label-2 text-sm">Loading…</div>
     </div>
   </dialog>
   {% include "_settings_drawer.html" %}

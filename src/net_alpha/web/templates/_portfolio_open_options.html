@@ -70,7 +70,7 @@
         </div>
         <div class="text-[12px] font-mono text-label-1">
           {% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %} ${{ "%g"|format(s.strike) }}
-          <div class="text-[10px] text-label-3">{{ s.expiry.strftime('%m/%d/%y') }}</div>
+          <div class="text-[10px] text-label-2">{{ s.expiry.strftime('%m/%d/%y') }}</div>
         </div>
         <div class="flex items-center gap-[10px]">
           <span class="text-[11px] text-label-2 num min-w-[88px]">
@@ -86,7 +86,7 @@
           <div class="{% if is_long %}text-label-1 font-medium{% else %}text-pos font-medium{% endif %}">
             {% if is_long %}-${{ "%.2f"|format(s.cash_basis) }}{% else %}+${{ "%.2f"|format(s.cash_basis) }}{% endif %}
           </div>
-          <div class="text-[10px] text-label-3">
+          <div class="text-[10px] text-label-2">
             {% if is_long %}cost paid{% elif s.call_put == 'P' %}${{ "{:,.0f}".format(s.cash_secured) }} secured{% else %}premium{% endif %}
           </div>
         </div>

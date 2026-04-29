@@ -65,7 +65,7 @@
 {# W2: active-filter chip summary row with ⌫ reset link. Always rendered so
    the reset anchor (data-testid="filter-reset") is always in the DOM. #}
 <div class="flex items-center gap-2 flex-wrap mb-3 text-[12px]">
-  <span class="text-label-3">Filters:</span>
+  <span class="text-label-2">Filters:</span>
   {% if filter_ticker %}
     <span class="chip">ticker: {{ filter_ticker }}
       <button type="button" aria-label="Remove ticker filter"
@@ -122,7 +122,7 @@
       <span class="text-pos tabular-nums">{{ fmt_currency(realized_kpis.realized_gains_ytd) }}</span>
     </div>
   {% else %}
-    <div data-testid="realized-mini-bar" class="mb-4 text-[12px] text-label-3">No realized P/L this period.</div>
+    <div data-testid="realized-mini-bar" class="mb-4 text-[12px] text-label-2">No realized P/L this period.</div>
   {% endif %}
 {% endif %}
 

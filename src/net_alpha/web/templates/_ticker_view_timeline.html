@@ -21,10 +21,10 @@
         <tr {% if is_synth %}class="text-label-2"{% endif %}>
           <td class="px-2 py-1 font-mono">
             {% if is_transfer %}
-              <span class="text-[10px] text-label-3 uppercase tracking-tightish">Acq</span>
+              <span class="text-[10px] text-label-2 uppercase tracking-tightish">Acq</span>
               {{ t.date }}
               {% if t.transfer_date and t.transfer_date != t.date %}
-                <div class="text-[10px] text-label-3">
+                <div class="text-[10px] text-label-2">
                   <span class="uppercase tracking-tightish">Xferred</span> {{ t.transfer_date }}
                 </div>
               {% endif %}

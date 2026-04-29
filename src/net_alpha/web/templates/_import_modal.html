@@ -13,18 +13,18 @@
         <div class="rounded p-2 text-sm" style="border:0.5px solid rgba(255,255,255,0.08); background: rgba(48,209,88,0.08);">
           <span class="font-medium text-pos">&#10003; Transaction History</span>
           <span class="text-label-2"> &mdash; {{ d.row_count }} rows</span>
-          <div class="text-xs text-label-3 mt-1">{{ d.filename }}</div>
+          <div class="text-xs text-label-2 mt-1">{{ d.filename }}</div>
         </div>
       {% elif d.parser_name == "schwab_realized_gl" %}
         <div class="rounded p-2 text-sm" style="border:0.5px solid rgba(255,255,255,0.08); background: rgba(48,209,88,0.08);">
           <span class="font-medium text-pos">&#10003; Realized G/L (Schwab)</span>
           <span class="text-label-2"> &mdash; {{ d.row_count }} lot rows</span>
-          <div class="text-xs text-label-3 mt-1">{{ d.filename }}</div>
+          <div class="text-xs text-label-2 mt-1">{{ d.filename }}</div>
         </div>
       {% else %}
         <div class="rounded p-2 text-sm" style="border:0.5px solid rgba(255,255,255,0.08); background: rgba(255,159,10,0.08);">
           <span class="font-medium text-warn">&#9888; Unrecognized format</span>
-          <div class="text-xs text-label-3 mt-1">{{ d.filename }} &mdash; no parser matched headers</div>
+          <div class="text-xs text-label-2 mt-1">{{ d.filename }} &mdash; no parser matched headers</div>
         </div>
       {% endif %}
     {% endfor %}

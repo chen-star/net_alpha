@@ -24,7 +24,7 @@
     <div class="kpi" data-kpi-slot="open-lots">
       <div class="label-uc">Open lots</div>
       <div class="num text-[22px] font-bold mt-2">
-        {{ kpi_open_lots }}{% if open_shorts %}<span class="text-label-3 text-[14px] font-normal"> + {{ open_shorts|length }} short opt</span>{% endif %}
+        {{ kpi_open_lots }}{% if open_shorts %}<span class="text-label-2 text-[14px] font-normal"> + {{ open_shorts|length }} short opt</span>{% endif %}
       </div>
       <div class="text-xs text-label-2 mt-1">Basis: {{ fmt_currency(kpi_open_basis) }}</div>
     </div>
@@ -40,7 +40,7 @@
              hx-get="/reconciliation/{{ symbol }}?account_id={{ account_ids[0] }}&variant=badge"
              hx-trigger="load"
              hx-swap="innerHTML">
-          <span class="text-[11px] text-label-3">checking…</span>
+          <span class="text-[11px] text-label-2">checking…</span>
         </div>
       {% endif %}
       <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">

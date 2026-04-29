@@ -8,7 +8,7 @@
      data-page-key="{{ page_key }}"
      x-data
      x-init="window.applyDensityFromLocalStorage && window.applyDensityFromLocalStorage($el)">
-  <span class="text-label-3 mr-1">Density:</span>
+  <span class="text-label-2 mr-1">Density:</span>
   {% for d in ['compact', 'comfortable', 'tax'] %}
     <form hx-post="/preferences" hx-swap="none" class="inline">
       {% if account_id is not none %}<input type="hidden" name="account_id" value="{{ account_id }}">{% endif %}

@@ -26,14 +26,14 @@
             class="text-label-3 text-[11px] hover:text-text">clear</button>
   </div>
   <template x-if="recents.length === 0">
-    <p class="m-0 text-label-3 text-[12px]">No sims this session yet.</p>
+    <p class="m-0 text-label-2 text-[12px]">No sims this session yet.</p>
   </template>
   <ul class="space-y-1" x-show="recents.length > 0">
     <template x-for="(r, i) in recents" :key="i">
       <li class="text-[12px] flex items-center gap-1">
         <span class="font-mono" x-text="r.ticker"></span>
         <span class="text-label-2" x-text="r.action + ' ' + r.qty"></span>
-        <span class="text-label-3" x-text="r.timestamp"></span>
+        <span class="text-label-2" x-text="r.timestamp"></span>
       </li>
     </template>
   </ul>

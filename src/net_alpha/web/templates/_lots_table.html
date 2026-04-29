@@ -23,7 +23,7 @@
               <span class="pill" style="color: var(--color-accent);">{% if o.call_put == 'C' %}CALL{% else %}PUT{% endif %}</span>
               ${{ "%g"|format(o.strike) }} <span class="text-label-3">·</span> {{ o.expiry.strftime('%m/%d/%y') }}
             {% else %}
-              <span class="text-label-3">Stock</span>
+              <span class="text-label-2">Stock</span>
             {% endif %}
           </td>
           <td class="px-2 py-1 font-mono">{{ lot.date }}</td>

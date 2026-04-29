@@ -48,7 +48,7 @@
         </div>
         <div class="text-[12px] font-mono text-label-1">
           {% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %} ${{ "%g"|format(s.strike) }}
-          <div class="text-[10px] text-label-3">{{ s.expiry.strftime('%m/%d/%y') }}</div>
+          <div class="text-[10px] text-label-2">{{ s.expiry.strftime('%m/%d/%y') }}</div>
         </div>
         <div class="flex items-center gap-[10px]">
           <span class="text-[11px] text-label-2 num min-w-[88px]">
@@ -62,7 +62,7 @@
         </div>
         <div class="text-right num text-[12px]">
           <div class="text-pos font-medium">+${{ "%.2f"|format(s.premium_received) }}</div>
-          {% if s.call_put == 'P' %}<div class="text-[10px] text-label-3">${{ "{:,.0f}".format(s.cash_secured) }} secured</div>{% endif %}
+          {% if s.call_put == 'P' %}<div class="text-[10px] text-label-2">${{ "{:,.0f}".format(s.cash_secured) }} secured</div>{% endif %}
         </div>
         <div class="text-right">
           <span class="badge badge-muted num text-[12px] font-semibold {{ dte_class }}"

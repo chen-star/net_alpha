@@ -46,7 +46,7 @@
           {% if row.premium_offset %}
             <span class="text-warn">&#8722;${{ "%.2f"|format(row.premium_offset) }}</span>
             {% if row.premium_origin_event %}
-              <div class="text-[11px] text-label-3">CSP premium received {{ row.premium_origin_event.assignment_date }}</div>
+              <div class="text-[11px] text-label-2">CSP premium received {{ row.premium_origin_event.assignment_date }}</div>
             {% endif %}
           {% else %}<span class="text-label-3">&#8212;</span>{% endif %}
         </td>
