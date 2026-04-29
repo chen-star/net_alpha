@@ -3,10 +3,10 @@
 These are the only place where rule citations and match-reason copy live.
 Tests in tests/explain/test_templates.py pin the wording.
 """
+
 from __future__ import annotations
 
 from decimal import Decimal
-
 
 _RULE_CITATIONS = {
     "regular": "IRC §1091(a) — Pub 550 p.59",
@@ -64,6 +64,7 @@ def confidence_reason(label: str, *, match_kind: str, days_between: int) -> str:
 
 
 # ---- formatting helpers ---------------------------------------------------
+
 
 def _fmt(d: Decimal) -> str:
     """Render Decimal with thousand-separators and 2dp."""

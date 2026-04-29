@@ -62,3 +62,14 @@ def test_confidence_reason_confirmed_exact_ticker():
 def test_confidence_reason_probable():
     s = confidence_reason("Probable", match_kind="etf_pair", days_between=12)
     assert "Probable" in s
+
+
+def test_match_reason_text_fallback_unknown_kind():
+    text = match_reason_text(match_kind="unknown", loss_ticker="AAPL", buy_ticker="MSFT")
+    assert "AAPL" in text and "MSFT" in text
+
+
+def test_confidence_reason_option_chain():
+    s = confidence_reason("Unclear", match_kind="option_chain", days_between=8)
+    assert "Unclear" in s
+    assert "option" in s.lower()
