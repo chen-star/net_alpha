@@ -10,7 +10,8 @@ Routes covered reflect the Phase 1 IA: top nav is
 ``/positions?view=at-loss``; the imports page now opens in the Settings
 drawer via ``/settings/imports``.
 
-Each route is captured at 1440×900 (desktop) and 768×1024 (tablet).
+Each route is captured at 768×1024 (tablet), 1024×768 (laptop),
+1280×800 (desktop), and 1440×900 (desktop-wide).
 """
 
 from __future__ import annotations
