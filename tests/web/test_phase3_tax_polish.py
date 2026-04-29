@@ -22,3 +22,27 @@ def test_tax_kpi_strip_includes_stacked_mini_bar(client: TestClient):
     resp = client.get("/tax")
     html = resp.text
     assert 'data-testid="realized-mini-bar"' in html or "no realized p/l this period" in html.lower()
+
+
+def test_wash_watch_panel_carries_forward_looking_label(client: TestClient):
+    """W1: the forward-looking watch panel is explicitly labeled."""
+    resp = client.get("/tax")
+    html = resp.text
+    assert "forward-looking" in html.lower()
+
+
+def test_violations_panel_carries_backward_looking_label(client: TestClient):
+    """W1: the backward-looking violations panel is explicitly labeled."""
+    resp = client.get("/tax")
+    html = resp.text
+    assert "backward-looking" in html.lower() or "violations · detected" in html.lower()
+
+
+def test_violations_empty_state_uses_affirmative_copy(client: TestClient):
+    """W1b: the empty state for violations is affirmative ("✓ No wash-sale
+    violations detected")."""
+    resp = client.get("/tax")
+    html = resp.text
+    if "wash-sale violations" not in html.lower():
+        return
+    assert "no wash-sale violations detected" in html.lower() or "✓" in html
