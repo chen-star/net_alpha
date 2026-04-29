@@ -17,6 +17,6 @@
     <a href="/positions?view={{ key }}{% if selected_period %}&period={{ selected_period }}{% endif %}{% if selected_account %}&account={{ selected_account }}{% endif %}"
        class="tab{% if _v == key %} tab--active{% endif %}"
        role="tab"
-       data-view-tab="{{ key }}">{{ label }}{% if count %}<span class="ml-1 text-label-3 text-[11px]">{{ count }}</span>{% endif %}</a>
+       data-view-tab="{{ key }}">{{ label }}{% if count %}<span class="ml-1 text-label-2 text-[11px]">{{ count }}</span>{% endif %}</a>
   {% endfor %}
 </div>

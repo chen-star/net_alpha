@@ -8,27 +8,27 @@
       <div class="label-uc mb-2">Breakdown</div>
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-[10px] text-[12px]">
         <div>
-          <div class="text-label-3 text-[11px]">Short-term gain</div>
+          <div class="text-label-2 text-[11px]">Short-term gain</div>
           <div class="num text-[14px] font-semibold mt-1 {% if projection.realized_st_gain < 0 %}text-neg{% elif projection.realized_st_gain > 0 %}text-pos{% else %}text-label-1{% endif %}">
             {% if projection.realized_st_gain < 0 %}−{% elif projection.realized_st_gain > 0 %}+{% endif %}${{ "{:,.2f}".format(projection.realized_st_gain|float|abs) }}
           </div>
         </div>
         <div>
-          <div class="text-label-3 text-[11px]">Long-term gain</div>
+          <div class="text-label-2 text-[11px]">Long-term gain</div>
           <div class="num text-[14px] font-semibold mt-1 {% if projection.realized_lt_gain < 0 %}text-neg{% elif projection.realized_lt_gain > 0 %}text-pos{% else %}text-label-1{% endif %}">
             {% if projection.realized_lt_gain < 0 %}−{% elif projection.realized_lt_gain > 0 %}+{% endif %}${{ "{:,.2f}".format(projection.realized_lt_gain|float|abs) }}
           </div>
         </div>
         <div>
-          <div class="text-label-3 text-[11px]">Qualified div</div>
+          <div class="text-label-2 text-[11px]">Qualified div</div>
           <div class="num text-[14px] font-semibold mt-1">${{ "{:,.2f}".format(projection.qualified_div|float) }}</div>
         </div>
         <div>
-          <div class="text-label-3 text-[11px]">Ordinary div</div>
+          <div class="text-label-2 text-[11px]">Ordinary div</div>
           <div class="num text-[14px] font-semibold mt-1">${{ "{:,.2f}".format(projection.ordinary_div|float) }}</div>
         </div>
         <div>
-          <div class="text-label-3 text-[11px]">Interest income</div>
+          <div class="text-label-2 text-[11px]">Interest income</div>
           <div class="num text-[14px] font-semibold mt-1">${{ "{:,.2f}".format(projection.interest_income|float) }}</div>
         </div>
       </div>

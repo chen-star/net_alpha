@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import date
 from datetime import date as _date
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.audit import Period, RealizedPLRef
@@ -155,9 +155,12 @@ def _build_timeline_rows(
 def ticker_drilldown(
     symbol: str,
     request: Request,
+    view: str = Query("timeline"),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     symbol = symbol.upper()
+    if view not in {"timeline", "lots", "recon"}:
+        view = "timeline"
     trades = repo.get_trades_for_ticker(symbol)
     raw_lots = repo.get_lots_for_ticker(symbol)
     # Filter to lots that are still open after consuming sells / GL closures.
@@ -226,32 +229,37 @@ def ticker_drilldown(
         symbol=symbol,
     )
 
-    return request.app.state.templates.TemplateResponse(
-        request,
-        "ticker.html",
-        {
-            "symbol": symbol,
-            "trades": trades,
-            "timeline_rows": timeline_rows,
-            "lots": lots,
-            "open_shorts": open_shorts,
-            "kpi_today": today,
-            "violations": violations,
-            "gl_lots": gl_lots,
-            "kpi_open_lots": len(lots),
-            "kpi_open_basis": sum((lot.adjusted_basis for lot in lots), start=0.0),
-            "kpi_realized_ytd": realized_ytd,
-            "kpi_realized_lifetime": realized_lifetime,
-            "kpi_disallowed_ytd": disallowed_ytd,
-            "kpi_disallowed_lifetime": disallowed_lifetime,
-            "realized_lifetime_ref": realized_lifetime_ref,
-            "kpi_accounts": accounts,
-            "kpi_last_trade": last_trade,
-            "account_ids": account_ids,
-            "display_action": display_action,
-            "realized_ref": realized_ref,
-        },
-    )
+    ctx = {
+        "symbol": symbol,
+        "trades": trades,
+        "timeline_rows": timeline_rows,
+        "lots": lots,
+        "open_shorts": open_shorts,
+        "kpi_today": today,
+        "violations": violations,
+        "gl_lots": gl_lots,
+        "kpi_open_lots": len(lots),
+        "kpi_open_basis": sum((lot.adjusted_basis for lot in lots), start=0.0),
+        "kpi_realized_ytd": realized_ytd,
+        "kpi_realized_lifetime": realized_lifetime,
+        "kpi_disallowed_ytd": disallowed_ytd,
+        "kpi_disallowed_lifetime": disallowed_lifetime,
+        "realized_lifetime_ref": realized_lifetime_ref,
+        "kpi_accounts": accounts,
+        "kpi_last_trade": last_trade,
+        "account_ids": account_ids,
+        "display_action": display_action,
+        "realized_ref": realized_ref,
+        "selected_view": view,
+    }
+    if request.headers.get("HX-Request") == "true":
+        fragment_template = {
+            "timeline": "_ticker_view_timeline.html",
+            "lots": "_ticker_view_lots.html",
+            "recon": "_ticker_view_reconciliation.html",
+        }[view]
+        return request.app.state.templates.TemplateResponse(request, fragment_template, ctx)
+    return request.app.state.templates.TemplateResponse(request, "ticker.html", ctx)
 
 
 @router.post("/lots/{lot_id}/edit", response_class=HTMLResponse)

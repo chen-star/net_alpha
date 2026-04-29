@@ -1,0 +1,26 @@
+<div x-data="{ open: false }"
+     x-show="open"
+     x-cloak
+     x-on:open-keyboard-cheatsheet.window="open = true"
+     x-on:keydown.window.escape="open = false"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+     @click.self="open = false"
+     role="dialog"
+     aria-modal="true"
+     aria-label="Keyboard shortcuts">
+  <div class="panel max-w-md w-full mx-4 px-5 py-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2>Keyboard shortcuts</h2>
+      <button @click="open = false" class="text-label-2 hover:text-text" aria-label="Close">✕</button>
+    </div>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[13px]">
+      <dt><kbd class="kbd">g</kbd> <kbd class="kbd">o</kbd></dt><dd>Overview</dd>
+      <dt><kbd class="kbd">g</kbd> <kbd class="kbd">p</kbd></dt><dd>Positions</dd>
+      <dt><kbd class="kbd">g</kbd> <kbd class="kbd">t</kbd></dt><dd>Tax</dd>
+      <dt><kbd class="kbd">g</kbd> <kbd class="kbd">s</kbd></dt><dd>Sim</dd>
+      <dt><kbd class="kbd">,</kbd></dt><dd>Settings</dd>
+      <dt><kbd class="kbd">?</kbd></dt><dd>This cheatsheet</dd>
+      <dt><kbd class="kbd">Esc</kbd></dt><dd>Close drawer / pane</dd>
+    </dl>
+  </div>
+</div>

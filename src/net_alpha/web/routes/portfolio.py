@@ -284,9 +284,7 @@ def portfolio_kpis(
         (kpis.open_position_value + cash_kpis.cash_balance) if kpis.open_position_value is not None else None
     )
     vs_contributed_delta: Decimal | None = (
-        (kpis.period_realized + (kpis.period_unrealized or Decimal("0")))
-        if kpis.period_unrealized is not None
-        else None
+        (total_account_value - cash_kpis.net_contributions) if total_account_value is not None else None
     )
 
     return request.app.state.templates.TemplateResponse(
@@ -493,6 +491,19 @@ def holdings_options(
     cash_secured_total = sum((o.cash_secured for o in open_options), start=Decimal("0"))
     premium_received_total = sum((o.cash_basis for o in open_options if o.side == "short"), start=Decimal("0"))
     long_cost_total = sum((o.cash_basis for o in open_options if o.side == "long"), start=Decimal("0"))
+    # 3-card mini-summary for the panel header (H7). Net premium signs short
+    # premium received as a credit and long cost paid as a debit. Avg DTE is
+    # qty-weighted across all open contracts (clamped to 0 when nothing open).
+    total_qty = sum((o.qty for o in open_options), start=Decimal("0"))
+    if total_qty > 0:
+        avg_dte = sum(((o.expiry - today).days * o.qty for o in open_options), start=Decimal("0")) / total_qty
+    else:
+        avg_dte = Decimal("0")
+    options_summary = {
+        "open_contracts": total_qty,
+        "net_premium": premium_received_total - long_cost_total,
+        "avg_dte": avg_dte,
+    }
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_open_options.html",
@@ -501,6 +512,7 @@ def holdings_options(
             "cash_secured_total": cash_secured_total,
             "premium_received_total": premium_received_total,
             "long_cost_total": long_cost_total,
+            "options_summary": options_summary,
             "today": today,
         },
     )
@@ -695,9 +707,7 @@ def portfolio_body(
         (kpis.open_position_value + cash_kpis.cash_balance) if kpis.open_position_value is not None else None
     )
     body_vs_contributed_delta: Decimal | None = (
-        (kpis.period_realized + (kpis.period_unrealized or Decimal("0")))
-        if kpis.period_unrealized is not None
-        else None
+        (body_total_account_value - cash_kpis.net_contributions) if body_total_account_value is not None else None
     )
 
     return request.app.state.templates.TemplateResponse(

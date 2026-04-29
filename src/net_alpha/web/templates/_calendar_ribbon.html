@@ -2,7 +2,7 @@
   <div class="panel text-label-2 text-sm">No wash sales in this view.</div>
 {% else %}
   <div class="panel">
-    <div class="text-xs text-label-3 uppercase mb-2">{{ selected_year }} — {{ markers|length }} violation(s)</div>
+    <div class="text-xs text-label-2 uppercase mb-2">{{ selected_year }} — {{ markers|length }} violation(s)</div>
     <div class="relative h-16 bg-surface-2 border-t border-b" style="border-color: var(--color-hairline);">
       <div class="absolute inset-0 flex justify-between pointer-events-none">
         {% for m in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"] %}
@@ -21,6 +21,6 @@
         </button>
       {% endfor %}
     </div>
-    <div class="text-xs text-label-3 mt-2">Click a dot to see the ±30-day focus strip.</div>
+    <div class="text-xs text-label-2 mt-2">Click a dot to see the ±30-day focus strip.</div>
   </div>
 {% endif %}

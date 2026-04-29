@@ -36,7 +36,7 @@
   <section class="panel mb-4" data-testid="data-hygiene">
     <div class="px-4 py-3" style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
       <h2 class="text-lg">Data quality</h2>
-      <p class="text-xs text-label-3 mt-1">
+      <p class="text-xs text-label-2 mt-1">
         {{ other_issues|length }} item{{ "s" if other_issues|length != 1 else "" }} need attention from your imports.
       </p>
     </div>
@@ -46,7 +46,7 @@
           <span class="badge badge-{{ issue.severity }}">{{ issue.severity }}</span>
           <div class="flex-1">
             <div class="text-sm font-medium">{{ issue.summary }}</div>
-            <div class="text-xs text-label-3 mt-1">{{ issue.detail }}</div>
+            <div class="text-xs text-label-2 mt-1">{{ issue.detail }}</div>
             {% if issue.fix_url %}
               <a class="text-xs underline mt-2 inline-block" href="{{ issue.fix_url }}">go fix →</a>
             {% endif %}

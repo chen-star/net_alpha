@@ -7,11 +7,11 @@
 <div class="kpi" data-testid="offset-budget">
   <div class="flex items-baseline justify-between">
     <div class="label-uc">Loss harvest budget</div>
-    <div class="text-[11px] text-label-3">{{ budget.year }}</div>
+    <div class="text-[11px] text-label-2">{{ budget.year }}</div>
   </div>
   <div class="num text-[22px] font-bold mt-2">
     ${{ "{:,.0f}".format(budget.used_against_ordinary) }}
-    <span class="text-[12px] text-label-3 font-normal ml-1">of ${{ "{:,.0f}".format(budget.cap_against_ordinary) }} cap</span>
+    <span class="text-[12px] text-label-2 font-normal ml-1">of ${{ "{:,.0f}".format(budget.cap_against_ordinary) }} cap</span>
   </div>
   <div data-testid="offset-budget-bar"
        class="mt-2 h-[5px] rounded-full overflow-hidden" style="background: rgba(255,255,255,0.06);"

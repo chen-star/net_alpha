@@ -1,0 +1,19 @@
+{# Compact "vs broker" status — used inside the Realized P/L KPI on /ticker (Tk3). #}
+{% if result.status.value == "match" %}
+  <span class="badge badge-success" title="net-alpha matches {{ result.source_label or 'broker' }} G/L">
+    vs broker ✓
+  </span>
+{% elif result.status.value == "near_match" %}
+  <span class="badge badge-info" title="Within tolerance of {{ result.source_label or 'broker' }} G/L">
+    vs broker ~
+  </span>
+{% elif result.status.value == "unavailable" %}
+  <span class="badge badge-muted" title="No broker G/L imported for this account">
+    vs broker —
+  </span>
+{% else %}
+  <a href="/ticker/{{ result.symbol }}?view=recon" class="badge badge-warn no-underline"
+     title="Discrepancy of ${{ '%.2f'|format(result.delta|abs) }} — click to investigate">
+    vs broker △ ${{ '%.0f'|format(result.delta|abs) }}
+  </a>
+{% endif %}

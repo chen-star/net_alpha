@@ -1,9 +1,9 @@
 <div class="recon-strip recon-strip-expanded panel">
   <div class="px-4 py-2 flex items-center gap-3" style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
-    <span class="text-xs text-label-3">net-alpha:</span>
+    <span class="text-xs text-label-2">net-alpha:</span>
     <span class="num font-mono">${{ "%.2f"|format(result.net_alpha_total) }}</span>
     <span class="text-xs text-label-3">·</span>
-    <span class="text-xs text-label-3">{{ result.source_label }}:</span>
+    <span class="text-xs text-label-2">{{ result.source_label }}:</span>
     <span class="num font-mono">${{ "%.2f"|format(result.broker_total) }}</span>
     <span class="text-warn">△ ${{ "%.2f"|format(result.delta|abs) }}</span>
     <button class="text-xs underline ml-auto"
@@ -33,7 +33,7 @@
           <td class="r num font-mono {% if d.delta < 0 %}text-neg{% elif d.delta > 0 %}text-pos{% endif %}">
             {% if d.delta != 0 %}${{ "%.2f"|format(d.delta|abs) }}{% else %}—{% endif %}
           </td>
-          <td class="text-xs text-label-3">{{ d.likely_cause or "—" }}</td>
+          <td class="text-xs text-label-2">{{ d.likely_cause or "—" }}</td>
         </tr>
       {% endfor %}
     </tbody>

@@ -60,7 +60,7 @@
             </label>
           </template>
           <template x-if="filtered().length === 0">
-            <div class="text-[11px] text-label-3 py-2 text-center">No matches.</div>
+            <div class="text-[11px] text-label-2 py-2 text-center">No matches.</div>
           </template>
         </div>
         <div class="flex justify-end gap-2 pt-2 mt-2" style="border-top: 0.5px solid var(--color-hairline);">
@@ -138,7 +138,7 @@
           {{ sort_th('market_value', 'Mkt $', align='r', tooltip='Qty × latest fetched price. — when no price is available. Click to sort.') }}
           {{ sort_th('open_cost', 'Open Cost', align='r', tooltip='Sum of adjusted basis across open lots. Click to sort.') }}
           {{ sort_th('avg_basis', 'Avg Basis', align='r', tooltip='Open Cost ÷ Qty. Per-share book basis after wash-sale adjustments. Click to sort.') }}
-          {{ sort_th('cash_sunk', 'Cash Sunk/sh', align='r', tooltip='(Total Buys − Total Sells, including option premium) ÷ current Qty. Click to sort.') }}
+          {{ sort_th('cash_sunk', 'Cash invested / sh', align='r', tooltip="Net cash you've put in for this position, divided by current shares. Includes wash adjustments.") }}
           {{ sort_th('unrealized', 'Unrealized', align='r', tooltip='Mkt $ − Open Cost on currently open lots. — when no price is available. Click to sort.') }}
           {% if extra_columns is defined %}
             {% if 'days_held' in extra_columns %}<th data-col="days_held" class="r" title="Days since the oldest open lot was acquired.">Days held</th>{% endif %}
@@ -168,25 +168,38 @@
                     {{ "%g"|format(r.open_option_contracts|float) }} opt
                   </span>
                 {% elif r.qty == 0 %}
-                  <span class="ml-1 text-[10px] uppercase text-label-3">closed</span>
+                  <span class="ml-1 text-[10px] uppercase text-label-2">closed</span>
                 {% endif %}
               </div>
             </td>
             <td class="text-[11px] text-label-2">
-              {% if r.accounts|length <= 3 %}
-                {{ r.accounts|join(' · ') }}
+              {% set _displays = r.account_displays if r.account_displays else r.accounts %}
+              {% if _displays|length <= 1 %}
+                <span class="font-mono">{{ r.account_chip or (_displays[0] if _displays else '—') }}</span>
               {% else %}
-                {{ r.accounts[0] }} +{{ r.accounts|length - 1 }} more
+                <span class="chip" title="{{ _displays|join(', ') }}">{{ r.account_chip or (_displays|join('+')) }}</span>
               {% endif %}
             </td>
-            <td class="r num">{{ "%.4f"|format(r.qty|float) }}</td>
+            <td class="r num">{{ fmt_quantity(r.qty) }}</td>
             <td class="r num">
               {% if r.market_value is none %}<span class="text-label-3">—</span>
               {% else %}${{ "%.2f"|format(r.market_value|float) }}{% endif %}
             </td>
-            <td class="r num">${{ "%.2f"|format(r.open_cost|float) }}</td>
-            <td class="r num">${{ "%.2f"|format(r.avg_basis|float) }}</td>
-            <td class="r num">${{ "%.2f"|format(r.cash_sunk_per_share|float) }}</td>
+            <td class="r num">
+              {% if (r.open_cost is none or r.open_cost == 0) and not r.basis_known and r.qty and r.qty != 0 %}
+                {% include "_basis_missing_chip.html" %}
+              {% else %}
+                {{ fmt_currency(r.open_cost) }}
+              {% endif %}
+            </td>
+            <td class="r num">
+              {% if (r.avg_basis is none or r.avg_basis == 0) and not r.basis_known and r.qty and r.qty != 0 %}
+                {% include "_basis_missing_chip.html" %}
+              {% else %}
+                {{ fmt_currency(r.avg_basis) }}
+              {% endif %}
+            </td>
+            <td class="r num">{{ fmt_currency(r.cash_sunk_per_share) }}</td>
             <td class="r num {% if r.unrealized_pl is not none and r.unrealized_pl < 0 %}text-neg{% elif r.unrealized_pl is not none and r.unrealized_pl > 0 %}text-pos{% endif %}">
               {% if r.unrealized_pl is none %}
                 <span class="text-label-3">—</span>
@@ -202,7 +215,7 @@
             </td>
             {% if extra_columns is defined %}
               {% if 'days_held' in extra_columns %}<td class="r num">{{ r.days_held if r.days_held is not none else '—' }}{% if r.days_held is not none %}d{% endif %}</td>{% endif %}
-              {% if 'lt_st_split' in extra_columns %}<td class="r num">{{ "%g"|format(r.lt_qty|float) }}LT / {{ "%g"|format(r.st_qty|float) }}ST</td>{% endif %}
+              {% if 'lt_st_split' in extra_columns %}<td class="r num">{{ fmt_quantity(r.lt_qty) }}LT / {{ fmt_quantity(r.st_qty) }}ST</td>{% endif %}
               {% if 'premium_received' in extra_columns %}<td class="r num">${{ "%.0f"|format(r.premium_received|float) }}</td>{% endif %}
               {% if 'origin_event' in extra_columns %}<td>—</td>{% endif %}
               {% if 'days_to_ltcg' in extra_columns %}<td class="r num">—</td>{% endif %}
@@ -220,7 +233,7 @@
     </table>
   </div>
   {% if extra_columns is defined and ('days_to_ltcg' in extra_columns or 'harvestable' in extra_columns or 'premium_offset' in extra_columns or 'origin_event' in extra_columns) %}
-    <p class="text-label-3 text-[11px] mt-1">
+    <p class="text-label-2 text-[11px] mt-1">
       <span class="num">→LTCG</span>, <span class="num">Harv.</span>,
       <span class="num">Prem.&nbsp;off</span>, and <span class="num">Origin</span>
       are tax-view placeholders &mdash; not yet wired to live data, so they show

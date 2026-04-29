@@ -10,7 +10,7 @@
   <div class="kpi col-span-4" data-kpi-slot="cash">
     <div class="label-uc"
          title="{% if _csp > 0 %}Total liquid cash. {{ "{:,.0f}".format(_csp) }} is pledged as collateral for {{ _csp_n }} cash-secured put{% if _csp_n != 1 %}s{% endif %} — your free cash is what's left.{% else %}Total liquid cash in this scope. No CSP collateral pledged.{% endif %}">
-      Cash {% if _csp > 0 %}<span class="text-label-3 normal-case">(free / pledged)</span>{% endif %}
+      Cash {% if _csp > 0 %}<span class="text-label-2 normal-case">(free / pledged)</span>{% endif %}
     </div>
     <div class="num text-[22px] font-bold mt-2">
       {% if cash_kpis is defined and cash_kpis %}
@@ -30,7 +30,7 @@
         <span class="text-label-2"><span class="num" style="color:#FF9F0A;">${{ "{:,.0f}".format(_csp) }}</span> pledged · {{ _csp_n }} CSP{% if _csp_n != 1 %}s{% endif %}</span>
       </div>
     {% else %}
-      <div class="text-[11px] text-label-3 mt-1">
+      <div class="text-[11px] text-label-2 mt-1">
         {% if cash_kpis is defined and cash_kpis %}{{ "%.0f"|format((cash_kpis.cash_share_pct|float) * 100) }}% of account{% endif %}
       </div>
     {% endif %}
@@ -53,7 +53,7 @@
         <span class="text-label-3">—</span>
       {% endif %}
     </div>
-    <div class="text-[11px] text-label-3 mt-1">
+    <div class="text-[11px] text-label-2 mt-1">
       {% if vs_contributed_delta is defined and vs_contributed_delta is not none %}
         {% if vs_contributed_delta > 0 %}+{% endif %}{{ fmt_currency(vs_contributed_delta) }} vs contributed
       {% endif %}
@@ -77,7 +77,7 @@
     <div class="num text-[22px] font-bold mt-2 {% if kpis.period_realized < 0 %}text-neg{% else %}text-pos{% endif %}">
       {% if kpis.period_realized < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized|float|abs) }}{% if metric_refs is defined and metric_refs.realized_period is defined %}{{ provenance_link(metric_refs.realized_period) }}{% endif %}
     </div>
-    <div class="text-[11px] text-label-3 mt-1">{{ kpis.period_label }}</div>
+    <div class="text-[11px] text-label-2 mt-1">{{ kpis.period_label }}</div>
   </div>
 
   {# Unrealized P/L #}
@@ -89,7 +89,7 @@
       {% else %}<span class="text-pos">+${{ "%.2f"|format(kpis.period_unrealized|float) }}</span>
       {% endif %}
     </div>
-    <div class="text-[11px] text-label-3 mt-1">{{ kpis.period_label }}</div>
+    <div class="text-[11px] text-label-2 mt-1">{{ kpis.period_label }}</div>
   </div>
 
   {# Net Contributed #}
@@ -106,7 +106,7 @@
         <span class="text-label-3">—</span>
       {% endif %}
     </div>
-    <div class="text-[11px] text-label-3 mt-1">deposits − withdrawals</div>
+    <div class="text-[11px] text-label-2 mt-1">deposits − withdrawals</div>
   </div>
 
   {# Growth #}
@@ -119,7 +119,7 @@
         <span class="text-label-3">—</span>
       {% endif %}
     </div>
-    <div class="text-[11px] text-label-3 mt-1">
+    <div class="text-[11px] text-label-2 mt-1">
       {% if cash_kpis is defined and cash_kpis and cash_kpis.growth_pct is not none %}
         {% if cash_kpis.growth_pct < 0 %}−{% else %}+{% endif %}{{ "%.1f"|format((cash_kpis.growth_pct|float|abs) * 100) }}% vs contributed
       {% else %}

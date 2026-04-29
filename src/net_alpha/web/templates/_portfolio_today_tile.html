@@ -12,7 +12,7 @@
       <span class="text-label-3">—</span>
     {% endif %}
   </div>
-  <div class="text-[11px] text-label-3 mt-1">
+  <div class="text-[11px] text-label-2 mt-1">
     {% if today_pct is not none %}
       {% if today_pct > 0 %}+{% endif %}{{ "%.2f"|format((today_pct|float) * 100) }}%
     {% else %}

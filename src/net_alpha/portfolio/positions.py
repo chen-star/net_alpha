@@ -496,6 +496,7 @@ def compute_open_positions(
     qty_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     open_cost_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     accounts_by_sym: dict[str, set[str]] = defaultdict(set)
+    basis_known_by_sym: dict[str, bool] = defaultdict(bool)
     for lot, rem_qty, rem_basis in consumed:
         if lot.option_details is not None:
             continue
@@ -504,6 +505,10 @@ def compute_open_positions(
         qty_by_sym[lot.ticker] += rem_qty
         open_cost_by_sym[lot.ticker] += rem_basis
         accounts_by_sym[lot.ticker].add(lot.account)
+        # Provably-known basis: any open lot has a non-null, non-zero cost_basis.
+        # Transferred-in lots default to None/0 until the user fills them in.
+        if lot.cost_basis is not None and lot.cost_basis != 0:
+            basis_known_by_sym[lot.ticker] = True
 
     # Phase 3 density extras: oldest-lot age and LT/ST split.
     LT_DAYS = 365
@@ -561,6 +566,12 @@ def compute_open_positions(
         sym: realized_pl_from_trades(ts, period=period) for sym, ts in trades_by_sym.items()
     }
 
+    def _account_chip(displays: tuple[str, ...]) -> str:
+        if len(displays) <= 1:
+            return displays[0] if displays else ""
+        suffixes = sorted({a.split("/")[-1] for a in displays})
+        return "+".join(suffixes)
+
     rows: list[PositionRow] = []
     for sym, qty in qty_by_sym.items():
         if qty == 0:
@@ -573,10 +584,11 @@ def compute_open_positions(
         unrealized = (market_value - open_cost) if market_value is not None else None
         oldest = oldest_open_by_sym.get(sym)
         days_held = (today - oldest).days if oldest is not None else None
+        accounts_tuple = tuple(sorted(accounts_by_sym[sym]))
         rows.append(
             PositionRow(
                 symbol=sym,
-                accounts=tuple(sorted(accounts_by_sym[sym])),
+                accounts=accounts_tuple,
                 qty=qty,
                 market_value=market_value,
                 open_cost=open_cost,
@@ -589,6 +601,9 @@ def compute_open_positions(
                 lt_qty=lt_qty_by_sym[sym],
                 st_qty=st_qty_by_sym[sym],
                 premium_received=premium_by_sym[sym].quantize(Decimal("0.01")),
+                basis_known=basis_known_by_sym.get(sym, False),
+                account_chip=_account_chip(accounts_tuple),
+                account_displays=accounts_tuple,
             )
         )
     # Tickers with only open option exposure (no equity lot): emit a qty=0 row
@@ -600,10 +615,11 @@ def compute_open_positions(
             continue
         if qty_by_sym.get(sym, Decimal("0")) != 0:
             continue
+        accounts_tuple = tuple(sorted(accounts_by_sym[sym]))
         rows.append(
             PositionRow(
                 symbol=sym,
-                accounts=tuple(sorted(accounts_by_sym[sym])),
+                accounts=accounts_tuple,
                 qty=Decimal("0"),
                 market_value=None,
                 open_cost=Decimal("0"),
@@ -612,6 +628,8 @@ def compute_open_positions(
                 realized_pl=realized_by_sym.get(sym, Decimal("0")),
                 unrealized_pl=None,
                 open_option_contracts=opt_contracts,
+                account_chip=_account_chip(accounts_tuple),
+                account_displays=accounts_tuple,
             )
         )
     if include_closed:
@@ -623,10 +641,11 @@ def compute_open_positions(
                 continue
             if qty_by_sym.get(sym, Decimal("0")) != 0:
                 continue
+            accounts_tuple = tuple(sorted(accounts_by_sym[sym]))
             rows.append(
                 PositionRow(
                     symbol=sym,
-                    accounts=tuple(sorted(accounts_by_sym[sym])),
+                    accounts=accounts_tuple,
                     qty=Decimal("0"),
                     market_value=Decimal("0"),
                     open_cost=Decimal("0"),
@@ -634,6 +653,8 @@ def compute_open_positions(
                     cash_sunk_per_share=Decimal("0"),
                     realized_pl=realized,
                     unrealized_pl=Decimal("0"),
+                    account_chip=_account_chip(accounts_tuple),
+                    account_displays=accounts_tuple,
                 )
             )
     rows.sort(key=lambda r: (r.market_value is None, -(r.market_value or Decimal("0"))))

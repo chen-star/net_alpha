@@ -47,9 +47,9 @@
               {%- endif -%}
               {%- if imp.duplicate_trades -%}
                 {%- if imp.trade_count or imp.gl_lot_count or imp.cash_event_count %} · {% endif -%}
-                <span class="text-label-3">skipped {{ imp.duplicate_trades }} duplicate{{ "s" if imp.duplicate_trades != 1 else "" }}</span>
+                <span class="text-label-2">skipped {{ imp.duplicate_trades }} duplicate{{ "s" if imp.duplicate_trades != 1 else "" }}</span>
               {%- endif -%}
-              {%- if not total_units and not imp.duplicate_trades -%}<span class="text-label-3">no records</span>{%- endif -%}
+              {%- if not total_units and not imp.duplicate_trades -%}<span class="text-label-2">no records</span>{%- endif -%}
             </td>
             <td class="px-3 py-2">
               <button class="btn-ghost text-confirmed border-confirmed/30"

@@ -33,6 +33,16 @@ class PositionRow:
     lt_qty: Decimal = Decimal("0")  # qty held > 365 days
     st_qty: Decimal = Decimal("0")  # qty held <= 365 days
     premium_received: Decimal = Decimal("0")  # net option premium captured on this underlying
+    # True iff at least one open lot has a non-zero, non-null cost_basis. False
+    # signals "provably missing" (e.g. transferred-in lots without user-set basis)
+    # so the renderer can show a "basis missing" chip instead of $0.00.
+    basis_known: bool = True
+    # Sub-account suffixes (e.g. ["lt", "st"]) and the full display labels for
+    # the Account column chip. Single-account rows render the label directly;
+    # multi-account rows show a single "lt+st" chip with a tooltip listing
+    # every label.
+    account_chip: str = ""
+    account_displays: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

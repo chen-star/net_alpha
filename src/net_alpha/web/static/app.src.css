@@ -305,6 +305,25 @@
   .badge-probable  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-warn); background: rgba(255,159,10,0.16); }
   .badge-unclear   { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-info); background: rgba(100,210,255,0.14); }
 
+  /* Generic badge primitive — used by the Ticker vs-broker badge (Tk3) and
+     other compact status chips. Variants below pair foreground/background per
+     semantic token. */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 14px;
+    border: 0.5px solid var(--color-hairline);
+  }
+  .badge-success { color: var(--color-pos);  background: rgba(48,209,88,0.10);  border-color: rgba(48,209,88,0.30); }
+  .badge-info    { color: var(--color-info); background: rgba(100,210,255,0.10); border-color: rgba(100,210,255,0.30); }
+  .badge-warn    { color: var(--color-warn); background: rgba(255,159,10,0.10); border-color: rgba(255,159,10,0.30); }
+  .badge-muted   { color: var(--color-label-2); background: rgba(255,255,255,0.04); }
+
   /* Phase 3: aliases that templates have been using inconsistently. Map to the
      semantic tokens so existing markup colors correctly. */
   .text-neg     { color: var(--color-neg); }
@@ -314,6 +333,35 @@
   .text-loss    { color: var(--color-neg); }
   .text-gain    { color: var(--color-pos); }
   .text-success { color: var(--color-pos); }
+
+  /* §5.14: keyboard-focus ring on every interactive primitive. Uses the
+     --ring-focus token so the indigo halo is consistent across buttons,
+     chips, tabs, nav links, and form inputs. */
+  .btn:focus-visible,
+  .btn-ghost:focus-visible,
+  .tab:focus-visible,
+  .chip:focus-visible,
+  .nav-link:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  button:focus-visible {
+    outline: none;
+    box-shadow: var(--ring-focus);
+    border-radius: 4px;
+  }
+
+  /* §3.7: cheatsheet kbd token style. */
+  .kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 14px;
+    background: var(--color-surface-2, rgba(255,255,255,0.08));
+    border: 0.5px solid var(--color-hairline);
+    border-radius: 3px;
+  }
 }
 
 /* Positions side pane (§3.5). Phase 2 ships fixed 480px on ≥1024px;

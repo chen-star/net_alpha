@@ -26,6 +26,22 @@
 {% if not open_options %}
   <div class="text-label-2 text-[13px] py-3">No open option positions.</div>
 {% else %}
+  {% if options_summary is defined and options_summary %}
+    <div class="grid grid-cols-3 gap-2 mb-3">
+      <div class="kpi kpi-numeric">
+        <div class="label-uc">Open contracts</div>
+        <div class="num text-base font-bold">{{ fmt_quantity(options_summary.open_contracts) }}</div>
+      </div>
+      <div class="kpi kpi-numeric">
+        <div class="label-uc">Net premium</div>
+        <div class="num text-base font-bold {% if options_summary.net_premium >= 0 %}text-pos{% else %}text-neg{% endif %}">{{ fmt_currency(options_summary.net_premium) }}</div>
+      </div>
+      <div class="kpi kpi-numeric">
+        <div class="label-uc">Avg DTE</div>
+        <div class="num text-base font-bold">{{ options_summary.avg_dte|round(0)|int }}d</div>
+      </div>
+    </div>
+  {% endif %}
   <div class="flex flex-col">
     {% for s in open_options %}
       {% set dte = (s.expiry - today).days %}
@@ -54,7 +70,7 @@
         </div>
         <div class="text-[12px] font-mono text-label-1">
           {% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %} ${{ "%g"|format(s.strike) }}
-          <div class="text-[10px] text-label-3">{{ s.expiry.strftime('%m/%d/%y') }}</div>
+          <div class="text-[10px] text-label-2">{{ s.expiry.strftime('%m/%d/%y') }}</div>
         </div>
         <div class="flex items-center gap-[10px]">
           <span class="text-[11px] text-label-2 num min-w-[88px]">
@@ -70,12 +86,15 @@
           <div class="{% if is_long %}text-label-1 font-medium{% else %}text-pos font-medium{% endif %}">
             {% if is_long %}-${{ "%.2f"|format(s.cash_basis) }}{% else %}+${{ "%.2f"|format(s.cash_basis) }}{% endif %}
           </div>
-          <div class="text-[10px] text-label-3">
+          <div class="text-[10px] text-label-2">
             {% if is_long %}cost paid{% elif s.call_put == 'P' %}${{ "{:,.0f}".format(s.cash_secured) }} secured{% else %}premium{% endif %}
           </div>
         </div>
-        <div class="text-right num text-[13px] font-semibold {{ dte_class }}">
-          {{ dte }}d <small class="text-[10px] text-label-3 font-normal ml-1">to expiry</small>
+        <div class="text-right">
+          <span class="badge badge-muted num text-[12px] font-semibold {{ dte_class }}"
+                title="Days to expiry">
+            {{ dte }}d
+          </span>
         </div>
       </div>
     {% endfor %}

@@ -1,16 +1,16 @@
 <div class="recon-strip flex items-center gap-3 px-4 py-2 panel" data-status="{{ result.status.value }}">
-  <span class="text-xs text-label-3">net-alpha computed:</span>
+  <span class="text-xs text-label-2">net-alpha computed:</span>
   <span class="num font-mono">${{ "%.2f"|format(result.net_alpha_total) }}</span>
   <span class="text-xs text-label-3">·</span>
   {% if result.status.value == "unavailable" %}
-    <span class="text-xs text-label-3">{{ result.source_label or "Broker G/L" }}: not available for this account</span>
+    <span class="text-xs text-label-2">{{ result.source_label or "Broker G/L" }}: not available for this account</span>
   {% else %}
-    <span class="text-xs text-label-3">{{ result.source_label or "Broker G/L" }}:</span>
+    <span class="text-xs text-label-2">{{ result.source_label or "Broker G/L" }}:</span>
     <span class="num font-mono">${{ "%.2f"|format(result.broker_total) }}</span>
     {% if result.status.value == "match" %}
       <span class="text-pos">✓</span>
     {% elif result.status.value == "near_match" %}
-      <span class="text-label-3 text-xs">~match (within tolerance)</span>
+      <span class="text-label-2 text-xs">~match (within tolerance)</span>
     {% else %}
       <span class="text-warn">△ ${{ "%.2f"|format(result.delta|abs) }}</span>
       <button class="text-xs underline ml-2"

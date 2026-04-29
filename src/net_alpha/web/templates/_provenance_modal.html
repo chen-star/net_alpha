@@ -3,7 +3,7 @@
   {% if error %}
     <div class="panel p-4">
       <div class="text-neg font-medium">Couldn't reconstruct trace — file a bug.</div>
-      <div class="text-label-3 text-xs mt-1">{{ error }}</div>
+      <div class="text-label-2 text-xs mt-1">{{ error }}</div>
       <a class="text-xs underline mt-2 inline-block"
          href="https://github.com/anthropics/net-alpha/issues" target="_blank" rel="noopener">
         Open an issue
@@ -58,7 +58,7 @@
                 <td class="font-mono text-xs">{{ a.replacement_trade_id[:8] }}…</td>
                 <td class="r num font-mono">${{ "%.2f"|format(a.rolled_amount) }}</td>
                 <td>{{ a.confidence }}</td>
-                <td class="text-xs text-label-3">{{ a.rule_citation }}</td>
+                <td class="text-xs text-label-2">{{ a.rule_citation }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -83,7 +83,7 @@
                 <td class="r num font-mono {% if e.amount < 0 %}text-neg{% else %}text-pos{% endif %}">
                   ${{ "%.2f"|format(e.amount|abs) }}
                 </td>
-                <td class="text-xs text-label-3">{{ e.description }}</td>
+                <td class="text-xs text-label-2">{{ e.description }}</td>
               </tr>
             {% endfor %}
           </tbody>

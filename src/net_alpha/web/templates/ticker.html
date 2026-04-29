@@ -2,220 +2,98 @@
 {% from "_provenance_macros.html" import provenance_link %}
 {% block title %}{{ symbol }} · net-alpha{% endblock %}
 {% block content %}
-  <div class="flex justify-between items-baseline mb-4">
-    <h1 class="text-2xl font-mono text-primary">{{ symbol }}</h1>
+  <div class="flex items-end justify-between flex-wrap gap-3 mb-4">
+    <div>
+      <h1>{{ symbol }}</h1>
+      <div class="text-[13px] text-label-2 mt-[3px]">
+        {{ company_name|default('—') }} · {{ instrument_kind|default('stock') }}
+      </div>
+    </div>
     <div class="flex gap-2">
-      <button type="button" class="btn"
+      <a href="/sim?ticker={{ symbol }}" class="btn">Sim sell</a>
+      <button type="button" class="btn btn-ghost"
               onclick="
                 fetch('/ticker/{{ symbol }}/add-form').then(r => r.text()).then(html => {
                   document.getElementById('trade-modal-content').innerHTML = html;
                   document.getElementById('trade-modal').classList.remove('hidden');
-                });
-              ">Add trade</button>
-      <a href="/sim?ticker={{ symbol }}" class="btn">Simulate sale</a>
+                });">⋯ More</button>
     </div>
   </div>
 
   <div class="grid grid-cols-5 gap-4 mb-6">
-    <div class="panel">
+    <div class="kpi" data-kpi-slot="open-lots">
       <div class="label-uc">Open lots</div>
-      <div class="text-2xl font-mono num">{{ kpi_open_lots }}{% if open_shorts %}<span class="text-label-3 text-base"> + {{ open_shorts|length }} short opt</span>{% endif %}</div>
-      <div class="text-xs text-label-2 mt-1">Basis: ${{ "%.2f"|format(kpi_open_basis) }}</div>
+      <div class="num text-[22px] font-bold mt-2">
+        {{ kpi_open_lots }}{% if open_shorts %}<span class="text-label-2 text-[14px] font-normal"> + {{ open_shorts|length }} short opt</span>{% endif %}
+      </div>
+      <div class="text-xs text-label-2 mt-1">Basis: {{ fmt_currency(kpi_open_basis) }}</div>
     </div>
-    <div class="panel">
+
+    <div class="kpi" data-kpi-slot="realized">
       <div class="label-uc">Realized P&amp;L</div>
-      <div class="text-2xl font-mono num {% if kpi_realized_ytd >= 0 %}text-pos{% else %}text-confirmed{% endif %}">
-        ${{ "%.2f"|format(kpi_realized_ytd) }}{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
+      <div class="num text-[22px] font-bold mt-2 {% if kpi_realized_ytd > 0 %}text-pos{% elif kpi_realized_ytd < 0 %}text-neg{% else %}text-label-2{% endif %}">
+        {{ fmt_currency(kpi_realized_ytd) }}{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
       </div>
       <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
-      <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
-        <div class="text-sm font-mono num {% if kpi_realized_lifetime >= 0 %}text-pos{% else %}text-confirmed{% endif %}">
-          ${{ "%.2f"|format(kpi_realized_lifetime) }}{% if realized_lifetime_ref %}{{ provenance_link(realized_lifetime_ref) }}{% endif %}
+      {% if account_ids %}
+        <div class="mt-1 flex flex-wrap gap-1"
+             hx-get="/reconciliation/{{ symbol }}?account_id={{ account_ids[0] }}&variant=badge"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+          <span class="text-[11px] text-label-2">checking…</span>
         </div>
-        <div class="text-xs text-label-3">Lifetime</div>
+      {% endif %}
+      <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
+        <div class="num text-sm font-semibold {% if kpi_realized_lifetime > 0 %}text-pos{% elif kpi_realized_lifetime < 0 %}text-neg{% else %}text-label-2{% endif %}">
+          {{ fmt_currency(kpi_realized_lifetime) }}{% if realized_lifetime_ref %}{{ provenance_link(realized_lifetime_ref) }}{% endif %}
+        </div>
+        <div class="text-xs text-label-2">Lifetime</div>
       </div>
     </div>
-    <div class="panel">
+
+    <div class="kpi" data-kpi-slot="disallowed">
       <div class="label-uc">Disallowed</div>
-      <div class="text-2xl font-mono text-confirmed num">${{ "%.2f"|format(kpi_disallowed_ytd) }}</div>
+      <div class="num text-[22px] font-bold mt-2 {% if kpi_disallowed_ytd > 0 %}text-neg{% else %}text-label-3{% endif %}">
+        {{ fmt_currency(kpi_disallowed_ytd) }}
+      </div>
       <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
       <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
-        <div class="text-sm font-mono text-confirmed num">${{ "%.2f"|format(kpi_disallowed_lifetime) }}</div>
-        <div class="text-xs text-label-3">Lifetime</div>
+        <div class="num text-sm font-semibold {% if kpi_disallowed_lifetime > 0 %}text-neg{% else %}text-label-3{% endif %}">
+          {{ fmt_currency(kpi_disallowed_lifetime) }}
+        </div>
+        <div class="text-xs text-label-2">Lifetime</div>
       </div>
     </div>
-    <div class="panel">
+
+    <div class="kpi" data-kpi-slot="accounts">
       <div class="label-uc">Accounts</div>
-      <div class="text-sm font-mono mt-1">
-        {% for a in kpi_accounts %}{{ a }}{% if not loop.last %}, {% endif %}{% endfor %}
-        {% if not kpi_accounts %}-{% endif %}
+      <div class="text-sm mt-2">
+        {% for a in kpi_accounts %}<span class="font-mono">{{ a }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+        {% if not kpi_accounts %}<span class="text-label-3">—</span>{% endif %}
       </div>
     </div>
-    <div class="panel">
+
+    <div class="kpi" data-kpi-slot="last-trade">
       <div class="label-uc">Last trade</div>
       {% if kpi_last_trade %}
-        <div class="text-sm font-mono mt-1">{{ kpi_last_trade.action }} {{ kpi_last_trade.quantity }}</div>
-        <div class="text-xs text-label-2">{{ kpi_last_trade.date }}</div>
+        <div class="text-sm mt-2">{{ kpi_last_trade.action }} <span class="font-mono num">{{ fmt_quantity(kpi_last_trade.quantity) }}</span></div>
+        <div class="text-xs text-label-2"><span class="font-mono">{{ fmt_date(kpi_last_trade.date) }}</span></div>
       {% else %}
-        <div class="text-sm text-label-2 mt-1">No trades</div>
+        <div class="text-sm text-label-2 mt-2">No trades</div>
       {% endif %}
     </div>
   </div>
 
-  {# Reconciliation strip — one per account that holds this symbol. Loads lazily. #}
-  {% if account_ids %}
-    {% for account_id in account_ids %}
-      <div class="mb-3"
-           hx-get="/reconciliation/{{ symbol }}?account_id={{ account_id }}"
-           hx-trigger="load"
-           hx-swap="innerHTML">
-        <div class="text-label-3 text-xs">Loading reconciliation…</div>
-      </div>
-    {% endfor %}
-  {% endif %}
-
-  <h2 class="text-xl mb-2">Timeline</h2>
-  <div class="panel mb-6" style="padding:0;">
-    <table class="net-table text-sm">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Account</th>
-          <th>Provenance</th>
-          <th>Action</th>
-          <th>Qty</th>
-          <th>Basis</th>
-          <th>Proceeds</th>
-          <th class="r" title="Realized P&L attributable to this row. Long-lot sells use proceeds−basis; short-option closes pair the close cost against the matching opening premium.">G/L</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in timeline_rows %}
-          {% set t = row.trade %}
-          {% set is_synth = t.basis_source == 'option_short_close_expiry' %}
-          {% set is_transfer = t.basis_source in ('transfer_in', 'transfer_out') %}
-          <tr {% if is_synth %}class="text-label-2"{% endif %}>
-            <td class="px-2 py-1 font-mono">
-              {% if is_transfer %}
-                <span class="text-[10px] text-label-3 uppercase tracking-tightish">Acq</span>
-                {{ t.date }}
-                {% if t.transfer_date and t.transfer_date != t.date %}
-                  <div class="text-[10px] text-label-3">
-                    <span class="uppercase tracking-tightish">Xferred</span> {{ t.transfer_date }}
-                  </div>
-                {% endif %}
-              {% else %}
-                {{ t.date }}
-              {% endif %}
-            </td>
-            <td class="px-2 py-1">{{ t.account }}</td>
-            <td class="px-2 py-1 text-[11px]">
-              {% if is_synth %}<span class="pill" style="color: var(--color-label-3);">auto</span>
-              {% elif t.is_manual %}<span class="pill" style="color: var(--color-accent);">manual</span>
-              {% elif t.transfer_basis_user_set %}<span class="pill" style="color: var(--color-warn);">edited</span>
-              {% endif %}
-            </td>
-            <td class="px-2 py-1">{{ display_action(t, assigned_from=row.assigned_from) }}</td>
-            <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
-            <td class="px-2 py-1 num font-mono">{{ t.cost_basis if t.cost_basis is not none else "-" }}</td>
-            <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
-            <td class="px-2 py-1 num font-mono r">
-              {% if row.gain_loss is not none %}
-                <span class="{% if row.gain_loss >= 0 %}text-pos{% else %}text-neg{% endif %}">
-                  {% if row.gain_loss >= 0 %}+{% else %}−{% endif %}${{ "%.2f"|format(row.gain_loss|abs) }}
-                </span>
-              {% else %}
-                <span class="text-label-3">—</span>
-              {% endif %}
-            </td>
-            <td class="px-2 py-1 text-[11px] r" id="trade-affordance-{{ t.id }}">
-              {% if t.is_manual %}
-                <a href="#" class="text-label-2 hover:text-text mr-2"
-                   onclick="event.preventDefault();
-                     fetch('/ticker/{{ symbol }}/edit-manual-form/{{ t.id }}').then(r => r.text()).then(html => {
-                       document.getElementById('trade-modal-content').innerHTML = html;
-                       document.getElementById('trade-modal').classList.remove('hidden');
-                     });">edit</a>
-                <a href="#" class="text-confirmed hover:text-text"
-                   onclick="event.preventDefault();
-                     fetch('/ticker/{{ symbol }}/delete-confirm/{{ t.id }}').then(r => r.text()).then(html => {
-                       document.getElementById('trade-modal-content').innerHTML = html;
-                       document.getElementById('trade-modal').classList.remove('hidden');
-                     });">delete</a>
-              {% elif t.basis_source in ['transfer_in', 'transfer_out'] %}
-                <a href="#" class="text-label-2 hover:text-text"
-                   onclick="event.preventDefault();
-                     fetch('/ticker/{{ symbol }}/edit-transfer-form/{{ t.id }}').then(r => r.text()).then(html => {
-                       document.getElementById('trade-modal-content').innerHTML = html;
-                       document.getElementById('trade-modal').classList.remove('hidden');
-                     });">set basis &amp; date</a>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-        {% if not timeline_rows %}
-          <tr><td colspan="9" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
+  {% include "_ticker_tabs.html" %}
+  <div id="ticker-tab-content">
+    {% if selected_view == 'lots' %}
+      {% include "_ticker_view_lots.html" %}
+    {% elif selected_view == 'recon' %}
+      {% include "_ticker_view_reconciliation.html" %}
+    {% else %}
+      {% include "_ticker_view_timeline.html" %}
+    {% endif %}
   </div>
-
-  {% if lots or not open_shorts %}
-    <h2 class="text-xl mb-2">Open long lots</h2>
-    {% include "_lots_table.html" %}
-  {% else %}
-    {# Only short options open on this ticker — the Open lots table would be
-       empty and confusing. The "Open short options" section right below shows
-       the actual exposure. #}
-    <h2 class="text-xl mb-2">Open positions</h2>
-    <div class="panel mb-6 px-4 py-3 text-[13px] text-label-2">
-      No long lots on {{ symbol }} &mdash; see <strong class="text-text">Open short options</strong> below.
-    </div>
-  {% endif %}
-
-  {% if open_shorts %}
-    <h2 class="text-xl mt-6 mb-2">Open short options</h2>
-    <div class="panel mb-6" style="padding:0;">
-      <table class="net-table text-sm">
-        <thead>
-          <tr>
-            <th>Account</th>
-            <th>Contract</th>
-            <th>Opened</th>
-            <th class="r">Qty short</th>
-            <th class="r">Premium received</th>
-            <th class="r">Cash secured</th>
-            <th class="r">DTE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for s in open_shorts %}
-            {% set dte = (s.expiry - kpi_today).days if kpi_today else None %}
-            <tr>
-              <td class="px-2 py-1 font-mono">{{ s.account }}</td>
-              <td class="px-2 py-1 font-mono text-[12px]">
-                <span class="pill" style="color: var(--color-accent);">{% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %}</span>
-                ${{ "%g"|format(s.strike) }}
-                <span class="text-label-3">·</span>
-                {{ s.expiry.strftime('%m/%d/%y') }}
-                <span class="pill ml-1" style="color: var(--color-warn);">short</span>
-              </td>
-              <td class="px-2 py-1 font-mono">{{ s.opened_at if s.opened_at else "—" }}</td>
-              <td class="px-2 py-1 num font-mono r">-{{ s.qty_short }}</td>
-              <td class="px-2 py-1 num font-mono r text-pos">+${{ "%.2f"|format(s.premium_received) }}</td>
-              <td class="px-2 py-1 num font-mono r">
-                {% if s.call_put == 'P' %}${{ "%.0f"|format(s.cash_secured) }}{% else %}—{% endif %}
-              </td>
-              <td class="px-2 py-1 num font-mono r {% if dte is not none and dte <= 7 %}text-warn{% endif %}">
-                {% if dte is not none %}{{ dte }}d{% else %}—{% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endif %}
 
   {% if violations %}
     <h2 class="text-xl mt-6 mb-2">Violations involving {{ symbol }}</h2>

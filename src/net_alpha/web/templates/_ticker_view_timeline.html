@@ -1,0 +1,93 @@
+<div class="panel mb-6" style="padding:0;">
+  <table class="net-table text-sm">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Account</th>
+        <th>Provenance</th>
+        <th>Action</th>
+        <th>Qty</th>
+        <th>Basis</th>
+        <th>Proceeds</th>
+        <th class="r" title="Realized P&L attributable to this row. Long-lot sells use proceeds−basis; short-option closes pair the close cost against the matching opening premium.">G/L</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in timeline_rows %}
+        {% set t = row.trade %}
+        {% set is_synth = t.basis_source == 'option_short_close_expiry' %}
+        {% set is_transfer = t.basis_source in ('transfer_in', 'transfer_out') %}
+        <tr {% if is_synth %}class="text-label-2"{% endif %}>
+          <td class="px-2 py-1 font-mono">
+            {% if is_transfer %}
+              <span class="text-[10px] text-label-2 uppercase tracking-tightish">Acq</span>
+              {{ t.date }}
+              {% if t.transfer_date and t.transfer_date != t.date %}
+                <div class="text-[10px] text-label-2">
+                  <span class="uppercase tracking-tightish">Xferred</span> {{ t.transfer_date }}
+                </div>
+              {% endif %}
+            {% else %}
+              {{ t.date }}
+            {% endif %}
+          </td>
+          <td class="px-2 py-1">{{ t.account }}</td>
+          <td class="px-2 py-1 text-[11px]">
+            {% if is_synth %}<span class="pill" style="color: var(--color-label-3);">auto</span>
+            {% elif t.is_manual %}<span class="pill" style="color: var(--color-accent);">manual</span>
+            {% elif t.transfer_basis_user_set %}<span class="pill" style="color: var(--color-warn);">edited</span>
+            {% endif %}
+          </td>
+          <td class="px-2 py-1">{{ display_action(t, assigned_from=row.assigned_from) }}</td>
+          <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
+          <td class="px-2 py-1 num font-mono" id="trade-basis-{{ t.id }}">
+            {% if t.cost_basis is not none %}
+              {{ fmt_currency(t.cost_basis) }}
+            {% elif t.basis_source in ('transfer_in', 'transfer_out') and not t.is_manual %}
+              {% with trade_id=t.id %}{% include "_ticker_basis_chip.html" %}{% endwith %}
+            {% else %}
+              <span class="text-label-3">—</span>
+            {% endif %}
+          </td>
+          <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
+          <td class="px-2 py-1 num font-mono r">
+            {% if row.gain_loss is not none %}
+              <span class="{% if row.gain_loss >= 0 %}text-pos{% else %}text-neg{% endif %}">
+                {% if row.gain_loss >= 0 %}+{% else %}−{% endif %}${{ "%.2f"|format(row.gain_loss|abs) }}
+              </span>
+            {% else %}
+              <span class="text-label-3">—</span>
+            {% endif %}
+          </td>
+          <td class="px-2 py-1 text-[11px] r" id="trade-affordance-{{ t.id }}">
+            {% if t.is_manual %}
+              <a href="#" class="text-label-2 hover:text-text mr-2"
+                 onclick="event.preventDefault();
+                   fetch('/ticker/{{ symbol }}/edit-manual-form/{{ t.id }}').then(r => r.text()).then(html => {
+                     document.getElementById('trade-modal-content').innerHTML = html;
+                     document.getElementById('trade-modal').classList.remove('hidden');
+                   });">edit</a>
+              <a href="#" class="text-confirmed hover:text-text"
+                 onclick="event.preventDefault();
+                   fetch('/ticker/{{ symbol }}/delete-confirm/{{ t.id }}').then(r => r.text()).then(html => {
+                     document.getElementById('trade-modal-content').innerHTML = html;
+                     document.getElementById('trade-modal').classList.remove('hidden');
+                   });">delete</a>
+            {% elif t.basis_source in ['transfer_in', 'transfer_out'] %}
+              <a href="#" class="text-label-2 hover:text-text"
+                 onclick="event.preventDefault();
+                   fetch('/ticker/{{ symbol }}/edit-transfer-form/{{ t.id }}').then(r => r.text()).then(html => {
+                     document.getElementById('trade-modal-content').innerHTML = html;
+                     document.getElementById('trade-modal').classList.remove('hidden');
+                   });">set basis &amp; date</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      {% if not timeline_rows %}
+        <tr><td colspan="9" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>

@@ -8,7 +8,7 @@
 {% set cash_pledged_color = 'rgba(255,159,10,0.65)' %}  {# orange (matches Cash KPI's pledged bar) — distinct from free cash + rest #}
 
 {% if allocation.symbol_count == 0 %}
-  <div class="text-label-3 text-[12px] py-4 text-center">
+  <div class="text-label-2 text-[12px] py-4 text-center">
     No priced open positions in scope.
   </div>
 {% else %}
@@ -46,7 +46,7 @@
         <div class="num text-[19px] font-bold tracking-tight mt-[2px]">
           ${{ "%.1f"|format(allocation.total_market_value|float / 1000) }}k
         </div>
-        <div class="text-[10px] text-label-3 mt-[2px]">{{ allocation.symbol_count }} symbol{% if allocation.symbol_count != 1 %}s{% endif %}</div>
+        <div class="text-[10px] text-label-2 mt-[2px]">{{ allocation.symbol_count }} symbol{% if allocation.symbol_count != 1 %}s{% endif %}</div>
       </div>
     </button>
 
@@ -127,7 +127,7 @@
            style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
         <div class="min-w-0">
           <h2 class="text-lg font-semibold tracking-tightish">Allocation breakdown</h2>
-          <div class="text-[11px] text-label-3 mt-1">
+          <div class="text-[11px] text-label-2 mt-1">
             {{ allocation.symbol_count }} priced symbol{% if allocation.symbol_count != 1 %}s{% endif %}
             · ${{ "{:,.2f}".format(allocation.total_market_value|float) }} total
           </div>

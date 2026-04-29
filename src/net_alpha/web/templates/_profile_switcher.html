@@ -14,7 +14,7 @@
   <div x-show="open" x-cloak
        class="absolute right-0 mt-1 z-30 bg-surface text-text rounded shadow-lg p-3 min-w-[280px]"
        style="border:0.5px solid rgba(255,255,255,0.08);">
-    <div class="text-[11px] text-label-3 mb-2">Profile per account</div>
+    <div class="text-[11px] text-label-2 mb-2">Profile per account</div>
     {% for a in accounts %}
       {% set current = account_profiles.get(a.id, 'active') %}
       <form hx-post="/preferences" hx-swap="none" class="flex items-center gap-2 mb-2">
