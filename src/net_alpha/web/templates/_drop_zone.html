@@ -1,4 +1,4 @@
-<div class="border-2 border-dashed rounded-lg p-8 text-center bg-surface"
+<div class="relative border-2 border-dashed rounded-lg p-8 text-center bg-surface"
      style="border-color: rgba(255,255,255,0.14);"
      id="drop-zone"
      hx-post="/imports/preview"
@@ -19,7 +19,10 @@
   <p>Drop one or more Schwab CSVs here or <a class="text-primary underline cursor-pointer">click to browse</a></p>
   <p class="text-xs text-label-2 mt-1">Transaction History &middot; Realized G/L &middot; max 50 MB each</p>
   <input type="file" id="csv-input" name="files" accept=".csv" multiple required form="import-form" class="hidden"
+         data-drop-zone
          onchange="document.getElementById('import-modal').classList.remove('hidden');"/>
+  <div data-testid="drop-zone-preview"
+       class="hidden absolute inset-x-0 bottom-2 text-center text-[12px] text-label-2 pointer-events-none"></div>
 </div>
 
 <div id="import-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
