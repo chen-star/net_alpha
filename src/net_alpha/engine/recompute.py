@@ -6,6 +6,7 @@ from datetime import timedelta
 from sqlalchemy import text
 from sqlmodel import Session
 
+from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION
 from net_alpha.db.repository import Repository
 from net_alpha.engine.detector import detect_in_window
 from net_alpha.engine.merge import merge_violations
@@ -23,14 +24,19 @@ class MigrationRecomputeSummary:
 
 
 def should_full_recompute(repo: Repository) -> bool:
-    """True iff the §1256 universe hash in meta differs from the current bundled+user merge."""
+    """True iff the §1256 universe hash OR the wash-sale engine version in meta
+    differs from the current bundled universe / CURRENT_SCHEMA_VERSION.
+    """
     with Session(repo.engine) as session:
-        row = session.exec(text("SELECT value FROM meta WHERE key='section_1256_universe_hash'")).first()
-        stored = row[0] if row else None
-    return stored != universe_hash()
+        hash_row = session.exec(text("SELECT value FROM meta WHERE key='section_1256_universe_hash'")).first()
+        version_row = session.exec(text("SELECT value FROM meta WHERE key='wash_sale_engine_version'")).first()
+        stored_hash = hash_row[0] if hash_row else None
+        stored_version = version_row[0] if version_row else None
+    return (stored_hash != universe_hash()) or (stored_version != str(CURRENT_SCHEMA_VERSION))
 
 
 def _stamp_universe_hash(repo: Repository) -> None:
+    """Stamp universe hash AND engine version in meta."""
     with Session(repo.engine) as session:
         session.exec(
             text(
@@ -38,55 +44,26 @@ def _stamp_universe_hash(repo: Repository) -> None:
                 "ON CONFLICT(key) DO UPDATE SET value=:v"
             ).bindparams(v=universe_hash())
         )
+        session.exec(
+            text(
+                "INSERT INTO meta(key, value) VALUES ('wash_sale_engine_version', :v) "
+                "ON CONFLICT(key) DO UPDATE SET value=:v"
+            ).bindparams(v=str(CURRENT_SCHEMA_VERSION))
+        )
         session.commit()
 
 
 def recompute_all(repo: Repository) -> None:
-    """Recompute all wash-sale violations, persist exempt matches, run §1256
-    classifier, and stamp the universe hash.
+    """Convenience wrapper: load ETF pairs and call recompute_all_violations.
 
-    Loads ETF pairs from the default bundled + user YAML paths so callers
-    don't need to supply them.
+    Recomputes violations, persists exempt matches, runs the §1256 classifier,
+    and stamps the universe hash + engine version. Callers that already hold
+    the ETF pairs dict should call recompute_all_violations directly.
     """
     from net_alpha.engine.etf_pairs import load_etf_pairs
 
     etf_pairs = load_etf_pairs()
     recompute_all_violations(repo, etf_pairs)
-
-    # Persist exempt matches from the last full detection pass.
-    # Re-run detect to get the full DetectionResult including exempt_matches.
-    all_trades = repo.all_trades()
-    accounts = repo.list_accounts()
-    gl_by_account = {a.id: repo.get_gl_lots_for_account(a.id) for a in accounts}
-
-    all_dates: list = [t.date for t in all_trades]
-    for lots in gl_by_account.values():
-        all_dates.extend(lot.closed_date for lot in lots)
-
-    if all_dates:
-        win_start = min(all_dates) - timedelta(days=30)
-        win_end = max(all_dates) + timedelta(days=30)
-        det = detect_in_window(
-            repo.trades_in_window(win_start, win_end),
-            win_start,
-            win_end,
-            etf_pairs=etf_pairs,
-        )
-
-        # Persist exempt matches
-        repo.clear_exempt_matches()
-        repo.save_exempt_matches(det.exempt_matches)
-
-        # Run §1256 classifier and persist classifications
-        all_lots = repo.all_lots()
-        classifications = classify_closed_trades(all_trades, all_lots)
-        repo.clear_section_1256_classifications()
-        repo.save_section_1256_classifications(classifications)
-
-        # Stamp universe hash so subsequent should_full_recompute() returns False.
-        # Only stamp when a real recompute actually ran (data was present);
-        # an empty DB must not suppress the trigger when trades are added later.
-        _stamp_universe_hash(repo)
 
 
 def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) -> None:
@@ -96,6 +73,11 @@ def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) 
     loss_sale_date sits outside the immediate ±30-day window of any single
     upload, so per-import incremental recompute leaves stale Confirmed/Probable
     labels behind. Run this after every upload or delete to keep state coherent.
+
+    Also persists exempt matches (§1256 trades that were skipped by the wash-sale
+    detector) and runs the §1256 60/40 classifier over all closed §1256 trades.
+    Stamps the universe hash and engine version in meta so should_full_recompute()
+    returns False until the universe or engine changes again.
     """
     all_trades = repo.all_trades()
     accounts = repo.list_accounts()
@@ -129,6 +111,23 @@ def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) 
     # layer on top and take final precedence.
     apply_splits(repo)
     apply_manual_overrides(repo)
+
+    # C2: Persist exempt matches from this recompute pass.
+    # clear_exempt_matches() is a full table wipe — acceptable for v1 where we
+    # always recompute globally (no windowed exempt-match persistence).
+    repo.clear_exempt_matches()
+    repo.save_exempt_matches(det.exempt_matches)
+
+    # C2: Run §1256 classifier over all closed §1256 trades and persist classifications.
+    # Reload lots AFTER splits/overrides have been applied so adjusted_basis is correct.
+    all_lots = repo.all_lots()
+    classifications = classify_closed_trades(all_trades, all_lots)
+    repo.clear_section_1256_classifications()
+    repo.save_section_1256_classifications(classifications)
+
+    # Stamp universe hash + engine version so should_full_recompute() returns False
+    # until the universe YAML changes or the binary is upgraded.
+    _stamp_universe_hash(repo)
 
 
 def migrate_existing_violations(repo: Repository) -> MigrationRecomputeSummary:
