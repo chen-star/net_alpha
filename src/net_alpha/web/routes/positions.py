@@ -1,17 +1,25 @@
 from __future__ import annotations
 
 import datetime as dt
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 from loguru import logger
 
 from net_alpha.db.repository import Repository
-from net_alpha.portfolio.positions import compute_closed_lots, open_lots_view
+from net_alpha.portfolio.cash_flow import compute_cash_kpis
+from net_alpha.portfolio.positions import (
+    compute_closed_lots,
+    compute_open_positions,
+    compute_open_short_option_positions,
+    open_lots_view,
+)
 from net_alpha.portfolio.tax_planner import compute_harvest_queue, compute_offset_budget
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
+from net_alpha.targets.models import TargetUnit
+from net_alpha.targets.view import build_plan_view
 from net_alpha.web.dependencies import (
     get_etf_pairs,
     get_pricing_service,
@@ -142,58 +150,11 @@ def positions_page(
             )
 
     if selected_view == "plan":
-        from net_alpha.portfolio.cash_flow import compute_cash_kpis
-        from net_alpha.portfolio.positions import compute_open_positions
-        from net_alpha.targets.view import build_plan_view
-
-        trades = repo.all_trades()
-        lots = repo.all_lots()
-        gl_closures = repo.get_equity_gl_closures()
-        gl_option_closures = repo.get_option_gl_closures()
-        all_lot_tickers = sorted({lot.ticker for lot in lots if lot.option_details is None})
-        quote_symbols = sorted(set(all_lot_tickers) | {t.symbol for t in targets})
-        prices = pricing.get_prices(quote_symbols)
-
-        pos_rows = compute_open_positions(
-            trades=trades, lots=lots, prices=prices,
-            period=None, account=account or None, include_closed=False,
-            gl_closures=gl_closures, gl_option_closures=gl_option_closures,
-        )
-        pos_by_sym = {r.symbol: r for r in pos_rows}
-        quotes_by_sym = {sym: q.price for sym, q in prices.items()}
-
-        cash_events = repo.list_cash_events(account_id=None)
-        if account:
-            cash_events = [e for e in cash_events if e.account == account]
-        holdings_value = sum(((r.market_value or Decimal("0")) for r in pos_rows), start=Decimal("0"))
-        cash_kpis = compute_cash_kpis(
-            events=cash_events, trades=trades, holdings_value=holdings_value,
-            account=None, period=None,
-        )
-        # Free cash = cash_balance − cash_secured_total. Pattern lifted from
-        # routes/portfolio.py lines 240–248.
-        from net_alpha.portfolio.positions import compute_open_short_option_positions
-
-        scoped_trades_for_shorts = [t for t in trades if t.account == account] if account else trades
-        open_shorts = compute_open_short_option_positions(
-            scoped_trades_for_shorts,
-            gl_option_closures=gl_option_closures,
-        )
-        cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
-        free_cash = cash_kpis.cash_balance - cash_secured_total
-
-        plan_view = build_plan_view(
-            targets=targets,
-            positions_by_symbol=pos_by_sym,
-            quotes_by_symbol=quotes_by_sym,
-            free_cash=free_cash,
-        )
+        plan_view = _build_plan_view_for_request(repo, pricing, account)
         ctx["plan_view"] = plan_view
         if request.headers.get("hx-request"):
             return request.app.state.templates.TemplateResponse(
-                request,
-                "_positions_view_plan.html",
-                ctx,
+                request, "_positions_view_plan.html", ctx,
             )
 
     return request.app.state.templates.TemplateResponse(
@@ -322,3 +283,121 @@ def positions_pane(
         "_positions_pane_body.html",
         ctx,
     )
+
+
+# ---------------------------------------------------------------------------
+# Plan-view helpers (shared by GET ?view=plan, POST /plan/target, DELETE)
+# ---------------------------------------------------------------------------
+
+
+def _build_plan_view_for_request(
+    repo: Repository,
+    pricing: PricingService,
+    account: str | None,
+):
+    """Compute the PlanView used by both GET ?view=plan and the POST/DELETE
+    fragment refreshes. Pulls trades, lots, prices, cash events, CSP collateral,
+    free cash, then calls build_plan_view."""
+    targets = repo.list_targets()
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    gl_closures = repo.get_equity_gl_closures()
+    gl_option_closures = repo.get_option_gl_closures()
+    all_lot_tickers = sorted({lot.ticker for lot in lots if lot.option_details is None})
+    quote_symbols = sorted(set(all_lot_tickers) | {t.symbol for t in targets})
+    prices = pricing.get_prices(quote_symbols)
+
+    pos_rows = compute_open_positions(
+        trades=trades, lots=lots, prices=prices,
+        period=None, account=account or None, include_closed=False,
+        gl_closures=gl_closures, gl_option_closures=gl_option_closures,
+    )
+    pos_by_sym = {r.symbol: r for r in pos_rows}
+    quotes_by_sym = {sym: q.price for sym, q in prices.items()}
+
+    cash_events = repo.list_cash_events(account_id=None)
+    if account:
+        cash_events = [e for e in cash_events if e.account == account]
+    holdings_value = sum(
+        ((r.market_value or Decimal("0")) for r in pos_rows),
+        start=Decimal("0"),
+    )
+    cash_kpis = compute_cash_kpis(
+        events=cash_events, trades=trades, holdings_value=holdings_value,
+        account=None, period=None,
+    )
+
+    scoped_trades_for_shorts = [t for t in trades if t.account == account] if account else trades
+    open_shorts = compute_open_short_option_positions(
+        scoped_trades_for_shorts,
+        gl_option_closures=gl_option_closures,
+    )
+    cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
+    free_cash = cash_kpis.cash_balance - cash_secured_total
+
+    return build_plan_view(
+        targets=targets,
+        positions_by_symbol=pos_by_sym,
+        quotes_by_symbol=quotes_by_sym,
+        free_cash=free_cash,
+    )
+
+
+def _modal_error(request: Request, msg: str, status: int) -> HTMLResponse:
+    response = request.app.state.templates.TemplateResponse(
+        request, "_positions_plan_modal.html",
+        {"_target": None, "error": msg},
+    )
+    response.status_code = status
+    return response
+
+
+def _render_plan_body(
+    request: Request,
+    repo: Repository,
+    pricing: PricingService,
+    account: str | None = None,
+) -> HTMLResponse:
+    plan_view = _build_plan_view_for_request(repo, pricing, account)
+    return request.app.state.templates.TemplateResponse(
+        request, "_positions_view_plan.html",
+        {"plan_view": plan_view},
+    )
+
+
+@router.get("/positions/plan/modal", response_class=HTMLResponse)
+def plan_modal(
+    request: Request,
+    symbol: str | None = None,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    target = repo.get_target(symbol) if symbol else None
+    return request.app.state.templates.TemplateResponse(
+        request, "_positions_plan_modal.html",
+        {"_target": target, "error": None},
+    )
+
+
+@router.post("/positions/plan/target", response_class=HTMLResponse)
+def plan_target_upsert(
+    request: Request,
+    symbol: str = Form(""),
+    target_unit: str = Form("usd"),
+    target_amount: str = Form("0"),
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        return _modal_error(request, "Symbol is required.", status=422)
+    try:
+        amount = Decimal(target_amount)
+    except (InvalidOperation, ValueError):
+        return _modal_error(request, "Amount must be a number.", status=422)
+    if amount <= 0:
+        return _modal_error(request, "Amount must be positive.", status=422)
+    if target_unit not in ("usd", "shares"):
+        return _modal_error(request, "Invalid target type.", status=422)
+
+    repo.upsert_target(sym, amount, TargetUnit(target_unit))
+    return _render_plan_body(request, repo, pricing)
