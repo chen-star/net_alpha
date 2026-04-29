@@ -18,6 +18,18 @@
 
   <form hx-post="/sim" hx-target="#sim-result" hx-swap="innerHTML"
         x-data="{ action: '{{ action_pref if action_pref else ('sell' if harvest_mode else 'sell') }}' }"
+        hx-on::after-request="
+          if (event.detail.successful) {
+            window.dispatchEvent(new CustomEvent('sim-ran', {
+              detail: {
+                ticker: this.querySelector('[name=ticker]').value,
+                action: this.querySelector('[name=action]').value,
+                qty: this.querySelector('[name=qty]').value,
+                timestamp: new Date().toLocaleTimeString()
+              }
+            }));
+          }
+        "
         class="panel mb-6">
     <div class="grid grid-cols-6 gap-3 items-end">
       <div class="col-span-1">
@@ -83,4 +95,6 @@
   </form>
 
   <div id="sim-result"></div>
+
+  {% include "_sim_recents.html" %}
 {% endblock %}
