@@ -415,6 +415,11 @@ def portfolio_positions(
     }
     profile = _resolve_profile(repo, account)
     extra_columns = profile.default_columns("holdings")
+    # Inject targets-by-symbol + 'target' column when any targets exist.
+    targets = repo.list_targets()
+    targets_by_symbol = {t.symbol: t for t in targets}
+    if targets and "target" not in extra_columns:
+        extra_columns = list(extra_columns) + ["target"]
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_table.html",
@@ -434,6 +439,7 @@ def portfolio_positions(
             "group_options": group_options,
             "profile": profile,
             "extra_columns": extra_columns,
+            "targets_by_symbol": targets_by_symbol,
             "sort": sort or "market_value",
             "dir": (dir or "desc").lower(),
         },

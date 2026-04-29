@@ -148,6 +148,7 @@
             {% if 'days_to_ltcg' in extra_columns %}<th data-col="days_to_ltcg" class="r" title="Days until the oldest short-term lot crosses the 1-year LTCG threshold. (Not yet computed.)">&rarr;LTCG</th>{% endif %}
             {% if 'harvestable' in extra_columns %}<th data-col="harvestable" class="r" title="Harvestable loss available on this position right now (capital loss the unrealized P&L would realize if you sold today). (Not yet computed.)">Harv.</th>{% endif %}
             {% if 'premium_offset' in extra_columns %}<th data-col="premium_offset" class="r" title="Premium received this year on this underlying that offsets cost basis when assignment occurs. (Not yet computed.)">Prem.&nbsp;off</th>{% endif %}
+            {% if 'target' in extra_columns %}<th data-col="target" class="text-left" style="min-width:160px;" title="Your set target for this symbol — manage in Positions / Plan tab.">Target</th>{% endif %}
           {% endif %}
           <th class="w-10"></th>
         </tr>
@@ -221,6 +222,32 @@
               {% if 'days_to_ltcg' in extra_columns %}<td class="r num">—</td>{% endif %}
               {% if 'harvestable' in extra_columns %}<td class="r">—</td>{% endif %}
               {% if 'premium_offset' in extra_columns %}<td class="r num">—</td>{% endif %}
+              {% if 'target' in extra_columns %}
+                <td data-col="target" class="text-[12px]">
+                  {% set _t = targets_by_symbol.get(r.symbol) if targets_by_symbol is defined else None %}
+                  {% if _t %}
+                    {% set _native = ('$%.0f' % _t.target_amount|float) if _t.target_unit.value == 'usd' else ('%.2f sh' % _t.target_amount|float) %}
+                    {% set _curr = ('$%.0f' % r.market_value|float) if (_t.target_unit.value == 'usd' and r.market_value is not none) else ('%.2f' % r.qty|float) %}
+                    {% if _t.target_unit.value == 'usd' and r.market_value is not none and _t.target_amount > 0 %}
+                      {% set _pct = (r.market_value|float / _t.target_amount|float * 100) %}
+                    {% elif _t.target_unit.value == 'shares' and _t.target_amount > 0 %}
+                      {% set _pct = (r.qty|float / _t.target_amount|float * 100) %}
+                    {% else %}
+                      {% set _pct = 0 %}
+                    {% endif %}
+                    {% set _color = 'var(--color-info)' if _pct == 0 else ('var(--color-warn)' if _pct < 95 else ('var(--color-pos)' if _pct <= 105 else 'var(--color-neg)')) %}
+                    <div class="flex items-center gap-2">
+                      <span class="num text-[11px]">{{ _curr }} / <strong>{{ _native }}</strong></span>
+                      <div class="rounded-full overflow-hidden" style="width:50px; height:4px; background:rgba(255,255,255,0.06);">
+                        <div style="width:{{ _pct if _pct < 100 else 100 }}%; height:100%; background:{{ _color }};"></div>
+                      </div>
+                      <span class="num text-[10px]" style="color:{{ _color }};">{{ "%.0f"|format(_pct) }}%</span>
+                    </div>
+                  {% else %}
+                    <span class="text-label-3 text-[11px]">— no target</span>
+                  {% endif %}
+                </td>
+              {% endif %}
             {% endif %}
             <td class="w-10 relative">
               {% with sym=r.symbol, qty=r.qty, account=r.accounts[0] if r.accounts else '', account_id=none %}
