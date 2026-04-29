@@ -46,3 +46,15 @@ def test_post_rejects_zero_amount(client: TestClient):
         "symbol": "HIMS", "target_unit": "usd", "target_amount": "0",
     })
     assert r.status_code == 422 or "must be positive" in r.text
+
+
+def test_delete_removes_target(client: TestClient, repo: Repository):
+    repo.upsert_target("HIMS", Decimal("1000"), TargetUnit.USD)
+    r = client.delete("/positions/plan/target/HIMS")
+    assert r.status_code == 200
+    assert repo.get_target("HIMS") is None
+
+
+def test_delete_unknown_symbol_is_ok(client: TestClient):
+    r = client.delete("/positions/plan/target/NOPE")
+    assert r.status_code == 200  # idempotent — body just shows empty state

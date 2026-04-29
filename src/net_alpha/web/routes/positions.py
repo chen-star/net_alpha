@@ -401,3 +401,14 @@ def plan_target_upsert(
 
     repo.upsert_target(sym, amount, TargetUnit(target_unit))
     return _render_plan_body(request, repo, pricing)
+
+
+@router.delete("/positions/plan/target/{symbol}", response_class=HTMLResponse)
+def plan_target_delete(
+    request: Request,
+    symbol: str,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    repo.delete_target(symbol)
+    return _render_plan_body(request, repo, pricing)
