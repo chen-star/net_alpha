@@ -2,6 +2,198 @@
 
 
 
+## v0.34.0 (2026-04-29)
+
+### Documentation
+
+* docs(plan): multi-lot transfer basis &amp; date implementation plan
+
+Eight TDD tasks: extend update_trade_basis with optional trade_date;
+add transfer-context to positions pane; add date input to single-lot
+form; add multi-lot fragment + GET swap routes; wire split link;
+implement POST /audit/set-basis/multi; integration test; manual UI
+verification.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`edb537c`](https://github.com/chen-star/net_alpha/commit/edb537c6d18faa0e01dce228befe08f4f2f55750))
+
+* docs(spec): multi-lot basis &amp; date for transfer-in positions
+
+Design for replacing the single-input &#34;Set basis&#34; panel on the Portfolio
+positions table with a tiered inline form: default single-row (date +
+basis) with a &#34;+ Split into multiple lots&#34; link that expands into a
+row-table with live qty-sum validation. Reuses
+Repository.split_imported_transfer() and the existing transfer_group_id
+infrastructure — no schema change.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`11f5697`](https://github.com/chen-star/net_alpha/commit/11f56979e2551b0462dbf740b9791f863f56426c))
+
+### Feature
+
+* feat(web): POST /audit/set-basis/multi for split-into-N-lots
+
+Validates per-row date / qty / basis bounds, qty-sum equality against
+the transferred quantity, and acquisition_date &lt;= transfer_date. Calls
+Repository.split_imported_transfer which persists N siblings sharing a
+transfer_group_id and triggers wash-sale recompute. Adds repo helper
+get_trades_in_transfer_group used by tests. Extracts a shared
+_post_basis_save_recompute helper to avoid a third copy of the
+post-save side effects.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2c63437`](https://github.com/chen-star/net_alpha/commit/2c634370f83f5f336ca7c2340f859c9c1e508fae))
+
+* feat(web): split-into-multiple-lots link on single-lot form
+
+HTMX-driven swap: clicking the link replaces the single-lot panel
+with the multi-lot row table fragment. Removes the Task 4 xfail.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`86a2966`](https://github.com/chen-star/net_alpha/commit/86a2966720c5854346ca0edb1d71d9efd93f5898))
+
+* feat(web): multi-lot set-basis fragment and HTMX swap routes
+
+Add GET /audit/set-basis/multi/{trade_id} (multi-lot row-table) and
+GET /audit/set-basis/single/{trade_id} (back-to-single swap target).
+Multi-lot fragment uses Alpine for live qty-sum validation against
+the transferred quantity.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`462e0f2`](https://github.com/chen-star/net_alpha/commit/462e0f280da64c064c6d70babc95da2cacb2ff2a))
+
+* feat(web): single-lot set-basis form takes acquisition date
+
+Add POST /audit/set-basis/single with date + basis fields and
+server-side validation (date format, future date, date &gt; transfer
+date, negative basis). Legacy POST /audit/set-basis remains for
+timeline-cell and imports-drawer callers.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f9f1f86`](https://github.com/chen-star/net_alpha/commit/f9f1f86fa7bbd7abbf406d39e00beb19c387ec55))
+
+* feat(web): expose transfer qty + date on positions pane
+
+Wire transfer_qty and transfer_date through positions_pane render
+context so the upcoming multi-lot split UI can validate qty-sum and
+enforce acquisition_date &lt;= transfer_date.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1f31fb9`](https://github.com/chen-star/net_alpha/commit/1f31fb9c5a0dbb0f2839ce976b32b1b2460299c2))
+
+* feat(db): update_trade_basis accepts optional trade_date
+
+The &#34;Set basis &amp; date&#34; inline form on the positions pane needs to set
+acquisition date alongside cost_basis on transfer-in trades. Add an
+optional trade_date parameter; when None, behavior is unchanged.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`de5448e`](https://github.com/chen-star/net_alpha/commit/de5448e712a146450a09b9698b792b28054509a6))
+
+### Fix
+
+* fix(web): correct single-form swap target, cancel propagation, and 4xx swap
+
+Three browser-side bugs found in final review:
+- Single-lot form used hx-target=&#34;this&#34;, producing a panel-inside-a-
+  panel after save. Now matches the multi flow&#39;s hx-target=&#34;closest
+  .panel&#34;.
+- Back-to-single cancel handler used stopPropagation, which doesn&#39;t
+  block HTMX&#39;s same-element listener. Switch to
+  stopImmediatePropagation so cancel actually cancels.
+- HTMX 1.9 silently drops 4xx responses by default. Add a global
+  htmx:beforeSwap handler so validation error fragments render in
+  the form panel as the spec calls for.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`071d7eb`](https://github.com/chen-star/net_alpha/commit/071d7eb2560d9483092690e411bf5d31bfeeada6))
+
+* fix(db): clear basis_unknown when transfer rows get user-supplied basis
+
+split_imported_transfer and update_imported_transfer were setting
+transfer_basis_user_set=True on the parent row but leaving
+basis_unknown=True, so the audit/hygiene checker kept flagging rows
+the user had already reconciled. Clear the flag in both methods and
+add a regression assertion to the integration test.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ac29232`](https://github.com/chen-star/net_alpha/commit/ac29232236e74d4e900dbfc8b039abd9af12e0f6))
+
+* fix(web): don&#39;t echo raw user input in multi-lot date error
+
+Mirror the wording from set_basis_single so a malformed date doesn&#39;t
+get reflected back into the error fragment.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fb048a0`](https://github.com/chen-star/net_alpha/commit/fb048a05cd2d0cef05c1034960e1247339be9db8))
+
+* fix(web): tighten multi-lot fragment JS — Alpine clone + float tolerance
+
+The &#34;+ Add lot&#34; button cloned a row and tried to wire @click via
+setAttribute, which Alpine doesn&#39;t process on cloned nodes. Switch to
+addEventListener so the remove button works. Replace == float
+comparisons in qty-sum validation with a 1e-4 tolerance consistent
+with the server-side check; otherwise fractional shares
+(e.g., 33.33+33.33+33.34) leave Save permanently disabled. Tidy the
+back-to-single confirm handler.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f8b8f37`](https://github.com/chen-star/net_alpha/commit/f8b8f37d63e96dcfc4a1981d8ba3283d9e87d419))
+
+* fix(web): test the existing /positions/pane route (no shim)
+
+The test URL was wrong; remove the redundant /portfolio/positions-pane/{sym}
+shim that was added to match it, and call the production route directly.
+The transfer-context behavior verified by the test is unchanged.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d832814`](https://github.com/chen-star/net_alpha/commit/d832814b42f991041ff9499412679e271d93132f))
+
+* fix(portfolio): YTD Net Contributed card now matches its provenance modal
+
+The KPI card on the Overview page read $54,840.64 (lifetime cumulative
+transfers) while the provenance modal opened from it read $23,475.53 (YTD
+2026 only). compute_cash_kpis returned series[-1].cumulative_contributions,
+which is a running total that folds pre-period transfers into the opening
+balance and never resets at period_start.
+
+Add a separate `period_net_contributions` field on CashFlowKPIs computed
+from in-period events only, and bind the card to it. Lifetime
+`net_contributions` is preserved for the growth math (current value − total
+money in is correctly lifetime-bounded). The cash-balance series semantics
+used by the cash chart are unchanged.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`67c3756`](https://github.com/chen-star/net_alpha/commit/67c3756b6e87aa3cc4d86c0c81e4c8eff20959e3))
+
+### Refactor
+
+* refactor(web): tighten set-basis/single — top-level import + id guard + tests
+
+Move the datetime import to module top to match other route files.
+Guard int(trade_id) so a non-numeric id returns 400 instead of 500.
+Add tests for the invalid-date-format and trade-not-found branches
+that were uncovered.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3304a8f`](https://github.com/chen-star/net_alpha/commit/3304a8f24b3ccdd207b75ec0575bccb66e24eba1))
+
+* refactor(web): remove duplicate imports in positions.py + conftest.py
+
+Single `import datetime as dt` in positions.py replaces the dual
+import; same for the inlined Trade import in seed_transfer_in.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d014742`](https://github.com/chen-star/net_alpha/commit/d014742c3afdf1c15c5ccbf1ce2dc96ff76c1498))
+
+### Test
+
+* test(integration): end-to-end multi-lot transfer basis split
+
+Imports a transfer-in row with no basis, walks through the HTMX swap
+to the multi-lot fragment, submits a 3-lot split, and verifies the
+basis-missing warning clears on re-render.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`283cd1c`](https://github.com/chen-star/net_alpha/commit/283cd1caaa53a67f18f0638c686951159be0146b))
+
+### Unknown
+
+* Merge branch &#39;feature/multi-lot-transfer-basis&#39; — Multi-lot transfer basis + YTD net-contributed fix
+
+YTD Overview Net Contributed card now matches its provenance modal
+(period-bounded transfers, not lifetime cumulative). Inline Set basis
+panel on the positions pane gains a date input plus a tiered Split
+Into Multiple Lots flow that calls Repository.split_imported_transfer
+under the hood — no schema change. End-to-end integration test covers
+the full flow.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e217db5`](https://github.com/chen-star/net_alpha/commit/e217db5eeb1f2fe04cd46a2accfd0f5da536059b))
+
+
 ## v0.33.0 (2026-04-29)
 
 ### Documentation
