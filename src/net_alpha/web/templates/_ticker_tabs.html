@@ -1,0 +1,20 @@
+{# Three-tab strip for /ticker/<sym> — mirrors _positions_tabs.html pattern. #}
+<nav class="tabs mb-3" role="tablist" aria-label="Ticker views">
+  {% set _tabs = [
+    ('timeline', 'Timeline'),
+    ('lots',     'Open lots'),
+    ('recon',    'Broker reconciliation'),
+  ] %}
+  {% for key, label in _tabs %}
+    <a href="/ticker/{{ symbol }}?view={{ key }}"
+       hx-get="/ticker/{{ symbol }}?view={{ key }}"
+       hx-target="#ticker-tab-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       class="tab{% if (selected_view|default('timeline')) == key %} tab--active{% endif %}"
+       role="tab"
+       aria-selected="{{ 'true' if (selected_view|default('timeline')) == key else 'false' }}">
+      {{ label }}
+    </a>
+  {% endfor %}
+</nav>

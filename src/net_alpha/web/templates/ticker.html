@@ -84,148 +84,16 @@
     </div>
   </div>
 
-  <h2 class="text-xl mb-2">Timeline</h2>
-  <div class="panel mb-6" style="padding:0;">
-    <table class="net-table text-sm">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Account</th>
-          <th>Provenance</th>
-          <th>Action</th>
-          <th>Qty</th>
-          <th>Basis</th>
-          <th>Proceeds</th>
-          <th class="r" title="Realized P&L attributable to this row. Long-lot sells use proceeds−basis; short-option closes pair the close cost against the matching opening premium.">G/L</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in timeline_rows %}
-          {% set t = row.trade %}
-          {% set is_synth = t.basis_source == 'option_short_close_expiry' %}
-          {% set is_transfer = t.basis_source in ('transfer_in', 'transfer_out') %}
-          <tr {% if is_synth %}class="text-label-2"{% endif %}>
-            <td class="px-2 py-1 font-mono">
-              {% if is_transfer %}
-                <span class="text-[10px] text-label-3 uppercase tracking-tightish">Acq</span>
-                {{ t.date }}
-                {% if t.transfer_date and t.transfer_date != t.date %}
-                  <div class="text-[10px] text-label-3">
-                    <span class="uppercase tracking-tightish">Xferred</span> {{ t.transfer_date }}
-                  </div>
-                {% endif %}
-              {% else %}
-                {{ t.date }}
-              {% endif %}
-            </td>
-            <td class="px-2 py-1">{{ t.account }}</td>
-            <td class="px-2 py-1 text-[11px]">
-              {% if is_synth %}<span class="pill" style="color: var(--color-label-3);">auto</span>
-              {% elif t.is_manual %}<span class="pill" style="color: var(--color-accent);">manual</span>
-              {% elif t.transfer_basis_user_set %}<span class="pill" style="color: var(--color-warn);">edited</span>
-              {% endif %}
-            </td>
-            <td class="px-2 py-1">{{ display_action(t, assigned_from=row.assigned_from) }}</td>
-            <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
-            <td class="px-2 py-1 num font-mono">{{ t.cost_basis if t.cost_basis is not none else "-" }}</td>
-            <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
-            <td class="px-2 py-1 num font-mono r">
-              {% if row.gain_loss is not none %}
-                <span class="{% if row.gain_loss >= 0 %}text-pos{% else %}text-neg{% endif %}">
-                  {% if row.gain_loss >= 0 %}+{% else %}−{% endif %}${{ "%.2f"|format(row.gain_loss|abs) }}
-                </span>
-              {% else %}
-                <span class="text-label-3">—</span>
-              {% endif %}
-            </td>
-            <td class="px-2 py-1 text-[11px] r" id="trade-affordance-{{ t.id }}">
-              {% if t.is_manual %}
-                <a href="#" class="text-label-2 hover:text-text mr-2"
-                   onclick="event.preventDefault();
-                     fetch('/ticker/{{ symbol }}/edit-manual-form/{{ t.id }}').then(r => r.text()).then(html => {
-                       document.getElementById('trade-modal-content').innerHTML = html;
-                       document.getElementById('trade-modal').classList.remove('hidden');
-                     });">edit</a>
-                <a href="#" class="text-confirmed hover:text-text"
-                   onclick="event.preventDefault();
-                     fetch('/ticker/{{ symbol }}/delete-confirm/{{ t.id }}').then(r => r.text()).then(html => {
-                       document.getElementById('trade-modal-content').innerHTML = html;
-                       document.getElementById('trade-modal').classList.remove('hidden');
-                     });">delete</a>
-              {% elif t.basis_source in ['transfer_in', 'transfer_out'] %}
-                <a href="#" class="text-label-2 hover:text-text"
-                   onclick="event.preventDefault();
-                     fetch('/ticker/{{ symbol }}/edit-transfer-form/{{ t.id }}').then(r => r.text()).then(html => {
-                       document.getElementById('trade-modal-content').innerHTML = html;
-                       document.getElementById('trade-modal').classList.remove('hidden');
-                     });">set basis &amp; date</a>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-        {% if not timeline_rows %}
-          <tr><td colspan="9" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
+  {% include "_ticker_tabs.html" %}
+  <div id="ticker-tab-content">
+    {% if selected_view == 'lots' %}
+      {% include "_ticker_view_lots.html" %}
+    {% elif selected_view == 'recon' %}
+      {% include "_ticker_view_reconciliation.html" %}
+    {% else %}
+      {% include "_ticker_view_timeline.html" %}
+    {% endif %}
   </div>
-
-  {% if lots or not open_shorts %}
-    <h2 class="text-xl mb-2">Open long lots</h2>
-    {% include "_lots_table.html" %}
-  {% else %}
-    {# Only short options open on this ticker — the Open lots table would be
-       empty and confusing. The "Open short options" section right below shows
-       the actual exposure. #}
-    <h2 class="text-xl mb-2">Open positions</h2>
-    <div class="panel mb-6 px-4 py-3 text-[13px] text-label-2">
-      No long lots on {{ symbol }} &mdash; see <strong class="text-text">Open short options</strong> below.
-    </div>
-  {% endif %}
-
-  {% if open_shorts %}
-    <h2 class="text-xl mt-6 mb-2">Open short options</h2>
-    <div class="panel mb-6" style="padding:0;">
-      <table class="net-table text-sm">
-        <thead>
-          <tr>
-            <th>Account</th>
-            <th>Contract</th>
-            <th>Opened</th>
-            <th class="r">Qty short</th>
-            <th class="r">Premium received</th>
-            <th class="r">Cash secured</th>
-            <th class="r">DTE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for s in open_shorts %}
-            {% set dte = (s.expiry - kpi_today).days if kpi_today else None %}
-            <tr>
-              <td class="px-2 py-1 font-mono">{{ s.account }}</td>
-              <td class="px-2 py-1 font-mono text-[12px]">
-                <span class="pill" style="color: var(--color-accent);">{% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %}</span>
-                ${{ "%g"|format(s.strike) }}
-                <span class="text-label-3">·</span>
-                {{ s.expiry.strftime('%m/%d/%y') }}
-                <span class="pill ml-1" style="color: var(--color-warn);">short</span>
-              </td>
-              <td class="px-2 py-1 font-mono">{{ s.opened_at if s.opened_at else "—" }}</td>
-              <td class="px-2 py-1 num font-mono r">-{{ s.qty_short }}</td>
-              <td class="px-2 py-1 num font-mono r text-pos">+${{ "%.2f"|format(s.premium_received) }}</td>
-              <td class="px-2 py-1 num font-mono r">
-                {% if s.call_put == 'P' %}${{ "%.0f"|format(s.cash_secured) }}{% else %}—{% endif %}
-              </td>
-              <td class="px-2 py-1 num font-mono r {% if dte is not none and dte <= 7 %}text-warn{% endif %}">
-                {% if dte is not none %}{{ dte }}d{% else %}—{% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endif %}
 
   {% if violations %}
     <h2 class="text-xl mt-6 mb-2">Violations involving {{ symbol }}</h2>

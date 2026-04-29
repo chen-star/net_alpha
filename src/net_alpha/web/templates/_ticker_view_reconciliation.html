@@ -1,0 +1,14 @@
+{% if account_ids %}
+  {% for account_id in account_ids %}
+    <div class="mb-3"
+         hx-get="/reconciliation/{{ symbol }}?account_id={{ account_id }}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="text-label-3 text-xs">Loading reconciliation…</div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="panel px-4 py-3 text-[13px] text-label-2">
+    No accounts have trades for {{ symbol }} yet.
+  </div>
+{% endif %}

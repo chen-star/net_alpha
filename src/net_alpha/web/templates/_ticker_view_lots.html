@@ -1,0 +1,52 @@
+{% if lots %}
+  {% include "_lots_table.html" %}
+{% elif open_shorts %}
+  <div class="panel mb-6 px-4 py-3 text-[13px] text-label-2">
+    No long lots on {{ symbol }} &mdash; see <strong class="text-text">Open short options</strong> below.
+  </div>
+{% else %}
+  <div class="panel mb-6 px-4 py-3 text-[13px] text-label-2">No open positions on {{ symbol }}.</div>
+{% endif %}
+
+{% if open_shorts %}
+  <h2 class="text-xl mt-6 mb-2">Open short options</h2>
+  <div class="panel mb-6" style="padding:0;">
+    <table class="net-table text-sm">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Contract</th>
+          <th>Opened</th>
+          <th class="r">Qty short</th>
+          <th class="r">Premium received</th>
+          <th class="r">Cash secured</th>
+          <th class="r">DTE</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in open_shorts %}
+          {% set dte = (s.expiry - kpi_today).days if kpi_today else None %}
+          <tr>
+            <td class="px-2 py-1 font-mono">{{ s.account }}</td>
+            <td class="px-2 py-1 font-mono text-[12px]">
+              <span class="pill" style="color: var(--color-accent);">{% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %}</span>
+              ${{ "%g"|format(s.strike) }}
+              <span class="text-label-3">·</span>
+              {{ s.expiry.strftime('%m/%d/%y') }}
+              <span class="pill ml-1" style="color: var(--color-warn);">short</span>
+            </td>
+            <td class="px-2 py-1 font-mono">{{ s.opened_at if s.opened_at else "—" }}</td>
+            <td class="px-2 py-1 num font-mono r">-{{ s.qty_short }}</td>
+            <td class="px-2 py-1 num font-mono r text-pos">+${{ "%.2f"|format(s.premium_received) }}</td>
+            <td class="px-2 py-1 num font-mono r">
+              {% if s.call_put == 'P' %}${{ "%.0f"|format(s.cash_secured) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-2 py-1 num font-mono r {% if dte is not none and dte <= 7 %}text-warn{% endif %}">
+              {% if dte is not none %}{{ dte }}d{% else %}—{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
