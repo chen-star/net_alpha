@@ -162,8 +162,6 @@ def positions_page(
         pos_by_sym = {r.symbol: r for r in pos_rows}
         quotes_by_sym = {sym: q.price for sym, q in prices.items()}
 
-        # Free cash for the empty state we ship in this task is the bare
-        # cash balance — full CSP-aware free-cash arrives in Task 13.
         cash_events = repo.list_cash_events(account_id=None)
         if account:
             cash_events = [e for e in cash_events if e.account == account]
@@ -172,7 +170,17 @@ def positions_page(
             events=cash_events, trades=trades, holdings_value=holdings_value,
             account=None, period=None,
         )
-        free_cash = cash_kpis.cash_balance
+        # Free cash = cash_balance − cash_secured_total. Pattern lifted from
+        # routes/portfolio.py lines 240–248.
+        from net_alpha.portfolio.positions import compute_open_short_option_positions
+
+        scoped_trades_for_shorts = [t for t in trades if t.account == account] if account else trades
+        open_shorts = compute_open_short_option_positions(
+            scoped_trades_for_shorts,
+            gl_option_closures=gl_option_closures,
+        )
+        cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
+        free_cash = cash_kpis.cash_balance - cash_secured_total
 
         plan_view = build_plan_view(
             targets=targets,
