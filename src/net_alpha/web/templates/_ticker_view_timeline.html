@@ -41,7 +41,7 @@
           </td>
           <td class="px-2 py-1">{{ display_action(t, assigned_from=row.assigned_from) }}</td>
           <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
-          <td class="px-2 py-1 num font-mono">
+          <td class="px-2 py-1 num font-mono" id="trade-basis-{{ t.id }}">
             {% if t.cost_basis is not none %}
               {{ fmt_currency(t.cost_basis) }}
             {% elif t.basis_source in ('transfer_in', 'transfer_out') and not t.is_manual %}

@@ -14,7 +14,7 @@
         x-on:click.outside="open = false"
         x-on:keydown.escape="open = false"
         hx-post="/audit/set-basis?caller=timeline"
-        hx-target="#trade-affordance-{{ trade_id }}"
+        hx-target="#trade-basis-{{ trade_id }}"
         hx-swap="outerHTML"
         class="absolute z-30 mt-1 right-0 panel px-3 py-2 flex flex-col gap-2 min-w-[220px]"
         style="box-shadow: var(--shadow-pane);">

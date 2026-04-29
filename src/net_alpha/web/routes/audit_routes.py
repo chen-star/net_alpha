@@ -95,8 +95,8 @@ def set_basis(
     _cache.invalidate()
     if caller == "timeline":
         return HTMLResponse(
-            f'<td class="px-2 py-1 num font-mono" id="trade-affordance-{trade_id}">'
-            f'<span class="text-pos text-[11px]">✓ saved</span></td>'
+            f'<td class="px-2 py-1 num font-mono" id="trade-basis-{trade_id}">'
+            f'${cost_basis:.2f} <span class="text-pos text-[11px] ml-1">✓ saved</span></td>'
         )
     if caller == "drawer":
         # Return a compact saved-row fragment for the Imports drawer inline form.
