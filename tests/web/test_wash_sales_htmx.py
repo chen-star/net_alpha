@@ -92,6 +92,7 @@ def test_wash_sales_table_includes_htmx_attrs(client: TestClient, repo, builders
     assert f'id="violation-{vid}"' in html
     assert f'hx-get="/tax/violation/{vid}/explain"' in html
     assert 'hx-trigger="click once"' in html
+    # I1 fix: hx-target points to the <td> (which now holds the id), not the <tr>.
     assert f'hx-target="#violation-{vid}-explain"' in html
     assert 'hx-swap="innerHTML"' in html
 

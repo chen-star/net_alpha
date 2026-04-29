@@ -153,6 +153,15 @@ def _wash_sales_context(
         for g in groups:
             g.violations.sort(key=key, reverse=reverse)
         expand_default = len(groups) <= EXPAND_THRESHOLD
+
+        # C4: load exempt matches, applying the same ticker/account/year filters.
+        all_exempt = repo.list_exempt_matches(
+            account=account or None,
+            year=effective_year,
+        )
+        if ticker:
+            all_exempt = [em for em in all_exempt if em.ticker == ticker.upper()]
+
         ctx.update(
             {
                 "violations": violations,
@@ -164,6 +173,7 @@ def _wash_sales_context(
                 "sort": sort or "",
                 "order": order or "desc",
                 "next_lag_order": "asc" if (sort == "lag" and (order or "desc") == "desc") else "desc",
+                "exempt_matches": all_exempt,
             }
         )
 
