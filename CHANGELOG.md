@@ -2,6 +2,193 @@
 
 
 
+## v0.31.0 (2026-04-29)
+
+### Feature
+
+* feat(web): keyboard shortcut layer (g o/p/t/s, ?, ,) + cheatsheet (§3.7)
+
+Adds a small self-contained keydown listener (keyboard.js) that wires:
+- g o / g p / g t / g s — navigate to Overview / Positions / Tax / Sim
+- ? — open the keyboard cheatsheet modal
+- , — open the settings drawer (event already wired in Phase 1)
+
+The handler ignores events from inputs/textareas/selects/contenteditable
+so typing inside forms is unaffected. Esc-close for drawers/panes is
+already handled by Alpine and is not duplicated here.
+
+Adds nav-link aria-keyshortcuts attributes for assistive tech.
+Adds a .kbd token style and the cheatsheet modal (Alpine x-data).
+
+Section G3 of Phase 4 plan. ([`caab763`](https://github.com/chen-star/net_alpha/commit/caab7631dc693ea99fe0c8082fb23e9af4a802c9))
+
+* feat(web): apply --ring-focus to all interactive elements (§5.14)
+
+Adds a single :focus-visible block that applies the --ring-focus token
+(0 0 0 2px rgba(94,92,230,0.6)) to every interactive primitive:
+.btn, .btn-ghost, .tab, .chip, .nav-link, native button, and form
+inputs. Outlines are nullified so the indigo halo is the canonical
+keyboard-focus indicator.
+
+Section G2 of Phase 4 plan. ([`791cc91`](https://github.com/chen-star/net_alpha/commit/791cc914577905f86adeb429040d5e0b30be1f3f))
+
+* feat(web): main container 1280px → 1536px (max-w-screen-2xl) (H8)
+
+Bumps the main and footer containers from max-w-[1280px] to
+max-w-screen-2xl (1536px) to give the wider Positions table and
+Tax view more horizontal room. Snapshot baselines will be
+re-captured in Section H. ([`2210e22`](https://github.com/chen-star/net_alpha/commit/2210e22ae1c0f04e0eb4e545deb5a2d47a5110a1))
+
+* feat(web): options panel header is a 3-card mini-summary (H7)
+
+/holdings/options now passes options_summary (open_contracts, net_premium,
+avg_dte) to _portfolio_open_options.html. Net premium signs short premium
+received as a credit and long cost paid as a debit; avg DTE is qty-weighted.
+The 3-card grid renders above the row list, mirroring the kpi-numeric
+pattern used elsewhere. ([`3a8b20d`](https://github.com/chen-star/net_alpha/commit/3a8b20dcc445378031012341efb363b255bedb3f))
+
+* feat(web): LT/ST mixed shows as single &#39;lt+st&#39; chip in Account column (H5)
+
+Adds account_chip (joined sub-account suffixes) and account_displays
+(full labels) to PositionRow. Single-account rows render the label in
+mono; multi-account rows render a single chip whose tooltip lists
+every full label. ([`184bdda`](https://github.com/chen-star/net_alpha/commit/184bdda691170e4577ad6edb5360f666f1a79be1))
+
+* feat(web): all quantity cells use fmt_quantity (H2)
+
+Replaces &#34;%.4f&#34;|format(r.qty) and &#34;%g&#34;|format(r.lt_qty|float) ST splits
+with fmt_quantity, so whole shares render as integers and fractional
+quantities trim trailing zeros consistently with other tables. ([`4847c17`](https://github.com/chen-star/net_alpha/commit/4847c172729be8a5db1eb39f48f40f6e3b6cddc2))
+
+* feat(web): missing-basis chip + em-dash empties on Positions table (H1)
+
+Adds PositionRow.basis_known derived from any open lot having non-null,
+non-zero cost_basis. The Positions table now renders the new chip
+&#39;⚠ basis missing&#39; when basis is provably missing on an open position
+instead of showing $0.00, and falls back to fmt_currency (em-dash for
+None) elsewhere. ([`5f4e1d7`](https://github.com/chen-star/net_alpha/commit/5f4e1d767358dac372e8f191c468d5a71327136a))
+
+* feat(web): inline Set-basis chip on Timeline rows missing basis (Tk5)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c43c384`](https://github.com/chen-star/net_alpha/commit/c43c384f7ee50cbe3f4ee438b7debbfdd14995e6))
+
+* feat(web): /ticker accepts ?view=timeline|lots|recon and serves fragments (Tk4) ([`8b41417`](https://github.com/chen-star/net_alpha/commit/8b41417f012629a9069c787dc403372cb0c39028))
+
+* feat(web): /ticker uses Timeline / Open lots / Broker reconciliation tabs (Tk4) ([`6efa53d`](https://github.com/chen-star/net_alpha/commit/6efa53deacd2b15ff2836d60999ccb00327403ab))
+
+* feat(web): reconciliation /reconciliation accepts variant=badge for Ticker KPI (Tk3)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`50d73bc`](https://github.com/chen-star/net_alpha/commit/50d73bcdd17ad91416c72755063184251e7317d6))
+
+* feat(web): ticker KPIs use sans + fmt_currency; mono only on identifiers (Tk1)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fd50318`](https://github.com/chen-star/net_alpha/commit/fd503184387b75d386c29f16bde7c23a67076651))
+
+* feat(web): ticker page h1 is sans Inter, white (Tk1, Tk2)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`86da6b8`](https://github.com/chen-star/net_alpha/commit/86da6b81f0769c6b4bcfac9c1fbf45e6c7401ee7))
+
+* feat(web): calendar strip shows N events YTD (N3) ([`d599c58`](https://github.com/chen-star/net_alpha/commit/d599c5874089c9f3df3fb36b82fda04102c74e57))
+
+### Fix
+
+* fix(web): keyboard.js state machine + Realized P/L $0 color
+
+keyboard.js: prior matcher used pending.endsWith(seq.replace(&#39; &#39;,&#39;&#39;)),
+so typing &#39;good&#39; or &#39;tags&#39; triggered nav. Replace with an explicit
+&#39;awaiting g&#39; state machine so only true g-prefixed chords fire.
+
+ticker.html: Realized P/L (YTD and Lifetime) used &gt;= 0 as the green
+threshold, painting $0.00 green. Mirror the Disallowed pattern: &gt; 0
+positive, &lt; 0 negative, else neutral text-label-2.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`677fa94`](https://github.com/chen-star/net_alpha/commit/677fa94ee3a171a391fc077b0d0b1653ec50205b))
+
+* fix(web): inline Set basis chip swaps the basis cell, not affordance cell
+
+The chip lived in the BASIS td but its hx-target pointed at the
+affordance cell two columns over, leaving the warning chip stuck after
+save. Add id=&#34;trade-basis-{id}&#34; to the basis td, retarget the chip
+form, and update the timeline-caller branch of /audit/set-basis to
+return matching markup including the saved cost-basis value.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ca807c2`](https://github.com/chen-star/net_alpha/commit/ca807c256e7ee8b5dc532bedd6f94e970062ba4d))
+
+* fix(web): drop HTMX swap on ticker tabs to preserve active state
+
+Tabs server-render the active class from selected_view, but HTMX swap
+only replaced inner content, leaving the highlight stuck on the old tab.
+Convert to plain &lt;a&gt; nav matching the _positions_tabs.html pattern. The
+route already returns full HTML for non-HX requests.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`727d456`](https://github.com/chen-star/net_alpha/commit/727d4563b88f7fd87dd68aa7657069a567d47ef9))
+
+* fix(web): wash-sale filter chips × is clickable, drops that filter (N2) ([`709e26c`](https://github.com/chen-star/net_alpha/commit/709e26c94ecbbba758687c00733770c415008126))
+
+* fix(web): sim Account label flips to (required) when Sell selected (N1) ([`72a9d5c`](https://github.com/chen-star/net_alpha/commit/72a9d5ca3fdd3ea478f332084e8b13afda179528))
+
+* fix(web): projection form swap is outerHTML to avoid self-nesting (I1) ([`0e0a11e`](https://github.com/chen-star/net_alpha/commit/0e0a11e9ef6c6b1c3bb9d7c9e7d3a7b5c8732201))
+
+* fix(web): hero subhead &#39;vs contributed&#39; now equals total − net_contributed (I2)
+
+Adapted to actual codebase field name: cash_kpis.net_contributions (not
+net_contributed). Both kpis_fragment and body call sites now compute
+total_account_value - cash_kpis.net_contributions instead of
+period_realized + period_unrealized. ([`ca3a16a`](https://github.com/chen-star/net_alpha/commit/ca3a16accab720ab07c74d07a116bb9cf83a928d))
+
+### Refactor
+
+* refactor(web): promote text-label-3 → text-label-2 on load-bearing copy (§5.14)
+
+Per §5.14, label-3 is reserved for decorative dividers and disabled
+affordances. Bumps load-bearing copy (KPI sub-lines, panel sub-headers,
+source labels, &#34;Loading…&#34; placeholders, event-count spans, harvest
+queue origin lines, profile descriptions, etc.) to label-2.
+
+Decorative `·` separators, em-dash placeholders for missing values,
+disabled pagination buttons, and chevron affordances stay at label-3.
+
+Section G1 of Phase 4 plan. ([`f95b2f1`](https://github.com/chen-star/net_alpha/commit/f95b2f11202cdfb6c28ed58674bb052834971e40))
+
+* refactor(web): open-options bar shows P/L only; DTE is a separate badge (H6)
+
+The time-elapsed bar already represents only one metric (not P/L,
+which would require live option quotes we don&#39;t fetch). Per the
+H6 split, DTE becomes a discrete badge-muted with the existing
+text-warn / text-label-1 / text-label-2 colorization preserved
+based on time-to-expiry, so the row&#39;s right column reads as a
+standalone badge instead of a number with inline subscript. ([`b29c688`](https://github.com/chen-star/net_alpha/commit/b29c688317a686dcbc276c555cac54a28b73787e))
+
+* refactor(web): rename CASH SUNK/SH → &#39;Cash invested / sh&#39; + tooltip (H3)
+
+Header now uses Title Case, plain English, with a clarifying tooltip on
+how the per-share number is derived (and that wash adjustments are
+included). ([`c9b21b9`](https://github.com/chen-star/net_alpha/commit/c9b21b91fa18ddbd6cd88fc2f4ffb103307ecc66))
+
+* refactor(web): drop above-table recon strips; badge + tab replace them (Tk3)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`54f8760`](https://github.com/chen-star/net_alpha/commit/54f8760e9da524028050ea362c39434336d167f2))
+
+### Test
+
+* test(web): smoke tests for Phase 4 ticker tabs + recon badge variant
+
+Cover the new query-param round-trip on /ticker/&lt;sym&gt;?view=, the
+HX-Request fragment-only response, and the variant=badge branch on
+/reconciliation/&lt;sym&gt;. Tests are tolerant of unseeded data so they pass
+in the default conftest.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`469ffd7`](https://github.com/chen-star/net_alpha/commit/469ffd78496ec8f626e9c3559b4b4ad9a5b624f5))
+
+* test(web): re-capture snapshot baselines after Phase 4 visual sweep ([`232646d`](https://github.com/chen-star/net_alpha/commit/232646ddb0f95faf4b2a3eedbbafc4751ade1e04))
+
+### Unknown
+
+* Merge branch &#39;phase4-ticker-visual&#39; — Phase 4 Ticker page + visual sweep ([`45fef5c`](https://github.com/chen-star/net_alpha/commit/45fef5cf55301f364e0597412c2bfc5ffaf5d598))
+
+* plan(web): Phase 4 — Ticker page + visual sweep ([`1a8becc`](https://github.com/chen-star/net_alpha/commit/1a8beccf03bf5ee1726073f1eb477105dd55a57a))
+
+
 ## v0.30.0 (2026-04-29)
 
 ### Chore
