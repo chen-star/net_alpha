@@ -33,7 +33,7 @@ def positions_page(
     etf_pairs: dict[str, list[str]] = Depends(get_etf_pairs),
 ) -> HTMLResponse:
     selected_view = view or "all"
-    if selected_view not in {"all", "stocks", "options", "at-loss", "closed"}:
+    if selected_view not in {"all", "stocks", "options", "at-loss", "closed", "plan"}:
         selected_view = "all"
 
     imports = repo.list_imports()
@@ -56,6 +56,9 @@ def positions_page(
     profile = resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
     extra_columns = profile.default_columns("holdings")
 
+    targets = repo.list_targets()
+    target_count = len(targets)
+
     ctx: dict = {
         "imports": imports,
         "accounts": accounts,
@@ -70,6 +73,7 @@ def positions_page(
         "page_key": "/positions",
         "account_id": filter_id,
         "selected_view": selected_view,
+        "target_count": target_count,
     }
 
     if selected_view == "closed":
@@ -134,6 +138,53 @@ def positions_page(
             return request.app.state.templates.TemplateResponse(
                 request,
                 "_positions_view_at_loss.html",
+                ctx,
+            )
+
+    if selected_view == "plan":
+        from net_alpha.portfolio.cash_flow import compute_cash_kpis
+        from net_alpha.portfolio.positions import compute_open_positions
+        from net_alpha.targets.view import build_plan_view
+
+        trades = repo.all_trades()
+        lots = repo.all_lots()
+        gl_closures = repo.get_equity_gl_closures()
+        gl_option_closures = repo.get_option_gl_closures()
+        all_lot_tickers = sorted({lot.ticker for lot in lots if lot.option_details is None})
+        quote_symbols = sorted(set(all_lot_tickers) | {t.symbol for t in targets})
+        prices = pricing.get_prices(quote_symbols)
+
+        pos_rows = compute_open_positions(
+            trades=trades, lots=lots, prices=prices,
+            period=None, account=account or None, include_closed=False,
+            gl_closures=gl_closures, gl_option_closures=gl_option_closures,
+        )
+        pos_by_sym = {r.symbol: r for r in pos_rows}
+        quotes_by_sym = {sym: q.price for sym, q in prices.items()}
+
+        # Free cash for the empty state we ship in this task is the bare
+        # cash balance — full CSP-aware free-cash arrives in Task 13.
+        cash_events = repo.list_cash_events(account_id=None)
+        if account:
+            cash_events = [e for e in cash_events if e.account == account]
+        holdings_value = sum(((r.market_value or Decimal("0")) for r in pos_rows), start=Decimal("0"))
+        cash_kpis = compute_cash_kpis(
+            events=cash_events, trades=trades, holdings_value=holdings_value,
+            account=None, period=None,
+        )
+        free_cash = cash_kpis.cash_balance
+
+        plan_view = build_plan_view(
+            targets=targets,
+            positions_by_symbol=pos_by_sym,
+            quotes_by_symbol=quotes_by_sym,
+            free_cash=free_cash,
+        )
+        ctx["plan_view"] = plan_view
+        if request.headers.get("hx-request"):
+            return request.app.state.templates.TemplateResponse(
+                request,
+                "_positions_view_plan.html",
                 ctx,
             )
 

@@ -1,0 +1,17 @@
+{# Plan tab — pooled targets across all accounts, alphabetical sort. #}
+<div id="plan-body">
+  {% if plan_view is defined and plan_view and plan_view.rows %}
+    {# Full body comes in next task; placeholder for now. #}
+    <div class="text-label-2 text-[13px] py-4">Targets exist (rendered in Task 13).</div>
+  {% else %}
+    <div class="panel py-12 text-center">
+      <div class="text-label-2 text-[14px] mb-3">No targets yet.</div>
+      <button type="button"
+              class="text-[13px] px-3 py-1.5 rounded-md"
+              style="background: var(--color-accent); color: white;"
+              hx-get="/positions/plan/modal"
+              hx-target="body"
+              hx-swap="beforeend">+ Add target</button>
+    </div>
+  {% endif %}
+</div>
