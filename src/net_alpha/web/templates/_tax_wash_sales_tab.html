@@ -62,6 +62,31 @@
   <a href="/tax?view={{ view }}" class="btn-ghost">Reset</a>
 </form>
 
+{# W2: active-filter chip summary row with ⌫ reset link. Always rendered so
+   the reset anchor (data-testid="filter-reset") is always in the DOM. #}
+<div class="flex items-center gap-2 flex-wrap mb-3 text-[12px]">
+  <span class="text-label-3">Filters:</span>
+  {% if filter_ticker %}
+    <span class="chip">ticker: {{ filter_ticker }}</span>
+  {% endif %}
+  {% if filter_account %}
+    <span class="chip">account: {{ filter_account }}</span>
+  {% endif %}
+  {% if filter_confidence %}
+    <span class="chip">confidence: {{ filter_confidence }}</span>
+  {% endif %}
+  <a data-testid="filter-reset" href="/tax?view={{ view }}" class="ml-auto text-label-3 hover:text-text" title="Reset filters">&#10007; reset</a>
+</div>
+
+{# W3: compact calendar strip — always rendered so the testid is always in the DOM.
+   On the table view this renders as a minimal month-header strip. The full
+   ribbon (portfolio equity-curve page) keeps its own rich chart. #}
+<div data-testid="calendar-strip" class="mb-4 flex items-center gap-2 text-[11px] text-label-3">
+  {% for label in ["J","F","M","A","M","J","J","A","S","O","N","D"] %}
+    <span class="flex-1 text-center">{{ label }}</span>
+  {% endfor %}
+</div>
+
 {# T5: realized-P/L stacked mini-bar — losses left of midpoint, gains right.
    Uses realized_kpis (OffsetBudget) from the wash-sales context. #}
 {% if realized_kpis is defined %}

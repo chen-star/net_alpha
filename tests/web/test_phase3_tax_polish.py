@@ -46,3 +46,17 @@ def test_violations_empty_state_uses_affirmative_copy(client: TestClient):
     if "wash-sale violations" not in html.lower():
         return
     assert "no wash-sale violations detected" in html.lower() or "✓" in html
+
+
+def test_tax_filter_bar_uses_inline_chips_with_reset(client: TestClient):
+    """W2: filters collapse to inline chips with [⌫] reset."""
+    resp = client.get("/tax")
+    html = resp.text
+    assert 'data-testid="filter-reset"' in html
+
+
+def test_tax_calendar_strip_always_visible(client: TestClient):
+    """W3: the compact calendar strip renders even when there are no events."""
+    resp = client.get("/tax")
+    html = resp.text
+    assert 'data-testid="calendar-strip"' in html
