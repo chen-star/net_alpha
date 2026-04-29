@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from net_alpha.audit.hygiene import collect_issues
+from net_alpha.audit.hygiene import collect_issues, collect_missing_basis_rows
 from net_alpha.brokers.registry import detect_broker
 from net_alpha.brokers.schwab import SchwabParser
 from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
@@ -41,6 +41,7 @@ def imports_page(
     """
     records = repo.list_imports()
     issues = collect_issues(repo)
+    missing_basis_rows = collect_missing_basis_rows(repo)
     prefs = repo.list_user_preferences()
     profile = resolve_effective_profile(prefs=prefs, filter_account_id=None)
     return request.app.state.templates.TemplateResponse(
@@ -49,6 +50,7 @@ def imports_page(
         {
             "imports": records,
             "issues": issues,
+            "missing_basis_rows": missing_basis_rows,
             "profile": profile,
             "page_key": "/imports",
             "account_id": None,

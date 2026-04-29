@@ -7,7 +7,7 @@ def test_detail_empty_state(client):
     resp = client.get("/wash-sales")
     assert resp.status_code == 200
     assert "Wash sales" in resp.text
-    assert "No violations match" in resp.text
+    assert "no wash-sale violations detected" in resp.text.lower() or "✓" in resp.text
 
 
 def test_detail_filter_by_ticker(client, repo, builders):

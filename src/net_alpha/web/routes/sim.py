@@ -74,6 +74,14 @@ def sim_run(
     account: str = Form(""),
     trade_date: str = Form(""),
 ) -> HTMLResponse:
+    account = (account or "").strip()
+    if action.lower() == "sell" and not account:
+        # OOB swap into #sim-form-error; main target #sim-result gets cleared.
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_sim_form_error.html",
+            {"message": "Account is required for Sell."},
+        )
     on_date = _date.fromisoformat(trade_date) if trade_date else _date.today()
     accounts = repo.list_accounts()
     accounts_filtered = [a for a in accounts if a.display() == account] if account else accounts

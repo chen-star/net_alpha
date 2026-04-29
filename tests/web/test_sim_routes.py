@@ -8,7 +8,11 @@ def test_sim_form_renders(client):
 
 
 def test_sim_post_with_no_holdings_returns_message(client):
-    resp = client.post("/sim", data={"ticker": "AAPL", "qty": "10", "price": "180"})
+    # action=sell requires an account (G1 validation); supply one so we reach the sim path
+    resp = client.post(
+        "/sim",
+        data={"ticker": "AAPL", "qty": "10", "price": "180", "action": "sell", "account": "schwab/personal"},
+    )
     assert resp.status_code == 200
     assert "No holdings" in resp.text or "no open lots" in resp.text.lower()
 
@@ -28,6 +32,9 @@ def test_sim_post_with_held_ticker_returns_per_account_card(client, repo, builde
     res = detect_in_window(repo.trades_in_window(win_start, win_end), win_start, win_end, etf_pairs={})
     repo.replace_lots_in_window(win_start, win_end, res.lots)
 
-    resp = client.post("/sim", data={"ticker": "TSLA", "qty": "5", "price": "150"})
+    resp = client.post(
+        "/sim",
+        data={"ticker": "TSLA", "qty": "5", "price": "150", "action": "sell", "account": "schwab/personal"},
+    )
     assert resp.status_code == 200
     assert "schwab/personal" in resp.text

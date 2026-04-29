@@ -10,7 +10,12 @@
 {% if cash_points|length == 0 %}
   <div class="text-label-2 text-[13px] py-4">No cash events yet — import a Schwab Transactions CSV to populate this chart.</div>
 {% else %}
-  <div id="cash-chart-{{ year }}" style="height: 218px;"></div>
+  {# data-series-solid / data-series-dashed: stable hooks for tests + future JS
+     readers (§5.12 P7). Solid line = cash balance; dashed = net contributed. #}
+  <div id="cash-chart-{{ year }}"
+       data-series-solid="cash_balance"
+       data-series-dashed="net_contributed"
+       style="height: 218px;"></div>
 
   <script>
   (function () {

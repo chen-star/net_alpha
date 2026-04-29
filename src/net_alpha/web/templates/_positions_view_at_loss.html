@@ -12,10 +12,19 @@
 
 <div id="positions-tab-content">
   <div class="flex items-center justify-between mb-3">
-    <div class="text-label-2 text-[13px]">
+    <div data-testid="at-loss-summary" class="text-label-2 text-[13px]">
       <strong class="text-text font-semibold">{{ rows|length }} lots at a loss</strong>
+      {% if total_unrealized is defined and rows %}
+        · <span class="text-loss">{{ fmt_currency(total_unrealized) }}</span> unrealized
+      {% endif %}
+      {% if harvest_clear_count is defined and rows %}
+        · {{ harvest_clear_count }} currently harvest-clear
+      {% endif %}
       {% if budget is defined and budget %}
-        · loss-harvest budget {{ fmt_currency(budget.net_realized) }} / {{ fmt_currency(budget.cap_against_ordinary) }} cap
+        · LH-budget {{ fmt_currency(budget.net_realized) }} / {{ fmt_currency(budget.cap_against_ordinary) }} cap
+      {% endif %}
+      {% if replacements_count is defined and rows %}
+        · ETF replacements: {{ replacements_count }}
       {% endif %}
     </div>
     <form hx-get="{{ harvest_form_action|default('/tax?view=harvest') }}"

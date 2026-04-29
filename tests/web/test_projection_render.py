@@ -33,9 +33,10 @@ def test_projection_card_renders_total_and_breakdown() -> None:
 
 
 def test_projection_card_placeholder_when_config_missing() -> None:
-    """Placeholder explains why the projection is empty and links to Tax setup."""
+    """Placeholder explains why the projection is empty (Pr2: no self-referential link)."""
     out = _env().get_template("_projection_card.html").render(projection=None, has_tax_config=False)
     # Placeholder should give the user something actionable to read.
     assert "filing status" in out.lower() or "tax rates" in out.lower()
-    # And link to where the config snippet lives — the Tax page Projection tab.
-    assert "/tax?view=projection" in out
+    # Pr2: the card no longer links to /tax?view=projection (self-referential cross-ref removed).
+    # Instead it directs the user to the inline form below the card.
+    assert "form below" in out.lower()

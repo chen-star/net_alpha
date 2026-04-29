@@ -83,3 +83,28 @@ def load_tax_config(path: Path) -> TaxConfig | None:
         return TaxConfig(**section)
     except ValidationError:
         return None
+
+
+def write_tax_config(config: dict, path: Path | None = None) -> None:
+    """Write or update the ``tax`` section of ``~/.net_alpha/config.yaml``.
+
+    Preserves any other top-level keys (e.g., ``etf_pairs``, ``prices``)
+    by reading the existing file (or starting from an empty dict) and
+    merging only the ``tax`` key.
+
+    Args:
+        config: Dict of tax config fields (matching ``TaxConfig`` field names).
+        path: Optional explicit path; defaults to ``~/.net_alpha/config.yaml``.
+    """
+    if path is None:
+        path = Path.home() / ".net_alpha" / "config.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data: dict = {}
+    if path.exists():
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+        except yaml.YAMLError:
+            data = {}
+    data["tax"] = config
+    with path.open("w") as f:
+        yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)

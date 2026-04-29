@@ -86,7 +86,14 @@ def set_basis(
     from net_alpha.audit._badge_cache import _cache
 
     _cache.invalidate()
-    if caller == "pane":
+    if caller == "drawer":
+        # Return a compact saved-row fragment for the Imports drawer inline form.
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_data_hygiene_row_saved.html",
+            {"trade_id": trade_id, "cost_basis": cost_basis},
+        )
+    elif caller == "pane":
         # Return an inline confirmation that stays inside the positions pane.
         trade = repo.get_trade_by_id(int(trade_id))
         sym = trade.ticker if trade is not None else ""

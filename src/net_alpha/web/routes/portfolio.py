@@ -23,6 +23,7 @@ from net_alpha.portfolio.cash_flow import (
     compute_cash_kpis,
 )
 from net_alpha.portfolio.equity_curve import build_equity_curve
+from net_alpha.portfolio.freshness import compute_price_freshness
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import (
     compute_open_option_positions,
@@ -175,6 +176,7 @@ def portfolio_page(
     account: str | None = None,
     group_options: str = "merge",
     repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
     imports = repo.list_imports()
     accounts = sorted({imp.account_display for imp in imports})
@@ -185,6 +187,8 @@ def portfolio_page(
     available_years = sorted(import_years | {current_year}, reverse=True)
 
     selected_period = period or "ytd"
+    snap = svc.last_snapshot()
+    price_freshness, price_freshness_label = compute_price_freshness(snap)
     return request.app.state.templates.TemplateResponse(
         request,
         "portfolio.html",
@@ -197,6 +201,8 @@ def portfolio_page(
             "selected_account": account or "",
             "group_options": group_options,
             "toolbar_action": "/",
+            "price_freshness": price_freshness,
+            "price_freshness_label": price_freshness_label,
         },
     )
 
@@ -259,6 +265,30 @@ def portfolio_kpis(
             projection = None
             has_tax_config = False
     profile = _resolve_profile(repo, account)
+
+    # Cash KPIs — needed for the Cash tile and for total_account_value.
+    cash_events = repo.list_cash_events(account_id=None)
+    if account:
+        cash_events = [e for e in cash_events if e.account == account]
+    holdings_value = kpis.open_position_value or Decimal("0")
+    cash_kpis = compute_cash_kpis(
+        events=cash_events,
+        trades=trades,
+        holdings_value=holdings_value,
+        account=None,  # already filtered in compute_kpis
+        period=period_tuple,
+    )
+
+    # Hero / Today tile context.
+    total_account_value: Decimal | None = (
+        (kpis.open_position_value + cash_kpis.cash_balance) if kpis.open_position_value is not None else None
+    )
+    vs_contributed_delta: Decimal | None = (
+        (kpis.period_realized + (kpis.period_unrealized or Decimal("0")))
+        if kpis.period_unrealized is not None
+        else None
+    )
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_kpis.html",
@@ -274,6 +304,11 @@ def portfolio_kpis(
             "profile": profile,
             "cash_secured_total": cash_secured_total,
             "csp_count": csp_count,
+            "cash_kpis": cash_kpis,
+            "total_account_value": total_account_value,
+            "vs_contributed_delta": vs_contributed_delta,
+            "today_change": kpis.today_change,
+            "today_pct": kpis.today_pct,
         },
     )
 
@@ -654,6 +689,17 @@ def portfolio_body(
             projection = None
             has_tax_config = False
     profile = _resolve_profile(repo, account)
+
+    # Hero / Today tile context (same as portfolio_kpis handler).
+    body_total_account_value: Decimal | None = (
+        (kpis.open_position_value + cash_kpis.cash_balance) if kpis.open_position_value is not None else None
+    )
+    body_vs_contributed_delta: Decimal | None = (
+        (kpis.period_realized + (kpis.period_unrealized or Decimal("0")))
+        if kpis.period_unrealized is not None
+        else None
+    )
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_body.html",
@@ -676,5 +722,9 @@ def portfolio_body(
             "projection": projection,
             "has_tax_config": has_tax_config,
             "profile": profile,
+            "total_account_value": body_total_account_value,
+            "vs_contributed_delta": body_vs_contributed_delta,
+            "today_change": kpis.today_change,
+            "today_pct": kpis.today_pct,
         },
     )

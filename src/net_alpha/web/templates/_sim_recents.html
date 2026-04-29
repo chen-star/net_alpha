@@ -1,0 +1,40 @@
+{# Sim recents — this-session list backed by localStorage (§6.2 S2). When
+   the user runs a sim, the parent template's hx-on::after-request handler
+   pushes a new entry to the Alpine `recents` array and persists.
+   The panel hides itself when the list is empty. #}
+
+<div data-testid="sim-recents"
+     class="panel p-3 mt-4"
+     x-data="{
+       recents: JSON.parse(localStorage.getItem('sim_recents_v1') || '[]'),
+       push(entry) {
+         this.recents.unshift(entry);
+         this.recents = this.recents.slice(0, 10);
+         localStorage.setItem('sim_recents_v1', JSON.stringify(this.recents));
+       },
+       clear() {
+         this.recents = [];
+         localStorage.removeItem('sim_recents_v1');
+       }
+     }"
+     x-on:sim-ran.window="push($event.detail)">
+  <div class="flex items-center justify-between mb-2">
+    <h3 class="m-0 text-[13px] font-semibold">Recent sims · this session</h3>
+    <button type="button"
+            x-show="recents.length > 0"
+            @click="clear()"
+            class="text-label-3 text-[11px] hover:text-text">clear</button>
+  </div>
+  <template x-if="recents.length === 0">
+    <p class="m-0 text-label-3 text-[12px]">No sims this session yet.</p>
+  </template>
+  <ul class="space-y-1" x-show="recents.length > 0">
+    <template x-for="(r, i) in recents" :key="i">
+      <li class="text-[12px] flex items-center gap-1">
+        <span class="font-mono" x-text="r.ticker"></span>
+        <span class="text-label-2" x-text="r.action + ' ' + r.qty"></span>
+        <span class="text-label-3" x-text="r.timestamp"></span>
+      </li>
+    </template>
+  </ul>
+</div>

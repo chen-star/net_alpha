@@ -34,24 +34,31 @@ def _kpi_slot_order(html: str) -> list[str]:
 
 
 def test_kpi_order_conservative(tmp_path):
+    """Phase 3 C3: fixed 3+4 grid — profile no longer changes slot order."""
     client = _seed(tmp_path, "conservative")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    assert order[:3] == ["open_position", "lifetime_growth", "cash"]
+    assert order[:3] == ["hero", "today", "cash"]
+    assert order[3:] == ["realized", "unrealized", "contributed", "growth"]
 
 
 def test_kpi_order_active(tmp_path):
+    """Phase 3 C3: fixed 3+4 grid — profile no longer changes slot order."""
     client = _seed(tmp_path, "active")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    # wash_impact moved to the Tax page wash-sales tab.
-    assert order[:4] == ["ytd_realized", "ytd_unrealized", "open_position", "cash"]
+    # Fixed layout: hero + today + cash (top) + 4 small (bottom)
+    assert order[:3] == ["hero", "today", "cash"]
+    assert order[3:] == ["realized", "unrealized", "contributed", "growth"]
+    # wash_impact removed from Portfolio KPI grid entirely (lives on /tax).
     assert "wash_impact" not in order
 
 
 def test_kpi_order_options(tmp_path):
+    """Phase 3 C3: fixed 3+4 grid — profile no longer changes slot order."""
     client = _seed(tmp_path, "options")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    assert order[:3] == ["ytd_realized", "open_position", "cash"]
+    assert order[:3] == ["hero", "today", "cash"]
+    assert order[3:] == ["realized", "unrealized", "contributed", "growth"]
     assert "wash_impact" not in order

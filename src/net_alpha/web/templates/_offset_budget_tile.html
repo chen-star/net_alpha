@@ -4,7 +4,7 @@
 {% set _pct = (_used / _cap * 100) if _cap else 0 %}
 {% set _pct_int = _pct|round(0,'floor')|int %}
 {% set _carry = budget.carryforward_projection|float %}
-<div class="kpi">
+<div class="kpi" data-testid="offset-budget">
   <div class="flex items-baseline justify-between">
     <div class="label-uc">Loss harvest budget</div>
     <div class="text-[11px] text-label-3">{{ budget.year }}</div>
@@ -13,7 +13,8 @@
     ${{ "{:,.0f}".format(budget.used_against_ordinary) }}
     <span class="text-[12px] text-label-3 font-normal ml-1">of ${{ "{:,.0f}".format(budget.cap_against_ordinary) }} cap</span>
   </div>
-  <div class="mt-2 h-[5px] rounded-full overflow-hidden" style="background: rgba(255,255,255,0.06);"
+  <div data-testid="offset-budget-bar"
+       class="mt-2 h-[5px] rounded-full overflow-hidden" style="background: rgba(255,255,255,0.06);"
        role="progressbar" aria-valuenow="{{ _pct_int }}" aria-valuemin="0" aria-valuemax="100">
     <div style="width: {{ _pct_int }}%; height: 100%;
                 background: linear-gradient(90deg, #5E5CE6 0%, #BF5AF2 100%);

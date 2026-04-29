@@ -230,6 +230,22 @@
     border-bottom-color: var(--color-indigo, #5E5CE6);
   }
 
+  /* Filter-bar chips (§5.7, audit W2). */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--color-surface-1, rgba(255,255,255,0.06));
+    border: 0.5px solid var(--color-hairline, rgba(255,255,255,0.08));
+    color: var(--color-text);
+    font-size: 11px;
+    line-height: 16px;
+  }
+  .chip:hover {
+    background: var(--color-surface-2, rgba(255,255,255,0.10));
+  }
+
   /* Status chips */
   .chip-confirm  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-neg);  background: rgba(255,69,58,0.14); }
   .chip-probable { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-warn); background: rgba(255,159,10,0.16); }
@@ -288,6 +304,16 @@
   .badge-confirmed { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-neg);  background: rgba(255,69,58,0.14); }
   .badge-probable  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-warn); background: rgba(255,159,10,0.16); }
   .badge-unclear   { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-info); background: rgba(100,210,255,0.14); }
+
+  /* Phase 3: aliases that templates have been using inconsistently. Map to the
+     semantic tokens so existing markup colors correctly. */
+  .text-neg     { color: var(--color-neg); }
+  .text-pos     { color: var(--color-pos); }
+  .text-warn    { color: var(--color-warn); }
+  .text-info    { color: var(--color-info); }
+  .text-loss    { color: var(--color-neg); }
+  .text-gain    { color: var(--color-pos); }
+  .text-success { color: var(--color-pos); }
 }
 
 /* Positions side pane (§3.5). Phase 2 ships fixed 480px on ≥1024px;

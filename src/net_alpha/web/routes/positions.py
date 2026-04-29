@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
+from loguru import logger
 
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.positions import open_lots_view
@@ -89,6 +90,13 @@ def positions_page(
             return (1, row.lockout_clear)
 
         rows = sorted(rows, key=_lockout_sort_key)
+
+        total_unrealized = sum((row.loss for row in rows), Decimal("0"))
+        harvest_clear_count = sum(1 for row in rows if row.lockout_clear is None or row.lockout_clear <= today)
+        replacements_count = sum(1 for row in rows if row.suggested_replacements)
+        ctx["total_unrealized"] = total_unrealized
+        ctx["harvest_clear_count"] = harvest_clear_count
+        ctx["replacements_count"] = replacements_count
 
         ctx["rows"] = rows
         ctx["today"] = today
@@ -181,14 +189,11 @@ def positions_pane(
             # For the set-basis form: single-lot → expose trade_id for the form
             if len(equity_open) == 1:
                 trade_id = equity_open[0].trade_id
-    except Exception:  # noqa: BLE001 — never block the pane render
-        pass
+    except Exception as exc:  # noqa: BLE001 — never block the pane render
+        logger.warning("positions_pane lookup failed for sym={}, account_id={}: {!r}", sym, account_id, exc)
 
     # --- Sim-sell realized delta ---
-    realized_delta: Decimal | None = None
-    if qty is not None and last_price is not None and open_basis is not None:
-        realized_delta = (qty * Decimal(str(last_price))) - open_basis
-
+    # realized_delta == loss when both are computed (qty * price − open_basis).
     ctx = {
         "sym": sym,
         "account_id": account_id,
@@ -197,7 +202,7 @@ def positions_pane(
         "open_basis": open_basis,
         "loss": loss,
         "account_label": account_label,
-        "realized_delta": realized_delta,
+        "realized_delta": loss,
         "trade_id": trade_id,
     }
 
