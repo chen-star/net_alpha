@@ -124,6 +124,16 @@ class EquityPoint:
 
 
 @dataclass(frozen=True)
+class BenchmarkPoint:
+    """One point in the benchmark shadow-account series. Same date-axis as
+    the EquityPoint series; the value is the dollar value of a hypothetical
+    'buy SPY with the same cash flows' account on that date."""
+
+    on: date
+    value: Decimal | None  # None when the close on that date is unavailable
+
+
+@dataclass(frozen=True)
 class WashImpact:
     period_label: str
     disallowed_total: Decimal
