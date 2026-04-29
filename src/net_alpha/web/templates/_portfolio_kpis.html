@@ -1,77 +1,13 @@
 {% from "_provenance_macros.html" import provenance_link %}
-{% set partial = kpis.missing_symbols and (kpis.open_position_value is not none) %}
-{% set period_label = kpis.period_label or 'Period' %}
 {% set _profile = profile if profile is defined else None %}
-{% set _slots = _profile.order("portfolio_kpi_hero") if _profile else ["ytd_realized", "ytd_unrealized", "wash_impact", "open_position"] %}
 
-{% macro slot_ytd_realized(kpis, period_label, metric_refs) %}
-  <div class="kpi kpi-hero col-span-3" data-kpi-slot="ytd_realized">
-    <div class="label-uc">Realized P/L</div>
-    <div class="num text-[22px] font-bold mt-2 {% if kpis.period_realized < 0 %}text-neg{% else %}text-pos{% endif %}">
-      {% if kpis.period_realized < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized|float|abs) }}{% if metric_refs is defined and metric_refs.realized_period is defined %}{{ provenance_link(metric_refs.realized_period) }}{% endif %}
-    </div>
-    <div class="text-[11px] text-label-3 mt-1">{{ period_label }}</div>
-  </div>
-{% endmacro %}
-
-{% macro slot_ytd_unrealized(kpis, period_label, metric_refs) %}
-  <div class="kpi col-span-3" data-kpi-slot="ytd_unrealized">
-    <div class="label-uc">Unrealized P/L</div>
-    <div class="num text-[22px] font-bold mt-2">
-      {% if kpis.period_unrealized is none %}<span class="text-label-3">—</span>
-      {% elif kpis.period_unrealized < 0 %}<span class="text-neg">−${{ "%.2f"|format(kpis.period_unrealized|float|abs) }}</span>
-      {% else %}<span class="text-pos">+${{ "%.2f"|format(kpis.period_unrealized|float) }}</span>
-      {% endif %}
-    </div>
-    <div class="text-[11px] text-label-3 mt-1">{{ period_label }}</div>
-  </div>
-{% endmacro %}
-
-{% macro slot_lifetime_growth(kpis) %}
-  <div class="kpi col-span-3" data-kpi-slot="lifetime_growth">
-    <div class="label-uc">Lifetime growth</div>
-    <div class="num text-[22px] font-bold mt-2 {% if kpis.lifetime_realized < 0 %}text-neg{% else %}text-pos{% endif %}">
-      {% if kpis.lifetime_realized < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.lifetime_realized|float|abs) }}
-    </div>
-    <div class="text-[11px] text-label-3 mt-1">all time</div>
-  </div>
-{% endmacro %}
-
-{% macro slot_open_position(kpis) %}
-  <div class="kpi col-span-3" data-kpi-slot="open_position">
-    <div class="label-uc">Open position $</div>
-    <div class="num text-[22px] font-bold mt-2">
-      {% if kpis.open_position_value is none %}<span class="text-label-3">—</span>
-      {% else %}${{ "%.2f"|format(kpis.open_position_value|float) }}{% endif %}
-    </div>
-    <div class="text-[11px] text-label-3 mt-1">
-      {% if kpis.missing_symbols %}{{ kpis.missing_symbols|length }} unpriced{% else %}all priced{% endif %}
-    </div>
-  </div>
-{% endmacro %}
-
-{% macro slot_wash_impact(metric_refs) %}
-  <div class="kpi col-span-3" data-kpi-slot="wash_impact">
-    <div class="label-uc">Wash impact</div>
-    <div class="num text-[22px] font-bold mt-2">
-      {% if wash_impact_total is defined and wash_impact_total %}
-        <span class="text-warn">−${{ "%.2f"|format(wash_impact_total|float|abs) }}</span>
-      {% else %}
-        <span class="text-label-3">$0.00</span>
-      {% endif %}
-    </div>
-    <div class="text-[11px] text-label-3 mt-1">
-      {% if wash_violations is defined and wash_violations %}{{ wash_violations }} violation{% if wash_violations != 1 %}s{% endif %}{% else %}no violations{% endif %}
-    </div>
-  </div>
-{% endmacro %}
-
+{# ── slot_cash macro ──────────────────────────────────────────────────────── #}
 {% macro slot_cash(cash_kpis, cash_secured_total, csp_count) %}
   {% set _csp = (cash_secured_total|float) if cash_secured_total is defined and cash_secured_total else 0 %}
   {% set _csp_n = csp_count if csp_count is defined and csp_count else 0 %}
   {% set _cash = (cash_kpis.cash_balance|float) if cash_kpis else 0 %}
   {% set _free = _cash - _csp %}
-  <div class="kpi col-span-3" data-kpi-slot="cash">
+  <div class="kpi col-span-4" data-kpi-slot="cash">
     <div class="label-uc"
          title="{% if _csp > 0 %}Total liquid cash. {{ "{:,.0f}".format(_csp) }} is pledged as collateral for {{ _csp_n }} cash-secured put{% if _csp_n != 1 %}s{% endif %} — your free cash is what's left.{% else %}Total liquid cash in this scope. No CSP collateral pledged.{% endif %}">
       Cash {% if _csp > 0 %}<span class="text-label-3 normal-case">(free / pledged)</span>{% endif %}
@@ -101,46 +37,90 @@
   </div>
 {% endmacro %}
 
+{# ── KPI grid — Phase 3 restructure (§4.1, §5.6) ────────────────────────── #}
+{# Top row: hero + today + cash (large, col-span-4 each in a 12-col grid).    #}
+{# Bottom row: 4 small numerics (col-span-3 each).                             #}
+
 <div class="grid grid-cols-12 gap-[10px]" data-profile="{{ _profile.profile if _profile else 'active' }}">
-  {% for slot in _slots %}
-    {% if slot == "ytd_realized" %}{{ slot_ytd_realized(kpis, period_label, metric_refs if metric_refs is defined else {}) }}
-    {% elif slot == "ytd_unrealized" %}{{ slot_ytd_unrealized(kpis, period_label, metric_refs if metric_refs is defined else {}) }}
-    {% elif slot == "lifetime_growth" %}{{ slot_lifetime_growth(kpis) }}
-    {% elif slot == "open_position" %}{{ slot_open_position(kpis) }}
-    {% elif slot == "wash_impact" %}{{ slot_wash_impact(metric_refs if metric_refs is defined else {}) }}
-    {% elif slot == "cash" %}{{ slot_cash(cash_kpis if cash_kpis is defined else None, cash_secured_total if cash_secured_total is defined else 0, csp_count if csp_count is defined else 0) }}
-    {% endif %}
-  {% endfor %}
+
+  {# ── Hero: Total Account Value ─────────────────────────────────────────── #}
+  <div class="kpi kpi-hero col-span-4" data-kpi-slot="hero">
+    <div class="label-uc">TOTAL ACCOUNT VALUE</div>
+    <div class="num text-[22px] font-bold mt-2">
+      {% if total_account_value is defined and total_account_value is not none %}
+        ${{ "%.2f"|format(total_account_value|float) }}
+      {% else %}
+        <span class="text-label-3">—</span>
+      {% endif %}
+    </div>
+    <div class="text-[11px] text-label-3 mt-1">
+      {% if vs_contributed_delta is defined and vs_contributed_delta is not none %}
+        {% if vs_contributed_delta >= 0 %}+{% endif %}${{ "%.2f"|format(vs_contributed_delta|float|abs) }}{% if vs_contributed_delta < 0 %}−{% endif %} vs contributed
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Today tile (NEW) ───────────────────────────────────────────────────── #}
+  {% include "_portfolio_today_tile.html" %}
+
+  {# ── Cash — single canonical emit ──────────────────────────────────────── #}
+  {{ slot_cash(cash_kpis if cash_kpis is defined else None, cash_secured_total if cash_secured_total is defined else 0, csp_count if csp_count is defined else 0) }}
+
 </div>
 
-{# Tax tiles moved to the dedicated Tax planning section at the bottom of the
-   page (see _portfolio_body.html). Portfolio KPIs stay focused on portfolio. #}
-
-{% if cash_kpis is defined %}
+{# ── Bottom row: 4 small KPIs ─────────────────────────────────────────────── #}
 <div class="grid grid-cols-12 gap-[10px] mt-[10px]">
 
-  {# --- Net contributed --- #}
-  {# Cash balance is shown once via slot_cash in the hero KPI grid (P3 — no dup). #}
-  <div class="kpi col-span-6">
+  {# Realized P/L #}
+  <div class="kpi col-span-3" data-kpi-slot="realized">
+    <div class="label-uc">Realized P/L</div>
+    <div class="num text-[22px] font-bold mt-2 {% if kpis.period_realized < 0 %}text-neg{% else %}text-pos{% endif %}">
+      {% if kpis.period_realized < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized|float|abs) }}{% if metric_refs is defined and metric_refs.realized_period is defined %}{{ provenance_link(metric_refs.realized_period) }}{% endif %}
+    </div>
+    <div class="text-[11px] text-label-3 mt-1">{{ kpis.period_label }}</div>
+  </div>
+
+  {# Unrealized P/L #}
+  <div class="kpi col-span-3" data-kpi-slot="unrealized">
+    <div class="label-uc">Unrealized P/L</div>
+    <div class="num text-[22px] font-bold mt-2">
+      {% if kpis.period_unrealized is none %}<span class="text-label-3">—</span>
+      {% elif kpis.period_unrealized < 0 %}<span class="text-neg">−${{ "%.2f"|format(kpis.period_unrealized|float|abs) }}</span>
+      {% else %}<span class="text-pos">+${{ "%.2f"|format(kpis.period_unrealized|float) }}</span>
+      {% endif %}
+    </div>
+    <div class="text-[11px] text-label-3 mt-1">{{ kpis.period_label }}</div>
+  </div>
+
+  {# Net Contributed #}
+  <div class="kpi col-span-3" data-kpi-slot="contributed">
     <div class="label-uc">Net contributed</div>
     <div class="num text-[22px] font-bold mt-2">
-      {% if cash_kpis.net_contributions < 0 %}
-        <span class="text-neg">−${{ "%.2f"|format(cash_kpis.net_contributions|float|abs) }}</span>
+      {% if cash_kpis is defined and cash_kpis %}
+        {% if cash_kpis.net_contributions < 0 %}
+          <span class="text-neg">−${{ "%.2f"|format(cash_kpis.net_contributions|float|abs) }}</span>
+        {% else %}
+          ${{ "%.2f"|format(cash_kpis.net_contributions|float) }}
+        {% endif %}{% if metric_refs is defined and metric_refs.net_contributed_period is defined %}{{ provenance_link(metric_refs.net_contributed_period) }}{% endif %}
       {% else %}
-        ${{ "%.2f"|format(cash_kpis.net_contributions|float) }}
-      {% endif %}{% if metric_refs is defined and metric_refs.net_contributed_period is defined %}{{ provenance_link(metric_refs.net_contributed_period) }}{% endif %}
+        <span class="text-label-3">—</span>
+      {% endif %}
     </div>
     <div class="text-[11px] text-label-3 mt-1">deposits − withdrawals</div>
   </div>
 
-  {# --- Growth --- #}
-  <div class="kpi col-span-6">
+  {# Growth #}
+  <div class="kpi col-span-3" data-kpi-slot="growth">
     <div class="label-uc">Growth</div>
-    <div class="num text-[22px] font-bold mt-2 {% if cash_kpis.growth < 0 %}text-neg{% else %}text-pos{% endif %}">
-      {% if cash_kpis.growth < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(cash_kpis.growth|float|abs) }}
+    <div class="num text-[22px] font-bold mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
+      {% if cash_kpis is defined and cash_kpis %}
+        {% if cash_kpis.growth < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(cash_kpis.growth|float|abs) }}
+      {% else %}
+        <span class="text-label-3">—</span>
+      {% endif %}
     </div>
     <div class="text-[11px] text-label-3 mt-1">
-      {% if cash_kpis.growth_pct is not none %}
+      {% if cash_kpis is defined and cash_kpis and cash_kpis.growth_pct is not none %}
         {% if cash_kpis.growth_pct < 0 %}−{% else %}+{% endif %}{{ "%.1f"|format((cash_kpis.growth_pct|float|abs) * 100) }}% vs contributed
       {% else %}
         no contributions
@@ -149,7 +129,6 @@
   </div>
 
 </div>
-{% endif %}
 
 {# Global price freshness is shown in the toolbar freshness chip (§5.11 / P5).
    Only tile-specific data-quality warnings (e.g. partial sum) remain here. #}

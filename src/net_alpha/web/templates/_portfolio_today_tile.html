@@ -1,0 +1,22 @@
+{# Today tile (§4.1, §6.2 Overview NEW). Phase 3 ships value + percent.
+   Phase 4 adds the intraday sparkline. #}
+
+<div class="kpi col-span-4" data-kpi-slot="today">
+  <div class="label-uc">TODAY</div>
+  <div class="num text-[22px] font-bold mt-2">
+    {% if today_change is not none %}
+      <span class="{% if today_change > 0 %}text-pos{% elif today_change < 0 %}text-neg{% else %}text-label-1{% endif %}">
+        {% if today_change >= 0 %}+{% endif %}${{ "%.2f"|format(today_change|float|abs) }}
+      </span>
+    {% else %}
+      <span class="text-label-3">—</span>
+    {% endif %}
+  </div>
+  <div class="text-[11px] text-label-3 mt-1">
+    {% if today_pct is not none %}
+      {% if today_pct > 0 %}+{% endif %}{{ "%.2f"|format((today_pct|float) * 100) }}%
+    {% else %}
+      no previous close
+    {% endif %}
+  </div>
+</div>

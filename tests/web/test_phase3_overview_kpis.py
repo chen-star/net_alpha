@@ -88,3 +88,36 @@ def test_overview_does_not_repeat_cached_prices_phrase(seeded_client: TestClient
     html = seeded_client.get("/portfolio/kpis").text
     cached_count = html.lower().count("cached prices")
     assert cached_count <= 1, f"'cached prices' appears {cached_count}× — expected ≤1"
+
+
+def test_overview_hero_kpi_is_total_account_value(seeded_client):
+    """Hero = Total Account Value (P4)."""
+    resp = seeded_client.get("/portfolio/kpis")
+    html = resp.text
+    assert 'data-kpi-slot="hero"' in html
+    assert "TOTAL ACCOUNT VALUE" in html or "Total account value" in html
+
+
+def test_overview_has_today_tile(seeded_client):
+    """The Today tile appears in the top-row of the KPI grid (NEW)."""
+    resp = seeded_client.get("/portfolio/kpis")
+    assert 'data-kpi-slot="today"' in resp.text
+
+
+def test_overview_kpi_grid_has_three_large_and_four_small_slots(seeded_client):
+    """Top row: hero + today + cash (3). Bottom row: realized, unrealized,
+    contributed, growth (4). Total 7 KPI slots."""
+    resp = seeded_client.get("/portfolio/kpis")
+    html = resp.text
+    slots = (
+        ("hero", 1),
+        ("today", 1),
+        ("cash", 1),
+        ("realized", 1),
+        ("unrealized", 1),
+        ("contributed", 1),
+        ("growth", 1),
+    )
+    for slot, expected in slots:
+        actual = html.count(f'data-kpi-slot="{slot}"')
+        assert actual == expected, f"slot={slot} appears {actual}× (expected {expected})"

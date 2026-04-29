@@ -265,6 +265,30 @@ def portfolio_kpis(
             projection = None
             has_tax_config = False
     profile = _resolve_profile(repo, account)
+
+    # Cash KPIs — needed for the Cash tile and for total_account_value.
+    cash_events = repo.list_cash_events(account_id=None)
+    if account:
+        cash_events = [e for e in cash_events if e.account == account]
+    holdings_value = kpis.open_position_value or Decimal("0")
+    cash_kpis = compute_cash_kpis(
+        events=cash_events,
+        trades=trades,
+        holdings_value=holdings_value,
+        account=None,  # already filtered in compute_kpis
+        period=period_tuple,
+    )
+
+    # Hero / Today tile context.
+    total_account_value: Decimal | None = (
+        (kpis.open_position_value + cash_kpis.cash_balance) if kpis.open_position_value is not None else None
+    )
+    vs_contributed_delta: Decimal | None = (
+        (kpis.period_realized + (kpis.period_unrealized or Decimal("0")))
+        if kpis.period_unrealized is not None
+        else None
+    )
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_kpis.html",
@@ -280,6 +304,11 @@ def portfolio_kpis(
             "profile": profile,
             "cash_secured_total": cash_secured_total,
             "csp_count": csp_count,
+            "cash_kpis": cash_kpis,
+            "total_account_value": total_account_value,
+            "vs_contributed_delta": vs_contributed_delta,
+            "today_change": kpis.today_change,
+            "today_pct": kpis.today_pct,
         },
     )
 
@@ -660,6 +689,17 @@ def portfolio_body(
             projection = None
             has_tax_config = False
     profile = _resolve_profile(repo, account)
+
+    # Hero / Today tile context (same as portfolio_kpis handler).
+    body_total_account_value: Decimal | None = (
+        (kpis.open_position_value + cash_kpis.cash_balance) if kpis.open_position_value is not None else None
+    )
+    body_vs_contributed_delta: Decimal | None = (
+        (kpis.period_realized + (kpis.period_unrealized or Decimal("0")))
+        if kpis.period_unrealized is not None
+        else None
+    )
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_body.html",
@@ -682,5 +722,9 @@ def portfolio_body(
             "projection": projection,
             "has_tax_config": has_tax_config,
             "profile": profile,
+            "total_account_value": body_total_account_value,
+            "vs_contributed_delta": body_vs_contributed_delta,
+            "today_change": kpis.today_change,
+            "today_pct": kpis.today_pct,
         },
     )
