@@ -21,47 +21,65 @@
   </div>
 
   <div class="grid grid-cols-5 gap-4 mb-6">
-    <div class="panel">
+    <div class="kpi" data-kpi-slot="open-lots">
       <div class="label-uc">Open lots</div>
-      <div class="text-2xl font-mono num">{{ kpi_open_lots }}{% if open_shorts %}<span class="text-label-3 text-base"> + {{ open_shorts|length }} short opt</span>{% endif %}</div>
-      <div class="text-xs text-label-2 mt-1">Basis: ${{ "%.2f"|format(kpi_open_basis) }}</div>
+      <div class="num text-[22px] font-bold mt-2">
+        {{ kpi_open_lots }}{% if open_shorts %}<span class="text-label-3 text-[14px] font-normal"> + {{ open_shorts|length }} short opt</span>{% endif %}
+      </div>
+      <div class="text-xs text-label-2 mt-1">Basis: {{ fmt_currency(kpi_open_basis) }}</div>
     </div>
-    <div class="panel">
+
+    <div class="kpi" data-kpi-slot="realized">
       <div class="label-uc">Realized P&amp;L</div>
-      <div class="text-2xl font-mono num {% if kpi_realized_ytd >= 0 %}text-pos{% else %}text-confirmed{% endif %}">
-        ${{ "%.2f"|format(kpi_realized_ytd) }}{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
+      <div class="num text-[22px] font-bold mt-2 {% if kpi_realized_ytd >= 0 %}text-pos{% else %}text-neg{% endif %}">
+        {{ fmt_currency(kpi_realized_ytd) }}{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
       </div>
       <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
-      <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
-        <div class="text-sm font-mono num {% if kpi_realized_lifetime >= 0 %}text-pos{% else %}text-confirmed{% endif %}">
-          ${{ "%.2f"|format(kpi_realized_lifetime) }}{% if realized_lifetime_ref %}{{ provenance_link(realized_lifetime_ref) }}{% endif %}
+      {% if account_ids %}
+        <div class="mt-1 flex flex-wrap gap-1"
+             hx-get="/reconciliation/{{ symbol }}?account_id={{ account_ids[0] }}&variant=badge"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+          <span class="text-[11px] text-label-3">checking…</span>
         </div>
-        <div class="text-xs text-label-3">Lifetime</div>
+      {% endif %}
+      <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
+        <div class="num text-sm font-semibold {% if kpi_realized_lifetime >= 0 %}text-pos{% else %}text-neg{% endif %}">
+          {{ fmt_currency(kpi_realized_lifetime) }}{% if realized_lifetime_ref %}{{ provenance_link(realized_lifetime_ref) }}{% endif %}
+        </div>
+        <div class="text-xs text-label-2">Lifetime</div>
       </div>
     </div>
-    <div class="panel">
+
+    <div class="kpi" data-kpi-slot="disallowed">
       <div class="label-uc">Disallowed</div>
-      <div class="text-2xl font-mono text-confirmed num">${{ "%.2f"|format(kpi_disallowed_ytd) }}</div>
+      <div class="num text-[22px] font-bold mt-2 {% if kpi_disallowed_ytd > 0 %}text-neg{% else %}text-label-3{% endif %}">
+        {{ fmt_currency(kpi_disallowed_ytd) }}
+      </div>
       <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
       <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
-        <div class="text-sm font-mono text-confirmed num">${{ "%.2f"|format(kpi_disallowed_lifetime) }}</div>
-        <div class="text-xs text-label-3">Lifetime</div>
+        <div class="num text-sm font-semibold {% if kpi_disallowed_lifetime > 0 %}text-neg{% else %}text-label-3{% endif %}">
+          {{ fmt_currency(kpi_disallowed_lifetime) }}
+        </div>
+        <div class="text-xs text-label-2">Lifetime</div>
       </div>
     </div>
-    <div class="panel">
+
+    <div class="kpi" data-kpi-slot="accounts">
       <div class="label-uc">Accounts</div>
-      <div class="text-sm font-mono mt-1">
-        {% for a in kpi_accounts %}{{ a }}{% if not loop.last %}, {% endif %}{% endfor %}
-        {% if not kpi_accounts %}-{% endif %}
+      <div class="text-sm mt-2">
+        {% for a in kpi_accounts %}<span class="font-mono">{{ a }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+        {% if not kpi_accounts %}<span class="text-label-3">—</span>{% endif %}
       </div>
     </div>
-    <div class="panel">
+
+    <div class="kpi" data-kpi-slot="last-trade">
       <div class="label-uc">Last trade</div>
       {% if kpi_last_trade %}
-        <div class="text-sm font-mono mt-1">{{ kpi_last_trade.action }} {{ kpi_last_trade.quantity }}</div>
-        <div class="text-xs text-label-2">{{ kpi_last_trade.date }}</div>
+        <div class="text-sm mt-2">{{ kpi_last_trade.action }} <span class="font-mono num">{{ fmt_quantity(kpi_last_trade.quantity) }}</span></div>
+        <div class="text-xs text-label-2"><span class="font-mono">{{ fmt_date(kpi_last_trade.date) }}</span></div>
       {% else %}
-        <div class="text-sm text-label-2 mt-1">No trades</div>
+        <div class="text-sm text-label-2 mt-2">No trades</div>
       {% endif %}
     </div>
   </div>
