@@ -12,11 +12,13 @@ from sqlmodel import Session, select
 from net_alpha.db.tables import (
     AccountRow,
     CashEventRow,
+    ExemptMatchRow,
     ImportRecordRow,
     LotOverrideRow,
     LotRow,
     MetaRow,
     RealizedGLLotRow,
+    Section1256ClassificationRow,
     SplitRow,
     TradeRow,
     UserPreferenceRow,
@@ -26,11 +28,13 @@ from net_alpha.models.domain import (
     Account,
     AddImportResult,
     CashEvent,
+    ExemptMatch,
     ImportRecord,
     ImportSummary,
     Lot,
     OptionDetails,
     RemoveImportResult,
+    Section1256Classification,
     Trade,
     WashSaleViolation,
 )
@@ -1350,6 +1354,101 @@ class Repository:
             if row is None:
                 return None
             return self._row_to_trade(row, self._account_display_for_id(s, row.account_id))
+
+    # ---- ExemptMatch ----
+
+    def save_exempt_matches(self, matches: list[ExemptMatch]) -> None:
+        """Persist exempt matches. Caller is responsible for clear_exempt_matches() before
+        a full recompute to avoid duplicates."""
+        with Session(self.engine) as session:
+            for m in matches:
+                session.add(ExemptMatchRow(
+                    loss_trade_id=int(m.loss_trade_id),
+                    triggering_buy_id=int(m.triggering_buy_id),
+                    exempt_reason=m.exempt_reason,
+                    rule_citation=m.rule_citation,
+                    notional_disallowed=m.notional_disallowed,
+                    confidence=m.confidence,
+                    matched_quantity=m.matched_quantity,
+                    loss_account=m.loss_account,
+                    buy_account=m.buy_account,
+                    loss_sale_date=m.loss_sale_date.isoformat(),
+                    triggering_buy_date=m.triggering_buy_date.isoformat(),
+                    ticker=m.ticker,
+                ))
+            session.commit()
+
+    def clear_exempt_matches(self) -> None:
+        with Session(self.engine) as session:
+            session.exec(ExemptMatchRow.__table__.delete())
+            session.commit()
+
+    def list_exempt_matches(
+        self,
+        *,
+        account: str | None = None,
+        year: int | None = None,
+    ) -> list[ExemptMatchRow]:
+        with Session(self.engine) as session:
+            stmt = select(ExemptMatchRow)
+            if account:
+                stmt = stmt.where(
+                    (ExemptMatchRow.loss_account == account) | (ExemptMatchRow.buy_account == account)
+                )
+            if year is not None:
+                stmt = stmt.where(ExemptMatchRow.loss_sale_date.startswith(f"{year}-"))
+            return list(session.exec(stmt).all())
+
+    # ---- Section1256Classification ----
+
+    def save_section_1256_classifications(
+        self, classifications: list[Section1256Classification]
+    ) -> None:
+        """Upsert by trade_id (unique). Replaces prior classification for the same trade."""
+        with Session(self.engine) as session:
+            for c in classifications:
+                session.exec(
+                    Section1256ClassificationRow.__table__.delete().where(
+                        Section1256ClassificationRow.trade_id == int(c.trade_id)
+                    )
+                )
+                session.add(Section1256ClassificationRow(
+                    trade_id=int(c.trade_id),
+                    realized_pnl=c.realized_pnl,
+                    long_term_portion=c.long_term_portion,
+                    short_term_portion=c.short_term_portion,
+                    underlying=c.underlying,
+                ))
+            session.commit()
+
+    def clear_section_1256_classifications(self) -> None:
+        with Session(self.engine) as session:
+            session.exec(Section1256ClassificationRow.__table__.delete())
+            session.commit()
+
+    def list_section_1256_classifications(
+        self,
+        *,
+        account: str | None = None,
+        year: int | None = None,
+    ) -> list[Section1256ClassificationRow]:
+        with Session(self.engine) as session:
+            if account is not None or year is not None:
+                # Join to TradeRow to apply account/year filters
+                stmt = select(Section1256ClassificationRow).join(
+                    TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id
+                )
+                if account is not None:
+                    acct_id = self._account_id_for_display(session, account)
+                    if acct_id is not None:
+                        stmt = stmt.where(TradeRow.account_id == acct_id)
+                    else:
+                        return []
+                if year is not None:
+                    stmt = stmt.where(TradeRow.trade_date.startswith(f"{year}-"))
+            else:
+                stmt = select(Section1256ClassificationRow)
+            return list(session.exec(stmt).all())
 
 
 # ---------------------------------------------------------------------------
