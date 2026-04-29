@@ -7,7 +7,7 @@
     "g s": "/sim",
   };
 
-  let pending = "";
+  let awaiting = null; // "g" while waiting for the second key, else null
   let resetTimer = null;
 
   function isTypingTarget(el) {
@@ -22,33 +22,37 @@
   }
 
   document.addEventListener("keydown", (e) => {
-    if (isTypingTarget(e.target)) return;
+    if (isTypingTarget(e.target)) { awaiting = null; return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
     if (e.key === "?") {
       e.preventDefault();
       window.dispatchEvent(new CustomEvent("open-keyboard-cheatsheet"));
+      awaiting = null;
       return;
     }
     if (e.key === ",") {
       e.preventDefault();
       window.dispatchEvent(new CustomEvent("open-settings-drawer", { detail: { tab: "imports" } }));
+      awaiting = null;
       return;
     }
 
-    if (e.key.length === 1) {
-      pending = (pending + e.key).slice(-3);
-      const candidate = pending.replace(/(.)(?=.)/g, "$1 ");
-      // Try last 3 chars as "x y", and last 1 char as single
-      for (const seq of Object.keys(SHORTCUTS)) {
-        if (pending.endsWith(seq.replace(" ", ""))) {
-          window.location.href = SHORTCUTS[seq];
-          pending = "";
-          return;
-        }
-      }
+    if (awaiting === "g") {
+      const target = SHORTCUTS["g " + e.key];
+      awaiting = null;
       clearTimeout(resetTimer);
-      resetTimer = setTimeout(() => { pending = ""; }, 800);
+      if (target) {
+        e.preventDefault();
+        window.location.href = target;
+      }
+      return;
+    }
+
+    if (e.key === "g") {
+      awaiting = "g";
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => { awaiting = null; }, 800);
     }
   });
 })();

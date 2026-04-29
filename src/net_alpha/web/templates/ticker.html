@@ -31,7 +31,7 @@
 
     <div class="kpi" data-kpi-slot="realized">
       <div class="label-uc">Realized P&amp;L</div>
-      <div class="num text-[22px] font-bold mt-2 {% if kpi_realized_ytd >= 0 %}text-pos{% else %}text-neg{% endif %}">
+      <div class="num text-[22px] font-bold mt-2 {% if kpi_realized_ytd > 0 %}text-pos{% elif kpi_realized_ytd < 0 %}text-neg{% else %}text-label-2{% endif %}">
         {{ fmt_currency(kpi_realized_ytd) }}{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
       </div>
       <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
@@ -44,7 +44,7 @@
         </div>
       {% endif %}
       <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
-        <div class="num text-sm font-semibold {% if kpi_realized_lifetime >= 0 %}text-pos{% else %}text-neg{% endif %}">
+        <div class="num text-sm font-semibold {% if kpi_realized_lifetime > 0 %}text-pos{% elif kpi_realized_lifetime < 0 %}text-neg{% else %}text-label-2{% endif %}">
           {{ fmt_currency(kpi_realized_lifetime) }}{% if realized_lifetime_ref %}{{ provenance_link(realized_lifetime_ref) }}{% endif %}
         </div>
         <div class="text-xs text-label-2">Lifetime</div>
