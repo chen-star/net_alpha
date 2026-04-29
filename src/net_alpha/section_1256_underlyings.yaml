@@ -1,0 +1,12 @@
+# Broad-based equity index options exempt from §1091 wash-sale rules
+# under IRC §1256(c). Closed trades on these underlyings split 60/40 LT/ST
+# regardless of holding period (§1256(a)(3)).
+broad_based_index_options:
+  - SPX     # S&P 500 Index
+  - NDX     # Nasdaq-100 Index
+  - RUT     # Russell 2000 Index
+  - VIX     # CBOE Volatility Index
+  - OEX     # S&P 100 Index
+  - XSP     # Mini-SPX
+  - MXEF    # MSCI Emerging Markets
+  - MXEA    # MSCI EAFE

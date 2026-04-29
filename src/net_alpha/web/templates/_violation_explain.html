@@ -1,0 +1,64 @@
+{# HTMX fragment — rendered inline below the wash-sale or exempt-match row. #}
+<div class="explain-panel p-4 bg-surface-2 border-l-4
+            {% if e.is_exempt %}border-l-confirmed{% else %}border-l-warn{% endif %}"
+     style="border-left-color: {% if e.is_exempt %}var(--color-pos){% else %}var(--color-neg){% endif %};">
+
+  <div class="text-sm text-text mb-2">{{ e.summary }}</div>
+
+  <div class="flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-label-2 mb-3">
+    <div><span class="text-label-3">Rule:</span> <code class="text-text">{{ e.rule_citation }}</code></div>
+    <div><span class="text-label-3">Match:</span> {{ e.match_reason }}</div>
+    <div><span class="text-label-3">Window:</span> {{ e.days_between }} days</div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4 text-[12px] mb-3">
+    <div class="panel p-2">
+      <div class="text-label-3 mb-1">Loss sale</div>
+      <div class="font-medium text-text">{{ e.loss_trade.ticker }} &middot; {{ e.loss_trade.action }} {{ e.loss_trade.quantity }}</div>
+      <div class="text-label-2">{{ e.loss_trade.date }}</div>
+      <div class="text-label-2">proceeds ${{ '{:,.2f}'.format(e.loss_trade.proceeds) }}</div>
+      <div class="text-label-2">basis ${{ '{:,.2f}'.format(e.loss_trade.cost_basis) }}</div>
+    </div>
+    <div class="panel p-2">
+      <div class="text-label-3 mb-1">Triggering buy</div>
+      <div class="font-medium text-text">{{ e.triggering_buy.ticker }} &middot; {{ e.triggering_buy.action }} {{ e.triggering_buy.quantity }}</div>
+      <div class="text-label-2">{{ e.triggering_buy.date }}</div>
+      <div class="text-label-2">cost ${{ '{:,.2f}'.format(e.triggering_buy.cost_basis) }}</div>
+    </div>
+  </div>
+
+  <div class="text-[12px] mb-2">
+    {% if e.is_exempt %}
+      <span class="text-label-3">Would have disallowed:</span>
+      <span class="line-through text-label-3">{{ e.disallowed_math }}</span>
+      <span class="text-pos ml-2">&rarr; $0 (exempt)</span>
+    {% else %}
+      <span class="text-label-3">Disallowed:</span>
+      <span class="text-neg font-medium">{{ e.disallowed_math }}</span>
+    {% endif %}
+  </div>
+
+  <div class="text-[12px] text-label-2 mb-2">
+    <span class="text-label-3">Confidence:</span> {{ e.confidence_reason }}
+  </div>
+
+  {% if e.adjusted_basis_target %}
+    <div class="text-[12px] text-label-2 mb-2">
+      <span class="text-label-3">Rolled into:</span>
+      Lot {{ e.adjusted_basis_target.lot_id }} ({{ e.adjusted_basis_target.acquired_date }}) &mdash;
+      adjusted basis ${{ '{:,.2f}'.format(e.adjusted_basis_target.adjusted_basis) }}
+    </div>
+  {% endif %}
+
+  {% if e.cross_account %}
+    <div class="text-[12px] text-label-3">
+      Cross-account: {{ e.cross_account.loss_account }} &rarr; {{ e.cross_account.buy_account }}
+    </div>
+  {% endif %}
+
+  {% if e.is_exempt %}
+    <div class="text-[12px] text-label-3 mt-2 italic">
+      Reference: section_1256_underlyings.yaml
+    </div>
+  {% endif %}
+</div>

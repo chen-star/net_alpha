@@ -1,10 +1,11 @@
 from datetime import date, datetime
+from decimal import Decimal
 
 import pytest
 from sqlmodel import SQLModel, create_engine
 
 from net_alpha.db.repository import Repository
-from net_alpha.models.domain import ImportRecord, Trade
+from net_alpha.models.domain import ImportRecord, OptionDetails, Trade
 
 
 @pytest.fixture
@@ -120,3 +121,42 @@ def test_existing_db_dup_does_not_drop_neighbors(repo):
     assert result.new_trades == 2
     assert result.duplicate_trades == 1
     assert {row.ticker for row in repo.trades_for_import(result.import_id)} == {"AAPL", "MSFT"}
+
+
+def test_add_import_roundtrips_is_section_1256(repo):
+    """Regression: is_section_1256 must round-trip through add_import → all_trades."""
+    acct = repo.get_or_create_account("schwab", "personal")
+    rec = ImportRecord(
+        account_id=acct.id,
+        csv_filename="s1256.csv",
+        csv_sha256="h_s1256",
+        imported_at=datetime(2026, 4, 25),
+        trade_count=0,
+    )
+    spx_trade = Trade(
+        date=date(2024, 9, 15),
+        account=acct.display(),
+        ticker="SPX",
+        action="Sell",
+        quantity=1,
+        proceeds=Decimal("100"),
+        cost_basis=Decimal("100"),
+        option_details=OptionDetails(strike=4500, expiry=date(2025, 12, 19), call_put="C"),
+        is_section_1256=True,
+    )
+    aapl_trade = Trade(
+        date=date(2024, 9, 15),
+        account=acct.display(),
+        ticker="AAPL",
+        action="Buy",
+        quantity=10,
+        proceeds=Decimal("1000"),
+        cost_basis=Decimal("1000"),
+        option_details=None,
+        is_section_1256=False,
+    )
+    repo.add_import(acct, rec, [spx_trade, aapl_trade])
+    loaded = repo.all_trades()
+    by_ticker = {t.ticker: t for t in loaded}
+    assert by_ticker["SPX"].is_section_1256 is True
+    assert by_ticker["AAPL"].is_section_1256 is False

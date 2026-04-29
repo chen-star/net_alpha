@@ -105,9 +105,7 @@ def test_term_passes_through():
 
 
 def test_wash_sale_fields_pass_through():
-    rows = compute_closed_lots(
-        [_gl(wash_sale=True, disallowed_loss=42.5, proceeds=100, cost_basis=200)]
-    )
+    rows = compute_closed_lots([_gl(wash_sale=True, disallowed_loss=42.5, proceeds=100, cost_basis=200)])
     assert rows[0].wash_sale is True
     assert rows[0].disallowed_loss == Decimal("42.5")
 

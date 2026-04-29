@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
@@ -65,6 +66,7 @@ class TradeRow(SQLModel, table=True):
     # values: "broker_csv" | "g_l" | "fifo" | "unknown" | "user"
     is_manual: bool = Field(default=False)
     transfer_basis_user_set: bool = Field(default=False)
+    is_section_1256: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})
     gross_cash_impact: float | None = Field(default=None)
     # The original broker-statement date the transfer landed in the account.
     # ``trade_date`` (above) is the *acquisition* date — set initially to the
@@ -114,6 +116,41 @@ class WashSaleViolationRow(SQLModel, table=True):
     matched_quantity: float
     source: str = Field(default="engine")
     # values: "schwab_g_l" | "engine"
+
+
+class ExemptMatchRow(SQLModel, table=True):
+    """Persistent form of `models.domain.ExemptMatch`."""
+
+    __tablename__ = "exempt_matches"
+
+    id: int | None = Field(default=None, primary_key=True)
+    loss_trade_id: int = Field(index=True, foreign_key="trades.id")
+    triggering_buy_id: int = Field(index=True, foreign_key="trades.id")
+    exempt_reason: str = Field(index=True)
+    rule_citation: str
+    notional_disallowed: Decimal
+    confidence: str
+    matched_quantity: float
+    loss_account: str = Field(index=True)
+    buy_account: str = Field(index=True)
+    loss_sale_date: str = Field(index=True)  # YYYY-MM-DD per project convention
+    triggering_buy_date: str
+    ticker: str = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Section1256ClassificationRow(SQLModel, table=True):
+    """Persistent form of `models.domain.Section1256Classification`. Pure derived data."""
+
+    __tablename__ = "section_1256_classifications"
+
+    id: int | None = Field(default=None, primary_key=True)
+    trade_id: int = Field(index=True, foreign_key="trades.id", unique=True)
+    realized_pnl: Decimal
+    long_term_portion: Decimal
+    short_term_portion: Decimal
+    underlying: str = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class MetaRow(SQLModel, table=True):

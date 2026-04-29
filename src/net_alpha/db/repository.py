@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from datetime import date
+from decimal import Decimal
 from uuid import uuid4
 
 from sqlalchemy import func
@@ -12,11 +13,13 @@ from sqlmodel import Session, select
 from net_alpha.db.tables import (
     AccountRow,
     CashEventRow,
+    ExemptMatchRow,
     ImportRecordRow,
     LotOverrideRow,
     LotRow,
     MetaRow,
     RealizedGLLotRow,
+    Section1256ClassificationRow,
     SplitRow,
     TradeRow,
     UserPreferenceRow,
@@ -26,17 +29,21 @@ from net_alpha.models.domain import (
     Account,
     AddImportResult,
     CashEvent,
+    ExemptMatch,
     ImportRecord,
     ImportSummary,
     Lot,
     OptionDetails,
     RemoveImportResult,
+    Section1256Classification,
     Trade,
     WashSaleViolation,
 )
 from net_alpha.models.preferences import AccountPreference
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.models.splits import LotOverride, Split
+from net_alpha.section_1256.universe import is_section_1256 as _is_section_1256
+from net_alpha.section_1256.universe import load_universe
 
 
 class Repository:
@@ -221,6 +228,9 @@ class Repository:
                 # populate transfer_date with the same value so the user can
                 # later edit `date` (acquisition) without losing the original.
                 _is_transfer = t.basis_source in ("transfer_in", "transfer_out")
+                # C1: auto-detect §1256 status if the caller (broker parser) did
+                # not set it explicitly. Respects any True already on the trade.
+                flag_1256 = t.is_section_1256 or _is_section_1256(t)
                 tr = TradeRow(
                     import_id=ir.id,
                     account_id=account.id,
@@ -238,6 +248,7 @@ class Repository:
                     option_expiry=(t.option_details.expiry.isoformat() if t.option_details else None),
                     option_call_put=(t.option_details.call_put if t.option_details else None),
                     transfer_date=(t.date.isoformat() if _is_transfer else None),
+                    is_section_1256=flag_1256,
                 )
                 s.add(tr)
                 s.flush()
@@ -391,6 +402,7 @@ class Repository:
             option_details=opt,
             transfer_date=(date.fromisoformat(row.transfer_date) if row.transfer_date else None),
             transfer_group_id=row.transfer_group_id,
+            is_section_1256=row.is_section_1256,
         )
 
     def _account_display_for_id(self, s: Session, account_id: int) -> str:
@@ -524,6 +536,17 @@ class Repository:
                     )
                 )
                 s.exec(LotOverrideRow.__table__.delete().where(LotOverrideRow.trade_id.in_(trade_ids)))
+                s.exec(
+                    ExemptMatchRow.__table__.delete().where(
+                        (ExemptMatchRow.loss_trade_id.in_(trade_ids))
+                        | (ExemptMatchRow.triggering_buy_id.in_(trade_ids))
+                    )
+                )
+                s.exec(
+                    Section1256ClassificationRow.__table__.delete().where(
+                        Section1256ClassificationRow.trade_id.in_(trade_ids)
+                    )
+                )
             s.exec(TradeRow.__table__.delete().where(TradeRow.import_id == import_id))
             # Delete G/L lots tied to this import (added in schema v2)
             s.exec(RealizedGLLotRow.__table__.delete().where(RealizedGLLotRow.import_id == import_id))
@@ -1350,6 +1373,215 @@ class Repository:
             if row is None:
                 return None
             return self._row_to_trade(row, self._account_display_for_id(s, row.account_id))
+
+    # ---- ExemptMatch ----
+
+    def save_exempt_matches(self, matches: list[ExemptMatch]) -> None:
+        """Persist exempt matches. Caller is responsible for clear_exempt_matches() before
+        a full recompute to avoid duplicates."""
+        with Session(self.engine) as session:
+            for m in matches:
+                session.add(
+                    ExemptMatchRow(
+                        loss_trade_id=int(m.loss_trade_id),
+                        triggering_buy_id=int(m.triggering_buy_id),
+                        exempt_reason=m.exempt_reason,
+                        rule_citation=m.rule_citation,
+                        notional_disallowed=m.notional_disallowed,
+                        confidence=m.confidence,
+                        matched_quantity=m.matched_quantity,
+                        loss_account=m.loss_account,
+                        buy_account=m.buy_account,
+                        loss_sale_date=m.loss_sale_date.isoformat(),
+                        triggering_buy_date=m.triggering_buy_date.isoformat(),
+                        ticker=m.ticker,
+                    )
+                )
+            session.commit()
+
+    def clear_exempt_matches(self) -> None:
+        with Session(self.engine) as session:
+            session.exec(ExemptMatchRow.__table__.delete())
+            session.commit()
+
+    def list_exempt_matches(
+        self,
+        *,
+        account: str | None = None,
+        year: int | None = None,
+    ) -> list[ExemptMatchRow]:
+        with Session(self.engine) as session:
+            stmt = select(ExemptMatchRow)
+            if account is not None:
+                stmt = stmt.where((ExemptMatchRow.loss_account == account) | (ExemptMatchRow.buy_account == account))
+            if year is not None:
+                stmt = stmt.where(ExemptMatchRow.loss_sale_date.startswith(f"{year}-"))
+            return list(session.exec(stmt).all())
+
+    # ---- Section1256Classification ----
+
+    def save_section_1256_classifications(self, classifications: list[Section1256Classification]) -> None:
+        """Upsert by trade_id (unique). Replaces prior classification for the same trade."""
+        with Session(self.engine) as session:
+            for c in classifications:
+                session.exec(
+                    Section1256ClassificationRow.__table__.delete().where(
+                        Section1256ClassificationRow.trade_id == int(c.trade_id)
+                    )
+                )
+                session.add(
+                    Section1256ClassificationRow(
+                        trade_id=int(c.trade_id),
+                        realized_pnl=c.realized_pnl,
+                        long_term_portion=c.long_term_portion,
+                        short_term_portion=c.short_term_portion,
+                        underlying=c.underlying,
+                    )
+                )
+            session.commit()
+
+    def clear_section_1256_classifications(self) -> None:
+        with Session(self.engine) as session:
+            session.exec(Section1256ClassificationRow.__table__.delete())
+            session.commit()
+
+    def delete_violations_by_id(self, violation_ids: list[int]) -> None:
+        """Delete WashSaleViolationRows by primary key. No-op if list is empty."""
+        if not violation_ids:
+            return
+        with Session(self.engine) as s:
+            s.exec(WashSaleViolationRow.__table__.delete().where(WashSaleViolationRow.id.in_(violation_ids)))
+            s.commit()
+
+    def set_section_1256_flag(self, trade_ids: list[int]) -> None:
+        """Backfill is_section_1256=True on the given trades. Used by migrations.
+        Accepts integer trade IDs (matches delete_violations_by_id signature)."""
+        if not trade_ids:
+            return
+        with Session(self.engine) as s:
+            s.exec(TradeRow.__table__.update().where(TradeRow.id.in_(trade_ids)).values(is_section_1256=True))
+            s.commit()
+
+    def list_section_1256_classifications(
+        self,
+        *,
+        account: str | None = None,
+        year: int | None = None,
+    ) -> list[Section1256ClassificationRow]:
+        with Session(self.engine) as session:
+            if account is not None or year is not None:
+                # Join to TradeRow to apply account/year filters
+                stmt = select(Section1256ClassificationRow).join(
+                    TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id
+                )
+                if account is not None:
+                    try:
+                        acct_id = self._account_id_for_display(session, account)
+                    except RuntimeError:
+                        return []
+                    stmt = stmt.where(TradeRow.account_id == acct_id)
+                if year is not None:
+                    stmt = stmt.where(TradeRow.trade_date.startswith(f"{year}-"))
+            else:
+                stmt = select(Section1256ClassificationRow)
+            return list(session.exec(stmt).all())
+
+    def get_violation(self, vid: int):
+        """Return WashSaleViolationRow by primary key, or None."""
+        with Session(self.engine) as session:
+            return session.get(WashSaleViolationRow, vid)
+
+    def get_exempt_match(self, eid: int):
+        """Return ExemptMatchRow by primary key, or None."""
+        with Session(self.engine) as session:
+            return session.get(ExemptMatchRow, eid)
+
+    # ---- After-tax helpers (Task 17) ----
+
+    def realized_pnl_split(self, period, account: str | None) -> dict[str, Decimal]:
+        """Return {'short_term': Decimal, 'long_term': Decimal} for closed non-§1256 lots.
+
+        Draws from RealizedGLLotRow (broker-sourced Realized G/L CSV).
+        Term is determined by the broker-supplied `term` column ("Short Term" / "Long Term").
+        P&L per lot = proceeds - cost_basis (uses the wash-sale-adjusted cost_basis column).
+        """
+        st = Decimal("0")
+        lt = Decimal("0")
+        with Session(self.engine) as session:
+            stmt = select(RealizedGLLotRow)
+            if account:
+                try:
+                    acct_id = self._account_id_for_display(session, account)
+                except RuntimeError:
+                    return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+                stmt = stmt.where(RealizedGLLotRow.account_id == acct_id)
+            if period.kind != "lifetime":
+                stmt = stmt.where(RealizedGLLotRow.closed_date.startswith(f"{period.year}-"))
+            # Exclude broad-based index option lots (§1256 contracts) — these are
+            # accounted for separately via section_1256_pnl. Both sides of the AND
+            # must hold to be excluded: (a) ticker is in the §1256 universe, and
+            # (b) the row represents an option (option_strike is not None).
+            universe = load_universe()
+            if universe:
+                stmt = stmt.where(
+                    ~(RealizedGLLotRow.ticker.in_(universe) & RealizedGLLotRow.option_strike.is_not(None))
+                )
+            rows = session.exec(stmt).all()
+            for r in rows:
+                pnl = Decimal(str(r.proceeds)) - Decimal(str(r.cost_basis))
+                if r.term == "Long Term":
+                    lt += pnl
+                else:
+                    st += pnl
+        return {"short_term": st, "long_term": lt}
+
+    def section_1256_pnl(self, period, account: str | None) -> Decimal:
+        """Total realized P&L for §1256 contracts in the period.
+
+        Draws from Section1256ClassificationRow (engine-derived). The realized_pnl
+        field is the net gain/loss already; 60/40 LT/ST split is applied by
+        compute_after_tax, not here.
+        """
+        with Session(self.engine) as session:
+            stmt = select(Section1256ClassificationRow).join(
+                TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id
+            )
+            if account:
+                try:
+                    acct_id = self._account_id_for_display(session, account)
+                except RuntimeError:
+                    return Decimal("0")
+                stmt = stmt.where(TradeRow.account_id == acct_id)
+            if period.kind != "lifetime":
+                stmt = stmt.where(TradeRow.trade_date.startswith(f"{period.year}-"))
+            rows = session.exec(stmt).all()
+            total = Decimal("0")
+            for r in rows:
+                total += Decimal(str(r.realized_pnl))
+        return total
+
+    def wash_sale_disallowed_total(self, period, account: str | None) -> Decimal:
+        """Total disallowed loss amount for wash-sale violations in the period.
+
+        Draws from WashSaleViolationRow. Account filter matches violations where
+        the loss account OR the triggering buy account is the specified account.
+        """
+        with Session(self.engine) as session:
+            stmt = select(WashSaleViolationRow.disallowed_loss)
+            if account:
+                try:
+                    acct_id = self._account_id_for_display(session, account)
+                except RuntimeError:
+                    return Decimal("0")
+                stmt = stmt.where(
+                    (WashSaleViolationRow.loss_account_id == acct_id) | (WashSaleViolationRow.buy_account_id == acct_id)
+                )
+            if period.kind != "lifetime":
+                stmt = stmt.where(WashSaleViolationRow.loss_sale_date.startswith(f"{period.year}-"))
+            total = Decimal("0")
+            for v in session.exec(stmt).all():
+                total += Decimal(str(v))
+        return total
 
 
 # ---------------------------------------------------------------------------

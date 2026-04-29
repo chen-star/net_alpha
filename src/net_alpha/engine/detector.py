@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import date as _date
+from decimal import Decimal
 
 from net_alpha.engine.matcher import get_match_confidence, is_within_wash_sale_window
-from net_alpha.models.domain import DetectionResult, Lot, Trade, WashSaleViolation
+from net_alpha.models.domain import DetectionResult, ExemptMatch, Lot, Trade, WashSaleViolation
 
 
 def detect_wash_sales(
@@ -46,6 +47,7 @@ def detect_wash_sales(
     basis_unknown_count = sum(1 for t in trades if t.basis_unknown)
 
     violations: list[WashSaleViolation] = []
+    exempt_matches: list[ExemptMatch] = []
 
     for loss_sale in loss_sales:
         remaining_qty = loss_sale.quantity
@@ -73,24 +75,43 @@ def detect_wash_sales(
 
             disallowed = round(allocable * loss_per_unit, 2)
 
-            violations.append(
-                WashSaleViolation(
-                    loss_trade_id=loss_sale.id,
-                    replacement_trade_id=candidate.id,
-                    confidence=confidence,
-                    disallowed_loss=disallowed,
-                    matched_quantity=allocable,
-                    loss_account=loss_sale.account,
-                    buy_account=candidate.account,
-                    loss_sale_date=loss_sale.date,
-                    triggering_buy_date=candidate.date,
-                    ticker=loss_sale.ticker,
+            if loss_sale.is_section_1256 or candidate.is_section_1256:
+                exempt_matches.append(
+                    ExemptMatch(
+                        loss_trade_id=loss_sale.id,
+                        triggering_buy_id=candidate.id,
+                        exempt_reason="section_1256",
+                        rule_citation="IRC §1256(c)",
+                        notional_disallowed=Decimal(str(disallowed)),
+                        confidence=confidence,
+                        matched_quantity=allocable,
+                        loss_account=loss_sale.account,
+                        buy_account=candidate.account,
+                        loss_sale_date=loss_sale.date,
+                        triggering_buy_date=candidate.date,
+                        ticker=loss_sale.ticker,
+                    )
                 )
-            )
+                # do NOT adjust replacement-lot basis — §1256 is exempt, no rollover
+            else:
+                violations.append(
+                    WashSaleViolation(
+                        loss_trade_id=loss_sale.id,
+                        replacement_trade_id=candidate.id,
+                        confidence=confidence,
+                        disallowed_loss=disallowed,
+                        matched_quantity=allocable,
+                        loss_account=loss_sale.account,
+                        buy_account=candidate.account,
+                        loss_sale_date=loss_sale.date,
+                        triggering_buy_date=candidate.date,
+                        ticker=loss_sale.ticker,
+                    )
+                )
 
-            # Adjust replacement lot basis
-            if candidate.id in lots:
-                lots[candidate.id].adjusted_basis += disallowed
+                # Adjust replacement lot basis
+                if candidate.id in lots:
+                    lots[candidate.id].adjusted_basis += disallowed
 
             remaining_qty -= allocable
 
@@ -98,6 +119,7 @@ def detect_wash_sales(
         violations=violations,
         lots=list(lots.values()),
         basis_unknown_count=basis_unknown_count,
+        exempt_matches=exempt_matches,
     )
 
 
@@ -139,9 +161,15 @@ def detect_in_window(
     in_window = [
         v for v in full.violations if v.loss_sale_date is not None and window_start <= v.loss_sale_date <= window_end
     ]
+    in_window_exempt = [
+        em
+        for em in full.exempt_matches
+        if em.loss_sale_date is not None and window_start <= em.loss_sale_date <= window_end
+    ]
     # Lots are recomputed downstream from the full trade set, so we still return all.
     return DetectionResult(
         violations=in_window,
         lots=full.lots,
         basis_unknown_count=full.basis_unknown_count,
+        exempt_matches=in_window_exempt,
     )

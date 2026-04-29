@@ -47,11 +47,19 @@
                 <th class="w-32">Source</th>
               </tr>
             </thead>
-            <tbody>
-              {% for v in g.violations %}
-                {% set lag = lag_days(v) %}
-                {% set src = source_label(v) %}
-                <tr class="hover:bg-surface-2">
+            {% for v in g.violations %}
+              {% set lag = lag_days(v) %}
+              {% set src = source_label(v) %}
+              {# Each violation gets its own <tbody> so Alpine x-data scopes
+                 correctly over both the data row and the explain row. #}
+              <tbody x-data="{ open: false }">
+                <tr id="violation-{{ v.id }}"
+                    @click="open = !open"
+                    hx-get="/tax/violation/{{ v.id }}/explain"
+                    hx-trigger="click once"
+                    hx-target="#violation-{{ v.id }}-explain"
+                    hx-swap="innerHTML"
+                    class="hover:bg-surface-2 cursor-pointer">
                   <td class="px-3 py-2 font-mono">{{ v.loss_sale_date or "—" }}</td>
                   <td class="px-3 py-2">{{ v.loss_account or "—" }} → {{ v.buy_account or "—" }}</td>
                   <td class="px-3 py-2 font-mono">{{ v.triggering_buy_date or "—" }}</td>
@@ -69,12 +77,74 @@
                     {% endif %}
                   </td>
                 </tr>
-              {% endfor %}
-            </tbody>
+                {# I1: id on the <td>, not the <tr>, so HTMX innerHTML swap inserts
+                   valid table content (a <div> inside a <tr> is hoisted by browsers). #}
+                <tr x-show="open" x-cloak>
+                  <td colspan="8" id="violation-{{ v.id }}-explain" data-explain class="p-0"></td>
+                </tr>
+              </tbody>
+            {% endfor %}
           </table>
           </div>
         </div>
       </div>
     {% endfor %}
+  </div>
+{% endif %}
+
+{# C4: Exempt matches — §1256 contracts that were skipped by the wash-sale detector.
+   Shown as a sibling section below the violations table. Gray + line-through styling
+   signals "detected but not penalised". #}
+{% if exempt_matches %}
+  <div class="mt-6">
+    <div class="flex items-baseline gap-3 mb-2">
+      <h4 class="m-0 text-[14px] font-semibold">§1256 Exempt Matches</h4>
+      <span class="text-xs text-label-2">These pairs were detected within the 30-day window but are exempt from wash-sale rules under IRC §1256(c).</span>
+    </div>
+    <div class="panel" style="padding:0; overflow:hidden;">
+      <div class="overflow-x-auto">
+        <table class="net-table text-sm min-w-[960px]" data-testid="exempt-matches-table">
+          <thead>
+            <tr>
+              <th class="w-28">Loss date</th>
+              <th>Loss → Buy</th>
+              <th class="w-28">Trigger date</th>
+              <th class="w-20">Ticker</th>
+              <th class="r w-28">Notional disallowed</th>
+              <th class="r w-20">Matched qty</th>
+              <th class="w-28">Confidence</th>
+              <th class="w-32">Exempt reason</th>
+            </tr>
+          </thead>
+          {% for em in exempt_matches %}
+            <tbody x-data="{ open: false }">
+              <tr @click="open = !open"
+                  hx-get="/tax/exempt/{{ em.id }}/explain"
+                  hx-trigger="click once"
+                  hx-target="#exempt-{{ em.id }}-explain"
+                  hx-swap="innerHTML"
+                  class="hover:bg-surface-2 cursor-pointer opacity-60"
+                  style="text-decoration: line-through;">
+                <td class="px-3 py-2 font-mono">{{ em.loss_sale_date or "—" }}</td>
+                <td class="px-3 py-2">{{ em.loss_account or "—" }} → {{ em.buy_account or "—" }}</td>
+                <td class="px-3 py-2 font-mono">{{ em.triggering_buy_date or "—" }}</td>
+                <td class="px-3 py-2 font-mono">{{ em.ticker or "—" }}</td>
+                <td class="r num text-label-2">${{ "%.2f"|format(em.notional_disallowed|float) }}</td>
+                <td class="r num">{{ em.matched_quantity }}</td>
+                <td class="px-3 py-2"><span class="chip-{{ em.confidence|lower }}">{{ em.confidence }}</span></td>
+                <td class="px-3 py-2">
+                  <span class="text-info bg-info/10 text-xs font-medium px-2 py-0.5 rounded" style="text-decoration: none;">
+                    {{ em.exempt_reason | replace("_", " ") | title }}
+                  </span>
+                </td>
+              </tr>
+              <tr x-show="open" x-cloak>
+                <td colspan="8" id="exempt-{{ em.id }}-explain" data-explain class="p-0"></td>
+              </tr>
+            </tbody>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
   </div>
 {% endif %}

@@ -1,0 +1,141 @@
+{# Tax-adjusted performance panel — full Tier-2 surface.
+   Shows 4 KPIs + ST/LT/§1256 mix bar + wash-sale cost + effective rate + caveats.
+   Context: breakdown (AfterTaxBreakdown | None), has_tax_config (bool)
+#}
+
+{% if not has_tax_config %}
+  <div class="panel p-4">
+    <p class="text-label-2">
+      Tax bracket configuration is required to compute after-tax performance.
+      Configure your tax rates in the <a href="/tax?view=projection">Projection</a> tab.
+    </p>
+  </div>
+{% else %}
+  <div class="space-y-4">
+
+    {# KPI row — 4 cards #}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div class="kpi p-3">
+        <div class="label-uc">Pre-tax realized</div>
+        <div class="num text-[22px] font-semibold mt-1 {% if breakdown.pre_tax_realized_pnl < 0 %}text-neg{% elif breakdown.pre_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
+          {% if breakdown.pre_tax_realized_pnl < 0 %}−{% elif breakdown.pre_tax_realized_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.pre_tax_realized_pnl|float|abs) }}
+        </div>
+      </div>
+      <div class="kpi p-3">
+        <div class="label-uc">Tax bill (est.)</div>
+        <div class="num text-[22px] font-semibold mt-1">
+          ${{ '{:,.2f}'.format(breakdown.estimated_tax_bill|float) }}
+        </div>
+      </div>
+      <div class="kpi p-3">
+        <div class="label-uc">After-tax realized</div>
+        <div class="num text-[22px] font-semibold mt-1 {% if breakdown.after_tax_realized_pnl < 0 %}text-neg{% elif breakdown.after_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
+          {% if breakdown.after_tax_realized_pnl < 0 %}−{% elif breakdown.after_tax_realized_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.after_tax_realized_pnl|float|abs) }}
+        </div>
+      </div>
+      <div class="kpi p-3">
+        <div class="label-uc">Tax drag</div>
+        <div class="num text-[22px] font-semibold mt-1">
+          ${{ '{:,.2f}'.format(breakdown.tax_drag_dollar|float) }}
+          <span class="text-[14px] text-label-2 ml-1">({{ '{:.1%}'.format(breakdown.tax_drag_pct|float) }})</span>
+        </div>
+      </div>
+    </div>
+
+    {# ST / LT / §1256 mix bar #}
+    <div class="kpi p-3">
+      <div class="text-[13px] font-medium mb-2">ST / LT / §1256 mix</div>
+      {% set st_abs = breakdown.short_term_pnl|float|abs %}
+      {% set lt_abs = breakdown.long_term_pnl|float|abs %}
+      {% set s1256_abs = breakdown.section_1256_pnl|float|abs %}
+      {% set total_abs = st_abs + lt_abs + s1256_abs %}
+      {% if total_abs > 0 %}
+        {% set st_pct = (st_abs / total_abs) * 100 %}
+        {% set lt_pct = (lt_abs / total_abs) * 100 %}
+        {% set s1256_pct = (s1256_abs / total_abs) * 100 %}
+        <div class="flex h-4 rounded overflow-hidden bg-surface-2">
+          <div class="bg-warn" style="width: {{ '{:.1f}'.format(st_pct) }}%" title="Short-term {{ '{:.0f}'.format(st_pct) }}%"></div>
+          <div class="bg-pos" style="width: {{ '{:.1f}'.format(lt_pct) }}%" title="Long-term {{ '{:.0f}'.format(lt_pct) }}%"></div>
+          <div style="background: var(--color-info, #64D2FF); width: {{ '{:.1f}'.format(s1256_pct) }}%" title="§1256 {{ '{:.0f}'.format(s1256_pct) }}%"></div>
+        </div>
+        <div class="flex flex-wrap justify-between text-[11px] text-label-2 mt-2 gap-2">
+          <span>
+            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--color-warn,#FF9F0A);margin-right:3px;vertical-align:middle;"></span>
+            ST
+            <span class="num {% if breakdown.short_term_pnl < 0 %}text-neg{% elif breakdown.short_term_pnl > 0 %}text-pos{% endif %}">
+              {% if breakdown.short_term_pnl < 0 %}−{% elif breakdown.short_term_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.short_term_pnl|float|abs) }}
+            </span>
+            ({{ '{:.0f}'.format(st_pct) }}%)
+          </span>
+          <span>
+            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--color-pos,#30D158);margin-right:3px;vertical-align:middle;"></span>
+            LT
+            <span class="num {% if breakdown.long_term_pnl < 0 %}text-neg{% elif breakdown.long_term_pnl > 0 %}text-pos{% endif %}">
+              {% if breakdown.long_term_pnl < 0 %}−{% elif breakdown.long_term_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.long_term_pnl|float|abs) }}
+            </span>
+            ({{ '{:.0f}'.format(lt_pct) }}%)
+          </span>
+          <span>
+            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#64D2FF;margin-right:3px;vertical-align:middle;"></span>
+            §1256
+            <span class="num {% if breakdown.section_1256_pnl < 0 %}text-neg{% elif breakdown.section_1256_pnl > 0 %}text-pos{% endif %}">
+              {% if breakdown.section_1256_pnl < 0 %}−{% elif breakdown.section_1256_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.section_1256_pnl|float|abs) }}
+            </span>
+            ({{ '{:.0f}'.format(s1256_pct) }}%)
+          </span>
+        </div>
+        {% if breakdown.section_1256_pnl != 0 %}
+          <div class="text-[11px] text-label-3 mt-1">
+            §1256 split: 60% LT
+            <span class="num {% if breakdown.section_1256_lt_portion < 0 %}text-neg{% elif breakdown.section_1256_lt_portion > 0 %}text-pos{% endif %}">
+              ${{ '{:,.2f}'.format(breakdown.section_1256_lt_portion|float|abs) }}
+            </span>
+            · 40% ST
+            <span class="num {% if breakdown.section_1256_st_portion < 0 %}text-neg{% elif breakdown.section_1256_st_portion > 0 %}text-pos{% endif %}">
+              ${{ '{:,.2f}'.format(breakdown.section_1256_st_portion|float|abs) }}
+            </span>
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="text-[13px] text-label-3">No realized P&amp;L for this period.</div>
+      {% endif %}
+    </div>
+
+    {# Wash-sale cost row #}
+    <div class="kpi p-3">
+      <div class="text-[13px] font-medium mb-1">Wash-sale impact</div>
+      <div class="text-[13px] mt-1">
+        Disallowed losses:
+        <span class="num font-medium">${{ '{:,.2f}'.format(breakdown.wash_sale_disallowed_total|float) }}</span>
+      </div>
+      <div class="text-[13px] mt-1">
+        Estimated deferred tax savings:
+        <span class="num font-medium">${{ '{:,.2f}'.format(breakdown.wash_sale_marginal_cost|float) }}</span>
+        <span class="text-label-3 ml-1">(disallowed × federal marginal rate)</span>
+      </div>
+      <div class="text-[11px] text-label-3 mt-1 italic">
+        Deferred, not lost — basis rolls into the replacement lot.
+      </div>
+    </div>
+
+    {# Effective tax rate #}
+    <div class="kpi p-3">
+      <div class="label-uc">Effective tax rate</div>
+      <div class="num text-[22px] font-semibold mt-1">{{ '{:.1%}'.format(breakdown.effective_tax_rate|float) }}</div>
+      <div class="text-[11px] text-label-3 mt-1">tax bill ÷ max(0, pre-tax realized)</div>
+    </div>
+
+    {# Caveats #}
+    <details class="text-[11px] text-label-3">
+      <summary class="cursor-pointer text-[12px] text-label-2 hover:text-text">ⓘ About these numbers</summary>
+      <ul class="list-disc list-inside mt-2 space-y-1 pl-2">
+        {% for c in breakdown.caveats %}<li>{{ c }}</li>{% endfor %}
+      </ul>
+    </details>
+
+    <div class="text-[11px] text-label-3 mt-2 italic">
+      ⚠ This is informational only. Consult a tax professional before filing.
+    </div>
+
+  </div>
+{% endif %}

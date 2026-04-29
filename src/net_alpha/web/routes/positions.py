@@ -90,9 +90,7 @@ def positions_page(
             account_display=account_display,
         )
         ctx["closed_rows"] = closed_rows
-        ctx["closed_total_realized"] = sum(
-            (r.realized_pl for r in closed_rows), Decimal("0")
-        )
+        ctx["closed_total_realized"] = sum((r.realized_pl for r in closed_rows), Decimal("0"))
         if request.headers.get("hx-request"):
             return request.app.state.templates.TemplateResponse(
                 request,

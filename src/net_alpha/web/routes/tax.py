@@ -10,11 +10,12 @@ from datetime import date as _date
 from decimal import Decimal
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.config import TaxConfig, write_tax_config
 from net_alpha.db.repository import Repository
+from net_alpha.explain import explain_exempt, explain_violation
 from net_alpha.portfolio.tax_planner import (
     MissingTaxConfig,
     TaxBrackets,
@@ -59,7 +60,7 @@ def get_tax(
         return RedirectResponse(url=target, status_code=301)
 
     # Normalise tab-level view key for context / template branching.
-    _TAB_VIEWS = {"wash-sales", "projection"}
+    _TAB_VIEWS = {"wash-sales", "projection", "performance"}
     # Inner sub-views for the wash-sales tab (table / calendar toggle).
     _WASH_SUB_VIEWS = {"table", "calendar"}
 
@@ -120,6 +121,10 @@ def get_tax(
         cfg = request.app.state.tax_brackets_cfg
         proj_ctx = _build_projection_ctx(request, repo, cfg)
         ctx.update(proj_ctx)
+    elif view == "performance":
+        cfg = request.app.state.tax_brackets_cfg
+        perf_ctx = _build_performance_ctx(request, repo, cfg, year=year, account=account)
+        ctx.update(perf_ctx)
 
     return request.app.state.templates.TemplateResponse(request, "tax.html", ctx)
 
@@ -168,6 +173,43 @@ def _build_projection_ctx(
     return ctx
 
 
+def _build_performance_ctx(
+    request: Request,
+    repo: Repository,
+    cfg: TaxConfig | None,
+    year: int | None,
+    account: str | None,
+) -> dict:
+    """Build the template context for the performance tab body fragment."""
+    from net_alpha.portfolio.after_tax import Period, compute_after_tax
+
+    ctx: dict = {"request": request, "tax_brackets_cfg": cfg}
+    if cfg is None:
+        ctx["breakdown"] = None
+        ctx["has_tax_config"] = False
+        return ctx
+
+    brackets = TaxBrackets(
+        filing_status=cfg.filing_status,
+        state=cfg.state,
+        federal_marginal_rate=cfg.federal_marginal_rate,
+        state_marginal_rate=cfg.state_marginal_rate,
+        ltcg_rate=cfg.ltcg_rate,
+        qualified_div_rate=cfg.qualified_div_rate,
+    )
+
+    today = _date.today()
+    if year is not None:
+        period_obj = Period.for_year(year)
+    else:
+        period_obj = Period.ytd(today.year)
+
+    breakdown = compute_after_tax(repo, period_obj, account, brackets)
+    ctx["breakdown"] = breakdown
+    ctx["has_tax_config"] = True
+    return ctx
+
+
 @router.post("/tax/projection-config", response_class=HTMLResponse)
 def post_projection_config(
     request: Request,
@@ -208,4 +250,40 @@ def post_projection_config(
         request,
         "_projection_tab.html",
         ctx,
+    )
+
+
+@router.get("/tax/violation/{vid}/explain", response_class=HTMLResponse, response_model=None)
+def get_violation_explain(
+    request: Request,
+    vid: int,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """HTMX fragment: inline explain panel for a wash-sale violation."""
+    v = repo.get_violation(vid)
+    if v is None:
+        raise HTTPException(status_code=404, detail="violation not found")
+    e = explain_violation(v, repo=repo)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_violation_explain.html",
+        {"e": e},
+    )
+
+
+@router.get("/tax/exempt/{eid}/explain", response_class=HTMLResponse, response_model=None)
+def get_exempt_explain(
+    request: Request,
+    eid: int,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """HTMX fragment: inline explain panel for an exempt match."""
+    em = repo.get_exempt_match(eid)
+    if em is None:
+        raise HTTPException(status_code=404, detail="exempt match not found")
+    e = explain_exempt(em, repo=repo)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_violation_explain.html",
+        {"e": e},
     )
