@@ -895,8 +895,20 @@ class Repository:
             account_display = self._account_display_for_id(s, account_id)
         return [self._row_to_trade(r, account_display) for r in rows]
 
-    def update_trade_basis(self, trade_id: str, cost_basis: float | None, basis_source: str) -> None:
-        """Persist hydrated cost_basis and basis_source on a Trade row."""
+    def update_trade_basis(
+        self,
+        trade_id: str,
+        cost_basis: float | None,
+        basis_source: str,
+        trade_date: date | None = None,
+    ) -> None:
+        """Persist hydrated cost_basis and basis_source on a Trade row.
+
+        When ``trade_date`` is provided, the row's acquisition date is updated
+        too — used by the inline "set basis & date" form on the positions pane
+        so transfer-in lots get a real acquisition date instead of the
+        broker-statement receipt date.
+        """
         with Session(self.engine) as s:
             row = s.exec(select(TradeRow).where(TradeRow.id == int(trade_id))).first()
             if row is None:
@@ -905,6 +917,22 @@ class Repository:
             row.basis_source = basis_source
             if cost_basis is not None:
                 row.basis_unknown = False
+            if trade_date is not None:
+                row.trade_date = trade_date.isoformat()
+            s.add(row)
+            s.commit()
+
+    def _set_is_manual_for_test(self, trade_id: int, value: bool) -> None:
+        """Test-only helper: flip is_manual on a trade row.
+
+        create_manual_trade() forces is_manual=True; tests need to simulate
+        imported (non-manual) transfer rows to exercise transfer-only code paths.
+        """
+        with Session(self.engine) as s:
+            row = s.exec(select(TradeRow).where(TradeRow.id == trade_id)).first()
+            if row is None:
+                raise LookupError(f"Trade id {trade_id} not found")
+            row.is_manual = value
             s.add(row)
             s.commit()
 
@@ -1069,6 +1097,7 @@ class Repository:
             else:
                 row.proceeds = float(first_basis)
             row.transfer_basis_user_set = True
+            row.basis_unknown = False
             row.transfer_group_id = group_id
             row.transfer_date = xfer_date
             s.add(row)
@@ -1121,6 +1150,18 @@ class Repository:
         recompute_all_violations(self, etf_pairs)
         return saved
 
+    def get_trades_in_transfer_group(self, group_id: str | None) -> list[Trade]:
+        """All sibling trades sharing a transfer_group_id, in trade_date order."""
+        if not group_id:
+            return []
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(TradeRow)
+                .where(TradeRow.transfer_group_id == group_id)
+                .order_by(TradeRow.trade_date, TradeRow.id)
+            ).all()
+            return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
     def update_imported_transfer(
         self,
         trade_id: str,
@@ -1154,6 +1195,7 @@ class Repository:
             else:  # transfer_out
                 row.proceeds = new_basis_or_proceeds
             row.transfer_basis_user_set = True
+            row.basis_unknown = False
             # natural_key intentionally untouched.
             s.add(row)
             s.commit()

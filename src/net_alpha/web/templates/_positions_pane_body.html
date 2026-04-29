@@ -16,7 +16,7 @@
 
   {% include "_positions_pane_sim_preview.html" %}
 
-  {% include "_positions_pane_set_basis.html" %}
+  {% if trade_id %}{% include "_positions_pane_set_basis.html" %}{% endif %}
 
   <a href="/ticker/{{ sym }}" class="inline-flex items-center gap-1 text-[13px] text-accent hover:underline">
     Open ticker

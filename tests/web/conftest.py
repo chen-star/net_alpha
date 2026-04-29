@@ -116,3 +116,29 @@ def builders():
             "seed_import": staticmethod(seed_import),
         },
     )
+
+
+@pytest.fixture
+def seed_transfer_in(repo):
+    """Seed one transfer_in trade with no basis. Returns
+    (sym, account_id, trade_id, qty, transfer_date).
+
+    Marks is_manual=False so the row is treated as an imported transfer
+    (which is what the inline set-basis form is for)."""
+    repo.get_or_create_account("Schwab", "x")
+    trade = Trade(
+        account="Schwab/x",
+        date=date(2026, 2, 1),
+        ticker="AAPL",
+        action="Buy",
+        quantity=100.0,
+        proceeds=None,
+        cost_basis=None,
+        gross_cash_impact=None,
+        basis_source="transfer_in",
+        option_details=None,
+    )
+    saved = repo.create_manual_trade(trade, etf_pairs={})
+    repo._set_is_manual_for_test(int(saved.id), False)
+    account_id = repo.list_accounts()[0].id
+    return ("AAPL", account_id, str(saved.id), 100.0, date(2026, 2, 1))

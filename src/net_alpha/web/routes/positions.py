@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+import datetime as dt
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Request
@@ -39,7 +39,7 @@ def positions_page(
     imports = repo.list_imports()
     accounts = sorted({imp.account_display for imp in imports})
 
-    today = date.today()
+    today = dt.date.today()
     current_year = today.year
     import_years = {imp.imported_at.year for imp in imports}
     available_years = sorted(import_years | {current_year}, reverse=True)
@@ -178,6 +178,11 @@ def positions_pane(
     open_basis: Decimal | None = None
     loss: Decimal | None = None
     trade_id: str | None = None  # for single-lot set-basis form
+    # Transfer-context for the inline set-basis form. We always expose
+    # trade_id (whether 1 or N lots) so the form can render a tiered UI;
+    # transfer_qty/transfer_date are only meaningful for transfer rows.
+    transfer_qty: float | None = None
+    transfer_date: dt.date | None = None
 
     try:
         lots = repo.get_lots_for_ticker(sym)
@@ -212,8 +217,27 @@ def positions_pane(
                 market_value = qty * Decimal(str(last_price))
                 loss = market_value - open_basis  # positive = gain, negative = loss
 
-            # For the set-basis form: single-lot → expose trade_id for the form
-            if len(equity_open) == 1:
+            # For the set-basis form: pick the single open transfer_in lot if
+            # one exists and its basis has not yet been set by the user.
+            # `Lot` doesn't carry basis_source, so look up the parent Trade
+            # by trade_id to filter. We exclude rows where
+            # transfer_basis_user_set=True so that after a multi-lot split
+            # the "Set basis & date" panel no longer renders.
+            transfer_lots = []
+            for lot in equity_open:
+                parent = repo.get_trade_by_id(int(lot.trade_id))
+                if (
+                    parent is not None
+                    and parent.basis_source == "transfer_in"
+                    and not parent.transfer_basis_user_set
+                ):
+                    transfer_lots.append((lot, parent))
+            if transfer_lots:
+                primary_lot, primary_trade = transfer_lots[0]
+                trade_id = primary_lot.trade_id
+                transfer_qty = primary_trade.quantity
+                transfer_date = primary_trade.date
+            elif len(equity_open) == 1:
                 trade_id = equity_open[0].trade_id
     except Exception as exc:  # noqa: BLE001 — never block the pane render
         logger.warning("positions_pane lookup failed for sym={}, account_id={}: {!r}", sym, account_id, exc)
@@ -230,6 +254,8 @@ def positions_pane(
         "account_label": account_label,
         "realized_delta": loss,
         "trade_id": trade_id,
+        "transfer_qty": transfer_qty,
+        "transfer_date": transfer_date,
     }
 
     return request.app.state.templates.TemplateResponse(

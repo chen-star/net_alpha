@@ -1,18 +1,27 @@
-{# Set-basis sub-block. Posts to the existing /audit/set-basis endpoint
-   for the single open lot, or links out to the ticker page when there
-   are multiple lots. The endpoint contract is unchanged from Phase 1. #}
+{# Single-lot variant of the inline "set basis & date" form. Posts to
+   /audit/set-basis/single. The "+ Split into multiple lots" link
+   swaps the panel via HTMX in Task 5. #}
 
-<div class="panel p-3">
+<div class="panel p-3"
+     {% if transfer_qty is not none %}data-transfer-qty="{{ transfer_qty }}"{% endif %}
+     {% if transfer_date is not none %}data-transfer-date="{{ transfer_date.isoformat() }}"{% endif %}>
   <h3 class="m-0 text-[13px] font-semibold mb-2">Set basis &amp; date</h3>
   {% if trade_id %}
-    <form hx-post="/audit/set-basis?caller=pane"
-          hx-target="this"
+    <form hx-post="/audit/set-basis/single?caller=pane"
+          hx-target="closest .panel"
           hx-swap="outerHTML"
           class="space-y-2">
       <input type="hidden" name="trade_id" value="{{ trade_id }}">
       <label class="block text-[12px] text-label-2">
+        Acquisition date
+        <input type="date" name="acquisition_date" required
+               {% if transfer_date is not none %}max="{{ transfer_date.isoformat() }}"{% endif %}
+               class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded"
+               style="border-color: var(--color-hairline);">
+      </label>
+      <label class="block text-[12px] text-label-2">
         Cost basis ($)
-        <input type="number" name="cost_basis" step="0.01" required
+        <input type="number" name="cost_basis" step="0.01" min="0" required
                class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded"
                style="border-color: var(--color-hairline);">
       </label>
@@ -21,6 +30,13 @@
         Save
       </button>
     </form>
+    <a href="#"
+       hx-get="/audit/set-basis/multi/{{ trade_id }}"
+       hx-target="closest .panel"
+       hx-swap="outerHTML"
+       class="block mt-2 text-accent text-[12px] hover:underline">
+      + Split into multiple lots
+    </a>
   {% else %}
     <p class="text-label-2 m-0 text-[12px]">
       Multiple lots —
