@@ -90,6 +90,16 @@
     {% endwith %}
   {% endif %}
   <script>
+    // Allow HTMX to swap 4xx responses so validation error fragments render
+    // inline in the form panel (HTMX 1.9 silently drops 4xx by default).
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+      if (evt.detail.xhr.status >= 400 && evt.detail.xhr.status < 500) {
+        evt.detail.shouldSwap = true;
+        evt.detail.isError = false;
+      }
+    });
+  </script>
+  <script>
     document.addEventListener("alpine:init", () => {
       const tab = document.body.dataset.openSettingsTab;
       if (tab) {

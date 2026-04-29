@@ -8,7 +8,7 @@
   <h3 class="m-0 text-[13px] font-semibold mb-2">Set basis &amp; date</h3>
   {% if trade_id %}
     <form hx-post="/audit/set-basis/single?caller=pane"
-          hx-target="this"
+          hx-target="closest .panel"
           hx-swap="outerHTML"
           class="space-y-2">
       <input type="hidden" name="trade_id" value="{{ trade_id }}">

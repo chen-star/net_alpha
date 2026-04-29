@@ -89,7 +89,7 @@
              .querySelectorAll('input[name=dates], input[name=quantities], input[name=basises]'))
              .some(i => i.value);
            if (!filled || confirm('Discard multi-lot rows and switch back to single-lot form?')) return;
-           event.stopPropagation();
+           event.stopImmediatePropagation();
          ">
         ← Back to single lot
       </a>
