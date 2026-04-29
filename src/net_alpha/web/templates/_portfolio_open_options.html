@@ -74,8 +74,11 @@
             {% if is_long %}cost paid{% elif s.call_put == 'P' %}${{ "{:,.0f}".format(s.cash_secured) }} secured{% else %}premium{% endif %}
           </div>
         </div>
-        <div class="text-right num text-[13px] font-semibold {{ dte_class }}">
-          {{ dte }}d <small class="text-[10px] text-label-3 font-normal ml-1">to expiry</small>
+        <div class="text-right">
+          <span class="badge badge-muted num text-[12px] font-semibold {{ dte_class }}"
+                title="Days to expiry">
+            {{ dte }}d
+          </span>
         </div>
       </div>
     {% endfor %}
