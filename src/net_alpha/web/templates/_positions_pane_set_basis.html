@@ -1,8 +1,9 @@
-{# Set-basis sub-block. Posts to the existing /audit/set-basis endpoint
-   for the single open lot, or links out to the ticker page when there
-   are multiple lots. The endpoint contract is unchanged from Phase 1. #}
+{# Set-basis sub-block. Posts to /audit/set-basis/single for the single
+   open lot. Multi-lot UI swap is wired in Task 5+. #}
 
-<div class="panel p-3">
+<div class="panel p-3"
+     {% if transfer_qty is not none %}data-transfer-qty="{{ transfer_qty }}"{% endif %}
+     {% if transfer_date is not none %}data-transfer-date="{{ transfer_date.isoformat() }}"{% endif %}>
   <h3 class="m-0 text-[13px] font-semibold mb-2">Set basis &amp; date</h3>
   {% if trade_id %}
     <form hx-post="/audit/set-basis?caller=pane"

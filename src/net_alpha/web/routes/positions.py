@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from datetime import date
 from decimal import Decimal
 
@@ -178,6 +179,11 @@ def positions_pane(
     open_basis: Decimal | None = None
     loss: Decimal | None = None
     trade_id: str | None = None  # for single-lot set-basis form
+    # Transfer-context for the inline set-basis form. We always expose
+    # trade_id (whether 1 or N lots) so the form can render a tiered UI;
+    # transfer_qty/transfer_date are only meaningful for transfer rows.
+    transfer_qty: float | None = None
+    transfer_date: dt.date | None = None
 
     try:
         lots = repo.get_lots_for_ticker(sym)
@@ -212,8 +218,20 @@ def positions_pane(
                 market_value = qty * Decimal(str(last_price))
                 loss = market_value - open_basis  # positive = gain, negative = loss
 
-            # For the set-basis form: single-lot → expose trade_id for the form
-            if len(equity_open) == 1:
+            # For the set-basis form: pick the single open transfer_in lot if
+            # one exists. `Lot` doesn't carry basis_source, so look up the
+            # parent Trade by trade_id to filter.
+            transfer_lots = []
+            for lot in equity_open:
+                parent = repo.get_trade_by_id(int(lot.trade_id))
+                if parent is not None and parent.basis_source == "transfer_in":
+                    transfer_lots.append((lot, parent))
+            if transfer_lots:
+                primary_lot, primary_trade = transfer_lots[0]
+                trade_id = primary_lot.trade_id
+                transfer_qty = primary_trade.quantity
+                transfer_date = primary_trade.date
+            elif len(equity_open) == 1:
                 trade_id = equity_open[0].trade_id
     except Exception as exc:  # noqa: BLE001 — never block the pane render
         logger.warning("positions_pane lookup failed for sym={}, account_id={}: {!r}", sym, account_id, exc)
@@ -230,10 +248,32 @@ def positions_pane(
         "account_label": account_label,
         "realized_delta": loss,
         "trade_id": trade_id,
+        "transfer_qty": transfer_qty,
+        "transfer_date": transfer_date,
     }
 
     return request.app.state.templates.TemplateResponse(
         request,
         "_positions_pane_body.html",
         ctx,
+    )
+
+
+@router.get("/portfolio/positions-pane/{sym}", response_class=HTMLResponse)
+def portfolio_positions_pane(
+    sym: str,
+    request: Request,
+    account_id: int | None = None,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Path-parameter variant of the positions pane fragment, used by the
+    portfolio page.  Delegates to the same render logic as
+    ``/positions/pane``."""
+    return positions_pane(
+        request=request,
+        sym=sym,
+        account_id=account_id,
+        repo=repo,
+        pricing=pricing,
     )
