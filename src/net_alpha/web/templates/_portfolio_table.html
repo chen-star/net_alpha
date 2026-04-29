@@ -128,8 +128,8 @@
     {% endif %}
   </div>
 {% else %}
-  <div class="panel" style="padding:0;">
-    <table class="net-table">
+  <div class="panel overflow-x-auto" style="padding:0;">
+    <table class="net-table min-w-[960px]">
       <thead>
         <tr>
           {{ sort_th('symbol', 'Symbol', tooltip='Underlying ticker. Click to sort. Options are merged into their underlying for quantity/market value (cash flows still tracked).') }}
