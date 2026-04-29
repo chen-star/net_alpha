@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime as dt
-from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Request
@@ -40,7 +39,7 @@ def positions_page(
     imports = repo.list_imports()
     accounts = sorted({imp.account_display for imp in imports})
 
-    today = date.today()
+    today = dt.date.today()
     current_year = today.year
     import_years = {imp.imported_at.year for imp in imports}
     available_years = sorted(import_years | {current_year}, reverse=True)

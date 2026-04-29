@@ -125,8 +125,6 @@ def seed_transfer_in(repo):
 
     Marks is_manual=False so the row is treated as an imported transfer
     (which is what the inline set-basis form is for)."""
-    from net_alpha.models.domain import Trade
-
     repo.get_or_create_account("Schwab", "x")
     trade = Trade(
         account="Schwab/x",
