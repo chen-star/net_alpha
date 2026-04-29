@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from loguru import logger
 
 from net_alpha.db.repository import Repository
-from net_alpha.portfolio.positions import open_lots_view
+from net_alpha.portfolio.positions import compute_closed_lots, open_lots_view
 from net_alpha.portfolio.tax_planner import compute_harvest_queue, compute_offset_budget
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
@@ -71,6 +71,34 @@ def positions_page(
         "account_id": filter_id,
         "selected_view": selected_view,
     }
+
+    if selected_view == "closed":
+        gl_lots = repo.list_all_gl_lots()
+        # Match Overview's period convention: YTD → (current_year, current_year+1);
+        # a numeric year string → that year only; "lifetime" → no filter.
+        period_filter: tuple[int, int] | None = None
+        if selected_period == "ytd":
+            period_filter = (current_year, current_year + 1)
+        elif selected_period.isdigit():
+            y = int(selected_period)
+            period_filter = (y, y + 1)
+        # selected_period == "lifetime" leaves period_filter as None.
+        account_display = account if account else None
+        closed_rows = compute_closed_lots(
+            gl_lots,
+            period=period_filter,
+            account_display=account_display,
+        )
+        ctx["closed_rows"] = closed_rows
+        ctx["closed_total_realized"] = sum(
+            (r.realized_pl for r in closed_rows), Decimal("0")
+        )
+        if request.headers.get("hx-request"):
+            return request.app.state.templates.TemplateResponse(
+                request,
+                "_positions_view_closed.html",
+                ctx,
+            )
 
     if selected_view == "at-loss":
         _falsey = ("", "0", "false", "off")

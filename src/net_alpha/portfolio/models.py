@@ -213,3 +213,39 @@ class CashFlowKPIs:
     growth: Decimal
     growth_pct: Decimal | None  # None when net_contributions == 0
     cash_share_pct: Decimal
+
+
+@dataclass(frozen=True)
+class ClosedLotRow:
+    """One historical realized lot for the Closed positions tab.
+
+    Sourced from the Realized G/L CSV (one row per closed buy lot). Realized
+    P/L is ``proceeds - cost_basis``; the ``term`` field carries Schwab's
+    short/long classification straight through.
+    """
+
+    account: str  # account_display, e.g. "Schwab/Brokerage"
+    ticker: str
+    qty: Decimal
+    cost_basis: Decimal
+    proceeds: Decimal
+    realized_pl: Decimal
+    opened_date: date
+    closed_date: date
+    term: str  # "Short Term" | "Long Term"
+    wash_sale: bool
+    disallowed_loss: Decimal
+    option_strike: float | None = None
+    option_expiry: str | None = None  # ISO date string straight from GL CSV
+    option_call_put: str | None = None  # "C" or "P"
+
+    @property
+    def is_option(self) -> bool:
+        return self.option_strike is not None
+
+    @property
+    def display_symbol(self) -> str:
+        if not self.is_option:
+            return self.ticker
+        cp = "CALL" if self.option_call_put == "C" else "PUT"
+        return f"{self.ticker} {cp} ${self.option_strike:g} {self.option_expiry}"

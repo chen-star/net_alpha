@@ -1,5 +1,73 @@
-{# Closed positions — Phase 2 ships the realized-lots view. #}
-<div class="panel py-12 text-center">
-  <h3 class="m-0">Closed positions</h3>
-  <p class="text-label-2 m-0 mt-2">Coming in Phase 2 — historical realized lots.</p>
+{# Closed positions — historical realized lots from the Realized G/L import.
+
+   Reads `closed_rows` (list of ClosedLotRow) and `closed_total_realized`
+   from context, populated by routes/positions.py when
+   `selected_view == 'closed'`. #}
+
+<div id="positions-tab-content">
+  <div class="flex items-center justify-between mb-3">
+    <div data-testid="closed-summary" class="text-label-2 text-[13px]">
+      <strong class="text-text font-semibold">{{ closed_rows|length }} closed lot{% if closed_rows|length != 1 %}s{% endif %}</strong>
+      {% if closed_rows %}
+        ·
+        {% if closed_total_realized < 0 %}
+          <span class="text-neg">{{ fmt_currency(closed_total_realized) }}</span>
+        {% else %}
+          <span class="text-pos">+{{ fmt_currency(closed_total_realized) }}</span>
+        {% endif %}
+        realized
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="data-table w-full min-w-[960px]">
+      <thead>
+        <tr>
+          <th>SYMBOL</th>
+          <th>ACCT</th>
+          <th class="text-right">QTY</th>
+          <th class="text-right">BASIS</th>
+          <th class="text-right">PROCEEDS</th>
+          <th class="text-right">REALIZED</th>
+          <th>OPENED</th>
+          <th>CLOSED</th>
+          <th>HOLDING</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not closed_rows %}
+          <tr>
+            <td colspan="9" class="py-10 text-center text-label-2">
+              No closed positions for this period.
+              {% if selected_period == "ytd" %}
+                Try switching to Lifetime, or import a Realized G/L CSV via Settings ⚙ → Imports.
+              {% else %}
+                Import a Realized G/L CSV via Settings ⚙ → Imports to populate this view.
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          {% for row in closed_rows %}
+            <tr>
+              <td class="font-semibold">{{ row.display_symbol }}</td>
+              <td class="text-label-2">{{ row.account }}</td>
+              <td class="text-right">{{ fmt_quantity(row.qty) }}</td>
+              <td class="text-right">{{ fmt_currency(row.cost_basis) }}</td>
+              <td class="text-right">{{ fmt_currency(row.proceeds) }}</td>
+              <td class="text-right {% if row.realized_pl < 0 %}text-neg{% elif row.realized_pl > 0 %}text-pos{% else %}text-label-2{% endif %}">
+                {% if row.realized_pl > 0 %}+{% endif %}{{ fmt_currency(row.realized_pl) }}
+                {% if row.wash_sale %}
+                  <span class="chip chip-confirm ml-1" title="Wash sale: {{ fmt_currency(row.disallowed_loss) }} disallowed">W</span>
+                {% endif %}
+              </td>
+              <td class="text-label-2">{{ fmt_date(row.opened_date) }}</td>
+              <td class="text-label-2">{{ fmt_date(row.closed_date) }}</td>
+              <td class="text-label-2">{{ "LT" if row.term == "Long Term" else "ST" }}</td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </div>

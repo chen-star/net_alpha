@@ -806,6 +806,23 @@ class Repository:
             account_display = self._account_display_for_id(s, account_id)
         return [self._row_to_gl_lot(r, account_display) for r in rows]
 
+    def list_all_gl_lots(self) -> list[RealizedGLLot]:
+        """Every Realized G/L lot across all accounts.
+
+        Used by the Closed positions tab to render historical realized lots.
+        Sorted by close date descending so most recent closures land at the
+        top of the table.
+        """
+        with Session(self.engine) as s:
+            rows = s.exec(select(RealizedGLLotRow).order_by(RealizedGLLotRow.closed_date.desc())).all()
+            display_cache: dict[int, str] = {}
+            out: list[RealizedGLLot] = []
+            for r in rows:
+                if r.account_id not in display_cache:
+                    display_cache[r.account_id] = self._account_display_for_id(s, r.account_id)
+                out.append(self._row_to_gl_lot(r, display_cache[r.account_id]))
+        return out
+
     def _row_to_gl_lot(self, row: RealizedGLLotRow, account_display: str) -> RealizedGLLot:
         return RealizedGLLot(
             account_display=account_display,

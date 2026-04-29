@@ -22,7 +22,13 @@ from datetime import date
 from decimal import Decimal
 
 from net_alpha.models.domain import Lot, Trade
-from net_alpha.portfolio.models import OpenOptionRow, OpenShortOptionRow, PositionRow
+from net_alpha.models.realized_gl import RealizedGLLot
+from net_alpha.portfolio.models import (
+    ClosedLotRow,
+    OpenOptionRow,
+    OpenShortOptionRow,
+    PositionRow,
+)
 from net_alpha.pricing.provider import Quote
 
 # Schwab appends a numeric suffix to an option's underlying after a split or
@@ -659,3 +665,49 @@ def compute_open_positions(
             )
     rows.sort(key=lambda r: (r.market_value is None, -(r.market_value or Decimal("0"))))
     return rows
+
+
+def compute_closed_lots(
+    gl_lots: Iterable[RealizedGLLot],
+    *,
+    period: tuple[int, int] | None = None,
+    account_display: str | None = None,
+) -> list[ClosedLotRow]:
+    """Aggregate Realized G/L lots into ClosedLotRow records for the Closed tab.
+
+    ``period`` is ``(year_start_inclusive, year_end_exclusive)`` matched against
+    each lot's ``closed_date.year`` — None means lifetime. ``account_display``
+    filters to a single account when provided.
+
+    Sorted by close date descending so the most recent closures land at the
+    top. Realized P/L is ``proceeds - cost_basis`` (Schwab GL data already has
+    wash-sale adjustments folded into the cost basis when applicable).
+    """
+    out: list[ClosedLotRow] = []
+    for lot in gl_lots:
+        if account_display is not None and lot.account_display != account_display:
+            continue
+        if period is not None and not (period[0] <= lot.closed_date.year < period[1]):
+            continue
+        cost_basis = Decimal(str(lot.cost_basis))
+        proceeds = Decimal(str(lot.proceeds))
+        out.append(
+            ClosedLotRow(
+                account=lot.account_display,
+                ticker=lot.ticker,
+                qty=Decimal(str(lot.quantity)),
+                cost_basis=cost_basis,
+                proceeds=proceeds,
+                realized_pl=proceeds - cost_basis,
+                opened_date=lot.opened_date,
+                closed_date=lot.closed_date,
+                term=lot.term,
+                wash_sale=lot.wash_sale,
+                disallowed_loss=Decimal(str(lot.disallowed_loss)),
+                option_strike=lot.option_strike,
+                option_expiry=lot.option_expiry,
+                option_call_put=lot.option_call_put,
+            )
+        )
+    out.sort(key=lambda r: r.closed_date, reverse=True)
+    return out
