@@ -257,6 +257,20 @@ def _migrate_v9_to_v10(session: Session) -> None:
     session.commit()
 
 
+def _stamp_section_1256_meta(session: Session) -> None:
+    """Stamp universe hash + engine version. Idempotent. Called by both
+    the fresh-DB branch of migrate() and _migrate_v10_to_v11."""
+    from net_alpha.section_1256.universe import universe_hash
+    session.exec(text(
+        "INSERT INTO meta(key, value) VALUES ('section_1256_universe_hash', :v) "
+        "ON CONFLICT(key) DO UPDATE SET value=:v"
+    ).bindparams(v=universe_hash()))
+    session.exec(text(
+        "INSERT INTO meta(key, value) VALUES ('wash_sale_engine_version', :v) "
+        "ON CONFLICT(key) DO UPDATE SET value=:v"
+    ).bindparams(v=str(CURRENT_SCHEMA_VERSION)))
+
+
 def _migrate_v10_to_v11(session: Session) -> None:
     """Add §1256 awareness: trades.is_section_1256 column,
     exempt_matches table, section_1256_classifications table,
@@ -311,15 +325,7 @@ def _migrate_v10_to_v11(session: Session) -> None:
         session.exec(text("CREATE INDEX IF NOT EXISTS ix_s1256_classifications_underlying ON section_1256_classifications(underlying)"))
 
     # 4. Stamp universe hash + engine version
-    from net_alpha.section_1256.universe import universe_hash
-    session.exec(text(
-        "INSERT INTO meta(key, value) VALUES ('section_1256_universe_hash', :v) "
-        "ON CONFLICT(key) DO UPDATE SET value=:v"
-    ).bindparams(v=universe_hash()))
-    session.exec(text(
-        "INSERT INTO meta(key, value) VALUES ('wash_sale_engine_version', '11') "
-        "ON CONFLICT(key) DO UPDATE SET value='11'"
-    ))
+    _stamp_section_1256_meta(session)
 
     session.commit()
 
@@ -335,8 +341,10 @@ def migrate(session: Session) -> None:
     current = get_schema_version(session)
     if current == 0:
         # Fresh DB: SQLModel.metadata.create_all has already produced the
-        # current-shape tables. Just stamp the version.
+        # current-shape tables. Just stamp the version and meta rows.
         set_schema_version(session, CURRENT_SCHEMA_VERSION)
+        _stamp_section_1256_meta(session)
+        session.commit()
         return
     if current == 1:
         _migrate_v1_to_v2(session)

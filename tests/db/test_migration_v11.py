@@ -58,3 +58,19 @@ def test_migration_v10_to_v11_idempotent():
         migrate(session)
     with Session(engine) as session:
         migrate(session)
+
+
+def test_fresh_db_stamps_section_1256_meta_keys():
+    """Regression: fresh DB initialization must stamp universe hash + engine version."""
+    engine = create_engine("sqlite:///:memory:")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        migrate(session)
+        hash_row = session.exec(text(
+            "SELECT value FROM meta WHERE key='section_1256_universe_hash'"
+        )).first()
+        version_row = session.exec(text(
+            "SELECT value FROM meta WHERE key='wash_sale_engine_version'"
+        )).first()
+        assert hash_row is not None and hash_row[0]
+        assert version_row is not None and version_row[0] == "11"
