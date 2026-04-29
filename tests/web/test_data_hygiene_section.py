@@ -41,10 +41,14 @@ def test_imports_page_shows_hygiene_section_when_issues_exist(tmp_path):
     client = TestClient(create_app(settings))
     resp = client.get("/imports/_legacy_page")
     assert resp.status_code == 200
-    assert "Data quality" in resp.text
+    # Phase 3 (I1): basis_unknown rows move to the "Missing cost basis" section
+    # with a single explanation card and per-row inline forms.  The ticker
+    # appears in the inline form; the old "Data quality" panel no longer shows
+    # basis_unknown rows (they're excluded via the `other_issues` filter).
+    assert "Missing cost basis" in resp.text
     assert "AAPL" in resp.text
-    # Now links to the ticker page edit affordance instead of an inline form.
-    assert "/ticker/AAPL" in resp.text
+    assert 'data-testid="hygiene-explanation"' in resp.text
+    assert 'hx-post="/audit/set-basis?caller=drawer"' in resp.text
 
 
 def test_imports_page_hides_hygiene_section_when_clean(tmp_path):

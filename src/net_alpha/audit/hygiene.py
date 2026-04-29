@@ -44,6 +44,44 @@ class HygieneIssue(BaseModel):
     fix_form: HygieneFixForm | None = None
 
 
+class MissingBasisRow(BaseModel):
+    """Lightweight row for the Imports drawer inline-form (§6.2 I1/I2).
+
+    Carries only the fields the ``_data_hygiene_row.html`` template needs:
+    ``trade_id``, ``symbol``, ``qty``, ``acquired_date``.
+    """
+
+    trade_id: int
+    symbol: str
+    qty: float
+    acquired_date: object  # datetime.date — kept as `object` to avoid circular imports
+
+
+def collect_missing_basis_rows(repo: Repository) -> list[MissingBasisRow]:
+    """Return one row per buy trade flagged ``basis_unknown=True``.
+
+    Used by the Imports drawer to render a single explanation card + one
+    compact inline form per row (§6.2 I1/I2).
+    """
+    rows: list[MissingBasisRow] = []
+    for t in repo.all_trades():
+        if not t.basis_unknown:
+            continue
+        if t.action.lower() != "buy":
+            continue
+        if t.id is None:
+            continue
+        rows.append(
+            MissingBasisRow(
+                trade_id=t.id,
+                symbol=t.ticker,
+                qty=t.quantity,
+                acquired_date=t.date,
+            )
+        )
+    return rows
+
+
 def collect_issues(repo: Repository, settings: Settings | None = None) -> list[HygieneIssue]:
     """Run all category checks against the current Repository state."""
     issues: list[HygieneIssue] = []

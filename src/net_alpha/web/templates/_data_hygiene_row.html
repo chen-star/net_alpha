@@ -1,0 +1,21 @@
+{# One missing-basis row in the Imports drawer (§6.2 I2). Posts to
+   /audit/set-basis?caller=drawer; on success the entire <li> is replaced
+   by a small "saved" confirmation via _data_hygiene_row_saved.html. #}
+
+<li data-row="missing-basis"
+    data-trade-id="{{ row.trade_id }}"
+    class="px-4 py-3 flex items-center gap-3 text-[13px]">
+  <form hx-post="/audit/set-basis?caller=drawer"
+        hx-target="closest li"
+        hx-swap="outerHTML"
+        class="flex flex-wrap items-center gap-2 w-full">
+    <input type="hidden" name="trade_id" value="{{ row.trade_id }}">
+    <span class="font-semibold w-14 inline-block tabular-nums">{{ row.symbol }}</span>
+    <span class="text-label-2 w-16 inline-block tabular-nums">{{ fmt_quantity(row.qty) }}</span>
+    <span class="text-label-3 text-[11px] tabular-nums">{{ fmt_date(row.acquired_date) }}</span>
+    <input type="number" name="cost_basis" required step="0.0001" placeholder="cost basis / share"
+           class="flex-1 min-w-[120px] px-2 py-1 bg-bg border rounded text-[12px] font-mono"
+           style="border-color: var(--color-hairline);">
+    <button type="submit" class="btn text-[12px] py-1 px-2">Save</button>
+  </form>
+</li>

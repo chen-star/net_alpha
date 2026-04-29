@@ -1,0 +1,9 @@
+{# Replacement fragment after a successful /audit/set-basis?caller=drawer
+   POST.  Swapped in by HTMX in place of the <li> row. #}
+
+<li data-row="missing-basis-saved"
+    class="px-4 py-3 flex items-center gap-2 text-[13px] text-label-3"
+    style="border-bottom: 0.5px solid rgba(255,255,255,0.06);">
+  <img src="/static/icons/check.svg?v={{ asset_v }}" class="w-3.5 h-3.5 invert opacity-70" alt="">
+  Saved — basis updated.
+</li>
