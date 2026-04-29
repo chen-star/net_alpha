@@ -98,6 +98,8 @@ class KpiSet:
     open_position_value: Decimal | None
     lifetime_net_pl: Decimal | None  # realized + unrealized; None when prices unavailable
     missing_symbols: tuple[str, ...] = ()  # tickers without a quote — affected KPIs are partial sums
+    today_change: Decimal | None = None  # $ change vs previous close (Today tile)
+    today_pct: Decimal | None = None  # % change vs previous close (Today tile)
 
 
 @dataclass(frozen=True)
