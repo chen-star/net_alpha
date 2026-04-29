@@ -1,8 +1,9 @@
 """Recompute should:
-  1. Persist exempt matches via repository
-  2. Run the §1256 classifier and persist classifications
-  3. Trigger a full recompute when the universe hash changes
+1. Persist exempt matches via repository
+2. Run the §1256 classifier and persist classifications
+3. Trigger a full recompute when the universe hash changes
 """
+
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -84,9 +85,7 @@ def test_recompute_persists_section_1256_classifications(repo):
 def test_should_full_recompute_returns_true_when_universe_hash_changes(repo):
     # Stamp a stale hash in meta
     with Session(repo.engine) as session:
-        session.exec(text(
-            "UPDATE meta SET value='deadbeef' WHERE key='section_1256_universe_hash'"
-        ))
+        session.exec(text("UPDATE meta SET value='deadbeef' WHERE key='section_1256_universe_hash'"))
         session.commit()
     assert should_full_recompute(repo) is True
 

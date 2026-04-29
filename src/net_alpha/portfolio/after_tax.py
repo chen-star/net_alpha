@@ -9,6 +9,7 @@ Out-of-scope simplifications (caveats surface inline):
 - Qualified dividends, §199A, AMT
 - Per-year historical brackets for Lifetime period
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -88,10 +89,7 @@ def compute_after_tax(
     st_tax = max(Decimal("0"), total_st) * brackets.federal_marginal_rate
     lt_tax = max(Decimal("0"), total_lt) * brackets.ltcg_rate
     state_tax = max(Decimal("0"), total_st + total_lt) * brackets.state_marginal_rate
-    niit = (
-        max(Decimal("0"), total_st + total_lt) * _NIIT_RATE
-        if brackets.niit_enabled else Decimal("0")
-    )
+    niit = max(Decimal("0"), total_st + total_lt) * _NIIT_RATE if brackets.niit_enabled else Decimal("0")
 
     tax_bill = st_tax + lt_tax + state_tax + niit
     pre_tax = st_pnl + lt_pnl + sec1256_pnl
@@ -108,13 +106,11 @@ def compute_after_tax(
 
     caveats = [
         "Estimate using your configured marginal rates — not a tax filing.",
-        "Capital-loss limitation ($3K/yr against ordinary income) and multi-year "
-        "carryforward not modeled.",
+        "Capital-loss limitation ($3K/yr against ordinary income) and multi-year carryforward not modeled.",
         f"NIIT applied at 3.8% above MAGI threshold ($200K single / $250K MFJ) "
         f"when enabled (currently: {'on' if brackets.niit_enabled else 'off'}).",
         "Open §1256 positions Dec 31 not marked-to-market — see 1099-B / Form 6781 separately.",
-        "Wash-sale 'deferred tax savings' = tax savings deferred (not lost) — "
-        "basis rolls into the replacement lot.",
+        "Wash-sale 'deferred tax savings' = tax savings deferred (not lost) — basis rolls into the replacement lot.",
     ]
     if period.kind == "lifetime":
         caveats.append(

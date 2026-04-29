@@ -1,4 +1,5 @@
 """P — wash-sale explanation surface (pure functions + templates)."""
+
 from net_alpha.explain.exempt import explain_exempt
 from net_alpha.explain.violation import (
     AccountPair,
@@ -9,6 +10,10 @@ from net_alpha.explain.violation import (
 )
 
 __all__ = [
-    "AccountPair", "ExplanationModel", "LotRef", "TradeRow",
-    "explain_violation", "explain_exempt",
+    "AccountPair",
+    "ExplanationModel",
+    "LotRef",
+    "TradeRow",
+    "explain_violation",
+    "explain_exempt",
 ]

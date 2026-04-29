@@ -1,5 +1,6 @@
 """CLI --detail formatter: renders an ExplanationModel as a multi-line ASCII block.
 Mirrors the visual structure of _violation_explain.html for parity."""
+
 from __future__ import annotations
 
 from net_alpha.explain.violation import ExplanationModel

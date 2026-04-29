@@ -1,4 +1,5 @@
 """explain_violation — pure function building an ExplanationModel for a WashSaleViolation."""
+
 from __future__ import annotations
 
 from datetime import date as _date
@@ -113,9 +114,9 @@ def explain_violation(v: WashSaleViolationRow, *, repo) -> ExplanationModel:
     lot_dict = repo.get_lot_row_dict_by_trade_id(buy.id)
     if lot_dict is not None:
         lot_ref = LotRef(
-            lot_id=str(lot_dict['trade_id']),
-            acquired_date=_date.fromisoformat(lot_dict['trade_date']),
-            adjusted_basis=Decimal(str(lot_dict['adjusted_basis'])),
+            lot_id=str(lot_dict["trade_id"]),
+            acquired_date=_date.fromisoformat(lot_dict["trade_date"]),
+            adjusted_basis=Decimal(str(lot_dict["adjusted_basis"])),
         )
 
     summary = (

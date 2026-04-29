@@ -1,4 +1,5 @@
 """explain_exempt — pure function building an ExplanationModel for an ExemptMatch."""
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -46,10 +47,7 @@ def explain_exempt(em: ExemptMatchRow, *, repo) -> ExplanationModel:
     if em.loss_account != em.buy_account:
         cross = AccountPair(loss_account=em.loss_account, buy_account=em.buy_account)
 
-    summary = (
-        f"{em.ticker} match — exempt under §1256(c). "
-        f"Index options are not subject to §1091."
-    )
+    summary = f"{em.ticker} match — exempt under §1256(c). Index options are not subject to §1091."
 
     if allocable != loss_qty:
         disallowed_math = tmpl.disallowed_math_str(

@@ -17,6 +17,7 @@ from net_alpha.splits.apply import apply_manual_overrides, apply_splits
 @dataclass
 class MigrationRecomputeSummary:
     """Counts returned by migrate_existing_violations for user-facing banner."""
+
     reclassified_count: int  # Stale §1256 violations converted to ExemptMatch
     classifications_count: int  # §1256 classifications saved
 
@@ -24,19 +25,19 @@ class MigrationRecomputeSummary:
 def should_full_recompute(repo: Repository) -> bool:
     """True iff the §1256 universe hash in meta differs from the current bundled+user merge."""
     with Session(repo.engine) as session:
-        row = session.exec(text(
-            "SELECT value FROM meta WHERE key='section_1256_universe_hash'"
-        )).first()
+        row = session.exec(text("SELECT value FROM meta WHERE key='section_1256_universe_hash'")).first()
         stored = row[0] if row else None
     return stored != universe_hash()
 
 
 def _stamp_universe_hash(repo: Repository) -> None:
     with Session(repo.engine) as session:
-        session.exec(text(
-            "INSERT INTO meta(key, value) VALUES ('section_1256_universe_hash', :v) "
-            "ON CONFLICT(key) DO UPDATE SET value=:v"
-        ).bindparams(v=universe_hash()))
+        session.exec(
+            text(
+                "INSERT INTO meta(key, value) VALUES ('section_1256_universe_hash', :v) "
+                "ON CONFLICT(key) DO UPDATE SET value=:v"
+            ).bindparams(v=universe_hash())
+        )
         session.commit()
 
 
@@ -189,20 +190,22 @@ def migrate_existing_violations(repo: Repository) -> MigrationRecomputeSummary:
         loss_account = getattr(loss, "account", "")
         buy_account = getattr(buy, "account", "")
 
-        new_exempt_matches.append(ExemptMatch(
-            loss_trade_id=str(row.loss_trade_id),
-            triggering_buy_id=str(row.replacement_trade_id),
-            exempt_reason="section_1256",
-            rule_citation="IRC §1256(c)",
-            notional_disallowed=row.disallowed_loss,
-            confidence=row.confidence,
-            matched_quantity=row.matched_quantity,
-            loss_account=loss_account,
-            buy_account=buy_account,
-            loss_sale_date=loss.date,
-            triggering_buy_date=buy.date,
-            ticker=row.ticker or loss.ticker,
-        ))
+        new_exempt_matches.append(
+            ExemptMatch(
+                loss_trade_id=str(row.loss_trade_id),
+                triggering_buy_id=str(row.replacement_trade_id),
+                exempt_reason="section_1256",
+                rule_citation="IRC §1256(c)",
+                notional_disallowed=row.disallowed_loss,
+                confidence=row.confidence,
+                matched_quantity=row.matched_quantity,
+                loss_account=loss_account,
+                buy_account=buy_account,
+                loss_sale_date=loss.date,
+                triggering_buy_date=buy.date,
+                ticker=row.ticker or loss.ticker,
+            )
+        )
 
     repo.delete_violations_by_id(stale_ids)
     # NOTE: We do NOT call clear_exempt_matches() before save here. The migration

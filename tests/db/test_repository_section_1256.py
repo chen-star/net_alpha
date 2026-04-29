@@ -76,9 +76,11 @@ def test_classifications_unique_per_trade(repo):
 
 
 def test_list_exempt_matches_filtered_by_account_returns_subset(repo):
-    repo.save_exempt_matches([
-        _exempt(loss_id="1", buy_id="2"),  # account schwab/personal
-    ])
+    repo.save_exempt_matches(
+        [
+            _exempt(loss_id="1", buy_id="2"),  # account schwab/personal
+        ]
+    )
     # Sanity: default returns 1
     assert len(repo.list_exempt_matches()) == 1
     # Filter to a non-existent account: 0

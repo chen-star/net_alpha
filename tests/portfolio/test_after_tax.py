@@ -1,8 +1,8 @@
 """compute_after_tax math correctness, all paths."""
+
 from datetime import datetime
 from decimal import Decimal
 
-import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 import net_alpha.db.tables  # noqa: F401 — register SQLModel metadata

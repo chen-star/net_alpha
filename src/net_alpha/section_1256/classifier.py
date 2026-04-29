@@ -4,6 +4,7 @@ Pure function. Runs after the detector during recompute. Reads from existing
 Lot records (FIFO basis) and the Trade list. Open positions are NOT classified
 in v1 — Dec 31 mark-to-market is out of scope (see spec Q2/B).
 """
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -26,11 +27,7 @@ def _matched_basis_fifo(sell: Trade, lots: list[Lot]) -> Decimal:
     remaining = Decimal(str(sell.quantity))
     basis = Decimal("0")
     matching = sorted(
-        [
-            lot for lot in lots
-            if lot.ticker == sell.ticker
-            and lot.option_details == sell.option_details
-        ],
+        [lot for lot in lots if lot.ticker == sell.ticker and lot.option_details == sell.option_details],
         key=lambda lot: lot.date,
     )
     for lot in matching:

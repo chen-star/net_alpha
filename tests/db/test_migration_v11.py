@@ -2,7 +2,7 @@ from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 
 import net_alpha.db.tables as _tables  # noqa: F401 — registers all SQLModel table classes
-from net_alpha.db.migrations import migrate, set_schema_version
+from net_alpha.db.migrations import migrate
 
 
 def _v10_engine():
@@ -31,7 +31,9 @@ def test_migration_v10_to_v11_creates_section_1256_classifications_table():
     engine = _v10_engine()
     with Session(engine) as session:
         migrate(session)
-        rows = session.exec(text("SELECT name FROM sqlite_master WHERE type='table' AND name='section_1256_classifications'")).all()
+        rows = session.exec(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='section_1256_classifications'")
+        ).all()
         assert len(rows) == 1
 
 
@@ -66,11 +68,7 @@ def test_fresh_db_stamps_section_1256_meta_keys():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         migrate(session)
-        hash_row = session.exec(text(
-            "SELECT value FROM meta WHERE key='section_1256_universe_hash'"
-        )).first()
-        version_row = session.exec(text(
-            "SELECT value FROM meta WHERE key='wash_sale_engine_version'"
-        )).first()
+        hash_row = session.exec(text("SELECT value FROM meta WHERE key='section_1256_universe_hash'")).first()
+        version_row = session.exec(text("SELECT value FROM meta WHERE key='wash_sale_engine_version'")).first()
         assert hash_row is not None and hash_row[0]
         assert version_row is not None and version_row[0] == "11"

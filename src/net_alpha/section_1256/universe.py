@@ -4,6 +4,7 @@ Mirrors the load pattern in net_alpha.engine.etf_pairs.load_etf_pairs:
 bundled YAML inside the package, optional user override that *adds*
 to (never replaces) the bundled list.
 """
+
 from __future__ import annotations
 
 import hashlib

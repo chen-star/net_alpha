@@ -1,9 +1,9 @@
 """Existing wash-sale violations on §1256 contracts should be reclassified
 as ExemptMatch records on first launch after upgrade."""
+
 from datetime import date, datetime
 from decimal import Decimal
 
-import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 import net_alpha.db.tables  # noqa: F401
@@ -69,19 +69,21 @@ def _inject_stale_violation(repo: Repository, sell_id: int, buy_id: int) -> None
     """Insert a stale WashSaleViolationRow directly using int PKs."""
     acct = repo.list_accounts()[0]
     with Session(repo.engine) as session:
-        session.add(WashSaleViolationRow(
-            loss_trade_id=sell_id,
-            replacement_trade_id=buy_id,
-            loss_account_id=acct.id,
-            buy_account_id=acct.id,
-            loss_sale_date="2024-09-15",
-            triggering_buy_date="2024-09-22",
-            ticker="SPX",
-            confidence="Confirmed",
-            disallowed_loss=621.50,
-            matched_quantity=1.0,
-            source="engine",
-        ))
+        session.add(
+            WashSaleViolationRow(
+                loss_trade_id=sell_id,
+                replacement_trade_id=buy_id,
+                loss_account_id=acct.id,
+                buy_account_id=acct.id,
+                loss_sale_date="2024-09-15",
+                triggering_buy_date="2024-09-22",
+                ticker="SPX",
+                confidence="Confirmed",
+                disallowed_loss=621.50,
+                matched_quantity=1.0,
+                source="engine",
+            )
+        )
         session.commit()
 
 
@@ -151,19 +153,21 @@ def test_migration_recompute_no_op_when_no_1256_violations(tmp_path):
 
     # Inject an equity (non-§1256) wash sale violation
     with Session(repo.engine) as session:
-        session.add(WashSaleViolationRow(
-            loss_trade_id=sell_id,
-            replacement_trade_id=buy_id,
-            loss_account_id=acct.id,
-            buy_account_id=acct.id,
-            loss_sale_date="2024-09-15",
-            triggering_buy_date="2024-09-22",
-            ticker="AAPL",
-            confidence="Confirmed",
-            disallowed_loss=500.0,
-            matched_quantity=10.0,
-            source="engine",
-        ))
+        session.add(
+            WashSaleViolationRow(
+                loss_trade_id=sell_id,
+                replacement_trade_id=buy_id,
+                loss_account_id=acct.id,
+                buy_account_id=acct.id,
+                loss_sale_date="2024-09-15",
+                triggering_buy_date="2024-09-22",
+                ticker="AAPL",
+                confidence="Confirmed",
+                disallowed_loss=500.0,
+                matched_quantity=10.0,
+                source="engine",
+            )
+        )
         session.commit()
 
     assert len(repo.all_violations()) == 1

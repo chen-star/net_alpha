@@ -1,6 +1,7 @@
 """§1256 contracts produce ExemptMatch instead of WashSaleViolation.
 Regression tests verify TSLA→TSLA and SPY↔VOO ETF-pair behavior is unchanged.
 """
+
 from datetime import date
 from decimal import Decimal
 

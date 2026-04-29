@@ -2,17 +2,17 @@
 
 Tests: /tax/violation/{vid}/explain and /tax/exempt/{eid}/explain
 """
+
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from net_alpha.db.tables import WashSaleViolationRow
-from net_alpha.models.domain import ExemptMatch, ImportRecord, Trade
+from net_alpha.models.domain import ExemptMatch, Trade
 
 # ---------------------------------------------------------------------------
 # Helpers — use the conftest fixtures (client, repo, builders) via pytest

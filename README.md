@@ -43,6 +43,9 @@ The problem compounds when you trade **options** alongside stocks, or **ETFs** t
 - **🌐 Cross-Account Intelligence:** Seamlessly match a loss sale on one broker against a repurchase on another in a single pass.
 - **🔒 100% Local & Zero-Knowledge:** Your financial data is yours. `net-alpha` runs entirely locally. No cloud uploads, no tracking, no telemetry.
 - **🧪 Pre-Trade Simulation:** Planning a trade? Run `net-alpha sim` to see FIFO lot consumption, realized P&L, and a cross-account wash-sale verdict before you execute.
+- **🧮 §1256 Awareness:** Index options (SPX, NDX, RUT, VIX, etc.) are recognized as §1256 contracts — wash-sale-exempt with statutory 60/40 LT/ST classification.
+- **🔍 Auditable Explanations:** Every wash-sale flag includes rule citation, source trades, match reason, math, and confidence reasoning — accessible inline in the web UI or via `--detail` on the CLI.
+- **📊 After-Tax Performance:** `/tax?view=performance` shows your realized P&L after estimated taxes, with a tax-drag breakdown and §1256 split.
 
 ---
 

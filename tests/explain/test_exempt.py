@@ -20,8 +20,14 @@ class _FakeRepo:
 
 def _spx_opt(id_: str, action: str, d: date, qty: float, proceeds) -> Trade:
     return Trade(
-        id=id_, date=d, account="schwab/personal", ticker="SPX", action=action,
-        quantity=qty, proceeds=float(proceeds), cost_basis=0.0,
+        id=id_,
+        date=d,
+        account="schwab/personal",
+        ticker="SPX",
+        action=action,
+        quantity=qty,
+        proceeds=float(proceeds),
+        cost_basis=0.0,
         option_details=OptionDetails(strike=4500, expiry=date(2025, 12, 19), call_put="C"),
         is_section_1256=True,
     )
@@ -32,11 +38,19 @@ def test_explain_exempt_section_1256_basic():
     buy = _spx_opt("2", "Buy", date(2024, 9, 22), 1, 100)
     repo = _FakeRepo([loss, buy])
     em = ExemptMatchRow(
-        id=1, loss_trade_id=1, triggering_buy_id=2,
-        exempt_reason="section_1256", rule_citation="IRC §1256(c)",
-        notional_disallowed=Decimal("621.50"), confidence="Confirmed",
-        matched_quantity=1.0, loss_account="schwab/personal", buy_account="schwab/personal",
-        loss_sale_date="2024-09-15", triggering_buy_date="2024-09-22", ticker="SPX",
+        id=1,
+        loss_trade_id=1,
+        triggering_buy_id=2,
+        exempt_reason="section_1256",
+        rule_citation="IRC §1256(c)",
+        notional_disallowed=Decimal("621.50"),
+        confidence="Confirmed",
+        matched_quantity=1.0,
+        loss_account="schwab/personal",
+        buy_account="schwab/personal",
+        loss_sale_date="2024-09-15",
+        triggering_buy_date="2024-09-22",
+        ticker="SPX",
     )
     e = explain_exempt(em, repo=repo)
     assert isinstance(e, ExplanationModel)
@@ -52,11 +66,19 @@ def test_explain_exempt_summary_mentions_index_options():
     buy = _spx_opt("4", "Buy", date(2024, 9, 22), 1, 100)
     repo = _FakeRepo([loss, buy])
     em = ExemptMatchRow(
-        id=2, loss_trade_id=3, triggering_buy_id=4,
-        exempt_reason="section_1256", rule_citation="IRC §1256(c)",
-        notional_disallowed=Decimal("100"), confidence="Confirmed",
-        matched_quantity=1.0, loss_account="x", buy_account="x",
-        loss_sale_date="2024-09-15", triggering_buy_date="2024-09-22", ticker="SPX",
+        id=2,
+        loss_trade_id=3,
+        triggering_buy_id=4,
+        exempt_reason="section_1256",
+        rule_citation="IRC §1256(c)",
+        notional_disallowed=Decimal("100"),
+        confidence="Confirmed",
+        matched_quantity=1.0,
+        loss_account="x",
+        buy_account="x",
+        loss_sale_date="2024-09-15",
+        triggering_buy_date="2024-09-22",
+        ticker="SPX",
     )
     e = explain_exempt(em, repo=repo)
     assert "SPX" in e.summary or "index" in e.summary.lower()

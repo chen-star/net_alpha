@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## [unreleased] — Tax Correctness 1.0
+
+### Added
+- §1256 contract awareness: broad-based index options (SPX/NDX/RUT/VIX/OEX/XSP/MXEF/MXEA) are now exempt from §1091 wash-sale detection per IRC §1256(c). Bundled in `section_1256_underlyings.yaml`; user can extend via `~/.net_alpha/section_1256_underlyings.yaml`.
+- §1256 60/40 LT/ST classification on closed contracts (`section_1256_classifications` table).
+- Inline-expandable wash-sale and exempt-match explanations (web UI HTMX fragment + CLI `--detail`). Includes rule citation, source trades, match reason, disallowed-amount math, confidence reasoning, adjusted-basis target.
+- `/tax?view=performance` tab — after-tax realized P&L, tax-drag, ST/LT/§1256 mix bar, wash-sale cost line, effective tax rate. Reuses existing `tax:` config plus a new `niit_enabled` toggle.
+
+### Changed
+- `TaxBrackets` model gains `niit_enabled: bool = True`.
+- `DetectionResult` gains `exempt_matches: list[ExemptMatch] = []`.
+- `Trade` model gains `is_section_1256: bool = False`.
+
+### Migration (v10 → v11)
+- New tables: `exempt_matches`, `section_1256_classifications`.
+- New column: `trades.is_section_1256`.
+- One-shot recompute on first launch reclassifies prior wash-sale violations on §1256 contracts as exempt matches; populates §1256 classifications. Banner surfaces counts.
+
+### Out of Scope
+- Open §1256 position year-end mark-to-market (consult 1099-B / Form 6781).
+- Form 6781 export (deferred to unified tax-export spec).
+- Capital-loss $3K cap and multi-year carryforward modeling.
+- MAGI-based NIIT threshold (assumed exceeded when toggle on).
+- Per-year historical tax brackets (Lifetime period uses current rates).
+
+### Rollback
+Not offered. Restore from manual SQLite backup if needed.
 
 
 ## v0.32.0 (2026-04-29)

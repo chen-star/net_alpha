@@ -261,14 +261,19 @@ def _stamp_section_1256_meta(session: Session) -> None:
     """Stamp universe hash + engine version. Idempotent. Called by both
     the fresh-DB branch of migrate() and _migrate_v10_to_v11."""
     from net_alpha.section_1256.universe import universe_hash
-    session.exec(text(
-        "INSERT INTO meta(key, value) VALUES ('section_1256_universe_hash', :v) "
-        "ON CONFLICT(key) DO UPDATE SET value=:v"
-    ).bindparams(v=universe_hash()))
-    session.exec(text(
-        "INSERT INTO meta(key, value) VALUES ('wash_sale_engine_version', :v) "
-        "ON CONFLICT(key) DO UPDATE SET value=:v"
-    ).bindparams(v=str(CURRENT_SCHEMA_VERSION)))
+
+    session.exec(
+        text(
+            "INSERT INTO meta(key, value) VALUES ('section_1256_universe_hash', :v) "
+            "ON CONFLICT(key) DO UPDATE SET value=:v"
+        ).bindparams(v=universe_hash())
+    )
+    session.exec(
+        text(
+            "INSERT INTO meta(key, value) VALUES ('wash_sale_engine_version', :v) "
+            "ON CONFLICT(key) DO UPDATE SET value=:v"
+        ).bindparams(v=str(CURRENT_SCHEMA_VERSION))
+    )
 
 
 def _migrate_v10_to_v11(session: Session) -> None:
@@ -283,7 +288,8 @@ def _migrate_v10_to_v11(session: Session) -> None:
 
     # 2. Create exempt_matches (FK columns are INTEGER to match trades.id)
     if not _table_exists(session, "exempt_matches"):
-        session.exec(text("""
+        session.exec(
+            text("""
             CREATE TABLE exempt_matches (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 loss_trade_id INTEGER NOT NULL,
@@ -302,15 +308,21 @@ def _migrate_v10_to_v11(session: Session) -> None:
                 FOREIGN KEY (loss_trade_id) REFERENCES trades(id),
                 FOREIGN KEY (triggering_buy_id) REFERENCES trades(id)
             )
-        """))
+        """)
+        )
         session.exec(text("CREATE INDEX IF NOT EXISTS ix_exempt_matches_loss_trade ON exempt_matches(loss_trade_id)"))
-        session.exec(text("CREATE INDEX IF NOT EXISTS ix_exempt_matches_triggering_buy ON exempt_matches(triggering_buy_id)"))
+        session.exec(
+            text("CREATE INDEX IF NOT EXISTS ix_exempt_matches_triggering_buy ON exempt_matches(triggering_buy_id)")
+        )
         session.exec(text("CREATE INDEX IF NOT EXISTS ix_exempt_matches_ticker ON exempt_matches(ticker)"))
-        session.exec(text("CREATE INDEX IF NOT EXISTS ix_exempt_matches_loss_sale_date ON exempt_matches(loss_sale_date)"))
+        session.exec(
+            text("CREATE INDEX IF NOT EXISTS ix_exempt_matches_loss_sale_date ON exempt_matches(loss_sale_date)")
+        )
 
     # 3. Create section_1256_classifications
     if not _table_exists(session, "section_1256_classifications"):
-        session.exec(text("""
+        session.exec(
+            text("""
             CREATE TABLE section_1256_classifications (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 trade_id INTEGER NOT NULL UNIQUE,
@@ -321,8 +333,14 @@ def _migrate_v10_to_v11(session: Session) -> None:
                 created_at TEXT NOT NULL,
                 FOREIGN KEY (trade_id) REFERENCES trades(id)
             )
-        """))
-        session.exec(text("CREATE INDEX IF NOT EXISTS ix_s1256_classifications_underlying ON section_1256_classifications(underlying)"))
+        """)
+        )
+        session.exec(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_s1256_classifications_underlying"
+                " ON section_1256_classifications(underlying)"
+            )
+        )
 
     # 4. Stamp universe hash + engine version
     _stamp_section_1256_meta(session)

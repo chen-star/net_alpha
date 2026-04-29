@@ -71,6 +71,8 @@ net-alpha ui [--port N] [--no-browser] [--reload]          # launch local web UI
 - `OptionDetails` — `strike`, `expiry`, `call_put` (parsed from symbol string via regex)
 - `Lot` — buy lot with `adjusted_basis` (updated when a wash sale rolls into it)
 - `WashSaleViolation` — links loss sale + triggering buy, stores `confidence`, `disallowed_loss`
+- `ExemptMatch` — would-have-been wash-sale exempt under a named rule (e.g., `section_1256`); sibling of `WashSaleViolation`
+- `Section1256Classification` — per-closed-§1256-trade 60/40 LT/ST split; pure derived data, cleared/rebuilt on recompute
 - `ImportRecord` — tracks each CSV import with timestamp and account label; used by `net-alpha imports`
 
 ### Confidence Labels (3-tier)
@@ -88,6 +90,10 @@ Options are parsed using hand-written regexes within each broker's `BrokerParser
 ### ETF Substantially-Identical Pairs
 
 Bundled in `etf_pairs.yaml` (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, etc.). User can extend with `~/.net_alpha/etf_pairs.yaml` — user file adds to defaults, never replaces them.
+
+### §1256 Contracts
+
+Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, MXEF, MXEA — bundled in `section_1256_underlyings.yaml`) are recognized as §1256 contracts. The engine emits an `ExemptMatch` record (not a `WashSaleViolation`) when either side of a wash-sale candidate is §1256 — they are exempt from §1091 under §1256(c). A separate classifier (`section_1256/classifier.py`) splits closed §1256 trade P&L 60/40 LT/ST per §1256(a)(3), regardless of holding period. Open positions at year-end are NOT marked-to-market in v1; users consult their 1099-B / Form 6781.
 
 ### Database
 
@@ -111,6 +117,10 @@ Tailwind CSS rebuild: `make build-css` (uses `pytailwindcss` from dev extras).
 ### Web UI conventions
 
 Each scoped page uses a top-of-page toolbar: `Period` (YTD / specific year / Lifetime) + `Account` (All / per-account). State is per-page (not global). Heavy panels load lazily as HTMX fragments under stable IDs.
+
+### Tax Performance Tab
+
+`/tax?view=performance` renders an after-tax realized P&L panel using configured marginal rates from the existing `tax:` config section. Reads pure-function `compute_after_tax(...)` in `portfolio/after_tax.py`. Surfaces 4 KPIs (pre-tax, tax bill, after-tax, tax drag), an ST/LT/§1256 mix bar, a wash-sale cost row, and the effective tax rate. Caveats (capital-loss limitation, MAGI threshold, Lifetime-period bracket assumption) are documented inline. Inline-expand explanations are available on every wash-sale row and exempt match via `tax/violation/{id}/explain` and `tax/exempt/{id}/explain` HTMX fragments; the same content is available via the CLI `--detail` flag.
 
 ### Disclaimer Policy
 

@@ -21,19 +21,16 @@ def get_engine(db_path: Path):
 def _migration_1256_done(engine) -> bool:
     """True iff the one-shot §1256 migration has already run on this DB."""
     with Session(engine) as s:
-        row = s.exec(
-            text("SELECT value FROM meta WHERE key=:k").bindparams(k=_MIGRATION_1256_DONE_KEY)
-        ).first()
+        row = s.exec(text("SELECT value FROM meta WHERE key=:k").bindparams(k=_MIGRATION_1256_DONE_KEY)).first()
         return row is not None
 
 
 def _stamp_migration_1256_done(engine) -> None:
     with Session(engine) as s:
         s.exec(
-            text(
-                "INSERT INTO meta(key, value) VALUES (:k, '1') "
-                "ON CONFLICT(key) DO UPDATE SET value='1'"
-            ).bindparams(k=_MIGRATION_1256_DONE_KEY)
+            text("INSERT INTO meta(key, value) VALUES (:k, '1') ON CONFLICT(key) DO UPDATE SET value='1'").bindparams(
+                k=_MIGRATION_1256_DONE_KEY
+            )
         )
         s.commit()
 

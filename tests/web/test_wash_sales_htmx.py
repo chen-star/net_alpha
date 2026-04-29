@@ -3,18 +3,17 @@
 Each violation row must carry hx-get, hx-trigger, hx-target, hx-swap and the
 sibling explain row must exist so the fragment has a DOM target.
 """
+
 from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from net_alpha.db.tables import WashSaleViolationRow
-from net_alpha.models.domain import ImportRecord, Trade
-
+from net_alpha.models.domain import Trade
 
 # ---------------------------------------------------------------------------
 # Helpers — mirror the seeding pattern from test_explain_fragment.py
@@ -97,7 +96,7 @@ def test_wash_sales_table_includes_htmx_attrs(client: TestClient, repo, builders
     assert 'hx-swap="innerHTML"' in html
 
     # Alpine toggle must be on the scoping tbody (or the row itself).
-    assert "@click=\"open = !open\"" in html
+    assert '@click="open = !open"' in html
 
     # Sibling explain row must exist in the DOM as the HTMX target.
     assert f'id="violation-{vid}-explain"' in html

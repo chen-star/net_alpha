@@ -25,7 +25,6 @@ from net_alpha.db.tables import (
     UserPreferenceRow,
     WashSaleViolationRow,
 )
-from net_alpha.section_1256.universe import load_universe
 from net_alpha.models.domain import (
     Account,
     AddImportResult,
@@ -43,6 +42,7 @@ from net_alpha.models.domain import (
 from net_alpha.models.preferences import AccountPreference
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.models.splits import LotOverride, Split
+from net_alpha.section_1256.universe import load_universe
 
 
 class Repository:
@@ -1377,20 +1377,22 @@ class Repository:
         a full recompute to avoid duplicates."""
         with Session(self.engine) as session:
             for m in matches:
-                session.add(ExemptMatchRow(
-                    loss_trade_id=int(m.loss_trade_id),
-                    triggering_buy_id=int(m.triggering_buy_id),
-                    exempt_reason=m.exempt_reason,
-                    rule_citation=m.rule_citation,
-                    notional_disallowed=m.notional_disallowed,
-                    confidence=m.confidence,
-                    matched_quantity=m.matched_quantity,
-                    loss_account=m.loss_account,
-                    buy_account=m.buy_account,
-                    loss_sale_date=m.loss_sale_date.isoformat(),
-                    triggering_buy_date=m.triggering_buy_date.isoformat(),
-                    ticker=m.ticker,
-                ))
+                session.add(
+                    ExemptMatchRow(
+                        loss_trade_id=int(m.loss_trade_id),
+                        triggering_buy_id=int(m.triggering_buy_id),
+                        exempt_reason=m.exempt_reason,
+                        rule_citation=m.rule_citation,
+                        notional_disallowed=m.notional_disallowed,
+                        confidence=m.confidence,
+                        matched_quantity=m.matched_quantity,
+                        loss_account=m.loss_account,
+                        buy_account=m.buy_account,
+                        loss_sale_date=m.loss_sale_date.isoformat(),
+                        triggering_buy_date=m.triggering_buy_date.isoformat(),
+                        ticker=m.ticker,
+                    )
+                )
             session.commit()
 
     def clear_exempt_matches(self) -> None:
@@ -1407,18 +1409,14 @@ class Repository:
         with Session(self.engine) as session:
             stmt = select(ExemptMatchRow)
             if account is not None:
-                stmt = stmt.where(
-                    (ExemptMatchRow.loss_account == account) | (ExemptMatchRow.buy_account == account)
-                )
+                stmt = stmt.where((ExemptMatchRow.loss_account == account) | (ExemptMatchRow.buy_account == account))
             if year is not None:
                 stmt = stmt.where(ExemptMatchRow.loss_sale_date.startswith(f"{year}-"))
             return list(session.exec(stmt).all())
 
     # ---- Section1256Classification ----
 
-    def save_section_1256_classifications(
-        self, classifications: list[Section1256Classification]
-    ) -> None:
+    def save_section_1256_classifications(self, classifications: list[Section1256Classification]) -> None:
         """Upsert by trade_id (unique). Replaces prior classification for the same trade."""
         with Session(self.engine) as session:
             for c in classifications:
@@ -1427,13 +1425,15 @@ class Repository:
                         Section1256ClassificationRow.trade_id == int(c.trade_id)
                     )
                 )
-                session.add(Section1256ClassificationRow(
-                    trade_id=int(c.trade_id),
-                    realized_pnl=c.realized_pnl,
-                    long_term_portion=c.long_term_portion,
-                    short_term_portion=c.short_term_portion,
-                    underlying=c.underlying,
-                ))
+                session.add(
+                    Section1256ClassificationRow(
+                        trade_id=int(c.trade_id),
+                        realized_pnl=c.realized_pnl,
+                        long_term_portion=c.long_term_portion,
+                        short_term_portion=c.short_term_portion,
+                        underlying=c.underlying,
+                    )
+                )
             session.commit()
 
     def clear_section_1256_classifications(self) -> None:
@@ -1446,11 +1446,7 @@ class Repository:
         if not violation_ids:
             return
         with Session(self.engine) as s:
-            s.exec(
-                WashSaleViolationRow.__table__.delete().where(
-                    WashSaleViolationRow.id.in_(violation_ids)
-                )
-            )
+            s.exec(WashSaleViolationRow.__table__.delete().where(WashSaleViolationRow.id.in_(violation_ids)))
             s.commit()
 
     def set_section_1256_flag(self, trade_ids: list[int]) -> None:
@@ -1459,11 +1455,7 @@ class Repository:
         if not trade_ids:
             return
         with Session(self.engine) as s:
-            s.exec(
-                TradeRow.__table__.update()
-                .where(TradeRow.id.in_(trade_ids))
-                .values(is_section_1256=True)
-            )
+            s.exec(TradeRow.__table__.update().where(TradeRow.id.in_(trade_ids)).values(is_section_1256=True))
             s.commit()
 
     def list_section_1256_classifications(
@@ -1528,10 +1520,7 @@ class Repository:
             universe = load_universe()
             if universe:
                 stmt = stmt.where(
-                    ~(
-                        RealizedGLLotRow.ticker.in_(universe)
-                        & RealizedGLLotRow.option_strike.is_not(None)
-                    )
+                    ~(RealizedGLLotRow.ticker.in_(universe) & RealizedGLLotRow.option_strike.is_not(None))
                 )
             rows = session.exec(stmt).all()
             for r in rows:
@@ -1581,13 +1570,10 @@ class Repository:
                 except RuntimeError:
                     return Decimal("0")
                 stmt = stmt.where(
-                    (WashSaleViolationRow.loss_account_id == acct_id)
-                    | (WashSaleViolationRow.buy_account_id == acct_id)
+                    (WashSaleViolationRow.loss_account_id == acct_id) | (WashSaleViolationRow.buy_account_id == acct_id)
                 )
             if period.kind != "lifetime":
-                stmt = stmt.where(
-                    WashSaleViolationRow.loss_sale_date.startswith(f"{period.year}-")
-                )
+                stmt = stmt.where(WashSaleViolationRow.loss_sale_date.startswith(f"{period.year}-"))
             total = Decimal("0")
             for v in session.exec(stmt).all():
                 total += Decimal(str(v))

@@ -11,6 +11,7 @@ Scenarios covered:
   - SPX call Sell loss + SPX call Buy same series  → 1 ExemptMatch (§1256 exempt)
   - SPX call Buy + Sell pair that closes +$1000    → 1 Section1256Classification (60/40 split)
 """
+
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -23,10 +24,10 @@ from net_alpha.db.repository import Repository
 from net_alpha.engine.recompute import recompute_all
 from net_alpha.models.domain import ImportRecord, OptionDetails, Trade
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_repo(tmp_path, db_name: str = "e2e.db") -> Repository:
     engine = create_engine(f"sqlite:///{tmp_path}/{db_name}")
@@ -155,7 +156,7 @@ SPX_PROFIT_SELL = Trade(
     ticker="SPX",
     action="Sell",
     quantity=1,
-    proceeds=Decimal("1500"),   # $1000 gain on top of $500 basis
+    proceeds=Decimal("1500"),  # $1000 gain on top of $500 basis
     cost_basis=Decimal("500"),
     basis_source="broker_csv",
     option_details=SPX_PROFIT_OPT,
@@ -163,16 +164,21 @@ SPX_PROFIT_SELL = Trade(
 )
 
 ALL_TRADES = [
-    TSLA_SELL, TSLA_BUY,
-    SPY_SELL, VOO_BUY,
-    SPX_LOSS_SELL, SPX_REBUY,
-    SPX_PROFIT_BUY, SPX_PROFIT_SELL,
+    TSLA_SELL,
+    TSLA_BUY,
+    SPY_SELL,
+    VOO_BUY,
+    SPX_LOSS_SELL,
+    SPX_REBUY,
+    SPX_PROFIT_BUY,
+    SPX_PROFIT_SELL,
 ]
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def fresh_repo(tmp_path):

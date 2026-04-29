@@ -4,6 +4,7 @@ Asserts every page returns 200 OK; the tablet snapshot suite catches
 visual regressions, this test catches outright server errors triggered
 by responsive class changes.
 """
+
 from __future__ import annotations
 
 import pytest
