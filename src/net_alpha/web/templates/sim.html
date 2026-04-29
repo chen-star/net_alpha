@@ -66,6 +66,9 @@
           <option value="">All</option>
           {% for a in accounts %}<option value="{{ a }}" {% if account_pref == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
         </select>
+        {% if form_error %}
+          <div class="text-loss text-[12px] mt-1" data-testid="sim-form-error">{{ form_error }}</div>
+        {% endif %}
       </div>
       <div>
         <label class="block label-uc">Date</label>

@@ -74,6 +74,25 @@ def sim_run(
     account: str = Form(""),
     trade_date: str = Form(""),
 ) -> HTMLResponse:
+    account = (account or "").strip()
+    if action.lower() == "sell" and not account:
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "sim.html",
+            {
+                "ticker": ticker,
+                "qty": str(qty),
+                "account_pref": account,
+                "action_pref": action.lower(),
+                "price_hint": str(price),
+                "harvest_mode": False,
+                "tickers": repo.list_distinct_tickers(),
+                "accounts": [a.display() for a in repo.list_accounts()],
+                "today_iso": _date.today().isoformat(),
+                "result": None,
+                "form_error": "Account is required for Sell.",
+            },
+        )
     on_date = _date.fromisoformat(trade_date) if trade_date else _date.today()
     accounts = repo.list_accounts()
     accounts_filtered = [a for a in accounts if a.display() == account] if account else accounts
