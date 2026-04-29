@@ -74,8 +74,10 @@ def recompute_all(repo: Repository) -> None:
         repo.clear_section_1256_classifications()
         repo.save_section_1256_classifications(classifications)
 
-    # Stamp universe hash so subsequent should_full_recompute() returns False
-    _stamp_universe_hash(repo)
+        # Stamp universe hash so subsequent should_full_recompute() returns False.
+        # Only stamp when a real recompute actually ran (data was present);
+        # an empty DB must not suppress the trigger when trades are added later.
+        _stamp_universe_hash(repo)
 
 
 def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) -> None:
