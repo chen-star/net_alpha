@@ -6,6 +6,8 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
+from loguru import logger
+
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.positions import open_lots_view
 from net_alpha.portfolio.tax_planner import compute_harvest_queue, compute_offset_budget
@@ -194,8 +196,8 @@ def positions_pane(
             # For the set-basis form: single-lot → expose trade_id for the form
             if len(equity_open) == 1:
                 trade_id = equity_open[0].trade_id
-    except Exception:  # noqa: BLE001 — never block the pane render
-        pass
+    except Exception as exc:  # noqa: BLE001 — never block the pane render
+        logger.warning("positions_pane lookup failed for sym={}, account_id={}: {!r}", sym, account_id, exc)
 
     # --- Sim-sell realized delta ---
     realized_delta: Decimal | None = None
