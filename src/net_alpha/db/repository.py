@@ -1439,6 +1439,29 @@ class Repository:
             session.exec(Section1256ClassificationRow.__table__.delete())
             session.commit()
 
+    def delete_violations_by_id(self, violation_ids: list[int]) -> None:
+        """Delete WashSaleViolationRows by primary key. No-op if list is empty."""
+        if not violation_ids:
+            return
+        with Session(self.engine) as s:
+            s.exec(
+                WashSaleViolationRow.__table__.delete().where(
+                    WashSaleViolationRow.id.in_(violation_ids)
+                )
+            )
+            s.commit()
+
+    def set_section_1256_flag(self, trade_ids: list[str]) -> None:
+        """Backfill is_section_1256=True for the given trade IDs (stringified ints)."""
+        if not trade_ids:
+            return
+        int_ids = [int(tid) for tid in trade_ids]
+        with Session(self.engine) as s:
+            from sqlalchemy import text as _text
+            placeholders = ",".join(str(i) for i in int_ids)
+            s.exec(_text(f"UPDATE trades SET is_section_1256=1 WHERE id IN ({placeholders})"))
+            s.commit()
+
     def list_section_1256_classifications(
         self,
         *,

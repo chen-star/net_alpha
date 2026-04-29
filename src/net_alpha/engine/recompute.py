@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
 
 from sqlalchemy import text
@@ -11,6 +12,13 @@ from net_alpha.engine.merge import merge_violations
 from net_alpha.section_1256.classifier import classify_closed_trades
 from net_alpha.section_1256.universe import universe_hash
 from net_alpha.splits.apply import apply_manual_overrides, apply_splits
+
+
+@dataclass
+class MigrationRecomputeSummary:
+    """Counts returned by migrate_existing_violations for user-facing banner."""
+    reclassified_count: int  # Stale §1256 violations converted to ExemptMatch
+    classifications_count: int  # §1256 classifications saved
 
 
 def should_full_recompute(repo: Repository) -> bool:
@@ -120,3 +128,92 @@ def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) 
     # layer on top and take final precedence.
     apply_splits(repo)
     apply_manual_overrides(repo)
+
+
+def migrate_existing_violations(repo: Repository) -> MigrationRecomputeSummary:
+    """One-shot migration pass for DBs upgraded from v10 (pre-§1256 awareness).
+
+    Steps:
+    1. Backfill trades.is_section_1256=True for any §1256 trades whose flag
+       was not set (can happen on DBs predating Task 8's add_import fix, where
+       the column was added with DEFAULT 0 but not retroactively populated).
+    2. Walk every WashSaleViolationRow; if either the loss or replacement trade
+       is §1256, delete the violation and emit a corresponding ExemptMatch.
+    3. Run the §1256 classifier over all closed §1256 trades and persist the
+       classifications.
+    4. Return a MigrationRecomputeSummary with counts for a user-facing banner.
+
+    Idempotent: a second run finds no stale §1256 violations (they were already
+    converted or never existed) and returns zero counts.
+    """
+    from net_alpha.db.tables import WashSaleViolationRow as _VRow
+    from net_alpha.models.domain import ExemptMatch
+    from net_alpha.section_1256.universe import is_section_1256 as _is_1256
+    from sqlmodel import select as _select
+
+    # ---- Step 1: Backfill is_section_1256 flag --------------------------------
+    # Old DBs added the column with DEFAULT 0; trades that were §1256 contracts
+    # (SPX, NDX, etc. options) may have the flag as False. Identify them by
+    # consulting the universe function (YAML I/O) and update the DB column.
+    all_trades = repo.all_trades()
+    to_backfill = [t for t in all_trades if not t.is_section_1256 and _is_1256(t)]
+    if to_backfill:
+        repo.set_section_1256_flag([t.id for t in to_backfill])
+        # Reload so subsequent steps see the updated flag values.
+        all_trades = repo.all_trades()
+
+    # Build a trade-id → Trade index for fast lookup.
+    trade_by_id: dict[str, object] = {t.id: t for t in all_trades}
+
+    # ---- Step 2: Reclassify stale §1256 violations ---------------------------
+    with Session(repo.engine) as session:
+        violation_rows = session.exec(_select(_VRow)).all()
+
+    stale_ids: list[int] = []
+    new_exempt_matches: list[ExemptMatch] = []
+
+    for row in violation_rows:
+        loss = trade_by_id.get(str(row.loss_trade_id))
+        buy = trade_by_id.get(str(row.replacement_trade_id))
+        if loss is None or buy is None:
+            # Orphaned violation — skip (don't reclassify, don't delete).
+            continue
+        if not (loss.is_section_1256 or buy.is_section_1256):
+            # Plain equity wash sale — leave it alone.
+            continue
+
+        stale_ids.append(row.id)
+
+        # Determine representative loss account display
+        loss_account = getattr(loss, "account", "")
+        buy_account = getattr(buy, "account", "")
+
+        new_exempt_matches.append(ExemptMatch(
+            loss_trade_id=str(row.loss_trade_id),
+            triggering_buy_id=str(row.replacement_trade_id),
+            exempt_reason="section_1256",
+            rule_citation="IRC §1256(c)",
+            notional_disallowed=row.disallowed_loss,
+            confidence=row.confidence,
+            matched_quantity=row.matched_quantity,
+            loss_account=loss_account,
+            buy_account=buy_account,
+            loss_sale_date=loss.date,
+            triggering_buy_date=buy.date,
+            ticker=row.ticker or loss.ticker,
+        ))
+
+    repo.delete_violations_by_id(stale_ids)
+    if new_exempt_matches:
+        repo.save_exempt_matches(new_exempt_matches)
+
+    # ---- Step 3: Run §1256 classifier ----------------------------------------
+    all_lots = repo.all_lots()
+    classifications = classify_closed_trades(all_trades, all_lots)
+    if classifications:
+        repo.save_section_1256_classifications(classifications)
+
+    return MigrationRecomputeSummary(
+        reclassified_count=len(stale_ids),
+        classifications_count=len(classifications),
+    )
