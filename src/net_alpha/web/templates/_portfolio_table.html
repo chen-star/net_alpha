@@ -138,7 +138,7 @@
           {{ sort_th('market_value', 'Mkt $', align='r', tooltip='Qty × latest fetched price. — when no price is available. Click to sort.') }}
           {{ sort_th('open_cost', 'Open Cost', align='r', tooltip='Sum of adjusted basis across open lots. Click to sort.') }}
           {{ sort_th('avg_basis', 'Avg Basis', align='r', tooltip='Open Cost ÷ Qty. Per-share book basis after wash-sale adjustments. Click to sort.') }}
-          {{ sort_th('cash_sunk', 'Cash Sunk/sh', align='r', tooltip='(Total Buys − Total Sells, including option premium) ÷ current Qty. Click to sort.') }}
+          {{ sort_th('cash_sunk', 'Cash invested / sh', align='r', tooltip="Net cash you've put in for this position, divided by current shares. Includes wash adjustments.") }}
           {{ sort_th('unrealized', 'Unrealized', align='r', tooltip='Mkt $ − Open Cost on currently open lots. — when no price is available. Click to sort.') }}
           {% if extra_columns is defined %}
             {% if 'days_held' in extra_columns %}<th data-col="days_held" class="r" title="Days since the oldest open lot was acquired.">Days held</th>{% endif %}
