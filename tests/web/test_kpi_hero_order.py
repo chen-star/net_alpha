@@ -34,31 +34,36 @@ def _kpi_slot_order(html: str) -> list[str]:
 
 
 def test_kpi_order_conservative(tmp_path):
-    """Phase 3 C3: fixed 3+4 grid — profile no longer changes slot order."""
+    """Phase 3 C3: fixed 3+3 grid — profile no longer changes slot order.
+    Top row: hero + total_return + cash. Bottom row: realized + unrealized + contributed."""
     client = _seed(tmp_path, "conservative")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    assert order[:3] == ["hero", "today", "cash"]
-    assert order[3:] == ["realized", "unrealized", "contributed", "growth"]
+    assert order[:3] == ["hero", "total_return", "cash"]
+    assert order[3:] == ["realized", "unrealized", "contributed"]
 
 
 def test_kpi_order_active(tmp_path):
-    """Phase 3 C3: fixed 3+4 grid — profile no longer changes slot order."""
+    """Phase 3 C3: fixed 3+3 grid — profile no longer changes slot order.
+    TODAY tile removed; Growth promoted to top row as Total Return."""
     client = _seed(tmp_path, "active")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    # Fixed layout: hero + today + cash (top) + 4 small (bottom)
-    assert order[:3] == ["hero", "today", "cash"]
-    assert order[3:] == ["realized", "unrealized", "contributed", "growth"]
+    # Fixed layout: hero + total_return + cash (top) + 3 small (bottom)
+    assert order[:3] == ["hero", "total_return", "cash"]
+    assert order[3:] == ["realized", "unrealized", "contributed"]
     # wash_impact removed from Portfolio KPI grid entirely (lives on /tax).
     assert "wash_impact" not in order
+    # today and growth slots are gone
+    assert "today" not in order
+    assert "growth" not in order
 
 
 def test_kpi_order_options(tmp_path):
-    """Phase 3 C3: fixed 3+4 grid — profile no longer changes slot order."""
+    """Phase 3 C3: fixed 3+3 grid — profile no longer changes slot order."""
     client = _seed(tmp_path, "options")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    assert order[:3] == ["hero", "today", "cash"]
-    assert order[3:] == ["realized", "unrealized", "contributed", "growth"]
+    assert order[:3] == ["hero", "total_return", "cash"]
+    assert order[3:] == ["realized", "unrealized", "contributed"]
     assert "wash_impact" not in order

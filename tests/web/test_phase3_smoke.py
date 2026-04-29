@@ -71,9 +71,9 @@ def test_phase3_smoke(tmp_path):
     import re
 
     order = re.findall(r'data-kpi-slot="([^"]+)"', kpis)
-    # Phase 3 C3: fixed 3-large + 4-small layout regardless of profile.
-    assert order[:3] == ["hero", "today", "cash"]
-    assert order[3:] == ["realized", "unrealized", "contributed", "growth"]
+    # Phase 3 C3: fixed 3-large + 3-small layout (TODAY removed, Growth → Total Return in top row).
+    assert order[:3] == ["hero", "total_return", "cash"]
+    assert order[3:] == ["realized", "unrealized", "contributed"]
     # wash_impact removed from Portfolio KPI grid entirely (lives on /tax).
     assert "wash_impact" not in order
 
@@ -90,5 +90,5 @@ def test_phase3_smoke(tmp_path):
     # Re-render /portfolio/kpis for Tax -> conservative; fixed layout unchanged.
     kpis2 = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order2 = re.findall(r'data-kpi-slot="([^"]+)"', kpis2)
-    assert order2[:3] == ["hero", "today", "cash"]
-    assert order2[3:] == ["realized", "unrealized", "contributed", "growth"]
+    assert order2[:3] == ["hero", "total_return", "cash"]
+    assert order2[3:] == ["realized", "unrealized", "contributed"]
