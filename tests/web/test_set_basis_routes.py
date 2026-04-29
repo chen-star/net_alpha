@@ -144,3 +144,57 @@ def test_single_lot_fragment_includes_split_link(client: TestClient, seed_transf
     html = resp.text
     assert "Split into multiple lots" in html
     assert f"/audit/set-basis/multi/{trade_id}" in html
+
+
+def test_post_set_basis_multi_splits_into_n_siblings(client: TestClient, repo, seed_transfer_in) -> None:
+    sym, _, trade_id, qty, xfer_date = seed_transfer_in
+    # Split 100 into 25 + 25 + 50.
+    resp = client.post(
+        "/audit/set-basis/multi",
+        params={"caller": "pane"},
+        data={
+            "trade_id": trade_id,
+            "dates": ["2024-03-12", "2024-09-04", "2025-01-08"],
+            "quantities": ["25", "25", "50"],
+            "basises": ["1875.00", "2150.50", "4900.00"],
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    parent = repo.get_trade_by_id(int(trade_id))
+    siblings = repo.get_trades_in_transfer_group(parent.transfer_group_id)
+    assert len(siblings) == 3
+    qtys = sorted(s.quantity for s in siblings)
+    assert qtys == [25.0, 25.0, 50.0]
+
+
+def test_post_set_basis_multi_rejects_qty_sum_mismatch(client: TestClient, seed_transfer_in) -> None:
+    _, _, trade_id, qty, _ = seed_transfer_in
+    # Transferred 100, but rows sum to 80.
+    resp = client.post(
+        "/audit/set-basis/multi",
+        params={"caller": "pane"},
+        data={
+            "trade_id": trade_id,
+            "dates": ["2024-03-12", "2024-09-04"],
+            "quantities": ["30", "50"],
+            "basises": ["1000", "2000"],
+        },
+    )
+    assert resp.status_code == 400
+    assert "sum" in resp.text.lower()
+
+
+def test_post_set_basis_multi_rejects_date_after_transfer(client: TestClient, seed_transfer_in) -> None:
+    _, _, trade_id, _, xfer_date = seed_transfer_in
+    after = (xfer_date + dt.timedelta(days=1)).isoformat()
+    resp = client.post(
+        "/audit/set-basis/multi",
+        params={"caller": "pane"},
+        data={
+            "trade_id": trade_id,
+            "dates": ["2024-03-12", after],
+            "quantities": ["50", "50"],
+            "basises": ["1000", "1000"],
+        },
+    )
+    assert resp.status_code == 400

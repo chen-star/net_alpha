@@ -1149,6 +1149,18 @@ class Repository:
         recompute_all_violations(self, etf_pairs)
         return saved
 
+    def get_trades_in_transfer_group(self, group_id: str | None) -> list[Trade]:
+        """All sibling trades sharing a transfer_group_id, in trade_date order."""
+        if not group_id:
+            return []
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(TradeRow)
+                .where(TradeRow.transfer_group_id == group_id)
+                .order_by(TradeRow.trade_date, TradeRow.id)
+            ).all()
+            return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
     def update_imported_transfer(
         self,
         trade_id: str,
