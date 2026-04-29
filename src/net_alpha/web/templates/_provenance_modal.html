@@ -20,6 +20,7 @@
       {% if trace.trades %}
       <section>
         <h4 class="label-uc">Contributing trades</h4>
+        <div class="overflow-x-auto">
         <table class="net-table text-sm w-full">
           <thead>
             <tr><th>Date</th><th>Account</th><th>Action</th><th class="r">Qty</th>
@@ -40,12 +41,14 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
       </section>
       {% endif %}
 
       {% if trace.adjustments %}
       <section>
         <h4 class="label-uc">Applied adjustments</h4>
+        <div class="overflow-x-auto">
         <table class="net-table text-sm w-full">
           <thead>
             <tr><th>Loss trade</th><th>Replacement</th><th class="r">Rolled $</th>
@@ -63,12 +66,14 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
       </section>
       {% endif %}
 
       {% if trace.cash_events %}
       <section>
         <h4 class="label-uc">Contributing cash events</h4>
+        <div class="overflow-x-auto">
         <table class="net-table text-sm w-full">
           <thead>
             <tr><th>Date</th><th>Account</th><th>Kind</th>
@@ -88,6 +93,7 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
       </section>
       {% endif %}
     </div>

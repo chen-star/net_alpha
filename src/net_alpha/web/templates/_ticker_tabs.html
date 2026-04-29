@@ -9,7 +9,9 @@
     <a href="/ticker/{{ symbol }}?view={{ key }}"
        class="tab{% if (selected_view|default('timeline')) == key %} tab--active{% endif %}"
        role="tab"
-       aria-selected="{{ 'true' if (selected_view|default('timeline')) == key else 'false' }}">
+       id="ticker-tab-{{ key }}"
+       aria-selected="{{ 'true' if (selected_view|default('timeline')) == key else 'false' }}"
+       aria-controls="ticker-tab-content">
       {{ label }}
     </a>
   {% endfor %}

@@ -7,7 +7,7 @@
   {% set _csp_n = csp_count if csp_count is defined and csp_count else 0 %}
   {% set _cash = (cash_kpis.cash_balance|float) if cash_kpis else 0 %}
   {% set _free = _cash - _csp %}
-  <div class="kpi col-span-4" data-kpi-slot="cash">
+  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="cash">
     <div class="label-uc"
          title="{% if _csp > 0 %}Total liquid cash. {{ "{:,.0f}".format(_csp) }} is pledged as collateral for {{ _csp_n }} cash-secured put{% if _csp_n != 1 %}s{% endif %} — your free cash is what's left.{% else %}Total liquid cash in this scope. No CSP collateral pledged.{% endif %}">
       Cash {% if _csp > 0 %}<span class="text-label-2 normal-case">(free / pledged)</span>{% endif %}
@@ -44,7 +44,7 @@
 <div class="grid grid-cols-12 gap-[10px]" data-profile="{{ _profile.profile if _profile else 'active' }}">
 
   {# ── Hero: Total Account Value ─────────────────────────────────────────── #}
-  <div class="kpi kpi-hero col-span-4" data-kpi-slot="hero">
+  <div class="kpi kpi-hero col-span-12 lg:col-span-4" data-kpi-slot="hero">
     <div class="label-uc">TOTAL ACCOUNT VALUE</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if total_account_value is defined and total_account_value is not none %}
@@ -72,7 +72,7 @@
 <div class="grid grid-cols-12 gap-[10px] mt-[10px]">
 
   {# Realized P/L #}
-  <div class="kpi col-span-3" data-kpi-slot="realized">
+  <div class="kpi col-span-6 lg:col-span-3" data-kpi-slot="realized">
     <div class="label-uc">Realized P/L</div>
     <div class="num text-[22px] font-bold mt-2 {% if kpis.period_realized < 0 %}text-neg{% else %}text-pos{% endif %}">
       {% if kpis.period_realized < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized|float|abs) }}{% if metric_refs is defined and metric_refs.realized_period is defined %}{{ provenance_link(metric_refs.realized_period) }}{% endif %}
@@ -81,7 +81,7 @@
   </div>
 
   {# Unrealized P/L #}
-  <div class="kpi col-span-3" data-kpi-slot="unrealized">
+  <div class="kpi col-span-6 lg:col-span-3" data-kpi-slot="unrealized">
     <div class="label-uc">Unrealized P/L</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if kpis.period_unrealized is none %}<span class="text-label-3">—</span>
@@ -93,7 +93,7 @@
   </div>
 
   {# Net Contributed #}
-  <div class="kpi col-span-3" data-kpi-slot="contributed">
+  <div class="kpi col-span-6 lg:col-span-3" data-kpi-slot="contributed">
     <div class="label-uc">Net contributed</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if cash_kpis is defined and cash_kpis %}
@@ -110,7 +110,7 @@
   </div>
 
   {# Growth #}
-  <div class="kpi col-span-3" data-kpi-slot="growth">
+  <div class="kpi col-span-6 lg:col-span-3" data-kpi-slot="growth">
     <div class="label-uc">Growth</div>
     <div class="num text-[22px] font-bold mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
       {% if cash_kpis is defined and cash_kpis %}

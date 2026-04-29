@@ -1,6 +1,7 @@
 {% if gl_lots %}
   <h2 class="text-xl mt-6 mb-2">Schwab Lot Detail (from G/L)</h2>
   <section class="panel mb-6" style="padding:0;">
+    <div class="overflow-x-auto">
     <table class="net-table text-sm">
       <thead>
         <tr>
@@ -33,5 +34,6 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </section>
 {% endif %}

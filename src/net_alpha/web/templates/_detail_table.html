@@ -31,7 +31,8 @@
         </button>
 
         <div x-show="open" x-cloak>
-          <table class="net-table text-sm">
+          <div class="overflow-x-auto">
+          <table class="net-table text-sm min-w-[960px]">
             <thead>
               <tr>
                 <th class="w-28">Loss date</th>
@@ -71,6 +72,7 @@
               {% endfor %}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     {% endfor %}

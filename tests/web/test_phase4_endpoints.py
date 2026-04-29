@@ -23,3 +23,13 @@ def test_reconciliation_variant_badge_returns_short_html(client: TestClient):
     assert r.status_code in (200, 404)
     if r.status_code == 200:
         assert "<html" not in r.text  # badge is a span/badge, no full page
+
+
+def test_ticker_tabs_have_aria_controls(client: TestClient):
+    r = client.get("/ticker/AAPL")
+    assert r.status_code == 200
+    body = r.text
+    assert 'aria-controls="ticker-tab-content"' in body
+    assert 'role="tabpanel"' in body
+    assert 'id="ticker-tab-timeline"' in body
+    assert 'aria-labelledby="ticker-tab-timeline"' in body

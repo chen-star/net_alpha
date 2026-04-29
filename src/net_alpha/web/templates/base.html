@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=1024">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}net-alpha{% endblock %}</title>
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
   <link rel="stylesheet" href="/static/vendor/apexcharts/apexcharts.min.css?v={{ asset_v }}">
@@ -18,7 +18,7 @@
 <body class="min-h-screen flex flex-col bg-bg text-text"
       x-data
       {% if open_settings_tab %}data-open-settings-tab="{{ open_settings_tab }}"{% endif %}>
-  <header class="topbar">
+  <header class="topbar hidden md:flex">
     <div class="flex items-center gap-6">
       <a href="/" class="flex items-center gap-2 no-underline text-text">
         <span class="brand-mark">α</span>
@@ -57,7 +57,10 @@
     </div>
   </header>
 
-  <main class="flex-1 max-w-screen-2xl w-full mx-auto px-5 py-5">
+  <div class="md:hidden px-4 py-6 text-center text-label-2 text-[13px]">
+    net-alpha is desktop-first. Switch to a tablet or larger screen for the full experience.
+  </div>
+  <main class="hidden md:block flex-1 max-w-screen-2xl w-full mx-auto px-5 py-5">
     {% block content %}{% endblock %}
   </main>
 
