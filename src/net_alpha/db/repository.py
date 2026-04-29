@@ -1097,6 +1097,7 @@ class Repository:
             else:
                 row.proceeds = float(first_basis)
             row.transfer_basis_user_set = True
+            row.basis_unknown = False
             row.transfer_group_id = group_id
             row.transfer_date = xfer_date
             s.add(row)
@@ -1194,6 +1195,7 @@ class Repository:
             else:  # transfer_out
                 row.proceeds = new_basis_or_proceeds
             row.transfer_basis_user_set = True
+            row.basis_unknown = False
             # natural_key intentionally untouched.
             s.add(row)
             s.commit()

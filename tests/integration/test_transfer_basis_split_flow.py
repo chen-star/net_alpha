@@ -47,6 +47,8 @@ def test_multi_lot_split_flow_clears_basis_warning(client: TestClient, repo, see
     assert by_date[dt.date(2024, 9, 4)].cost_basis == 2150.50
     assert by_date[dt.date(2025, 1, 8)].quantity == 50.0
     assert by_date[dt.date(2025, 1, 8)].cost_basis == 4900.00
+    # Parent row's basis_unknown should be cleared too (hygiene-checker correctness).
+    assert parent.basis_unknown is False
 
     # 5. Re-render the pane: the basis-missing warning is gone.
     resp = client.get("/positions/pane", params={"sym": sym, "account_id": account_id})
