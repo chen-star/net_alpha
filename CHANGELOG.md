@@ -1,32 +1,319 @@
 # CHANGELOG
 
-## [unreleased] — Tax Correctness 1.0
 
-### Added
-- §1256 contract awareness: broad-based index options (SPX/NDX/RUT/VIX/OEX/XSP/MXEF/MXEA) are now exempt from §1091 wash-sale detection per IRC §1256(c). Bundled in `section_1256_underlyings.yaml`; user can extend via `~/.net_alpha/section_1256_underlyings.yaml`.
-- §1256 60/40 LT/ST classification on closed contracts (`section_1256_classifications` table).
-- Inline-expandable wash-sale and exempt-match explanations (web UI HTMX fragment + CLI `--detail`). Includes rule citation, source trades, match reason, disallowed-amount math, confidence reasoning, adjusted-basis target.
-- `/tax?view=performance` tab — after-tax realized P&L, tax-drag, ST/LT/§1256 mix bar, wash-sale cost line, effective tax rate. Reuses existing `tax:` config plus a new `niit_enabled` toggle.
 
-### Changed
-- `TaxBrackets` model gains `niit_enabled: bool = True`.
-- `DetectionResult` gains `exempt_matches: list[ExemptMatch] = []`.
-- `Trade` model gains `is_section_1256: bool = False`.
+## v0.33.0 (2026-04-29)
 
-### Migration (v10 → v11)
-- New tables: `exempt_matches`, `section_1256_classifications`.
-- New column: `trades.is_section_1256`.
-- One-shot recompute on first launch reclassifies prior wash-sale violations on §1256 contracts as exempt matches; populates §1256 classifications. Banner surfaces counts.
+### Documentation
 
-### Out of Scope
-- Open §1256 position year-end mark-to-market (consult 1099-B / Form 6781).
-- Form 6781 export (deferred to unified tax-export spec).
-- Capital-loss $3K cap and multi-year carryforward modeling.
-- MAGI-based NIIT threshold (assumed exceeded when toggle on).
-- Per-year historical tax brackets (Lifetime period uses current rates).
+* docs: tax correctness 1.0 — §1256 + explainability + after-tax performance
 
-### Rollback
-Not offered. Restore from manual SQLite backup if needed.
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`94185b3`](https://github.com/chen-star/net_alpha/commit/94185b313b13e5285dcace3ea7251951adfb65b3))
+
+* docs(plan): tax correctness 1.0 (P+M+O3) implementation plan
+
+21-task plan with bite-sized TDD steps, full code in every step,
+exact commands and commit messages. Phased: foundation (universe +
+data model + migration), engine changes (detector + classifier +
+recompute), P explainer (templates + violation + exempt + HTMX
+fragment + CLI renderer), M after-tax (niit_enabled + AfterTaxBreakdown
++ /tax?view=performance), wrap-up (e2e test + docs).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`19f0151`](https://github.com/chen-star/net_alpha/commit/19f0151a4f99ac4e5a0b4660e1c06bcd20f74739))
+
+* docs(spec): tax correctness 1.0 — §1256 + explainability + after-tax (P+M+O3)
+
+Brainstormed slice from trader-perspective gap analysis. Bundles three
+tightly-coupled features into one spec because M&#39;s tax-drag math is
+wrong without O3&#39;s 60/40 split, and P needs to render §1256 exemptions
+to be complete.
+
+Covers: ExemptMatch sibling table for §1256 wash-sale exemptions,
+Section1256Classification for closed-trade 60/40 splits, inline-expand
+explanation panels with rule citations and source trades, /tax?view=performance
+panel using existing TaxBrackets config (+ niit_enabled field).
+
+Open §1256 mark-to-market, Form 6781 export, capital-loss carryforward
+modeling, MAGI-based NIIT thresholds, and other O-series rules
+(§1092 straddles, §1259 constructive sale, IRA permanent disallowance,
+spousal/household) explicitly out of scope — caveats documented.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a80f78b`](https://github.com/chen-star/net_alpha/commit/a80f78bd840a3baeb1dd25ba670f9bed67f213ba))
+
+### Feature
+
+* feat(web): tax/performance.html — 4 KPIs + ST/LT/§1256 mix + wash cost + caveats
+
+Replaces Task 18 placeholder with full Tier-2 panel: pre-tax/tax-bill/
+after-tax/drag KPI cards, stacked mix bar with legend, wash-sale impact
+row, effective tax rate, expandable caveats, and disclaimer footer.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`325a912`](https://github.com/chen-star/net_alpha/commit/325a912afe6e02a7d5dacb5430336a1764efe7f0))
+
+* feat(web): /tax?view=performance route uses compute_after_tax
+
+Wire the performance view into the /tax handler: reads tax_brackets_cfg
+from app state, builds a Period from the year param (or YTD), calls
+compute_after_tax, and renders _tax_performance_panel.html. Adds the
+Performance tab to tax.html. Minimal placeholder template satisfies
+the pre-tax / after-tax text assertions; Task 19 will flesh it out.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0acc81b`](https://github.com/chen-star/net_alpha/commit/0acc81bcbf8ccca5206e9ac582f99722eb83c27f))
+
+* feat(portfolio): compute_after_tax + AfterTaxBreakdown (M&#39;s pure compute)
+
+Add Period dataclass, AfterTaxBreakdown Pydantic model, and compute_after_tax
+pure function with 60/40 §1256 split, NIIT toggle, state tax layer, and
+wash-sale marginal-cost calculation. Add three Repository helpers
+(realized_pnl_split, section_1256_pnl, wash_sale_disallowed_total) backed
+by RealizedGLLotRow, Section1256ClassificationRow, and WashSaleViolationRow.
+12/12 unit tests pass; full suite 1013 passed.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`91a34a8`](https://github.com/chen-star/net_alpha/commit/91a34a8110dd9c02e49102e3133b881c798cf679))
+
+* feat(tax_planner): add niit_enabled field to TaxBrackets (default True) ([`bd1309f`](https://github.com/chen-star/net_alpha/commit/bd1309f6ddbc40649f068da35192f4fa82916a4b))
+
+* feat(cli): --detail prints per-violation explanations + §1256 exempt matches
+
+Adds cli_renderer.py with render_explanation() that formats an ExplanationModel
+as a printable ASCII block; wires _print_detail() into the default command&#39;s
+--detail branch to render each WashSaleViolation and §1256 exempt match.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b7b2cba`](https://github.com/chen-star/net_alpha/commit/b7b2cba33644c33f26be2b5cb25639b2c7df8a5e))
+
+* feat(web): wire HTMX inline-expand trigger on wash-sale rows
+
+Each violation row in _detail_table.html now carries hx-get, hx-trigger=&#34;click once&#34;,
+hx-target, hx-swap, and an Alpine @click toggle. A sibling explain &lt;tr&gt; with x-show
+provides the lazy-load target for the /tax/violation/{id}/explain fragment. Rows are
+wrapped per-violation in their own &lt;tbody x-data&gt; so Alpine scope covers both rows.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f391876`](https://github.com/chen-star/net_alpha/commit/f391876daa7e4167105a35bbdd7f6ea5e4eb8685))
+
+* feat(web): HTMX inline-expand explain fragments for violations + exempt matches
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e114a29`](https://github.com/chen-star/net_alpha/commit/e114a29dedbf656d3550e6c6e27ee961b298d40a))
+
+* feat(explain): explain_exempt mirrors explain_violation for ExemptMatch
+
+Pure function explain_exempt() builds ExplanationModel with is_exempt=True
+and adjusted_basis_target=None for §1256 exempt matches; re-exported from
+net_alpha.explain.__init__.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bb7eed4`](https://github.com/chen-star/net_alpha/commit/bb7eed4eb664b5d4852de509514f075526fdc795))
+
+* feat(explain): explain_violation + ExplanationModel
+
+Pure function that builds a structured ExplanationModel from a
+WashSaleViolationRow, covering exact-ticker, ETF-pair, and option-chain
+matches with cross-account detection and partial-wash-sale math strings.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1eab8fc`](https://github.com/chen-star/net_alpha/commit/1eab8fc484d922e56f20cc8ea4b4b17ffd34b3ae))
+
+* feat(explain): rule citations, match-reason, disallowed-math, confidence-reason templates
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`dd941b1`](https://github.com/chen-star/net_alpha/commit/dd941b180a8b31094177d4c28efaf36d1d75510f))
+
+* feat(engine): one-shot migration recompute reclassifies stale §1256 violations
+
+Adds migrate_existing_violations() to engine/recompute.py: backfills
+trades.is_section_1256 for legacy rows with DEFAULT 0, converts any
+WashSaleViolationRows referencing §1256 contracts into ExemptMatch
+records, runs the §1256 60/40 classifier, and returns a
+MigrationRecomputeSummary with counts for a user-facing banner.
+
+Wires the one-shot pass into init_db() (connection.py) behind a meta
+key guard (section_1256_migration_done) so it runs exactly once per
+DB after upgrade from v10. Adds repository helpers delete_violations_by_id
+and set_section_1256_flag. Six new integration tests cover reclassification,
+no-op on equity violations, flag backfill, idempotency, and classifier output.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c5f610a`](https://github.com/chen-star/net_alpha/commit/c5f610ac3f51d45ab76be48f3d043bc3c90cf1cc))
+
+* feat(engine): recompute persists ExemptMatch + §1256 classifications; universe-hash trigger
+
+- Add recompute_all(repo) orchestrator: runs wash-sale detection, persists
+  ExemptMatch records, runs §1256 classifier and persists classifications,
+  then stamps the universe hash.
+- Add should_full_recompute(repo) -&gt; bool: compares stored meta hash against
+  current bundled+user universe hash; returns True when stale.
+- Add _stamp_universe_hash(repo) private helper.
+- Fix add_import and _row_to_trade to round-trip is_section_1256 through
+  the DB (was missing, causing trades loaded from DB to always have
+  is_section_1256=False, silently breaking exempt-match detection).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b923965`](https://github.com/chen-star/net_alpha/commit/b9239652ed5b375e04763e41ac87d920eb3a8bec))
+
+* feat(section_1256): 60/40 classifier for closed §1256 trades
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`93538bc`](https://github.com/chen-star/net_alpha/commit/93538bcb71a522ccaf7aa4cbfe69ac7a40688167))
+
+* feat(engine): emit ExemptMatch for §1256 contracts (Approach 2)
+
+When either side of a candidate wash-sale match is a §1256 contract
+(trade.is_section_1256 == True), the detector now emits ExemptMatch
+instead of WashSaleViolation and does not adjust replacement-lot basis.
+Applies to both detect_wash_sales and detect_in_window.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7252a53`](https://github.com/chen-star/net_alpha/commit/7252a53509047125436a27582f8e50a7d3d2ff82))
+
+* feat(db): repository methods for ExemptMatch + Section1256Classification
+
+Add save/clear/list methods for ExemptMatch and Section1256Classification
+to Repository, with int() FK conversions mirroring _violation_to_row.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bec906e`](https://github.com/chen-star/net_alpha/commit/bec906ed6886a5d4062455b6ec08410edf123972))
+
+* feat(db): migration v10→v11 — exempt_matches + section_1256_classifications + is_section_1256
+
+- Add _migrate_v10_to_v11: creates exempt_matches table (INTEGER FKs),
+  section_1256_classifications table, adds trades.is_section_1256 column,
+  stamps section_1256_universe_hash and wash_sale_engine_version meta rows.
+- Add preflight column-ensure at top of migrate() so SQLModel ORM SELECTs
+  (used in intermediate migration steps like v1→v2 backfill) always work
+  even when DB hasn&#39;t reached v11 yet — fixes 6 pre-existing test failures.
+- Bump CURRENT_SCHEMA_VERSION 10 → 11.
+- Add tests/db/test_migration_v11.py (5 new tests, all passing).
+- Update version assertions in test_migration_v1_v2.py and test_migrations.py.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5f4e5a0`](https://github.com/chen-star/net_alpha/commit/5f4e5a083cafd6fed5184693cab37d64e7278b24))
+
+* feat(db): row tables for ExemptMatch + Section1256Classification + TradeRow.is_section_1256
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`db3906e`](https://github.com/chen-star/net_alpha/commit/db3906ea50f0571b2f85ee6bf81204f1a4c8a822))
+
+* feat(models): ExemptMatch + Section1256Classification + Trade.is_section_1256
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`64cb032`](https://github.com/chen-star/net_alpha/commit/64cb032d718c4664a4bf062ce755ce62708da8cc))
+
+* feat(section_1256): bundled universe + is_section_1256 detection ([`895ab32`](https://github.com/chen-star/net_alpha/commit/895ab3221c85628a2bdb21133ba0f97193dbcc3d))
+
+### Fix
+
+* fix(web): surface ExemptMatch on wash-sales tab + valid HTMX target (C4, I1)
+
+C4: _detail_table.html renders a §1256 Exempt Matches section after the
+violations table when exempt_matches is non-empty. wash_sales.py passes
+exempt_matches into the table-view context (filtered by same ticker/account/year).
+
+I1: Move explain-row id from &lt;tr&gt; to &lt;td colspan=&#34;8&#34;&gt; so HTMX innerHTML
+swap inserts into a valid container — a &lt;div&gt; inside a bare &lt;tr&gt; is
+hoisted out of the table by browsers. Applied to both violation and exempt
+match rows. hx-target updated to point directly to the &lt;td id&gt;.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`57213f2`](https://github.com/chen-star/net_alpha/commit/57213f23e1bdbe26fd67eb0c39d461b5fe7260b4))
+
+* fix(engine): persist ExemptMatch + classifications in recompute_all_violations (C2, C3)
+
+C2: Fold exempt-match persistence and §1256 classifier invocation into
+recompute_all_violations so the production recompute path is complete.
+recompute_all() becomes a thin wrapper that auto-loads ETF pairs.
+
+C3: should_full_recompute() now checks both the universe hash AND the
+wash_sale_engine_version meta key, triggering a full recompute on binary
+upgrades. _stamp_universe_hash() also stamps the engine version.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c05a8f5`](https://github.com/chen-star/net_alpha/commit/c05a8f592cb8eeaa7dbcf0da8a3e8841f7f452fb))
+
+* fix(db): set Trade.is_section_1256 in add_import (C1: was always False on import)
+
+Auto-detect §1256 status via is_section_1256() when the broker parser
+does not set the flag explicitly. Respects any explicit True already on
+the trade object.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2bb8f66`](https://github.com/chen-star/net_alpha/commit/2bb8f66408fc10d21e9b497fbf5e92eb5ee8dc53))
+
+* fix(db): exclude §1256 from realized_pnl_split to avoid double-count with section_1256_pnl ([`f38da33`](https://github.com/chen-star/net_alpha/commit/f38da3326ad9a790b8cccf75676b8a470a3e8a51))
+
+* fix(explain): use Repository.get_trade_by_id (was nonexistent get_trade) ([`0bbe21b`](https://github.com/chen-star/net_alpha/commit/0bbe21b1019286333553b3f0f747cb3fa5b60ecd))
+
+* fix(db,engine): use bindparams + ORM update; replace typer.echo with print in db layer
+
+- connection.py: convert f-string SQL in _migration_1256_done and _stamp_migration_1256_done to bindparams; remove typer import and replace typer.echo with plain print
+- repository.py: rewrite set_section_1256_flag to use ORM table.update().where().values() pattern matching delete_violations_by_id; signature changed to list[int]
+- recompute.py: cast Trade.id to int at set_section_1256_flag call site; add idempotency invariant comments for exempt-match save and classifier save steps; ruff-fixed import sort
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d651d0a`](https://github.com/chen-star/net_alpha/commit/d651d0a93939a959bc5e655a232e7d120f63eb1c))
+
+* fix(engine): stamp universe hash only when recompute ran; add is_section_1256 round-trip test
+
+Move _stamp_universe_hash inside the `if all_dates:` guard so an empty-DB
+call to recompute_all does not lock out should_full_recompute when trades
+are added later. Add focused add_import → all_trades round-trip test for
+the is_section_1256 field to give direct coverage of the repository fix.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`25b0471`](https://github.com/chen-star/net_alpha/commit/25b0471d179d5030c5cfc1524d3c561b650dbc1e))
+
+* fix(section_1256): classifier uses is_sell() predicate (was lowercase string compare)
+
+Real broker-imported trades have action=&#34;Sell&#34; (title case); the hard-coded
+`!= &#34;sell&#34;` guard silently skipped every real §1256 sell. Switch to the
+existing `Trade.is_sell()` casing-insensitive predicate. Update test fixtures
+to use title-case actions matching production broker output; remove unused
+`import pytest`.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c956484`](https://github.com/chen-star/net_alpha/commit/c956484094efc9804df730234e98db65fafaf003))
+
+* fix(db): repository fixups — account filter consistency, RuntimeError catch, cascade delete on remove_import
+
+- list_exempt_matches: `if account:` → `if account is not None:` to match rest of file
+- list_section_1256_classifications: replace dead `acct_id is not None` branch with try/except RuntimeError, returning [] on unknown account (safe for user-controlled filter values in web layer)
+- remove_import: cascade-delete ExemptMatchRow (loss_trade_id OR triggering_buy_id) and Section1256ClassificationRow (trade_id) so no orphaned rows persist after import removal
+- tests: 2 new filter-path tests (account subset + unknown account → []) bringing file to 6 tests
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4c6c88a`](https://github.com/chen-star/net_alpha/commit/4c6c88a2f5d6c04cd43696778b64d8883d21a1f4))
+
+* fix(db): stamp §1256 meta keys on fresh DB init (was upgrade-only)
+
+Extract _stamp_section_1256_meta() helper and call it from both the
+fresh-DB branch of migrate() and _migrate_v10_to_v11, so a new install
+gets section_1256_universe_hash + wash_sale_engine_version in meta.
+Also changes hardcoded &#39;11&#39; to str(CURRENT_SCHEMA_VERSION) for
+extensibility. Adds regression test test_fresh_db_stamps_section_1256_meta_keys.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2fa724b`](https://github.com/chen-star/net_alpha/commit/2fa724b83c35b59c894c30ac4cbfa912350b5e65))
+
+* fix(test): remove unused imports flagged by ruff F401 ([`6a0c1c1`](https://github.com/chen-star/net_alpha/commit/6a0c1c1605cd21253b33f6ae4320e08a87f2b731))
+
+### Test
+
+* test(integration): real production-path test for §1256 auto-detection + persistence
+
+3 tests covering:
+- add_import auto-detects is_section_1256 (no explicit flag set)
+- recompute_all_violations persists exempt matches and classifications
+- recompute_all_violations stamps universe hash + engine version in meta
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`afc36ca`](https://github.com/chen-star/net_alpha/commit/afc36ca52bc128105e6d50124e78aae6adfc9164))
+
+* test(integration): end-to-end §1256 recognition + ETF pair preservation
+
+Adds a golden end-to-end integration test that seeds synthetic trades, runs
+recompute_all, and asserts the full expected mix: 2 regular wash-sale violations
+(TSLA confirmed, SPY/VOO ETF-pair unclear), 1 ExemptMatch for the §1256 SPX
+call pair, and 1 Section1256Classification with correct 60/40 LT/ST split on
+the closed SPX 5000C profit trade.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d7097ad`](https://github.com/chen-star/net_alpha/commit/d7097ad2a31310a6a4b3cc17b3bc692c015223ec))
+
+* test(explain): cover fallback branches in templates ([`3aaaf5a`](https://github.com/chen-star/net_alpha/commit/3aaaf5a14e0554f82e2b2561715af553d5e2f186))
+
+* test(engine): cover §1256 candidate-only flag + detect_in_window exempt path
+
+Replace misnamed test_mixed_spx_loss_spy_buy_emits_exempt_match (which
+was a SPX→SPX duplicate) with test_candidate_only_section_1256_still_emits_exempt,
+exercising the candidate-arm of the `loss_sale.is_section_1256 or candidate.is_section_1256`
+branch with asymmetric flags. Add two detect_in_window tests: one asserting
+the §1256 exempt match is included when both trades fall inside the window,
+and one asserting it is excluded when both fall outside.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a8740f0`](https://github.com/chen-star/net_alpha/commit/a8740f050cfc3f25d144e35239e26c68f53a5b9e))
+
+### Unknown
+
+* Merge branch &#39;feature/tax-correctness-pmo3&#39; — Tax Correctness 1.0 (P+M+O3) ([`d8173ce`](https://github.com/chen-star/net_alpha/commit/d8173ced8fed0b5424d4782b5f113b759e2ff00e))
+
+* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`6247493`](https://github.com/chen-star/net_alpha/commit/6247493b5371dc8b255e108efe63c888be33ed9d))
 
 
 ## v0.32.1 (2026-04-29)
