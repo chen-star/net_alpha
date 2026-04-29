@@ -47,11 +47,19 @@
                 <th class="w-32">Source</th>
               </tr>
             </thead>
-            <tbody>
-              {% for v in g.violations %}
-                {% set lag = lag_days(v) %}
-                {% set src = source_label(v) %}
-                <tr class="hover:bg-surface-2">
+            {% for v in g.violations %}
+              {% set lag = lag_days(v) %}
+              {% set src = source_label(v) %}
+              {# Each violation gets its own <tbody> so Alpine x-data scopes
+                 correctly over both the data row and the explain row. #}
+              <tbody x-data="{ open: false }">
+                <tr id="violation-{{ v.id }}"
+                    @click="open = !open"
+                    hx-get="/tax/violation/{{ v.id }}/explain"
+                    hx-trigger="click once"
+                    hx-target="#violation-{{ v.id }}-explain"
+                    hx-swap="innerHTML"
+                    class="hover:bg-surface-2 cursor-pointer">
                   <td class="px-3 py-2 font-mono">{{ v.loss_sale_date or "—" }}</td>
                   <td class="px-3 py-2">{{ v.loss_account or "—" }} → {{ v.buy_account or "—" }}</td>
                   <td class="px-3 py-2 font-mono">{{ v.triggering_buy_date or "—" }}</td>
@@ -69,8 +77,11 @@
                     {% endif %}
                   </td>
                 </tr>
-              {% endfor %}
-            </tbody>
+                <tr id="violation-{{ v.id }}-explain" x-show="open" x-cloak>
+                  <td colspan="8" class="p-0"></td>
+                </tr>
+              </tbody>
+            {% endfor %}
           </table>
           </div>
         </div>
