@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 
 
 def test_sim_post_sell_without_account_returns_inline_error(client: TestClient):
-    """S3: action=Sell with empty account yields an inline error, not a 500."""
+    """S3: action=Sell with empty account yields an inline error fragment,
+    not a full-page swap (review C3)."""
     resp = client.post(
         "/sim",
         data={
@@ -17,9 +18,19 @@ def test_sim_post_sell_without_account_returns_inline_error(client: TestClient):
             "trade_date": "2026-04-28",
             # NO account
         },
+        headers={"HX-Request": "true"},
     )
-    assert resp.status_code in (200, 400, 422)
-    assert "account is required" in resp.text.lower() or "required for sell" in resp.text.lower()
+    assert resp.status_code == 200
+    html = resp.text
+    # Error message present
+    assert "account is required" in html.lower() or "required for sell" in html.lower()
+    # Response is a partial (no full HTML document)
+    assert "<html" not in html.lower(), "error response is a full page, not a partial"
+    assert "<!DOCTYPE" not in html, "error response is a full page, not a partial"
+    # Bytes are small (under 2KB)
+    assert len(html) < 2000, f"error response is {len(html)} bytes — should be a small fragment"
+    # OOB swap directive is present
+    assert "hx-swap-oob" in html
 
 
 def test_sim_post_buy_without_account_succeeds(client: TestClient):

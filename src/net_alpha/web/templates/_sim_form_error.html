@@ -1,0 +1,6 @@
+{# OOB swap for sim form validation errors. The route returns this
+   fragment with hx-swap-oob targeting #sim-form-error so the swap
+   lands next to the account select, not in the result panel. #}
+<div id="sim-form-error" hx-swap-oob="true" class="text-neg text-[12px] mt-1" data-testid="sim-form-error">
+  {{ message }}
+</div>

@@ -279,9 +279,9 @@ def _check_tax_config_missing(settings: Settings) -> list[HygieneIssue]:
             detail=(
                 "The year-end tax projection on the Tax page is disabled until "
                 "you fill in your filing status and rates. Open the Tax page "
-                "→ Projection tab for a copy-paste config snippet. The harvest "
-                "queue, offset budget, and trade traffic light still work "
-                "without it."
+                "→ Projection tab to set your filing status and rates inline. "
+                "The harvest queue, offset budget, and trade traffic light "
+                "still work without it."
             ),
             fix_url="/tax?view=projection",
             fix_form=None,
