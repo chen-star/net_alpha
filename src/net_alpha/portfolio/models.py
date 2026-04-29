@@ -207,7 +207,8 @@ class CashFlowKPIs:
     """Single-shot summary used by the Portfolio KPI strip."""
 
     cash_balance: Decimal
-    net_contributions: Decimal
+    net_contributions: Decimal  # lifetime cumulative — used by growth math
+    period_net_contributions: Decimal  # period-bounded — matches the provenance modal on the KPI card
     holdings_value: Decimal
     account_value: Decimal
     growth: Decimal

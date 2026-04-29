@@ -145,6 +145,41 @@ def test_kpis_simple_deposit_and_holdings():
     assert kpi.cash_share_pct == Decimal("0.8")  # 1000/1250
 
 
+def test_kpis_period_net_contributions_excludes_pre_period_transfers():
+    """Regression: the YTD KPI card was leaking lifetime contributions because
+    `compute_cash_kpis` returned `series[-1].cumulative_contributions`, which
+    folds pre-period events into the running total. The card displayed next to
+    the provenance modal must match the modal (in-period transfers only)."""
+    events = [
+        _ev(dt.date(2025, 6, 1), "transfer_in", 31000.0),  # pre-period
+        _ev(dt.date(2026, 2, 3), "transfer_in", 750.0),
+        _ev(dt.date(2026, 3, 24), "transfer_in", 500.0),
+    ]
+    kpi = compute_cash_kpis(
+        events=events,
+        trades=[],
+        holdings_value=Decimal("0"),
+        account=None,
+        period=(2026, 2027),  # YTD 2026
+    )
+    # Lifetime cumulative — used by growth math, unchanged.
+    assert kpi.net_contributions == Decimal("32250")
+    # Period-bounded — what the card and the provenance modal both show.
+    assert kpi.period_net_contributions == Decimal("1250")
+
+
+def test_kpis_period_net_contributions_equals_lifetime_when_no_period():
+    events = [_ev(dt.date(2026, 3, 4), "transfer_in", 1000.0)]
+    kpi = compute_cash_kpis(
+        events=events,
+        trades=[],
+        holdings_value=Decimal("0"),
+        account=None,
+        period=None,
+    )
+    assert kpi.period_net_contributions == kpi.net_contributions == Decimal("1000")
+
+
 def test_kpis_growth_pct_none_when_no_contributions():
     events = [_ev(dt.date(2026, 3, 4), "dividend", 4.47)]
     kpi = compute_cash_kpis(

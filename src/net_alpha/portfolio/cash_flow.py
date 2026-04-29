@@ -134,6 +134,22 @@ def compute_cash_kpis(
         cash = Decimal("0")
         contrib = Decimal("0")
 
+    # Period-bounded contributions: only transfer events whose date falls inside
+    # the active period window. Matches the provenance modal so the KPI card
+    # reads the same number the user sees when they drill in.
+    if period is None:
+        period_contrib = contrib
+    else:
+        period_start = dt.date(period[0], 1, 1)
+        period_end_excl = dt.date(period[1], 1, 1)
+        period_contrib = Decimal("0")
+        for e in events:
+            if account is not None and e.account != account:
+                continue
+            if not (period_start <= e.event_date < period_end_excl):
+                continue
+            period_contrib += _event_contrib_delta(e)
+
     account_value = cash + holdings_value
     growth = account_value - contrib
     growth_pct: Decimal | None = (growth / contrib) if contrib != 0 else None
@@ -141,6 +157,7 @@ def compute_cash_kpis(
     return CashFlowKPIs(
         cash_balance=cash,
         net_contributions=contrib,
+        period_net_contributions=period_contrib,
         holdings_value=holdings_value,
         account_value=account_value,
         growth=growth,

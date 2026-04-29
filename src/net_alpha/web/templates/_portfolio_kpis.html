@@ -97,10 +97,10 @@
     <div class="label-uc">Net contributed</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if cash_kpis is defined and cash_kpis %}
-        {% if cash_kpis.net_contributions < 0 %}
-          <span class="text-neg">−${{ "%.2f"|format(cash_kpis.net_contributions|float|abs) }}</span>
+        {% if cash_kpis.period_net_contributions < 0 %}
+          <span class="text-neg">−${{ "%.2f"|format(cash_kpis.period_net_contributions|float|abs) }}</span>
         {% else %}
-          ${{ "%.2f"|format(cash_kpis.net_contributions|float) }}
+          ${{ "%.2f"|format(cash_kpis.period_net_contributions|float) }}
         {% endif %}{% if metric_refs is defined and metric_refs.net_contributed_period is defined %}{{ provenance_link(metric_refs.net_contributed_period) }}{% endif %}
       {% else %}
         <span class="text-label-3">—</span>
