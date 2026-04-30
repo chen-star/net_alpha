@@ -1,0 +1,12 @@
+{# Inputs: chips (list[SimSuggestion]) #}
+{% if chips %}
+<div class="flex flex-wrap gap-2 mb-3">
+  {% for c in chips %}
+  <a href="/sim?ticker={{ c.ticker }}&qty={{ c.qty }}&price={{ c.price }}&action={{ c.action }}{% if c.account %}&account={{ c.account|urlencode }}{% endif %}"
+     class="chip-{% if c.kind == 'wash_risk' %}confirm{% elif c.kind == 'largest_loss' %}probable{% elif c.kind == 'largest_gain' %}unclear{% else %}unclear{% endif %} text-[12px] cursor-pointer hover:opacity-80"
+     title="One-click prefill — runs against the simulator with these values">
+    {{ c.label }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}

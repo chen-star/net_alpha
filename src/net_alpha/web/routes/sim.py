@@ -152,3 +152,92 @@ def sim_run(
         "_sim_sell_result.html",
         {"options": options, "ticker": ticker.upper(), "signal": signal},
     )
+
+
+@router.get("/sim/suggestions", response_class=HTMLResponse)
+def sim_suggestions(
+    request: Request,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Up to three chips for the /sim page: largest loss, wash-sale risk, largest gain.
+
+    Empty portfolio falls back to a single demo chip.
+    """
+    from datetime import date, timedelta
+
+    from net_alpha.portfolio.sim_suggestions import (
+        LossClose,
+        Position,
+        top_suggestions,
+    )
+
+    today = date.today()
+
+    # Aggregate open lots by (account, symbol) — equity only.
+    lots = repo.all_lots()
+    by_key: dict[tuple[str, str], list] = {}
+    for lot in lots:
+        if lot.option_details is not None:
+            continue
+        by_key.setdefault((lot.account, lot.ticker), []).append(lot)
+
+    symbols = sorted({k[1] for k in by_key.keys()})
+    quotes = pricing.get_prices(symbols) if symbols else {}
+
+    positions: list[Position] = []
+    for (account, symbol), lot_list in by_key.items():
+        qty = sum((Decimal(str(lot.quantity)) for lot in lot_list), Decimal("0"))
+        if qty <= 0:
+            continue
+        basis = sum(
+            (Decimal(str(lot.adjusted_basis)) for lot in lot_list), Decimal("0")
+        )
+        q = quotes.get(symbol)
+        if q is None or q.price is None:
+            continue
+        positions.append(
+            Position(
+                symbol=symbol,
+                account_label=account,
+                qty=qty,
+                cost_basis=basis,
+                last_price=Decimal(str(q.price)),
+            )
+        )
+
+    # Recent loss closes — last 30 days, equity only.
+    losses: list[LossClose] = []
+    for t in repo.all_trades():
+        if t.action.lower() not in {"sell", "sell to close"}:
+            continue
+        if t.proceeds is None or t.cost_basis is None:
+            continue
+        if t.option_details is not None:
+            continue
+        if (today - t.date).days > 30:
+            continue
+        pnl = Decimal(str(t.proceeds)) - Decimal(str(t.cost_basis))
+        if pnl >= 0:
+            continue
+        q = quotes.get(t.ticker)
+        last = (
+            Decimal(str(q.price)) if q is not None and q.price is not None else Decimal("0")
+        )
+        losses.append(
+            LossClose(
+                symbol=t.ticker,
+                account_label=t.account,
+                closed_on=t.date,
+                loss=pnl,
+                lockout_clear=t.date + timedelta(days=30),
+                last_price=last,
+            )
+        )
+
+    chips = top_suggestions(positions, losses, today=today)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_sim_suggestions.html",
+        {"chips": chips},
+    )
