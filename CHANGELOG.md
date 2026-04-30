@@ -2,6 +2,25 @@
 
 
 
+## v0.35.1 (2026-04-30)
+
+### Fix
+
+* fix(web): positions UI fixes — overshoot bar, table styling, options dup
+
+- Plan tab + Positions Target column: when % filled &gt; 100, render the bar
+  fully filled with a green &#34;target met&#34; segment + red &#34;over&#34; segment
+  proportional to the overshoot, instead of capping width at 100%.
+- Closed and At-loss tables: replace undefined `data-table` class with the
+  existing `panel`+`net-table` styling so rows have proper padding,
+  hairlines, and aligned numeric columns.
+- Options tab: drop the duplicate `holdings-short-options` panel —
+  `/holdings/short-options` is a backwards-compat alias for
+  `/holdings/options`, so the same long+short table was rendering twice.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9caca5e`](https://github.com/chen-star/net_alpha/commit/9caca5eef3481587e189d95452cce0fe3fc08dd8))
+
+
 ## v0.35.0 (2026-04-30)
 
 ### Documentation
