@@ -24,3 +24,33 @@ def test_holdings_thead_is_sticky():
                     end = html.find(">", idx)
                     open_tag = html[idx:end]
                     assert "sticky" in open_tag, f"view={view} thead not sticky: {open_tag!r}"
+
+
+def test_holdings_tabs_include_options_and_stocks():
+    with tempfile.TemporaryDirectory() as d:
+        s = Settings(data_dir=pathlib.Path(d))
+        app = create_app(s)
+        with TestClient(app) as c:
+            r = c.get("/positions")
+        html = r.text
+        # Tab links to options and stocks views must be present.
+        assert "view=options" in html, "Options tab missing"
+        assert "view=stocks" in html, "Stocks tab missing"
+
+
+def test_holdings_options_view_returns_200():
+    with tempfile.TemporaryDirectory() as d:
+        s = Settings(data_dir=pathlib.Path(d))
+        app = create_app(s)
+        with TestClient(app) as c:
+            r = c.get("/positions?view=options")
+        assert r.status_code == 200
+
+
+def test_holdings_stocks_view_returns_200():
+    with tempfile.TemporaryDirectory() as d:
+        s = Settings(data_dir=pathlib.Path(d))
+        app = create_app(s)
+        with TestClient(app) as c:
+            r = c.get("/positions?view=stocks")
+        assert r.status_code == 200
