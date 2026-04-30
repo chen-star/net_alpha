@@ -1,12 +1,10 @@
-{# Options-only — Phase 1 shows just the open options panel via HTMX. #}
+{# Options tab — single unified panel covering long + short options.
+   /holdings/short-options is a backwards-compat alias for /holdings/options
+   so we only render one fragment here to avoid duplicate tables. #}
 {% if not imports %}
   {% include "_portfolio_empty_state.html" %}
 {% else %}
   <div id="holdings-options" class="panel"
        hx-get="/holdings/options?account={{ selected_account }}"
-       hx-trigger="load" hx-swap="innerHTML"></div>
-
-  <div id="holdings-short-options" class="panel mt-4"
-       hx-get="/holdings/short-options?account={{ selected_account }}"
        hx-trigger="load" hx-swap="innerHTML"></div>
 {% endif %}

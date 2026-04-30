@@ -20,19 +20,19 @@
     </div>
   </div>
 
-  <div class="overflow-x-auto">
-    <table class="data-table w-full min-w-[960px]">
+  <div class="panel overflow-x-auto" style="padding:0;">
+    <table class="net-table min-w-[960px]">
       <thead>
         <tr>
-          <th>SYMBOL</th>
-          <th>ACCT</th>
-          <th class="text-right">QTY</th>
-          <th class="text-right">BASIS</th>
-          <th class="text-right">PROCEEDS</th>
-          <th class="text-right">REALIZED</th>
-          <th>OPENED</th>
-          <th>CLOSED</th>
-          <th>HOLDING</th>
+          <th>Symbol</th>
+          <th>Acct</th>
+          <th class="r">Qty</th>
+          <th class="r">Basis</th>
+          <th class="r">Proceeds</th>
+          <th class="r">Realized</th>
+          <th>Opened</th>
+          <th>Closed</th>
+          <th>Holding</th>
         </tr>
       </thead>
       <tbody>
@@ -52,17 +52,17 @@
             <tr>
               <td class="font-semibold">{{ row.display_symbol }}</td>
               <td class="text-label-2">{{ row.account }}</td>
-              <td class="text-right">{{ fmt_quantity(row.qty) }}</td>
-              <td class="text-right">{{ fmt_currency(row.cost_basis) }}</td>
-              <td class="text-right">{{ fmt_currency(row.proceeds) }}</td>
-              <td class="text-right {% if row.realized_pl < 0 %}text-neg{% elif row.realized_pl > 0 %}text-pos{% else %}text-label-2{% endif %}">
+              <td class="r num">{{ fmt_quantity(row.qty) }}</td>
+              <td class="r num">{{ fmt_currency(row.cost_basis) }}</td>
+              <td class="r num">{{ fmt_currency(row.proceeds) }}</td>
+              <td class="r num {% if row.realized_pl < 0 %}text-neg{% elif row.realized_pl > 0 %}text-pos{% else %}text-label-2{% endif %}">
                 {% if row.realized_pl > 0 %}+{% endif %}{{ fmt_currency(row.realized_pl) }}
                 {% if row.wash_sale %}
                   <span class="chip chip-confirm ml-1" title="Wash sale: {{ fmt_currency(row.disallowed_loss) }} disallowed">W</span>
                 {% endif %}
               </td>
-              <td class="text-label-2">{{ fmt_date(row.opened_date) }}</td>
-              <td class="text-label-2">{{ fmt_date(row.closed_date) }}</td>
+              <td class="text-label-2 num">{{ fmt_date(row.opened_date) }}</td>
+              <td class="text-label-2 num">{{ fmt_date(row.closed_date) }}</td>
               <td class="text-label-2">{{ "LT" if row.term == "Long Term" else "ST" }}</td>
             </tr>
           {% endfor %}

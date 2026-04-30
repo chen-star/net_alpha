@@ -42,18 +42,18 @@
     </form>
   </div>
 
-  <div class="overflow-x-auto">
-    <table class="data-table w-full">
+  <div class="panel overflow-x-auto" style="padding:0;">
+    <table class="net-table min-w-[820px]">
       <thead>
         <tr>
-          <th>SYM</th>
-          <th>ACCT</th>
-          <th class="text-right">QTY</th>
-          <th class="text-right">MKT</th>
-          <th class="text-right">BASIS</th>
-          <th class="text-right">UNREAL</th>
-          <th>LOCKOUT-CLEAR</th>
-          <th>REPLACEMENT</th>
+          <th>Sym</th>
+          <th>Acct</th>
+          <th class="r">Qty</th>
+          <th class="r">Mkt</th>
+          <th class="r">Basis</th>
+          <th class="r">Unreal</th>
+          <th>Lockout-clear</th>
+          <th>Replacement</th>
           <th class="w-10"></th>
         </tr>
       </thead>
@@ -71,13 +71,13 @@
                 @click.stop="$dispatch('open-positions-pane', { sym: '{{ row.symbol }}', account_id: {{ row.account_id }} })">
               <td class="font-semibold">{{ row.symbol }}</td>
               <td class="text-label-2">{{ row.account_label }}</td>
-              <td class="text-right">{{ fmt_quantity(row.qty) }}</td>
-              <td class="text-right">{{ fmt_currency(row.open_basis + row.loss) }}</td>
-              <td class="text-right">{{ fmt_currency(row.open_basis) }}</td>
-              <td class="text-right text-loss">{{ fmt_currency(row.loss) }}</td>
+              <td class="r num">{{ fmt_quantity(row.qty) }}</td>
+              <td class="r num">{{ fmt_currency(row.open_basis + row.loss) }}</td>
+              <td class="r num">{{ fmt_currency(row.open_basis) }}</td>
+              <td class="r num text-loss">{{ fmt_currency(row.loss) }}</td>
               <td>
                 {% if row.lockout_clear and row.lockout_clear > today %}
-                  {{ fmt_date(row.lockout_clear) }}
+                  <span class="num">{{ fmt_date(row.lockout_clear) }}</span>
                 {% else %}
                   <span class="text-success">clear</span>
                 {% endif %}
