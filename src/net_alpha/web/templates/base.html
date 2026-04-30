@@ -51,6 +51,8 @@
         {% if _badge > 0 %}
           <span data-testid="settings-gear-dot"
                 class="absolute top-1 right-1 w-2 h-2 rounded-full bg-warn"
+                aria-label="{{ _badge }} imports"
+                title="{{ _badge }} imports"
                 aria-hidden="true"></span>
         {% endif %}
       </button>
