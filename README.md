@@ -39,13 +39,16 @@ The problem compounds when you trade **options** alongside stocks, or **ETFs** t
 
 ## 🌟 Key Features
 
-- **📂 Bundled Broker Parsers:** Schwab CSV is supported out of the box. Other brokers can be added by contributing a parser — no configuration needed for supported formats.
+- **📂 Bundled Broker Parsers:** Schwab transactions + Schwab Realized G/L are supported out of the box. Other brokers can be added by contributing a parser — no configuration needed for supported formats.
 - **🌐 Cross-Account Intelligence:** Seamlessly match a loss sale on one broker against a repurchase on another in a single pass.
-- **🔒 100% Local & Zero-Knowledge:** Your financial data is yours. `net-alpha` runs entirely locally. No cloud uploads, no tracking, no telemetry.
-- **🧪 Pre-Trade Simulation:** Planning a trade? Run `net-alpha sim` to see FIFO lot consumption, realized P&L, and a cross-account wash-sale verdict before you execute.
+- **🔒 100% Local & Zero-Knowledge:** Your financial data is yours. `net-alpha` runs entirely locally. No cloud uploads, no tracking, no telemetry. (Quote fetches are the one exception — only the *symbol* leaves the box, never trades; disable with `prices.enable_remote: false`.)
+- **🖥 Local Web UI:** `net-alpha ui` opens a complete local dashboard — Portfolio, Positions, Tax, Sim, Imports, per-ticker drill-down — all rendered server-side via HTMX. No Node, no npm, no CDN at runtime.
+- **🧪 Pre-Trade Simulation:** Planning a trade? The Sim page surfaces one-click suggestion chips (largest unrealized loss, wash-sale risk, largest unrealized gain) and shows FIFO lot consumption, realized P&L, and a cross-account wash-sale verdict before you execute. Available as `net-alpha sim` from the CLI.
+- **🌾 Tax Harvest Planner:** A forward-looking, plan-builder assistant turns the harvest queue into a ranked, editable plan (greedy by tax saved, capped by §1211's $3,000 ordinary-loss limit). Honours user-declared position targets so it never closes something you want to keep.
 - **🧮 §1256 Awareness:** Index options (SPX, NDX, RUT, VIX, etc.) are recognized as §1256 contracts — wash-sale-exempt with statutory 60/40 LT/ST classification.
-- **🔍 Auditable Explanations:** Every wash-sale flag includes rule citation, source trades, match reason, math, and confidence reasoning — accessible inline in the web UI or via `--detail` on the CLI.
-- **📊 After-Tax Performance:** `/tax?view=performance` shows your realized P&L after estimated taxes, with a tax-drag breakdown and §1256 split.
+- **🔍 Auditable Explanations & Reconciliation:** Every wash-sale flag includes rule citation, source trades, match reason, math, and confidence reasoning — accessible inline in the web UI or via `--detail` on the CLI. Per-symbol reconciliation cross-checks computed realized P&L against your broker's Realized G/L file.
+- **📊 After-Tax Performance:** The Tax → Performance view shows your realized P&L after estimated taxes, with a tax-drag breakdown and ST/LT/§1256 mix bar.
+- **✍️ Manual Trade CRUD:** Add, edit, transfer, or delete trades by hand from the web UI — wash sales recompute automatically over the affected window.
 
 ---
 
@@ -70,13 +73,25 @@ pip install 'wash-alpha[ui]'
 
 ## 💻 Usage
 
-### Import + check (the only command you usually run)
+### Local web UI (recommended)
+
+```bash
+net-alpha ui
+```
+
+Boots an ephemeral local server on `127.0.0.1` (free port in 8765–8775), opens your default browser, and exits when you press Ctrl-C. Drag CSVs into the dashboard, drill into any ticker, build a harvest plan, hand-enter trades, run pre-trade sims with suggested chips.
+
+Optional flags: `--port N` · `--no-browser` · `--reload` (dev).
+
+> **Install with UI extras:** `pip install wash-alpha[ui]` (or `uv sync --extra ui` from source). The CLI works without UI deps; UI deps are optional.
+
+### Import + check from the CLI
 
 ```bash
 net-alpha schwab.csv --account personal
 ```
 
-This imports the CSV, recomputes wash sales over the affected window, and prints a watch list plus a year-to-date impact summary. Add `--detail` for a per-violation breakdown.
+This imports the CSV, recomputes wash sales over the affected window, and prints a watch list plus a year-to-date impact summary. Add `--detail` for a per-violation breakdown. The same import is available via drag-and-drop in the web UI.
 
 ### Pre-trade simulation
 
@@ -84,7 +99,7 @@ This imports the CSV, recomputes wash sales over the affected window, and prints
 net-alpha sim TSLA 10 --price 180
 ```
 
-Lists every account that holds the ticker, with FIFO lot consumption, realized P&L, and a cross-account wash-sale verdict per account.
+Lists every account that holds the ticker, with FIFO lot consumption, realized P&L, and a cross-account wash-sale verdict per account. The web Sim page additionally surfaces one-click suggestion chips and remembers your recents.
 
 ### Manage past imports
 
@@ -101,18 +116,6 @@ net-alpha migrate-from-v1 --yes
 
 Reads `~/.net_alpha/net_alpha.db` (v1 schema) and writes a fresh v2 DB at `~/.net_alpha/net_alpha.db.v2`. This helper exists only in the v2.0.x line.
 
-### Local web UI
-
-```bash
-net-alpha ui
-```
-
-Boots an ephemeral local server on `127.0.0.1`, opens your default browser, and exits when you press Ctrl-C. Drag CSVs into the dashboard, see your wash-sale calendar, drill into a ticker.
-
-Optional flags: `--port N` · `--no-browser` · `--reload` (dev).
-
-> **Install with UI extras:** `pip install wash-alpha[ui]` (or `uv sync --extra ui` from source). The CLI works without UI deps; UI deps are optional.
-
 ---
 
 ## 🧠 How the Rules Work
@@ -127,11 +130,11 @@ Optional flags: `--port N` · `--no-browser` · `--reload` (dev).
 | **ETFs** | Sold ETF at a loss, bought the exact same ETF ticker. | 🟢 **Confirmed** |
 | **ETFs** | Sold ETF at a loss, bought ETF tracking the same index (e.g., `SPY` → `VOO`). | 🟠 **Unclear** |
 
-> **Custom ETF Matching:** You can easily add your own "substantially identical" security pairs (like custom ETFs) by editing `~/.net_alpha/etf_pairs.yaml`.
+> **Custom ETF Matching:** You can easily add your own "substantially identical" security pairs (like custom ETFs) by editing `~/.net_alpha/etf_pairs.yaml`. Bundled defaults live in the package and are merged with your overrides — your file adds, never replaces.
 
-**Supported brokers (v2.0):** Schwab.
+**Supported brokers (v2.0):** Schwab — both transaction CSVs and Realized G/L exports (the latter powers per-symbol reconciliation).
 
-Other brokers can be added by contributing a parser at `src/net_alpha/brokers/<name>.py` — implement the `BrokerParser` Protocol and register it in `brokers/registry.py`.
+Other brokers can be added by contributing a parser at `src/net_alpha/brokers/<name>.py` — implement the `BrokerParser` Protocol and register it in `brokers/registry.py`. Realized G/L parsers go in `src/net_alpha/audit/brokers/`.
 
 ---
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`wash-alpha` (package `net_alpha`) is a local-first Python CLI tool for cross-account wash sale detection, covering equities, options, and ETFs. The v2 design spec lives in `docs/superpowers/specs/2026-04-25-v2-simplification-design.md`.
+`wash-alpha` (package `net_alpha`, current version `0.40.0`) is a local-first Python tool for cross-account wash sale detection, tax-performance analysis, and pre-trade simulation — covering equities, options, and ETFs. It ships a Typer CLI plus an optional FastAPI web UI (`net-alpha ui`) that is now the primary interactive surface. The v2 design spec lives in `docs/superpowers/specs/2026-04-25-v2-simplification-design.md`; further design specs live alongside it in `docs/superpowers/specs/`.
 
 ## Tech Stack
 
@@ -52,7 +52,7 @@ uv run pytest -k "test_wash_sale"
 ### CLI Commands (Typer)
 
 ```
-net-alpha <csv> [<csv>...] --account <label> [--detail]   # default: import + check + render
+net-alpha <csv> [<csv>...] --account <label> [--detail]   # hidden default: import + check + render
 net-alpha sim <ticker> <qty> --price P [--account <l>]    # pre-trade what-if planner
 net-alpha imports                                          # list past imports
 net-alpha imports rm <id> [--yes]                          # remove an import
@@ -60,20 +60,27 @@ net-alpha migrate-from-v1 [--yes]                          # v1 → v2 helper (v
 net-alpha ui [--port N] [--no-browser] [--reload]          # launch local web UI in browser
 ```
 
+The CSV-import default is a hidden `run` subcommand routed via a custom `_FileFirstGroup` (`cli/app.py`) so file paths can sit in the first positional slot.
+
 ### Data Flow
 
-1. **CSV import** → bundled BrokerParser detects from headers (Schwab at launch) → trades parsed → idempotent dedup via natural_key → stored to SQLite
-2. **Wash sale engine** → incremental window-based recompute (±30 days around new/removed trade dates) → assigns confidence label → adjusts cost basis of replacement lot
+1. **CSV import** → bundled BrokerParser detects from headers (Schwab transactions + Schwab Realized G/L at launch) → trades parsed → idempotent dedup via natural_key → stored to SQLite
+2. **Splits sync (optional)** → `splits/` rewrites lot quantities from canonical inputs (trade qty × cumulative split multiplier) — never gated on the audit log
+3. **Wash sale engine** → incremental window-based recompute (±30 days around new/removed trade dates) → assigns confidence label → adjusts cost basis of replacement lot
+4. **Audit / reconciliation (optional)** → `audit/reconciliation.py` cross-checks per-trade computed P&L against a broker's Realized G/L file (Schwab supported); `audit/hygiene.py` surfaces missing-basis / missing-quote rows on the Imports page
 
 ### Key Domain Models (Pydantic v2 + SQLModel)
 
-- `Trade` — canonical trade with `ticker` (underlying), `action`, `quantity`, `proceeds`, `cost_basis`, optional `OptionDetails`
+- `Trade` — canonical trade with `ticker` (underlying), `action`, `quantity`, `proceeds`, `cost_basis`, optional `OptionDetails`; supports a manual-trade source for hand-entered rows and a transfer source for inbound external lots
 - `OptionDetails` — `strike`, `expiry`, `call_put` (parsed from symbol string via regex)
-- `Lot` — buy lot with `adjusted_basis` (updated when a wash sale rolls into it)
+- `Lot` — buy lot with `adjusted_basis` (updated when a wash sale rolls into it). Quantity is derived from trade qty × cumulative split multiplier (see `splits/apply.py`); `lot_overrides` is an audit log, not a gate
 - `WashSaleViolation` — links loss sale + triggering buy, stores `confidence`, `disallowed_loss`
 - `ExemptMatch` — would-have-been wash-sale exempt under a named rule (e.g., `section_1256`); sibling of `WashSaleViolation`
 - `Section1256Classification` — per-closed-§1256-trade 60/40 LT/ST split; pure derived data, cleared/rebuilt on recompute
 - `ImportRecord` — tracks each CSV import with timestamp and account label; used by `net-alpha imports`
+- `RealizedGLLot` (`models/realized_gl.py`) — broker-reported per-lot realized P&L row, used by reconciliation
+- `PositionTarget` (`targets/models.py`) — user-declared "what I want to hold" entry (USD or shares) consumed by the harvest plan-builder
+- `Split` / `LotOverride` (`models/splits.py`) — corporate action input + audit row written when split adjustment first applies
 
 ### Confidence Labels (3-tier)
 
@@ -103,24 +110,44 @@ Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, MXEF, MXEA — b
 
 ### Pricing & Portfolio modules
 
-- Pricing subsystem: `pricing/` — PriceProvider ABC, YahooPriceProvider, SQLite-backed PriceCache, PricingService orchestrator.
-- Portfolio aggregations: `portfolio/` — pure functions for positions, KPIs, allocation (donut + leaderboard), equity curve, lot aging, wash-sale watch (recent loss closes).
+- Pricing subsystem: `pricing/` — `PriceProvider` ABC, `YahooPriceProvider`, SQLite-backed `PriceCache`, `PricingService` orchestrator.
+- Portfolio aggregations: `portfolio/` — pure functions for positions, KPIs, allocation (donut + leaderboard), equity curve, cash flow, lot aging, wash-sale watch (recent loss closes), top movers, calendar P&L, benchmark, after-tax realized P&L (`after_tax.py`), forward tax planner (`tax_planner.py` — harvest queue, offset budget, projection, traffic light), sim suggestions (`sim_suggestions.py` — chip-strip picks for the Sim page), and freshness checks.
+- Audit subsystem: `audit/` — provenance helpers (`provenance.py` encodes/decodes deep links to a metric's source rows), per-broker reconciliation against Realized G/L (`reconciliation.py` + `audit/brokers/`), and data-hygiene rollups (`hygiene.py`) for the Imports page.
+- Splits + targets + prefs: `splits/` (corporate-action sync + lot-quantity rewrite), `targets/` (position targets used by harvest plan-builder), `prefs/` (per-profile UI preferences).
 
 ### Web UI (optional, v2.1+)
 
-`src/net_alpha/web/` is an optional FastAPI subpackage providing a local browser UI. It only calls existing public seams (`Repository`, engine functions, `csv_loader`, `BrokerParser`) — **no business logic in `web/`**. Templates use Jinja with HTMX for fragment swaps and Alpine for tiny client state. Static assets (htmx, alpine, built `app.css`) are vendored under `web/static/` — no CDN at runtime, no node, no npm.
+`src/net_alpha/web/` is an optional FastAPI subpackage providing a local browser UI. It only calls existing public seams (`Repository`, engine functions, `csv_loader`, `BrokerParser`, audit/portfolio/planner pure functions) — **no business logic in `web/`**. Templates use Jinja with HTMX for fragment swaps and Alpine for tiny client state. Static assets (htmx, alpine, ApexCharts, Lucide icons, built `app.css`, Inter + JetBrains Mono fonts) are vendored under `web/static/` — no CDN at runtime, no node, no npm.
 
-Launch with `net-alpha ui`. Binds to loopback only, dies on Ctrl-C. UI deps are in the `[ui]` optional group; install with `uv sync --extra ui`.
+Launch with `net-alpha ui`. Picks a free port in 8765–8775 (override with `--port`), binds to loopback only, dies on Ctrl-C. UI deps are in the `[ui]` optional group (FastAPI, uvicorn, Jinja2, python-multipart, yfinance); install with `uv sync --extra ui`.
 
-Tailwind CSS rebuild: `make build-css` (uses `pytailwindcss` from dev extras).
+Asset rebuild targets in the `Makefile`: `build-css` (Tailwind via `pytailwindcss`), `vendor-fonts`, `vendor-apex`, `vendor-lucide` (pinned to v0.469.0).
+
+### Web UI surface
+
+Top-level pages (one route file per area in `web/routes/`):
+
+- `/` — Portfolio (KPIs, allocation, equity curve, cash curve, top movers, options/short-options panels, wash-sale watch).
+- `/positions` — Holdings views (all / stocks / options / at-loss / closed) plus a Plan view backed by `PositionTarget`s; includes a "Set basis" multi-lot editor and a per-row "↗ Sim" deep link.
+- `/sim` — Pre-trade simulator with a `/sim/suggestions` chip strip (largest unrealized loss, wash-sale risk, largest unrealized gain, or a demo chip on empty portfolios) and a recents list.
+- `/tax` — Tax performance, harvest queue, harvest plan-builder (`/tax/harvest/plan`), tax-projection setup form (`/tax/projection-config`), wash-sale + exempt-match listings.
+- `/imports` — Imports table, drop-zone upload, preview/commit, per-import detail, data-hygiene groups (Missing basis / No price quote / Missing dates as collapsible `<details>` buckets).
+- `/ticker/{symbol}` — Per-symbol timeline, lots, and reconciliation views; lot edit + add-trade forms.
+- `/settings` — Settings drawer (profile, density, ETF pairs, imports, about) — resizable.
+- `/trades` (POST) — Manual trade CRUD: add, edit-manual, edit-transfer, delete; recomputes wash sales over the affected window.
+- Misc: `/preferences` (Alpine state persistence), `/quit`, `/provenance/{encoded}`, `/reconciliation/{symbol}`, `/audit/set-basis*`.
 
 ### Web UI conventions
 
-Each scoped page uses a top-of-page toolbar: `Period` (YTD / specific year / Lifetime) + `Account` (All / per-account). State is per-page (not global). Heavy panels load lazily as HTMX fragments under stable IDs.
+Each scoped page uses a top-of-page toolbar: `Period` (YTD / specific year / Lifetime) + `Account` (All / per-account). State is per-page (not global). Heavy panels load lazily as HTMX fragments under stable IDs. The settings drawer is resizable; chart panels support zoom; positions has client-side search.
 
 ### Tax Performance Tab
 
 `/tax?view=performance` renders an after-tax realized P&L panel using configured marginal rates from the existing `tax:` config section. Reads pure-function `compute_after_tax(...)` in `portfolio/after_tax.py`. Surfaces 4 KPIs (pre-tax, tax bill, after-tax, tax drag), an ST/LT/§1256 mix bar, a wash-sale cost row, and the effective tax rate. Caveats (capital-loss limitation, MAGI threshold, Lifetime-period bracket assumption) are documented inline. Inline-expand explanations are available on every wash-sale row and exempt match via `tax/violation/{id}/explain` and `tax/exempt/{id}/explain` HTMX fragments; the same content is available via the CLI `--detail` flag.
+
+### Tax Harvest Planner
+
+`portfolio/tax_planner.py` is a forward-looking, pure-function planner over `Repository` + `PricingService` reads (no DB writes). It builds a greedy harvest plan ranked by tax saved, summarizes user-edited picks, applies `ORDINARY_LOSS_CAP = $3,000` (§1211), and projects year-end tax. The planner consumes `PositionTarget`s from `targets/` so users can edit "what I want to hold" inline. The web surface lives at `/tax/harvest/plan` and its `_harvest_plan.html` fragment.
 
 ### Disclaimer Policy
 
@@ -150,7 +177,7 @@ never leave the box. Disable price fetches by setting
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **net_alpha** (5885 symbols, 15292 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **net_alpha** (6099 symbols, 15794 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
