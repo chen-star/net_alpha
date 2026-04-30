@@ -44,7 +44,8 @@
 <div class="grid grid-cols-12 gap-[10px]" data-profile="{{ _profile.profile if _profile else 'active' }}">
 
   {# ── Hero: Total Account Value ─────────────────────────────────────────── #}
-  <div class="kpi kpi-hero col-span-12 lg:col-span-4" data-kpi-slot="hero">
+  <div class="kpi kpi-hero col-span-12 lg:col-span-4" data-kpi-slot="hero"
+       title="Sum of cash + open position market value across all in-scope accounts. Updates as quotes refresh.">
     <div class="label-uc">TOTAL ACCOUNT VALUE</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if total_account_value is defined and total_account_value is not none %}
@@ -89,7 +90,8 @@
 <div class="grid grid-cols-12 gap-[10px] mt-[10px]">
 
   {# Realized P/L #}
-  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="realized">
+  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="realized"
+       title="Net realized profit/loss from closed trades in the selected period. Includes equities, options, and §1256 contracts. Excludes wash-sale-disallowed losses (those roll into replacement-lot basis).">
     <div class="label-uc">Realized P/L</div>
     <div class="num text-[22px] font-bold mt-2 {% if kpis.period_realized < 0 %}text-neg{% else %}text-pos{% endif %}">
       {% if kpis.period_realized < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized|float|abs) }}{% if metric_refs is defined and metric_refs.realized_period is defined %}{{ provenance_link(metric_refs.realized_period) }}{% endif %}
@@ -98,7 +100,8 @@
   </div>
 
   {# Unrealized P/L #}
-  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="unrealized">
+  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="unrealized"
+       title="Mark-to-market gain/loss on open positions vs. their cost basis. Live with the latest available quotes.">
     <div class="label-uc">Unrealized P/L</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if kpis.period_unrealized is none %}<span class="text-label-3">—</span>
@@ -110,7 +113,8 @@
   </div>
 
   {# Net Contributed #}
-  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="contributed">
+  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="contributed"
+       title="Cash you've moved into the account: deposits minus withdrawals, in the selected period.">
     <div class="label-uc">Net contributed</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if cash_kpis is defined and cash_kpis %}
