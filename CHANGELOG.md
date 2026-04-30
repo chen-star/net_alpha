@@ -2,6 +2,22 @@
 
 
 
+## v0.36.0 (2026-04-30)
+
+### Feature
+
+* feat(web): show Total planned in Plan tab footer
+
+Adds a Total planned figure (sum of every target&#39;s USD equivalent) to
+the Plan tab footer alongside Total to fill / Free cash / Coverage so
+the user can see the full target portfolio size at a glance.
+
+Share-unit targets without a quote are excluded from the sum; the
+footer indicates partial coverage as &#34;(X/Y priced)&#34; when that happens.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6fece9c`](https://github.com/chen-star/net_alpha/commit/6fece9c8709acdcf26273c61e5469fa5cf0aaa90))
+
+
 ## v0.35.1 (2026-04-30)
 
 ### Fix
