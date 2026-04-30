@@ -2,6 +2,198 @@
 
 
 
+## v0.35.0 (2026-04-30)
+
+### Documentation
+
+* docs: add Overview redesign + position targets implementation plan
+
+Bite-sized TDD-style task list covering all spec sections: KPI restructure
+(Task 1), Top Movers (2-3), SPY benchmark line (4-7), targets schema (8),
+domain models (9), repository (10), Plan view-model (11), Plan tab UI
+(12-15), Target column (16), and end-to-end verification (17).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`68eb510`](https://github.com/chen-star/net_alpha/commit/68eb510dbef920f6d6ed172f47005f5350b03198))
+
+* docs: fix spec paths to match actual codebase layout
+
+Storage is db/, not storage/; migrations are inline Python in
+db/migrations.py keyed by integer schema_version (currently at 11).
+PositionRow is the OpenPosition shape. Spec edits align all references.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9469cfb`](https://github.com/chen-star/net_alpha/commit/9469cfb4a7da098e68c3a00015a521ee0d4bc282))
+
+* docs: add Overview redesign + position targets spec
+
+Drafts the Overview KPI restructure (drop TODAY, promote Total Return,
+add SPY benchmark line, add Top Movers panel) and the new Plan tab on
+the Positions page (per-symbol $ or share targets, gap to fill, % filled
+progress bar, Target column in shared positions table).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`98363b1`](https://github.com/chen-star/net_alpha/commit/98363b1cdcbc5dd67c6ada2db0e35d0819d8b04e))
+
+### Feature
+
+* feat(web): add Target column to Positions table when targets exist
+
+Injects a target column into the shared _portfolio_table.html partial
+whenever any PositionTarget rows exist; shows current vs target with a
+progress bar and color-coded fill percentage.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5f52135`](https://github.com/chen-star/net_alpha/commit/5f521350429d0902da29b4f68a6a1e6a7444f98e))
+
+* feat(web): plan target delete endpoint
+
+Adds DELETE /positions/plan/target/{symbol} that removes a target and returns
+the updated plan body fragment; idempotent for unknown symbols (200 in both cases). ([`10ce6f7`](https://github.com/chen-star/net_alpha/commit/10ce6f7a61d55d8753ed2fbba347c8ea701039f1))
+
+* feat(web): plan target add/edit modal + upsert endpoint
+
+Extracts _build_plan_view_for_request helper from the inline plan branch so
+GET ?view=plan, POST /positions/plan/target, and future DELETE can all share
+the same view-model assembly. Adds modal template and two new routes.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2c0cead`](https://github.com/chen-star/net_alpha/commit/2c0cead99b44902f08c7d08803bcb87f60f5fdeb))
+
+* feat(web): full Plan tab render with progress bars + footer
+
+Replace placeholder div with a complete position-targets table: per-row progress bars (blue/yellow/green/red by fill %), target/current/gap cells, and a footer summarising Total to fill, Free cash, and coverage. Free-cash calculation is now CSP-aware (subtracts cash_secured_total from open short-option positions).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`94fb912`](https://github.com/chen-star/net_alpha/commit/94fb9122f223648155872145aa71c872868dca05))
+
+* feat(web): add Plan tab navigation + empty state
+
+Wires the Plan tab into the Positions page: adds the tab link to
+_positions_tabs.html, branches the positions.html include chain, creates
+the _positions_view_plan.html empty-state template, and extends the
+positions_page route to validate &#34;plan&#34; as a view, fetch targets for
+the tab badge count, and build + inject plan_view for the plan branch
+(with a bare cash-balance free_cash that Task 13 will upgrade).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3d83911`](https://github.com/chen-star/net_alpha/commit/3d83911ba23e190a027452442f1dbdd6e0d3feb4))
+
+* feat(targets): add build_plan_view pure function
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6b48c35`](https://github.com/chen-star/net_alpha/commit/6b48c35c66d11f5073d137c2302d68fc8f625850))
+
+* feat(db): add Repository.{list,get,upsert,delete}_target
+
+Adds four public methods and one static helper to Repository for
+reading and writing position_targets rows, using the existing ORM
+select() pattern. Uppercases symbols on write and lookup.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`51c4c61`](https://github.com/chen-star/net_alpha/commit/51c4c610456ffc49702add6a9756b97cf02226fd))
+
+* feat(targets): add PositionTarget domain model + SQLModel row
+
+Introduces TargetUnit enum (usd/shares), frozen PositionTarget dataclass,
+and PositionTargetRow SQLModel mapped to the existing position_targets table.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`07a463a`](https://github.com/chen-star/net_alpha/commit/07a463a8328dde4f762755940bd8db2d74c74345))
+
+* feat(web): add SPY benchmark line on equity curve
+
+Wire benchmark_symbol from PricingConfig into the equity-curve chart as a
+dashed gray ApexCharts series; gracefully degrades to empty list on any
+failure or when remote pricing is disabled.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4417f16`](https://github.com/chen-star/net_alpha/commit/4417f16a6fe5fb8a9ddd5eeb9e306b66c6c1fc2d))
+
+* feat(portfolio): add benchmark shadow-account series builder
+
+Adds BenchmarkPoint dataclass to models.py and build_benchmark_series()
+pure function in portfolio/benchmark.py that simulates a shadow account
+buying the benchmark index with the same cash flows as the user&#39;s account.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`451ec05`](https://github.com/chen-star/net_alpha/commit/451ec05ae3773f7bdf93aff15ad1ffa9e5dc9e74))
+
+* feat(pricing): add cached get_historical_close on PricingService
+
+Read-through historical close cache: _MISS sentinel distinguishes
+no-row from negative-cache (None), so Yahoo is hit at most once per
+(symbol, date) pair even when the close is unavailable.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c045889`](https://github.com/chen-star/net_alpha/commit/c0458897e54fc200a6740d552dc999f34963224b))
+
+* feat(db): add v11→v12 migration (position_targets + historical_price_cache)
+
+Introduces two new tables: position_targets (user-managed per-symbol
+allocation targets with USD/share unit) and historical_price_cache
+(read-through cache for benchmark daily closes). Fixes the migration
+chain so v10→v11 assigns current=11 instead of early-returning,
+allowing v12 to run. Bumps CURRENT_SCHEMA_VERSION to 12 and updates
+all tests that hardcoded version &#34;11&#34;.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`03fb1a3`](https://github.com/chen-star/net_alpha/commit/03fb1a3c7cc092f04daee53dc9233af1110d0ad6))
+
+* feat(pricing): add get_historical_close to provider + Yahoo impl
+
+Adds a default no-op get_historical_close(symbol, on) to the PriceProvider
+ABC and a full yfinance implementation on YahooPriceProvider that fetches a
+single-day window and returns Decimal or None on any failure.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ead11b9`](https://github.com/chen-star/net_alpha/commit/ead11b97ac8d92c1471cf4d5a7237b8c7a808764))
+
+* feat(web): add Top Movers panel on Overview
+
+Renders the top-3 unrealized $ winners and losers among open positions
+on the portfolio body fragment; panel is caller-gated and omitted when
+no priced positions exist.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4b122a6`](https://github.com/chen-star/net_alpha/commit/4b122a64ccf5caf8e9933f8ce7aa7c9d67dd7b2e))
+
+* feat(portfolio): add top_movers pure function ([`5d4691d`](https://github.com/chen-star/net_alpha/commit/5d4691ddcc7f4dcc4f2f29189957306df9c6bfd9))
+
+* feat(web): drop TODAY tile, promote Total Return to top row
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6b242f6`](https://github.com/chen-star/net_alpha/commit/6b242f61737110d257e60c81e00d1dfbd2d344bd))
+
+### Fix
+
+* fix(web): address final code review (modal swap header, dt.UTC, target column, dead guards)
+
+- Fix 1: _modal_error now sets HX-Retarget/#plan-modal-backdrop + HX-Reswap/outerHTML
+  so validation errors re-render the modal in-place instead of replacing the plan body
+- Fix 2: standalone /portfolio/equity-curve passes benchmark_points/benchmark_symbol defaults
+- Fix 3: replace datetime.utcnow() with datetime.now(UTC) in repository.upsert_target
+- Fix 4: fallback branch in _portfolio_table Target cell appends &#39; sh&#39; for share count clarity
+- Fix 5: remove dead _quantize(...) or Decimal(&#34;0&#34;) guards; call .quantize directly
+- Fix 6: _render_plan_body forwards selected_account/selected_period context keys
+- Tests: strengthen test_post_rejects_empty_symbol/zero_amount with HX-Retarget assertion;
+  drop unused dt import from test_positions_pane_context.py (pre-existing ruff F401)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a0ba9b7`](https://github.com/chen-star/net_alpha/commit/a0ba9b7e031ba6a19acdd275b091b68c3fcfe1fe))
+
+### Style
+
+* style: ruff format + StrEnum upgrade for new feature files
+
+Apply ruff format/check across files added or modified during the
+Overview redesign + position targets feature. The functional change is
+TargetUnit (enum.Enum) → StrEnum, eliminating the redundant str+Enum
+inheritance. Pre-existing ruff issues outside the feature scope are not
+touched.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ecd0613`](https://github.com/chen-star/net_alpha/commit/ecd0613dc0627dee87e0c9a82244f629a38ea633))
+
+* style(web): rename misleading test, remove blank-line artifact
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`93290cb`](https://github.com/chen-star/net_alpha/commit/93290cbc4eba240f8af5f3502b0a193e17a4fbee))
+
+### Unknown
+
+* Merge branch &#39;feature/overview-redesign-and-position-targets&#39;
+
+Overview page redesign + position targets (17 tasks):
+- Drop TODAY tile, promote Total Return to top row
+- SPY benchmark line on equity curve (graceful degrade)
+- Top Movers panel (3 winners + 3 losers by unrealized $)
+- Plan tab on Positions with full CRUD via HTMX modal
+- Target column on shared positions table
+- New SQLite tables: position_targets, historical_price_cache (v11→v12)
+- 31 new tests, full suite 1095 passing ([`9d902b0`](https://github.com/chen-star/net_alpha/commit/9d902b0a299e3eac76adafe355e07d9c43154248))
+
+
 ## v0.34.0 (2026-04-29)
 
 ### Documentation
