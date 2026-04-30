@@ -567,7 +567,7 @@ def portfolio_equity_curve(
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_equity_curve.html",
-        {"points": points, "year": year},
+        {"points": points, "year": year, "benchmark_points": [], "benchmark_symbol": ""},
     )
 
 

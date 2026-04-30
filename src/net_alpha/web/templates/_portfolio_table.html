@@ -227,7 +227,7 @@
                   {% set _t = targets_by_symbol.get(r.symbol) if targets_by_symbol is defined else None %}
                   {% if _t %}
                     {% set _native = ('$%.0f' % _t.target_amount|float) if _t.target_unit.value == 'usd' else ('%.2f sh' % _t.target_amount|float) %}
-                    {% set _curr = ('$%.0f' % r.market_value|float) if (_t.target_unit.value == 'usd' and r.market_value is not none) else ('%.2f' % r.qty|float) %}
+                    {% set _curr = ('$%.0f' % r.market_value|float) if (_t.target_unit.value == 'usd' and r.market_value is not none) else ('%.2f sh' % r.qty|float) %}
                     {% if _t.target_unit.value == 'usd' and r.market_value is not none and _t.target_amount > 0 %}
                       {% set _pct = (r.market_value|float / _t.target_amount|float * 100) %}
                     {% elif _t.target_unit.value == 'shares' and _t.target_amount > 0 %}

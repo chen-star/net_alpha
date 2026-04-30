@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -1650,7 +1650,7 @@ class Repository:
         created_at is preserved.
         """
         sym = symbol.upper()
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
         with Session(self.engine) as s:
             row = s.exec(select(PositionTargetRow).where(PositionTargetRow.symbol == sym)).first()
             if row is None:

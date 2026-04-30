@@ -48,7 +48,9 @@ def test_post_rejects_empty_symbol(client: TestClient):
             "target_amount": "1000",
         },
     )
-    assert r.status_code == 422 or "Symbol is required" in r.text
+    assert r.status_code == 422
+    assert "Symbol is required" in r.text
+    assert r.headers.get("HX-Retarget") == "#plan-modal-backdrop"
 
 
 def test_post_rejects_zero_amount(client: TestClient):
@@ -60,7 +62,9 @@ def test_post_rejects_zero_amount(client: TestClient):
             "target_amount": "0",
         },
     )
-    assert r.status_code == 422 or "must be positive" in r.text
+    assert r.status_code == 422
+    assert "must be positive" in r.text
+    assert r.headers.get("HX-Retarget") == "#plan-modal-backdrop"
 
 
 def test_delete_removes_target(client: TestClient, repo: Repository):

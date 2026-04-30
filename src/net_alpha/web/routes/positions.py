@@ -356,6 +356,8 @@ def _modal_error(request: Request, msg: str, status: int) -> HTMLResponse:
         {"_target": None, "error": msg},
     )
     response.status_code = status
+    response.headers["HX-Retarget"] = "#plan-modal-backdrop"
+    response.headers["HX-Reswap"] = "outerHTML"
     return response
 
 
@@ -369,7 +371,11 @@ def _render_plan_body(
     return request.app.state.templates.TemplateResponse(
         request,
         "_positions_view_plan.html",
-        {"plan_view": plan_view},
+        {
+            "plan_view": plan_view,
+            "selected_account": account or "",
+            "selected_period": "ytd",
+        },
     )
 
 
