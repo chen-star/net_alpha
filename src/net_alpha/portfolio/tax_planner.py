@@ -687,3 +687,42 @@ def build_plan(
         target_budget=target,
         used_auto_budget=used_auto,
     )
+
+
+def summarize_manual_picks(
+    picks: list[tuple[str, str]],
+    candidates: list[HarvestOpportunity],
+    realized_gains_ytd: Decimal,
+    marginal_rates: TaxBrackets | None,
+) -> HarvestPlan:
+    """Build a HarvestPlan from an explicit (symbol, account_label) selection.
+
+    No algorithm — the user's UI selection is authoritative. Unknown picks
+    (stale UI state) are silently dropped.
+    """
+    by_key = {(c.symbol, c.account_label): c for c in candidates}
+    selected = [by_key[k] for k in picks if k in by_key]
+
+    total_loss = sum((abs(c.loss) for c in selected), Decimal("0"))
+    tax_saved_sum = sum(
+        (_tax_saved_for(c, marginal_rates) for c in selected),
+        Decimal("0"),
+    )
+    cap = Decimal("3000")
+    excess_over_gains = max(
+        Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd)
+    )
+    ordinary_offset = min(cap, excess_over_gains)
+    gain_offset = total_loss - ordinary_offset
+
+    return HarvestPlan(
+        selected=selected,
+        skipped_locked=[],
+        realized_gains_ytd=realized_gains_ytd,
+        ordinary_offset_used=ordinary_offset,
+        gain_offset_used=gain_offset,
+        total_loss_harvested=total_loss,
+        estimated_tax_saved=tax_saved_sum,
+        target_budget=total_loss,
+        used_auto_budget=False,
+    )

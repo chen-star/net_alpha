@@ -6,6 +6,7 @@ from net_alpha.portfolio.tax_planner import (
     HarvestOpportunity,
     TaxBrackets,
     build_plan,
+    summarize_manual_picks,
 )
 
 
@@ -167,3 +168,54 @@ def test_ordinary_offset_capped_at_3000():
     assert plan.ordinary_offset_used == Decimal("3000")
     assert plan.gain_offset_used == Decimal("7000")
     assert plan.total_loss_harvested == Decimal("10000")
+
+
+def test_summarize_manual_picks_uses_explicit_selection():
+    rows = [_row("A", -100), _row("B", -200), _row("C", -300)]
+    picks = [("A", "schwab/personal"), ("C", "schwab/personal")]
+    plan = summarize_manual_picks(
+        picks=picks,
+        candidates=rows,
+        realized_gains_ytd=Decimal("0"),
+        marginal_rates=_rates(),
+    )
+    syms = {c.symbol for c in plan.selected}
+    assert syms == {"A", "C"}
+    assert plan.total_loss_harvested == Decimal("400")
+    assert plan.used_auto_budget is False
+
+
+def test_summarize_manual_picks_unknown_pick_silently_dropped():
+    rows = [_row("A", -100)]
+    plan = summarize_manual_picks(
+        picks=[("A", "schwab/personal"), ("ZZZ", "schwab/personal")],
+        candidates=rows,
+        realized_gains_ytd=Decimal("0"),
+        marginal_rates=_rates(),
+    )
+    assert {c.symbol for c in plan.selected} == {"A"}
+
+
+def test_summarize_manual_picks_empty_selection():
+    rows = [_row("A", -100), _row("B", -200)]
+    plan = summarize_manual_picks(
+        picks=[],
+        candidates=rows,
+        realized_gains_ytd=Decimal("5000"),
+        marginal_rates=_rates(),
+    )
+    assert plan.selected == []
+    assert plan.total_loss_harvested == Decimal("0")
+    assert plan.estimated_tax_saved == Decimal("0")
+
+
+def test_summarize_manual_picks_caps_ordinary_offset():
+    rows = [_row("BIG", -10000)]
+    plan = summarize_manual_picks(
+        picks=[("BIG", "schwab/personal")],
+        candidates=rows,
+        realized_gains_ytd=Decimal("0"),
+        marginal_rates=_rates(),
+    )
+    assert plan.ordinary_offset_used == Decimal("3000")
+    assert plan.gain_offset_used == Decimal("7000")
