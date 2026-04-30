@@ -73,7 +73,24 @@
     const showLegend = hasTotal || hasBenchmark;
 
     const opts = window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
-      chart: { type: "line", height: 218 },
+      chart: {
+        type: "line",
+        height: 218,
+        zoom: { enabled: true, type: "x", autoScaleYaxis: true },
+        toolbar: {
+          show: true,
+          tools: {
+            download: false,
+            selection: true,
+            zoom: true,
+            zoomin: true,
+            zoomout: true,
+            pan: true,
+            reset: true,
+          },
+          autoSelected: "zoom",
+        },
+      },
       colors: colors,
       stroke: {
         width: widths,

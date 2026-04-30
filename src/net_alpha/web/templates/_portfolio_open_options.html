@@ -57,6 +57,7 @@
       {% endif %}
       {% set is_long = s.side == 'long' %}
       <div class="grid items-center gap-[14px] py-[9px] text-[13px]"
+           data-symbol="{{ s.ticker|upper }}"
            style="grid-template-columns: 60px 90px 110px 1fr 110px 100px; border-bottom: 0.5px solid rgba(255,255,255,0.08);">
         <div class="text-[10px] uppercase font-semibold tracking-tightish"
              style="color: {% if is_long %}var(--color-accent){% else %}var(--color-warn){% endif %};">

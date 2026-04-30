@@ -30,7 +30,7 @@
     </thead>
     <tbody>
       {% for row in rows %}
-      <tr>
+      <tr data-symbol="{{ row.symbol|upper }}">
         <td class="font-semibold">{{ row.symbol }}</td>
         <td class="r num text-neg">−${{ "%.2f"|format(row.loss|abs) }}</td>
         <td><span class="chip-{% if row.lt_st|lower == 'lt' %}unclear{% else %}probable{% endif %}">{{ row.lt_st }}</span></td>

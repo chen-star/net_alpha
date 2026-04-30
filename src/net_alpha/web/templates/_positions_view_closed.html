@@ -49,7 +49,7 @@
           </tr>
         {% else %}
           {% for row in closed_rows %}
-            <tr>
+            <tr data-symbol="{{ row.ticker|upper }}">
               <td class="font-semibold">{{ row.display_symbol }}</td>
               <td class="text-label-2">{{ row.account }}</td>
               <td class="r num">{{ fmt_quantity(row.qty) }}</td>

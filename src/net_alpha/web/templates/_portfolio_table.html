@@ -157,6 +157,7 @@
       <tbody>
         {% for r in rows %}
           <tr data-row="position"
+              data-symbol="{{ r.symbol|upper }}"
               class="group cursor-pointer hover:bg-surface-2"
               @click.stop="$dispatch('open-positions-pane', { sym: '{{ r.symbol }}', account_id: null })">
             <td>

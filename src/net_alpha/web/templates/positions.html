@@ -21,6 +21,20 @@
       {% for col in extra_columns %}data-col="{{ col }}" {% endfor %}></span>
   {% endif %}
 
+  {# Symbol search — client-side filter applied to all rows with `data-symbol`
+     (set by tab fragments). Partial match by underlying; for options that
+     means typing the ticker shows every contract on it. #}
+  <div class="mb-3">
+    <input type="text"
+           data-symbol-search
+           data-testid="positions-symbol-search"
+           placeholder="Search by symbol (e.g. SPY)…"
+           @input="window.__applyPositionsSymbolFilter && window.__applyPositionsSymbolFilter($event.target.value)"
+           aria-label="Search positions by symbol"
+           class="bg-surface text-text rounded-md px-3 py-1.5 font-mono text-[13px] w-full md:w-72"
+           style="border:0.5px solid rgba(255,255,255,0.08);"/>
+  </div>
+
   {% include "_positions_tabs.html" %}
 
   {% if selected_view == 'all' %}

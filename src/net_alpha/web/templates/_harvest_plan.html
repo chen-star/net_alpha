@@ -76,7 +76,7 @@
     <tbody>
     {% for row in rows %}
       {% set _checked = (row.symbol, row.account_label) in selected_keys %}
-      <tr>
+      <tr data-symbol="{{ row.symbol|upper }}">
         <td>
           <input type="checkbox"
                  name="pick" value="{{ row.symbol }}::{{ row.account_label }}"

@@ -33,18 +33,21 @@
           }
         "
         class="panel mb-6">
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
-      <div class="col-span-1">
-        <label class="block label-uc mb-1">Action</label>
-        <div class="inline-flex rounded-md overflow-hidden text-sm seg">
+    {# Each column is a flex-col with a fixed-height label, a fixed-height input row,
+       and helper text below. items-start + matched heights keep the inputs on the
+       same horizontal baseline regardless of helper-text presence. #}
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-start">
+      <div class="col-span-1 flex flex-col">
+        <label class="block label-uc mb-1 h-[14px] leading-[14px]">Action</label>
+        <div class="inline-flex rounded-md overflow-hidden text-sm seg h-[30px]">
           <button type="button"
                   @click="action='buy'"
                   :class="action==='buy' ? 'seg-active' : ''"
-                  class="px-3 py-1.5 font-medium seg">Buy</button>
+                  class="px-3 font-medium seg">Buy</button>
           <button type="button"
                   @click="action='sell'"
                   :class="action==='sell' ? 'seg-active' : ''"
-                  class="px-3 py-1.5 font-medium seg">Sell</button>
+                  class="px-3 font-medium seg">Sell</button>
         </div>
         {# Hidden select carries the form value; Alpine keeps it in sync via x-model. #}
         <select name="action" x-model="action" class="hidden" aria-hidden="true">
@@ -52,37 +55,37 @@
           <option value="sell" {% if action_pref == 'sell' %}selected{% endif %}>Sell</option>
         </select>
       </div>
-      <div>
-        <label class="block label-uc">Ticker</label>
+      <div class="flex flex-col">
+        <label class="block label-uc mb-1 h-[14px] leading-[14px]">Ticker</label>
         <input type="text" name="ticker" value="{{ ticker }}" list="ticker-list" required
-               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
+               class="bg-surface text-text rounded-md px-2 font-mono text-[13px] w-full h-[30px]"
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
         <datalist id="ticker-list">
           {% for t in tickers %}<option value="{{ t }}">{% endfor %}
         </datalist>
         <p class="text-[11px] text-label-2 mt-1">Symbol exactly as it appears on your statement.</p>
       </div>
-      <div>
-        <label class="block label-uc">Quantity</label>
+      <div class="flex flex-col">
+        <label class="block label-uc mb-1 h-[14px] leading-[14px]">Quantity</label>
         <input type="number" name="qty" step="0.01" value="{{ qty or '' }}" required
-               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
+               class="bg-surface text-text rounded-md px-2 font-mono text-[13px] w-full h-[30px]"
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
         <p class="text-[11px] text-label-2 mt-1">Shares for stock; contracts for options.</p>
       </div>
-      <div>
-        <label class="block label-uc">Price{% if price_hint %} <span class="text-label-2 text-[10px]">(quote ${{ price_hint }})</span>{% endif %}</label>
+      <div class="flex flex-col">
+        <label class="block label-uc mb-1 h-[14px] leading-[14px]">Price{% if price_hint %} <span class="text-label-2 text-[10px]">(quote ${{ price_hint }})</span>{% endif %}</label>
         <input type="number" name="price" step="0.01" value="{{ price_hint }}" required
-               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
+               class="bg-surface text-text rounded-md px-2 font-mono text-[13px] w-full h-[30px]"
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
         {% if not price_hint and ticker %}
           <p class="text-[11px] text-warn mt-1">No quote available — enter manually.</p>
         {% endif %}
       </div>
-      <div>
-        <label class="block label-uc">
+      <div class="flex flex-col">
+        <label class="block label-uc mb-1 h-[14px] leading-[14px]">
           Account <span class="text-label-2" x-text="action === 'sell' ? '(required)' : '(optional)'"></span>
         </label>
-        <select name="account" class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
+        <select name="account" class="bg-surface text-text rounded-md px-2 text-[13px] w-full h-[30px]"
                 style="border:0.5px solid rgba(255,255,255,0.08);">
           <option value="">All</option>
           {% for a in accounts %}<option value="{{ a }}" {% if account_pref == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
@@ -90,10 +93,10 @@
         {# Phase 3 review C3: sim form errors target this div via HTMX OOB swap. #}
         <div id="sim-form-error" data-testid="sim-form-error-slot"></div>
       </div>
-      <div>
-        <label class="block label-uc">Date</label>
+      <div class="flex flex-col">
+        <label class="block label-uc mb-1 h-[14px] leading-[14px]">Date</label>
         <input type="date" name="trade_date" value="{{ today_iso }}" required
-               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
+               class="bg-surface text-text rounded-md px-2 font-mono text-[13px] w-full h-[30px]"
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
         <p class="text-[11px] text-label-2 mt-1">When the trade would settle.</p>
       </div>

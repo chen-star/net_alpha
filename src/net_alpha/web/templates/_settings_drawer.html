@@ -13,7 +13,36 @@
      x-data="{
        open: false,
        tab: 'imports',
-       openTab(name) { this.tab = name; this.open = true; }
+       width: (function () {
+         const v = parseInt(localStorage.getItem('settings-drawer-width') || '480', 10);
+         return Number.isFinite(v) ? v : 480;
+       })(),
+       resizing: false,
+       openTab(name) { this.tab = name; this.open = true; },
+       startResize(ev) {
+         ev.preventDefault();
+         this.resizing = true;
+         const startX = ev.clientX;
+         const startW = this.width;
+         const min = 360;
+         const onMove = (e) => {
+           const max = Math.max(min + 40, window.innerWidth - 60);
+           const next = Math.max(min, Math.min(max, startW + (startX - e.clientX)));
+           this.width = next;
+         };
+         const onUp = () => {
+           document.removeEventListener('mousemove', onMove);
+           document.removeEventListener('mouseup', onUp);
+           document.body.style.userSelect = '';
+           document.body.style.cursor = '';
+           try { localStorage.setItem('settings-drawer-width', String(this.width)); } catch (e) {}
+           this.resizing = false;
+         };
+         document.body.style.userSelect = 'none';
+         document.body.style.cursor = 'col-resize';
+         document.addEventListener('mousemove', onMove);
+         document.addEventListener('mouseup', onUp);
+       }
      }"
      x-show="open"
      x-on:open-settings-drawer.window="openTab($event.detail?.tab || 'imports')"
@@ -24,13 +53,27 @@
        @click="open = false"
        aria-hidden="true"></div>
 
-  {# Drawer panel #}
+  {# Drawer panel — width is resizable via the left-edge drag handle. The icon
+     that opens this drawer is hidden on mobile, so width binds unconditionally. #}
   <aside id="settings-drawer"
-         class="absolute inset-y-0 right-0 w-full md:w-[480px] bg-bg flex flex-col"
-         style="box-shadow: var(--shadow-drawer);"
+         class="absolute inset-y-0 right-0 bg-bg flex flex-col"
+         :style="'box-shadow: var(--shadow-drawer); width: ' + width + 'px; max-width: 100vw;'"
          role="dialog"
          aria-modal="true"
          aria-label="Settings">
+    {# Drag handle for resize. Uses inline styles for cursor + background so it
+       doesn't depend on Tailwind utility compilation. 8px hit zone, 2px visible bar. #}
+    <div data-testid="settings-drawer-resize-handle"
+         style="position: absolute; top: 0; bottom: 0; left: -4px; width: 8px; cursor: col-resize; z-index: 35;"
+         @mousedown="startResize($event)"
+         @mouseenter="$el.querySelector('.handle-bar').style.backgroundColor = resizing ? 'var(--color-accent)' : 'rgba(94,92,230,0.7)'"
+         @mouseleave="$el.querySelector('.handle-bar').style.backgroundColor = resizing ? 'var(--color-accent)' : 'rgba(94,92,230,0.25)'"
+         role="separator"
+         aria-orientation="vertical"
+         aria-label="Resize settings drawer">
+      <div class="handle-bar"
+           :style="`position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 2px; background-color: ${resizing ? 'var(--color-accent)' : 'rgba(94,92,230,0.25)'}; transition: background-color 0.15s;`"></div>
+    </div>
     <header class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--color-hairline);">
       <h2 class="text-[16px] font-semibold tracking-tight m-0">Settings</h2>
       <button data-testid="settings-drawer-close"

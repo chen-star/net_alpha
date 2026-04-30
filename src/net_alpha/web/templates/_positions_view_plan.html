@@ -27,7 +27,7 @@
         </thead>
         <tbody>
           {% for r in plan_view.rows %}
-            <tr style="border-bottom: 0.5px solid var(--color-hairline);">
+            <tr data-symbol="{{ r.symbol|upper }}" style="border-bottom: 0.5px solid var(--color-hairline);">
               <td class="p-[7px] font-semibold">{{ r.symbol }}</td>
               <td class="r p-[7px] num">
                 <strong>
