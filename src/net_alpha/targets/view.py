@@ -31,6 +31,9 @@ class PlanView:
     total_to_fill_dollar: Decimal  # sum of max(0, gap_dollar) — buys only
     free_cash: Decimal
     coverage_pct: Decimal | None  # free_cash / total_to_fill * 100; None when total = 0
+    total_planned_dollar: Decimal  # sum of target_dollar_equiv across rows where it's known
+    planned_rows_with_quote: int  # how many rows contributed to total_planned_dollar
+    planned_rows_total: int  # total number of rows (for "X of Y" display)
 
 
 _TWO = Decimal("0.01")
@@ -116,9 +119,18 @@ def build_plan_view(
     else:
         coverage_pct = None
 
+    total_planned = sum(
+        (r.target_dollar_equiv for r in rows if r.target_dollar_equiv is not None),
+        Decimal("0"),
+    )
+    planned_with_quote = sum(1 for r in rows if r.target_dollar_equiv is not None)
+
     return PlanView(
         rows=rows,
         total_to_fill_dollar=total_to_fill,
         free_cash=free_cash,
         coverage_pct=coverage_pct,
+        total_planned_dollar=total_planned.quantize(_TWO),
+        planned_rows_with_quote=planned_with_quote,
+        planned_rows_total=len(rows),
     )

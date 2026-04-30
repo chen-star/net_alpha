@@ -152,3 +152,36 @@ def test_coverage_none_when_total_to_fill_is_zero():
     )
     assert view.total_to_fill_dollar == Decimal("0")
     assert view.coverage_pct is None
+
+
+def test_total_planned_sums_dollar_equivalents():
+    targets = [
+        _target("HIMS", "1000", TargetUnit.USD),
+        _target("SPY", "50", TargetUnit.SHARES),  # 50 × 490 = 24,500
+        _target("VOO", "10000", TargetUnit.USD),
+    ]
+    view = build_plan_view(
+        targets=targets,
+        positions_by_symbol={},
+        quotes_by_symbol={"HIMS": Decimal("30.04"), "SPY": Decimal("490"), "VOO": Decimal("466.66")},
+        free_cash=Decimal("0"),
+    )
+    assert view.total_planned_dollar == Decimal("35500.00")
+    assert view.planned_rows_with_quote == 3
+    assert view.planned_rows_total == 3
+
+
+def test_total_planned_skips_share_target_without_quote():
+    targets = [
+        _target("HIMS", "1000", TargetUnit.USD),  # known $ regardless of quote
+        _target("OBSCURE", "10", TargetUnit.SHARES),  # no quote → no $ equiv
+    ]
+    view = build_plan_view(
+        targets=targets,
+        positions_by_symbol={},
+        quotes_by_symbol={},
+        free_cash=Decimal("0"),
+    )
+    assert view.total_planned_dollar == Decimal("1000.00")
+    assert view.planned_rows_with_quote == 1
+    assert view.planned_rows_total == 2

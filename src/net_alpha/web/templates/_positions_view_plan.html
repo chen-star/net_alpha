@@ -99,7 +99,14 @@
       </table>
 
       {# Footer summary #}
-      <div class="mt-3 pt-3 flex justify-between text-[12px]" style="border-top:0.5px solid var(--color-hairline);">
+      <div class="mt-3 pt-3 flex justify-between flex-wrap gap-x-4 gap-y-1 text-[12px]" style="border-top:0.5px solid var(--color-hairline);">
+        <span class="text-label-2">
+          Total planned:
+          <strong class="num text-text">${{ "%.2f"|format(plan_view.total_planned_dollar|float) }}</strong>
+          {% if plan_view.planned_rows_with_quote < plan_view.planned_rows_total %}
+            <span class="text-label-3" title="{{ plan_view.planned_rows_total - plan_view.planned_rows_with_quote }} target(s) excluded — no quote available to convert to USD.">({{ plan_view.planned_rows_with_quote }}/{{ plan_view.planned_rows_total }} priced)</span>
+          {% endif %}
+        </span>
         {% if plan_view.total_to_fill_dollar > 0 %}
           <span class="text-label-2">Total to fill: <strong class="num text-text">+${{ "%.2f"|format(plan_view.total_to_fill_dollar|float) }}</strong></span>
           <span class="text-label-2">Free cash: <strong class="num text-text">${{ "%.2f"|format(plan_view.free_cash|float) }}</strong></span>
