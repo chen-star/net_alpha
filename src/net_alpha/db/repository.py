@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -18,6 +18,7 @@ from net_alpha.db.tables import (
     LotOverrideRow,
     LotRow,
     MetaRow,
+    PositionTargetRow,
     RealizedGLLotRow,
     Section1256ClassificationRow,
     SplitRow,
@@ -44,6 +45,7 @@ from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.models.splits import LotOverride, Split
 from net_alpha.section_1256.universe import is_section_1256 as _is_section_1256
 from net_alpha.section_1256.universe import load_universe
+from net_alpha.targets.models import PositionTarget, TargetUnit
 
 
 class Repository:
@@ -1624,6 +1626,70 @@ class Repository:
             for v in session.exec(stmt).all():
                 total += Decimal(str(v))
         return total
+
+    # ---- Position Targets ----
+
+    def list_targets(self) -> list[PositionTarget]:
+        """Return all position targets sorted alphabetically by symbol."""
+        with Session(self.engine) as s:
+            rows = s.exec(select(PositionTargetRow).order_by(PositionTargetRow.symbol)).all()
+        return [self._row_to_target(r) for r in rows]
+
+    def get_target(self, symbol: str) -> PositionTarget | None:
+        """Return the target for `symbol` (case-insensitive), or None if absent."""
+        sym = symbol.upper()
+        with Session(self.engine) as s:
+            row = s.exec(select(PositionTargetRow).where(PositionTargetRow.symbol == sym)).first()
+        return self._row_to_target(row) if row else None
+
+    def upsert_target(self, symbol: str, amount: Decimal, unit: TargetUnit) -> PositionTarget:
+        """Create or update the position target for `symbol`.
+
+        On insert, created_at and updated_at are both set to now.
+        On update, only target_amount, target_unit, and updated_at change;
+        created_at is preserved.
+        """
+        sym = symbol.upper()
+        now = datetime.now(UTC).isoformat()
+        with Session(self.engine) as s:
+            row = s.exec(select(PositionTargetRow).where(PositionTargetRow.symbol == sym)).first()
+            if row is None:
+                row = PositionTargetRow(
+                    symbol=sym,
+                    target_amount=amount,
+                    target_unit=unit.value,
+                    created_at=now,
+                    updated_at=now,
+                )
+            else:
+                row.target_amount = amount
+                row.target_unit = unit.value
+                row.updated_at = now
+            s.add(row)
+            s.commit()
+            s.refresh(row)
+            return self._row_to_target(row)
+
+    def delete_target(self, symbol: str) -> bool:
+        """Delete the target for `symbol`. Returns True if deleted, False if not found."""
+        sym = symbol.upper()
+        with Session(self.engine) as s:
+            row = s.exec(select(PositionTargetRow).where(PositionTargetRow.symbol == sym)).first()
+            if row is None:
+                return False
+            s.delete(row)
+            s.commit()
+        return True
+
+    @staticmethod
+    def _row_to_target(row: PositionTargetRow) -> PositionTarget:
+        return PositionTarget(
+            symbol=row.symbol,
+            target_amount=Decimal(str(row.target_amount)),
+            target_unit=TargetUnit(row.target_unit),
+            created_at=datetime.fromisoformat(row.created_at),
+            updated_at=datetime.fromisoformat(row.updated_at),
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -98,32 +98,37 @@ def test_overview_hero_kpi_is_total_account_value(seeded_client):
     assert "TOTAL ACCOUNT VALUE" in html or "Total account value" in html
 
 
-def test_overview_has_today_tile(seeded_client):
-    """The Today tile appears in the top-row of the KPI grid (NEW)."""
+def test_overview_has_total_return_tile(seeded_client):
+    """The Total Return tile appears in the top-row of the KPI grid (promoted
+    from bottom row, renamed from Growth; TODAY tile dropped)."""
     resp = seeded_client.get("/portfolio/kpis")
-    assert 'data-kpi-slot="today"' in resp.text
+    assert 'data-kpi-slot="total_return"' in resp.text
+    assert 'data-kpi-slot="today"' not in resp.text
 
 
-def test_overview_kpi_grid_has_three_large_and_four_small_slots(seeded_client):
-    """Top row: hero + today + cash (3). Bottom row: realized, unrealized,
-    contributed, growth (4). Total 7 KPI slots."""
+def test_overview_kpi_grid_has_three_large_and_three_small_slots(seeded_client):
+    """Top row: hero + total_return + cash (3). Bottom row: realized, unrealized,
+    contributed (3). Total 6 KPI slots. Growth tile moved to top row as Total
+    Return; TODAY tile removed."""
     resp = seeded_client.get("/portfolio/kpis")
     html = resp.text
     slots = (
         ("hero", 1),
-        ("today", 1),
+        ("total_return", 1),
         ("cash", 1),
         ("realized", 1),
         ("unrealized", 1),
         ("contributed", 1),
-        ("growth", 1),
     )
     for slot, expected in slots:
         actual = html.count(f'data-kpi-slot="{slot}"')
         assert actual == expected, f"slot={slot} appears {actual}× (expected {expected})"
+    # Removed slots must not appear
+    for removed in ("today", "growth"):
+        assert f'data-kpi-slot="{removed}"' not in html, f"removed slot={removed} still present"
 
 
-def test_today_tile_renders_negative_sign_for_loss_days():
+def test_fmt_currency_prepends_minus_for_negatives():
     """Today tile shows ``-$50.00`` (with leading minus), not ``$50.00``,
     when the day's net change is negative (review C1 regression)."""
     from decimal import Decimal

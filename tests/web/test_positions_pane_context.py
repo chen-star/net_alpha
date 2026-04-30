@@ -1,9 +1,8 @@
 """The positions pane must always pass transfer context (trade_id,
 transfer_qty, transfer_date) so the inline set-basis form can validate
 multi-lot splits."""
-from __future__ import annotations
 
-import datetime as dt
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 

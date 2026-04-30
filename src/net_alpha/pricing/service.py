@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 from loguru import logger
 
-from net_alpha.pricing.cache import PriceCache
+from net_alpha.pricing.cache import _MISS, PriceCache
 from net_alpha.pricing.provider import PriceFetchError, PriceProvider, Quote
 
 
@@ -133,3 +134,14 @@ class PricingService:
         apply_splits(repo)
         apply_manual_overrides(repo)
         return result
+
+    def get_historical_close(self, symbol: str, on: dt.date) -> Decimal | None:
+        """Read-through cache for historical closes. Disabled service returns None."""
+        if not self._enabled:
+            return None
+        cached = self._cache.historical_get(symbol, on)
+        if cached is not _MISS:
+            return cached  # Decimal or None (negative cache)
+        fetched = self._provider.get_historical_close(symbol, on)
+        self._cache.historical_put(symbol, on, fetched)
+        return fetched

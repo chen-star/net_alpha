@@ -184,8 +184,8 @@ def test_init_db_bumps_schema_version_to_2(tmp_path):
     init_db(engine)
     with engine.connect() as conn:
         v = conn.execute(sqlalchemy.text("SELECT value FROM meta WHERE key='schema_version'")).scalar()
-    # v1 DBs are migrated through every step up to CURRENT_SCHEMA_VERSION (11).
-    assert v == "11"
+    # v1 DBs are migrated through every step up to CURRENT_SCHEMA_VERSION (12).
+    assert v == "12"
 
 
 def test_init_db_on_fresh_db_creates_v2_directly(tmp_path):
@@ -199,7 +199,7 @@ def test_init_db_on_fresh_db_creates_v2_directly(tmp_path):
         tables = [
             r[0] for r in conn.execute(sqlalchemy.text("SELECT name FROM sqlite_master WHERE type='table'")).all()
         ]
-    assert v == "11"
+    assert v == "12"
     assert "basis_source" in cols
     assert "transfer_date" in cols
     assert "transfer_group_id" in cols

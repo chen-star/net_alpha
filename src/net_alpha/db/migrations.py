@@ -25,7 +25,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 11
+CURRENT_SCHEMA_VERSION = 12
 
 
 def get_schema_version(session: Session) -> int:
@@ -348,6 +348,42 @@ def _migrate_v10_to_v11(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v11_to_v12(session: Session) -> None:
+    """Add position_targets (user-managed per-symbol target $ or share counts)
+    and historical_price_cache (read-through cache for benchmark closes).
+    Idempotent.
+    """
+    if not _table_exists(session, "position_targets"):
+        session.exec(
+            text("""
+            CREATE TABLE position_targets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                target_amount NUMERIC NOT NULL,
+                target_unit TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(symbol)
+            )
+            """)
+        )
+        session.exec(text("CREATE INDEX IF NOT EXISTS ix_position_targets_symbol ON position_targets(symbol)"))
+
+    if not _table_exists(session, "historical_price_cache"):
+        session.exec(
+            text("""
+            CREATE TABLE historical_price_cache (
+                symbol TEXT NOT NULL,
+                on_date TEXT NOT NULL,
+                close_price NUMERIC,
+                fetched_at TEXT NOT NULL,
+                PRIMARY KEY(symbol, on_date)
+            )
+            """)
+        )
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -403,6 +439,10 @@ def migrate(session: Session) -> None:
     if current < 11:
         _migrate_v10_to_v11(session)
         set_schema_version(session, 11)
+        current = 11
+    if current < 12:
+        _migrate_v11_to_v12(session)
+        set_schema_version(session, 12)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(

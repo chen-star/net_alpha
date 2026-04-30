@@ -245,3 +245,13 @@ class UserPreferenceRow(SQLModel, table=True):
     profile: str = Field(default="active")  # 'conservative' | 'active' | 'options'
     density: str = Field(default="comfortable")  # 'compact' | 'comfortable' | 'tax'
     updated_at: datetime
+
+
+class PositionTargetRow(SQLModel, table=True):
+    __tablename__ = "position_targets"
+    id: int | None = Field(default=None, primary_key=True)
+    symbol: str = Field(index=True, unique=True)
+    target_amount: Decimal
+    target_unit: str  # 'usd' | 'shares'
+    created_at: str  # ISO datetime
+    updated_at: str  # ISO datetime

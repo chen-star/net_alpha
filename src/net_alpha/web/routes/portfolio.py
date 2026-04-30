@@ -17,6 +17,7 @@ from net_alpha.audit import (
 )
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.allocation import build_allocation
+from net_alpha.portfolio.benchmark import build_benchmark_series
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
     cash_allocation_slice,
@@ -36,6 +37,7 @@ from net_alpha.portfolio.tax_planner import (
     compute_offset_budget,
     project_year_end_tax,
 )
+from net_alpha.portfolio.top_movers import build_top_movers
 from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
@@ -413,6 +415,11 @@ def portfolio_positions(
     }
     profile = _resolve_profile(repo, account)
     extra_columns = profile.default_columns("holdings")
+    # Inject targets-by-symbol + 'target' column when any targets exist.
+    targets = repo.list_targets()
+    targets_by_symbol = {t.symbol: t for t in targets}
+    if targets and "target" not in extra_columns:
+        extra_columns = list(extra_columns) + ["target"]
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_table.html",
@@ -432,6 +439,7 @@ def portfolio_positions(
             "group_options": group_options,
             "profile": profile,
             "extra_columns": extra_columns,
+            "targets_by_symbol": targets_by_symbol,
             "sort": sort or "market_value",
             "dir": (dir or "desc").lower(),
         },
@@ -559,7 +567,7 @@ def portfolio_equity_curve(
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_equity_curve.html",
-        {"points": points, "year": year},
+        {"points": points, "year": year, "benchmark_points": [], "benchmark_symbol": ""},
     )
 
 
@@ -634,6 +642,8 @@ def portfolio_body(
         gl_option_closures=gl_option_closures,
     )
 
+    top_movers = build_top_movers(positions_for_alloc)
+
     # --- Cash flow ---
     cash_events = repo.list_cash_events(account_id=None)
     if account:
@@ -660,6 +670,21 @@ def portfolio_body(
         trades=scoped_trades,
         account=None,
     )
+
+    # Benchmark shadow series for the same date axis. Best-effort: a missing
+    # benchmark must NOT break the chart, so we wrap the call in try/except
+    # and pass empty list on any failure.
+    benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
+    try:
+        eq_dates = [p.on for p in points]
+        benchmark_points = build_benchmark_series(
+            symbol=benchmark_symbol,
+            eq_dates=eq_dates,
+            cash_points=cash_points,
+            get_close=svc.get_historical_close,
+        )
+    except Exception:
+        benchmark_points = []
 
     open_shorts = compute_open_short_option_positions(
         scoped_trades,
@@ -736,5 +761,8 @@ def portfolio_body(
             "vs_contributed_delta": body_vs_contributed_delta,
             "today_change": kpis.today_change,
             "today_pct": kpis.today_pct,
+            "top_movers": top_movers,
+            "benchmark_points": benchmark_points,
+            "benchmark_symbol": benchmark_symbol,
         },
     )

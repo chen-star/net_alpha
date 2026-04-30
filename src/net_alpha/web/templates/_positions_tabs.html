@@ -12,6 +12,7 @@
     ('options', 'Options',   options_count|default('')),
     ('at-loss', 'At a loss', at_loss_count|default('')),
     ('closed',  'Closed',    ''),
+    ('plan',    'Plan',      target_count|default('')),
   ] %}
     {% set key, label, count = tab %}
     <a href="/positions?view={{ key }}{% if selected_period %}&period={{ selected_period }}{% endif %}{% if selected_account %}&account={{ selected_account }}{% endif %}"
