@@ -1,0 +1,120 @@
+{# Harvest plan-builder tile + re-rendered queue.
+
+   Inputs:
+     plan: HarvestPlan
+     rows: list[HarvestOpportunity]                 (full pool, decorated with __tax_saved)
+     selected_keys: set[(symbol, account_label)]    (rows currently checked)
+     mode: "auto" | "manual" | "custom"             (current budget mode)
+     custom_budget: str                             (last custom value or "")
+     exclude_locked: bool
+     has_tax_config: bool
+#}
+<section id="harvest-queue-region" class="space-y-3">
+
+  <div class="panel p-3">
+    <div class="label-uc mb-2">Harvest plan</div>
+    <form hx-get="/tax/harvest/plan" hx-trigger="change delay:200ms"
+          hx-target="#harvest-queue-region" hx-swap="outerHTML"
+          class="flex flex-wrap gap-3 items-baseline text-sm">
+      <label class="inline-flex items-center gap-1">
+        <input type="radio" name="mode" value="auto"
+               {% if mode == 'auto' %}checked{% endif %}> Auto
+        <span class="text-label-2 text-[11px]">
+          (${{ "{:,.0f}".format(plan.realized_gains_ytd|float|abs) }} realized gains
+          + $3,000 ordinary)
+        </span>
+      </label>
+      <label class="inline-flex items-center gap-1">
+        <input type="radio" name="mode" value="custom"
+               {% if mode == 'custom' %}checked{% endif %}> Custom
+        <input type="number" name="custom_budget" min="0" step="100"
+               value="{{ custom_budget }}"
+               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[12px] w-28"
+               style="border:0.5px solid rgba(255,255,255,0.08);"
+               oninput="this.form.querySelector('input[value=custom]').checked = true">
+      </label>
+      <label class="inline-flex items-center gap-1">
+        <input type="checkbox" name="exclude_locked" value="1"
+               {% if exclude_locked %}checked{% endif %}>
+        Exclude locked
+      </label>
+    </form>
+
+    <div class="mt-3 text-[13px] text-label-1 leading-[1.55]">
+      Selected: <span class="num font-semibold">{{ plan.selected|length }}</span>
+      of {{ rows|length }} candidates
+      &middot; <span class="num text-neg">−${{ "%.2f"|format(plan.total_loss_harvested|float|abs) }}</span>
+      loss harvested
+      {% if has_tax_config %}
+        &middot; tax saved (est.): <span class="num text-pos">${{ "%.2f"|format(plan.estimated_tax_saved|float) }}</span>
+      {% else %}
+        &middot; <a href="/tax?view=projection" class="text-label-2 underline">configure tax rates</a> to see tax-saved estimates
+      {% endif %}
+    </div>
+    <div class="text-[11px] text-label-2 mt-1">
+      Offsets gains: <span class="num">${{ "%.2f"|format(plan.gain_offset_used|float) }}</span>
+      &middot; against ordinary income (capped $3K):
+      <span class="num">${{ "%.2f"|format(plan.ordinary_offset_used|float) }}</span>
+    </div>
+  </div>
+
+  {% if rows %}
+  <table class="net-table">
+    <thead class="sticky top-0 z-10 bg-bg">
+      <tr>
+        <th></th>
+        <th>Symbol</th>
+        <th class="r">Loss</th>
+        <th>LT/ST</th>
+        <th>Account</th>
+        <th>Lockout-clear</th>
+        <th class="r">Tax saved (est.)</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+      {% set _checked = (row.symbol, row.account_label) in selected_keys %}
+      <tr>
+        <td>
+          <input type="checkbox"
+                 name="pick" value="{{ row.symbol }}::{{ row.account_label }}"
+                 {% if _checked %}checked{% endif %}
+                 hx-get="/tax/harvest/plan?mode=manual"
+                 hx-trigger="change"
+                 hx-target="#harvest-queue-region"
+                 hx-swap="outerHTML"
+                 hx-include="[name='pick']:checked,[name='exclude_locked']">
+        </td>
+        <td class="font-semibold">{{ row.symbol }}</td>
+        <td class="r num text-neg">−${{ "%.2f"|format(row.loss|abs) }}</td>
+        <td><span class="chip-{% if row.lt_st|lower == 'lt' %}unclear{% else %}probable{% endif %}">{{ row.lt_st }}</span></td>
+        <td class="text-[12px]">{{ row.account_label }}</td>
+        <td>
+          {% if row.lockout_clear %}
+            <span class="chip-confirm">{{ row.lockout_clear }}</span>
+          {% else %}
+            <span class="chip-unclear" style="color: var(--color-pos); background: rgba(48,209,88,0.14);">clear</span>
+          {% endif %}
+        </td>
+        <td class="r num">
+          {% if has_tax_config and row.__tax_saved is defined %}
+            <span class="text-pos">${{ "%.2f"|format(row.__tax_saved|float) }}</span>
+          {% else %}
+            <span class="text-label-3">—</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="/sim?ticker={{ row.symbol }}&amp;qty={{ row.qty }}&amp;harvest=1" class="btn-ghost text-[12px]">
+            Simulate harvest
+          </a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="text-label-2 text-[13px]">No harvestable candidates right now.</p>
+  {% endif %}
+
+</section>
