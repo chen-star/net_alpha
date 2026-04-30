@@ -654,9 +654,7 @@ def build_plan(
         else:
             pool.append(c)
 
-    pool.sort(
-        key=lambda c: (-_tax_saved_for(c, marginal_rates), 0 if c.lt_st == "ST" else 1)
-    )
+    pool.sort(key=lambda c: (-_tax_saved_for(c, marginal_rates), 0 if c.lt_st == "ST" else 1))
 
     selected: list[HarvestOpportunity] = []
     total_loss = Decimal("0")
@@ -670,9 +668,7 @@ def build_plan(
         tax_saved_sum += _tax_saved_for(c, marginal_rates)
 
     cap = Decimal("3000")
-    excess_over_gains = max(
-        Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd)
-    )
+    excess_over_gains = max(Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd))
     ordinary_offset = min(cap, excess_over_gains)
     gain_offset = total_loss - ordinary_offset
 
@@ -709,9 +705,7 @@ def summarize_manual_picks(
         Decimal("0"),
     )
     cap = Decimal("3000")
-    excess_over_gains = max(
-        Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd)
-    )
+    excess_over_gains = max(Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd))
     ordinary_offset = min(cap, excess_over_gains)
     gain_offset = total_loss - ordinary_offset
 

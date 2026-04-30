@@ -1,4 +1,5 @@
 """Tests for tax_planner.build_plan."""
+
 from datetime import date
 from decimal import Decimal
 

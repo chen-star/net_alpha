@@ -2,6 +2,33 @@
 
 
 
+## v0.38.0 (2026-04-29)
+
+### Features
+
+Pre-launch UX polish (Phase B of three sequential PRs). Tax → Harvest now ships a
+plan-builder assistant that turns the passive 50-row queue into an action-oriented
+"build a plan" experience.
+
+* feat(planner): build_plan greedy harvest planner with tax-saved ranking — pure
+  function in `portfolio/tax_planner.py`. Auto budget defaults to
+  `realized_gains_ytd + $3,000` ordinary cap; custom budget overrides. Greedy by
+  estimated tax saved (federal+state marginal rate × abs(loss) for ST, LTCG rate
+  for LT), ST-first on ties. Stops on first overshoot — no skip-and-continue.
+* feat(planner): summarize_manual_picks for user-edited selection — when the
+  user manually checks/unchecks rows, summary math runs without re-greedy.
+* feat(web): /tax/harvest/plan endpoint + lazy-load on at-loss view — Tax →
+  Harvest renders the plan-builder tile (auto/custom/manual budget mode,
+  exclude-locked toggle, selected loss + tax-saved estimate, gain-vs-ordinary
+  split) followed by a candidates table with per-row checkboxes and
+  estimated-tax-saved column.
+
+### Tests
+
+16 unit tests for the planner + 4 endpoint tests + 3 compat updates.
+
+
+
 ## v0.37.1 (2026-04-29)
 
 ### Polish
