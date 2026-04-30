@@ -5,59 +5,51 @@
       hx-post="/tax/projection-config"
       hx-target="#projection-tab-content"
       hx-swap="outerHTML"
-      class="grid grid-cols-2 gap-3 max-w-xl">
-  <label class="block text-[12px] text-label-2">
-    Filing status
-    <select name="filing_status" required class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded" style="border-color: var(--color-hairline);">
+      class="grid gap-3 sm:grid-cols-2 mt-3 panel">
+  <div>
+    <label class="block label-uc">Filing status</label>
+    <select name="filing_status" required class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full">
       {% set _fs = (tax_brackets_cfg.filing_status if tax_brackets_cfg else 'single') %}
       <option value="single" {% if _fs == 'single' %}selected{% endif %}>Single</option>
-      <option value="mfj" {% if _fs == 'mfj' %}selected{% endif %}>Married, filing jointly</option>
-      <option value="mfs" {% if _fs == 'mfs' %}selected{% endif %}>Married, filing separately</option>
+      <option value="mfj" {% if _fs == 'mfj' %}selected{% endif %}>Married filing jointly</option>
+      <option value="mfs" {% if _fs == 'mfs' %}selected{% endif %}>Married filing separately</option>
       <option value="hoh" {% if _fs == 'hoh' %}selected{% endif %}>Head of household</option>
     </select>
-  </label>
-
-  <label class="block text-[12px] text-label-2">
-    State (2-letter)
-    <input type="text" name="state" required maxlength="2" pattern="[A-Za-z]{2}"
-           value="{{ tax_brackets_cfg.state if tax_brackets_cfg else 'CA' }}"
-           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded uppercase"
-           style="border-color: var(--color-hairline);">
-  </label>
-
-  <label class="block text-[12px] text-label-2">
-    Federal marginal rate
-    <input type="number" name="federal_marginal_rate" required step="0.001" min="0" max="1"
-           value="{{ tax_brackets_cfg.federal_marginal_rate if tax_brackets_cfg else 0.32 }}"
-           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded font-mono"
-           style="border-color: var(--color-hairline);">
-  </label>
-
-  <label class="block text-[12px] text-label-2">
-    State marginal rate
-    <input type="number" name="state_marginal_rate" required step="0.001" min="0" max="1"
-           value="{{ tax_brackets_cfg.state_marginal_rate if tax_brackets_cfg else 0.093 }}"
-           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded font-mono"
-           style="border-color: var(--color-hairline);">
-  </label>
-
-  <label class="block text-[12px] text-label-2">
-    LTCG rate
-    <input type="number" name="ltcg_rate" required step="0.001" min="0" max="1"
-           value="{{ tax_brackets_cfg.ltcg_rate if tax_brackets_cfg else 0.15 }}"
-           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded font-mono"
-           style="border-color: var(--color-hairline);">
-  </label>
-
-  <label class="block text-[12px] text-label-2">
-    Qualified-dividend rate
-    <input type="number" name="qualified_div_rate" required step="0.001" min="0" max="1"
-           value="{{ tax_brackets_cfg.qualified_div_rate if tax_brackets_cfg else 0.15 }}"
-           class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded font-mono"
-           style="border-color: var(--color-hairline);">
-  </label>
-
-  <div class="col-span-2">
-    <button type="submit" class="btn">Save &amp; recompute</button>
   </div>
+  <div>
+    <label class="block label-uc">State (ISO; blank for federal-only)</label>
+    <input type="text" name="state" maxlength="2"
+           value="{{ tax_brackets_cfg.state if tax_brackets_cfg else '' }}"
+           class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full" placeholder="e.g. CA"/>
+  </div>
+  <div>
+    <label class="block label-uc">Federal marginal rate</label>
+    <input type="number" name="federal_marginal_rate" step="0.001" min="0" max="0.5" required
+           value="{{ tax_brackets_cfg.federal_marginal_rate if tax_brackets_cfg else 0.24 }}"
+           class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full" placeholder="0.24"/>
+  </div>
+  <div>
+    <label class="block label-uc">State marginal rate</label>
+    <input type="number" name="state_marginal_rate" step="0.001" min="0" max="0.2"
+           value="{{ tax_brackets_cfg.state_marginal_rate if tax_brackets_cfg else '' }}"
+           class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full" placeholder="0.093"/>
+  </div>
+  <div>
+    <label class="block label-uc">LTCG rate</label>
+    <input type="number" name="ltcg_rate" step="0.01" min="0" max="0.3" required
+           value="{{ tax_brackets_cfg.ltcg_rate if tax_brackets_cfg else 0.15 }}"
+           class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full" placeholder="0.15"/>
+  </div>
+  <div>
+    <label class="block label-uc">Qualified dividend rate</label>
+    <input type="number" name="qualified_div_rate" step="0.01" min="0" max="0.3"
+           value="{{ tax_brackets_cfg.qualified_div_rate if tax_brackets_cfg else 0.15 }}"
+           class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full" placeholder="0.15"/>
+  </div>
+  <div class="sm:col-span-2 text-right">
+    <button type="submit" class="btn">Save tax rates</button>
+  </div>
+  <p class="sm:col-span-2 text-[11px] text-label-2 leading-[1.5]">
+    Saved locally to <code>~/.net_alpha/config.yaml</code>. Nothing leaves your machine.
+  </p>
 </form>

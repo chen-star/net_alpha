@@ -214,11 +214,11 @@ def _build_performance_ctx(
 def post_projection_config(
     request: Request,
     filing_status: str = Form(...),
-    state: str = Form(...),
+    state: str = Form(""),
     federal_marginal_rate: float = Form(...),
-    state_marginal_rate: float = Form(...),
+    state_marginal_rate: float = Form(0.0),
     ltcg_rate: float = Form(...),
-    qualified_div_rate: float = Form(...),
+    qualified_div_rate: float = Form(0.0),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     """Persist the user's tax-projection config and re-render the projection
