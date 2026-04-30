@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`wash-alpha` (package `net_alpha`, current version `0.40.0`) is a local-first Python tool for cross-account wash sale detection, tax-performance analysis, and pre-trade simulation — covering equities, options, and ETFs. It ships a Typer CLI plus an optional FastAPI web UI (`net-alpha ui`) that is now the primary interactive surface. The v2 design spec lives in `docs/superpowers/specs/2026-04-25-v2-simplification-design.md`; further design specs live alongside it in `docs/superpowers/specs/`.
+`wash-alpha` (package `net_alpha`, current version `0.40.0`) is a local-first Python tool for cross-account wash sale detection, tax-performance analysis, and pre-trade simulation — covering equities, options, and ETFs. It ships a Typer CLI plus an optional FastAPI web UI (`net-alpha ui`) that is now the primary interactive surface.
 
 ## Tech Stack
 

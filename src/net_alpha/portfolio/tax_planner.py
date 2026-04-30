@@ -640,10 +640,7 @@ def build_plan(
     target_budget: Decimal | None = None,
     exclude_locked: bool = True,
 ) -> HarvestPlan:
-    """Greedy by estimated tax saved per candidate, ST-first on ties.
-
-    See spec: docs/superpowers/specs/2026-04-29-prelaunch-ux-polish-design.md §5.
-    """
+    """Greedy by estimated tax saved per candidate, ST-first on ties."""
     used_auto = target_budget is None
     if target_budget is not None:
         target = target_budget
