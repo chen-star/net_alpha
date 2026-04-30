@@ -130,7 +130,7 @@
 {% else %}
   <div class="panel overflow-x-auto" style="padding:0;">
     <table class="net-table min-w-[960px]">
-      <thead>
+      <thead class="sticky top-0 z-10 bg-bg">
         <tr>
           {{ sort_th('symbol', 'Symbol', tooltip='Underlying ticker. Click to sort. Options are merged into their underlying for quantity/market value (cash flows still tracked).') }}
           <th title="All accounts that hold (or held) this symbol within the selected scope.">Accounts</th>
