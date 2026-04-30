@@ -2,6 +2,21 @@
 
 
 
+## v0.37.0 (2026-04-30)
+
+### Feature
+
+* feat(web): add cash-vs-positions deployment chart on Overview
+
+Splits the allocation row into a 2/3 + 1/3 grid. The new right-hand
+panel shows a hero &#34;% deployed&#34; stat, a stacked bar (Positions ·
+Cash·free · Cash·pledged), and a per-segment legend so the user can
+read deployment ratio at a glance — the data already lived on
+AllocationView, so no compute changes.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c80b94d`](https://github.com/chen-star/net_alpha/commit/c80b94d30ddd127cac6adee20dc29d9c4b441d2e))
+
+
 ## v0.36.0 (2026-04-30)
 
 ### Feature
