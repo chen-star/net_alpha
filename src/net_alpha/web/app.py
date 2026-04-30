@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 
+from net_alpha import __version__ as _app_version
 from net_alpha.audit import encode_metric_ref as _encode_metric_ref
 from net_alpha.config import Settings, load_pricing_config, load_tax_config
 from net_alpha.db.connection import get_engine, init_db
@@ -118,6 +119,19 @@ def create_app(settings: Settings) -> FastAPI:
         }
 
     templates.env.globals["first_visit_modal_data"] = _first_visit_modal_data
+
+    templates.env.globals["app_version"] = _app_version
+    templates.env.globals["data_dir_path"] = str(settings.data_dir)
+    templates.env.globals["pricing_remote_enabled"] = pricing_config.enable_remote
+
+    def _etf_pairs_data() -> dict[str, object]:
+        return {
+            "groups": app.state.etf_pairs,
+            "user_file_path": str(settings.user_etf_pairs_path),
+            "user_file_exists": settings.user_etf_pairs_path.exists(),
+        }
+
+    templates.env.globals["etf_pairs_data"] = _etf_pairs_data
 
     app.state.templates = templates
 

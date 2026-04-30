@@ -1,0 +1,47 @@
+{# About tab — version, privacy guarantees, and the standard disclaimer.
+
+   Static content; relies on the `app_version`, `data_dir_path`,
+   `pricing_remote_enabled`, and `disclaimer` Jinja globals. #}
+
+<div class="space-y-5 text-[13px]">
+  <div>
+    <h3 class="text-[14px] font-semibold m-0 mb-1">net-alpha</h3>
+    <p class="text-label-2 text-[12px] m-0">
+      Version <span class="text-text font-mono">{{ app_version }}</span>
+    </p>
+    <p class="text-label-2 text-[12px] m-0 mt-1">
+      Local-first cross-account wash-sale detection for equities, options, and ETFs.
+    </p>
+  </div>
+
+  <div>
+    <h4 class="text-[13px] font-semibold m-0 mb-1">Privacy</h4>
+    <ul class="text-label-2 text-[12px] m-0 pl-4 list-disc space-y-1">
+      <li>All trade data stays on this machine. No telemetry.</li>
+      <li>
+        {% if pricing_remote_enabled %}
+          Symbols (only) are sent to Yahoo Finance for current quotes.
+          Disable in <span class="font-mono">~/.net_alpha/config.yaml</span>
+          with <span class="font-mono">prices.enable_remote: false</span>.
+        {% else %}
+          Remote price fetching is disabled. No outbound network calls are made.
+        {% endif %}
+      </li>
+      <li>Trade details, accounts, P&amp;L, and tax data never leave the box.</li>
+    </ul>
+  </div>
+
+  <div>
+    <h4 class="text-[13px] font-semibold m-0 mb-1">Data location</h4>
+    <p class="text-label-2 text-[12px] m-0 font-mono break-all">{{ data_dir_path }}</p>
+    <p class="text-label-2 text-[12px] m-0 mt-1">
+      Holds the SQLite database, optional <span class="font-mono">config.yaml</span>,
+      and any user ETF pair extensions.
+    </p>
+  </div>
+
+  <div>
+    <h4 class="text-[13px] font-semibold m-0 mb-1">Disclaimer</h4>
+    <p class="text-label-2 text-[12px] m-0">{{ disclaimer }}</p>
+  </div>
+</div>

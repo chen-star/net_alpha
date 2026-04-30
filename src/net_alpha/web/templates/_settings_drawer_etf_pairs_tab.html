@@ -1,0 +1,50 @@
+{# ETF pairs tab — read-only viewer of bundled + user-extended pair groups.
+
+   Pairs in the same group are treated as substantially-identical for §1091
+   wash-sale matching. Users extend the bundled list by editing
+   `~/.net_alpha/etf_pairs.yaml`; user entries augment (never replace) the
+   bundled groups (see engine/etf_pairs.py::load_etf_pairs).
+
+   Data comes from the `etf_pairs_data()` Jinja global which exposes the
+   already-merged dict from app.state. #}
+
+{% set _epd = etf_pairs_data() %}
+<div class="space-y-3 text-[13px]">
+  <div>
+    <h3 class="text-[14px] font-semibold m-0 mb-1">ETF substantially-identical pairs</h3>
+    <p class="text-label-2 text-[12px] m-0">
+      Tickers in the same group are treated as substantially-identical for
+      wash-sale matching.
+    </p>
+  </div>
+
+  <div>
+    <h4 class="text-[13px] font-semibold m-0 mb-1">Extend</h4>
+    <p class="text-label-2 text-[12px] m-0">
+      Edit this file to add your own groups. Entries augment the bundled
+      list; existing groups merge by ticker.
+    </p>
+    <p class="text-label-2 text-[12px] m-0 mt-1 font-mono break-all">
+      {{ _epd.user_file_path }}
+      {% if not _epd.user_file_exists %}
+        <span class="text-label-3">(does not exist yet)</span>
+      {% endif %}
+    </p>
+  </div>
+
+  <div>
+    <h4 class="text-[13px] font-semibold m-0 mb-2">Groups ({{ _epd.groups | length }})</h4>
+    <div class="space-y-1">
+      {% for group, tickers in _epd.groups.items() | sort %}
+        <div class="flex items-baseline gap-3 py-1 border-b" style="border-color: var(--color-hairline);">
+          <div class="text-label-2 text-[12px] font-mono w-40 shrink-0 truncate">{{ group }}</div>
+          <div class="text-text text-[12px] font-mono flex flex-wrap gap-1.5">
+            {% for t in tickers %}
+              <span class="px-1.5 py-0.5 rounded bg-surface" style="border:0.5px solid rgba(255,255,255,0.08);">{{ t }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>

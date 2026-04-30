@@ -1,9 +1,8 @@
-{# Settings drawer — Phase 1 shell with tabs.
+{# Settings drawer — five tabs: Imports / Profile / Density / ETF pairs / About.
 
-   Five tabs: Imports / Profile / Density / ETF pairs / About.
-   Phase 1 ships Imports + Density as functional; the other three are
-   placeholder panels showing "Coming in Phase 2/3" copy. Phase 2-3 will
-   replace those placeholders with real content.
+   Each tab is a separate template included below; switching is purely
+   client-side via Alpine. Cross-tab interactions (e.g. profile changes
+   that recompute pages) post to /preferences and rely on HX-Refresh.
 
    Open events come from outside this scope via:
      window.dispatchEvent(new CustomEvent('open-settings-drawer', { detail: { tab: 'density' } }))
@@ -76,22 +75,16 @@
         {% include "_settings_drawer_imports_tab.html" %}
       </div>
       <div x-show="tab === 'profile'" x-cloak>
-        {% with what="Profile preferences (default tax tab, default account)" %}
-          {% include "_settings_drawer_placeholder_tab.html" %}
-        {% endwith %}
+        {% include "_settings_drawer_profile_tab.html" %}
       </div>
       <div x-show="tab === 'density'" x-cloak>
         {% include "_settings_drawer_density_tab.html" %}
       </div>
       <div x-show="tab === 'etf-pairs'" x-cloak>
-        {% with what="ETF substantially-identical pairs viewer + extender" %}
-          {% include "_settings_drawer_placeholder_tab.html" %}
-        {% endwith %}
+        {% include "_settings_drawer_etf_pairs_tab.html" %}
       </div>
       <div x-show="tab === 'about'" x-cloak>
-        {% with what="Version, disclaimer, privacy guarantees" %}
-          {% include "_settings_drawer_placeholder_tab.html" %}
-        {% endwith %}
+        {% include "_settings_drawer_about_tab.html" %}
       </div>
     </div>
   </aside>

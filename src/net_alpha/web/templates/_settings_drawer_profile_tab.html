@@ -1,0 +1,47 @@
+{# Profile tab — per-account trading profile (Conservative / Active / Options).
+
+   Mirrors the Density tab pattern: hosts an existing topbar control inside
+   the drawer with a one-line explainer. Posts to /preferences just like
+   the topbar profile switcher; profile_switcher_data() resolves accounts
+   and current selections. Density is preserved on each write so changing
+   profile here doesn't reset density. #}
+
+<div class="space-y-3 text-[13px]">
+  <div>
+    <h3 class="text-[14px] font-semibold m-0 mb-1">Profile</h3>
+    <p class="text-label-2 text-[12px] m-0">
+      Tunes which surfaces and columns show by default.
+      <span class="font-medium text-text">Conservative</span> hides advanced
+      wash-sale views; <span class="font-medium text-text">Active</span> is
+      the default; <span class="font-medium text-text">Options</span> adds
+      premium-received and §1256 columns.
+    </p>
+  </div>
+
+  {% set _psd = profile_switcher_data() %}
+  {% if _psd.show_switcher %}
+    <div>
+      <div class="text-label-2 text-[12px] mb-2">Per account</div>
+      {% for a in _psd.accounts %}
+        {% set current = _psd.account_profiles.get(a.id, 'active') %}
+        <form hx-post="/preferences" hx-swap="none"
+              class="flex items-center gap-2 mb-2">
+          <input type="hidden" name="account_id" value="{{ a.id }}">
+          <input type="hidden" name="density" value="{{ _psd.profile.density }}">
+          <span class="text-[12px] flex-1 truncate">{{ a.broker }}/{{ a.label }}</span>
+          <select name="profile" onchange="this.form.submit()"
+                  class="bg-bg text-text rounded px-1.5 py-0.5 text-[12px]"
+                  style="border:0.5px solid rgba(255,255,255,0.08);">
+            <option value="conservative"{% if current == "conservative" %} selected{% endif %}>Conservative</option>
+            <option value="active"{% if current == "active" %} selected{% endif %}>Active</option>
+            <option value="options"{% if current == "options" %} selected{% endif %}>Options</option>
+          </select>
+        </form>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-label-2 text-[12px] m-0">
+      Import a CSV file to set up your first account, then profile preferences will appear here.
+    </p>
+  {% endif %}
+</div>
