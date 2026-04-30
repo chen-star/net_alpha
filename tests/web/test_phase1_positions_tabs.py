@@ -39,14 +39,20 @@ def test_view_at_loss_marks_at_loss_tab_active(client: TestClient):
 
 
 def test_at_loss_view_renders_harvest_queue_content(client: TestClient):
-    """`/positions?view=at-loss` renders the Phase 2 at-loss dedicated table
-    (replaces the old `_harvest_queue.html` partial as of B1)."""
+    """`/positions?view=at-loss` renders a loading shell that lazy-loads
+    `/tax/harvest/plan` via HTMX (as of B4).  The plan fragment has the
+    harvest plan-builder and the Lockout-clear column."""
+    # The at-loss page now renders an HTMX loading shell; the column headers
+    # live in the /tax/harvest/plan fragment that is fetched client-side.
     resp = client.get("/positions?view=at-loss")
-    html = resp.text
     assert resp.status_code == 200
-    # Phase 2 B1 replaced the old "Harvest queue" heading with a dedicated
-    # table; verify the new column headers are present instead.
-    assert "LOCKOUT-CLEAR" in html or "Lockout-clear" in html
+    html = resp.text
+    # The loading shell must reference the plan endpoint
+    assert "/tax/harvest/plan" in html or "harvest-queue-region" in html
+    # The plan fragment is served correctly (200 + region id)
+    plan_resp = client.get("/tax/harvest/plan")
+    assert plan_resp.status_code == 200
+    assert 'id="harvest-queue-region"' in plan_resp.text
 
 
 def test_view_all_renders_existing_positions_table(client: TestClient):

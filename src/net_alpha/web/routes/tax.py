@@ -10,7 +10,7 @@ from datetime import date as _date
 from decimal import Decimal
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.config import TaxConfig, write_tax_config
@@ -22,7 +22,9 @@ from net_alpha.portfolio.tax_planner import (
     project_year_end_tax,
 )
 from net_alpha.prefs.profile import resolve_effective_profile
+from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import (
+    get_pricing_service,
     get_repository,
 )
 
@@ -127,6 +129,116 @@ def get_tax(
         ctx.update(perf_ctx)
 
     return request.app.state.templates.TemplateResponse(request, "tax.html", ctx)
+
+
+@router.get("/tax/harvest/plan", response_class=HTMLResponse, response_model=None)
+def harvest_plan(
+    request: Request,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+    mode: str = "auto",
+    custom_budget: str = "",
+    exclude_locked: bool = True,
+    pick: list[str] | None = Query(default=None),
+):
+    """Return the harvest plan-builder fragment.
+
+    Modes:
+      - auto: target = realized_gains_ytd + 3000
+      - custom: target = custom_budget
+      - manual: selection comes from `pick` query params (symbol::account_label)
+    """
+    from datetime import date
+    from decimal import Decimal, InvalidOperation
+
+    from net_alpha.portfolio.tax_planner import (
+        TaxBrackets,
+        _realized_in_year,
+        _tax_saved_for,
+        build_plan,
+        compute_harvest_queue,
+        summarize_manual_picks,
+    )
+
+    today = date.today()
+    rows = compute_harvest_queue(
+        repo=repo,
+        pricing=pricing,
+        as_of=today,
+        etf_pairs=request.app.state.etf_pairs,
+        etf_replacements=request.app.state.etf_replacements,
+        only_harvestable=False,
+    )
+
+    cfg = request.app.state.tax_brackets_cfg
+    brackets: TaxBrackets | None = None
+    if cfg is not None:
+        brackets = TaxBrackets(
+            filing_status=cfg.filing_status,
+            state=cfg.state,
+            federal_marginal_rate=cfg.federal_marginal_rate,
+            state_marginal_rate=cfg.state_marginal_rate,
+            ltcg_rate=cfg.ltcg_rate,
+            qualified_div_rate=cfg.qualified_div_rate,
+        )
+
+    _, gains_ytd = _realized_in_year(repo, today.year)
+
+    if mode == "manual":
+        picks: list[tuple[str, str]] = []
+        for p in pick or []:
+            if "::" in p:
+                sym, acct = p.split("::", 1)
+                picks.append((sym, acct))
+        plan = summarize_manual_picks(
+            picks=picks,
+            candidates=rows,
+            realized_gains_ytd=gains_ytd,
+            marginal_rates=brackets,
+        )
+        budget_str = ""
+    elif mode == "custom":
+        try:
+            tb = Decimal(custom_budget) if custom_budget else Decimal("0")
+        except InvalidOperation:
+            tb = Decimal("0")
+        plan = build_plan(
+            rows,
+            gains_ytd,
+            brackets,
+            target_budget=tb,
+            exclude_locked=exclude_locked,
+        )
+        budget_str = custom_budget
+    else:
+        plan = build_plan(
+            rows,
+            gains_ytd,
+            brackets,
+            target_budget=None,
+            exclude_locked=exclude_locked,
+        )
+        budget_str = ""
+
+    # Decorate rows with __tax_saved for the per-row column.
+    for r in rows:
+        r.__dict__["__tax_saved"] = _tax_saved_for(r, brackets)
+
+    selected_keys = {(c.symbol, c.account_label) for c in plan.selected}
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_harvest_plan.html",
+        {
+            "plan": plan,
+            "rows": rows,
+            "selected_keys": selected_keys,
+            "mode": mode,
+            "custom_budget": budget_str,
+            "exclude_locked": exclude_locked,
+            "has_tax_config": brackets is not None,
+        },
+    )
 
 
 def _build_chips_clear_urls(request: Request) -> dict[str, str]:
