@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wash-alpha"
-version = "0.39.0"
+version = "0.40.0"
 description = "Cross-account wash sale detection — Schwab CSV, options, ETFs (v2 simplified)"
 requires-python = ">=3.11"
 dependencies = [

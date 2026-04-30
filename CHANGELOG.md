@@ -2,83 +2,178 @@
 
 
 
-## v0.39.0 (2026-04-29)
+## v0.40.0 (2026-04-30)
 
-### Features
+### Feature
 
-Pre-launch UX polish (Phase C of three sequential PRs). Increases discoverability
-of pre-trade simulation — the product's killer feature — and tames the imports
-data-quality firehose.
+* feat(web): resizable settings drawer, chart zoom, positions search, sim form alignment
 
-* feat(sim): top_suggestions pure-function chip picker — new
-  `portfolio/sim_suggestions.py` module. Picks up to three chips: largest
-  unrealized loss, wash-sale risk, and largest unrealized gain. Empty
-  portfolios get a single demo chip ("Try a demo: TSLA 10 @ $180").
-* feat(web): /sim/suggestions chip strip on Sim page — new endpoint returns
-  a chip-strip fragment that lazy-loads on the Sim page. Each chip is a
-  one-click prefill of the simulator with the suggested ticker, qty, price,
-  and action.
-* feat(web): per-row 'Simulate sale' action on Holdings — every row in the
-  Portfolio positions table now carries a trailing `↗ Sim` link that opens
-  the Sim page prefilled with the row's symbol, qty, and last price.
-* feat(web): collapsible data-quality groups on Imports page — replaces the
-  flat warnings list with three `<details>` buckets (Missing basis, No price
-  quote, Missing dates), most-actionable bucket open by default.
+- Settings drawer: drag the left edge to expand/shrink. Persists to
+  localStorage; clamped to [360px, viewport-60px]. Handle uses inline
+  styles so it doesn&#39;t depend on Tailwind utility compilation.
+- Equity / Cash &amp; Contributions charts: enabled ApexCharts&#39; zoom toolbar
+  (drag-select range, zoom in/out, pan, reset) with autoScaleYaxis.
+- Positions page: new symbol-search box above the tabs filters every row
+  (stocks, options, at-loss, closed, plan) by underlying ticker. Options
+  match on the underlying so typing &#39;SPY&#39; shows every contract on it.
+  Filter survives HTMX swaps via htmx:afterSwap.
+- Sim form: switched to items-start with fixed label/input heights so all
+  six controls share the same horizontal baseline regardless of helper-text
+  presence.
 
-### Tests
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`22f039f`](https://github.com/chen-star/net_alpha/commit/22f039f6de4e81aa55372d4c6a86a9e9cc6e115b))
 
-7 unit tests for sim_suggestions + 3 endpoint tests + 1 row-action test +
-2 imports-grouping tests (13 new tests total).
+* feat(web): wire real content into Profile / ETF pairs / About drawer tabs
 
+Replaces the Phase 1 &#39;Coming soon&#39; placeholders with the per-tab templates,
+exposes app_version / data_dir_path / pricing_remote_enabled / etf_pairs_data
+to Jinja so the new tabs can render, and updates the regression test to assert
+real content rather than placeholder copy. Also bumps GitNexus index counts
+in AGENTS.md / CLAUDE.md.
 
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0b2862e`](https://github.com/chen-star/net_alpha/commit/0b2862e439969782e080b9047425cb43b8f1a570))
 
-## v0.38.0 (2026-04-29)
+### Refactor
 
-### Features
+* refactor(planner+web): ORDINARY_LOSS_CAP constant + pass tax_saved as dict
 
-Pre-launch UX polish (Phase B of three sequential PRs). Tax → Harvest now ships a
-plan-builder assistant that turns the passive 50-row queue into an action-oriented
-"build a plan" experience.
+Extract the §1211 $3,000 ordinary-income-offset cap into a named constant
+ORDINARY_LOSS_CAP (replacing 4 bare Decimal(&#34;3000&#34;) literals). Replace the
+fragile Pydantic __dict__ smuggle in the harvest_plan endpoint with a plain
+parallel dict passed explicitly to the template context.
 
-* feat(planner): build_plan greedy harvest planner with tax-saved ranking — pure
-  function in `portfolio/tax_planner.py`. Auto budget defaults to
-  `realized_gains_ytd + $3,000` ordinary cap; custom budget overrides. Greedy by
-  estimated tax saved (federal+state marginal rate × abs(loss) for ST, LTCG rate
-  for LT), ST-first on ties. Stops on first overshoot — no skip-and-continue.
-* feat(planner): summarize_manual_picks for user-edited selection — when the
-  user manually checks/unchecks rows, summary math runs without re-greedy.
-* feat(web): /tax/harvest/plan endpoint + lazy-load on at-loss view — Tax →
-  Harvest renders the plan-builder tile (auto/custom/manual budget mode,
-  exclude-locked toggle, selected loss + tax-saved estimate, gain-vs-ordinary
-  split) followed by a candidates table with per-row checkboxes and
-  estimated-tax-saved column.
-
-### Tests
-
-16 unit tests for the planner + 4 endpoint tests + 3 compat updates.
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`83ccd36`](https://github.com/chen-star/net_alpha/commit/83ccd362e0b5e781502c1e634f64084c95b7882c))
 
 
+## v0.39.0 (2026-04-30)
 
-## v0.37.1 (2026-04-29)
+### Feature
 
-### Polish
+* feat(web): collapsible data-quality groups on Imports page
 
-Pre-launch UX polish (Phase A of three sequential PRs). All template/CSS only,
-no behavior changes.
+Groups hygiene warnings into Missing basis / No price quote / Missing dates
+buckets rendered as &lt;details&gt; elements; the first non-empty bucket is open
+by default, replacing the previous flat list in _data_hygiene.html.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7a216b2`](https://github.com/chen-star/net_alpha/commit/7a216b2ba97238093da312dd515c6b57bfa5ddcd))
+
+* feat(web): per-row &#39;Simulate sale&#39; action on Holdings
+
+Adds a visible ↗ Sim link to each row in the Holdings table that opens
+the Sim page prefilled with ticker, qty, action=sell, and derived price
+(market_value ÷ qty when available), making Sim discoverable from the
+table without opening the row-actions menu.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cf039ed`](https://github.com/chen-star/net_alpha/commit/cf039edd7ebe16ab2385b0e9781da344c8e35b70))
+
+* feat(web): /sim/suggestions chip strip on Sim page
+
+Add GET /sim/suggestions HTMX fragment endpoint that surfaces up to 3
+one-click prefill chips (largest loss, wash-sale risk, largest gain)
+above the sim form; falls back to a demo TSLA chip on empty DB.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eadbdc2`](https://github.com/chen-star/net_alpha/commit/eadbdc21dfd5e9cdf3b5088554d7f583f3ba0f8d))
+
+* feat(sim): top_suggestions pure-function chip picker
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`89e4fec`](https://github.com/chen-star/net_alpha/commit/89e4fec550aa86641397b8e102a737fc7889ea85))
+
+
+## v0.38.0 (2026-04-30)
+
+### Feature
+
+* feat(web): /tax/harvest/plan endpoint + lazy-load on at-loss view
+
+Wire up GET /tax/harvest/plan that builds a HarvestPlan and renders the
+_harvest_plan.html fragment. Embed it into _positions_view_at_loss.html
+via an HTMX loading shell replacing the old inline table. Updated two
+compat test files (test_phase1_positions_tabs, test_phase2_at_loss_columns)
+to hit the new fragment endpoint directly since headers are now lazy-loaded.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`db1885e`](https://github.com/chen-star/net_alpha/commit/db1885e6bb4e7f0cecbf4727ffaee9314dbb9654))
+
+* feat(web): _harvest_plan.html fragment skeleton ([`21d2d84`](https://github.com/chen-star/net_alpha/commit/21d2d8448724643242095a5e5dde7712d81e4bba))
+
+* feat(planner): summarize_manual_picks for user-edited selection
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`88cf4e5`](https://github.com/chen-star/net_alpha/commit/88cf4e59e1810ff3a2804198d025927ff9a48602))
+
+* feat(planner): build_plan greedy harvest planner with tax-saved ranking
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8bf7987`](https://github.com/chen-star/net_alpha/commit/8bf7987d6b75083ea8b5571eb62df0ea2b97c08d))
+
+
+## v0.37.1 (2026-04-30)
+
+### Documentation
+
+* docs(plan): pre-launch UX polish implementation plan
+
+Three-phase task breakdown covering PR #1 (polish, v0.36.1), PR #2
+(harvest plan assistant, v0.37.0), and PR #3 (sim chips + holdings
+row action + imports grouping, v0.38.0). TDD throughout, with each
+task scoped to ~2-5 minutes of work.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0efa846`](https://github.com/chen-star/net_alpha/commit/0efa846e773b94b07eacda4d67d8faab2e356553))
+
+* docs(spec): pre-launch UX polish design
+
+Three-PR plan to address ~25 UX issues from the PM evaluation: a
+template-only polish PR, a Tax→Harvest plan-builder feature PR, and
+a discoverability PR (sim chips + holdings row action + imports
+data-quality grouping). Mobile redesign and export work deferred to
+separate brainstorms.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`731689f`](https://github.com/chen-star/net_alpha/commit/731689fec8c1dec21577417210550aa7a0b306a2))
+
+### Feature
+
+* feat(web): aria-label and tooltip on top-nav imports badge ([`416385e`](https://github.com/chen-star/net_alpha/commit/416385eb63c1530860a02035a80c4c56b1f7d393))
+
+* feat(web): per-input helper text and missing-quote message on Sim form ([`2590d6e`](https://github.com/chen-star/net_alpha/commit/2590d6e766078fe1c32f87fe6c3f693e8054ab19))
+
+* feat(web): inline tax-projection setup form replacing YAML snippet
+
+Replaces the legacy YAML-snippet copy-paste flow with a styled inline
+form using the app&#39;s standard classes (panel, label-uc, bg-surface,
+btn). Makes state and state_marginal_rate optional (blank = federal-only)
+to match TaxConfig defaults. Route handler updated to use Form(&#34;&#34;) /
+Form(0.0) defaults accordingly.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`02b5a3f`](https://github.com/chen-star/net_alpha/commit/02b5a3fc46e0dca0045ec109121fe248f2067de6))
+
+* feat(web): default Harvest queue to &#39;currently harvestable only&#39;
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5074ce5`](https://github.com/chen-star/net_alpha/commit/5074ce580b107308a9167c489018e38c9d6e8f88))
+
+* feat(web): tooltip on wash-sale &#39;to safe&#39; countdown ([`2981c95`](https://github.com/chen-star/net_alpha/commit/2981c95a9b36c3caadd91e2b8a14612e76d0877b))
+
+* feat(web): explain Watch vs Violations on the Tax wash-sales tab
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b175d52`](https://github.com/chen-star/net_alpha/commit/b175d5227c99ffa9733065959c9fc7fc2a6c579c))
+
+* feat(web): collapse wash-sales filter behind a Filter summary
+
+Wraps the filter form in a &lt;details&gt; element that is collapsed by default and auto-opens only when at least one filter is explicitly set by the user (ticker, account, confidence, or year). Adds filter_year_explicit context flag to _wash_sales_context so the template can distinguish a user-chosen year from the default current-year preset. Applied to both wash_sales.html and _tax_wash_sales_tab.html (the live route).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`38e4f78`](https://github.com/chen-star/net_alpha/commit/38e4f781fdbd8133c138bddcddc746ba80d869cb))
+
+* feat(web): sticky thead on remaining Holdings/Portfolio table fragments ([`f8c5552`](https://github.com/chen-star/net_alpha/commit/f8c55526420e1b382d8c51d686c46b9b97bbd387))
+
+* feat(web): sticky thead on Positions table views
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`520e33e`](https://github.com/chen-star/net_alpha/commit/520e33eabd6cb444e00901c725c2b8c52b3fa403))
 
 * feat(web): add tooltips to remaining four portfolio KPI tiles
-* feat(web): sticky thead on Positions table views
-* feat(web): sticky thead on remaining Holdings/Portfolio table fragments
-* feat(web): collapse wash-sales filter behind a Filter summary
-* feat(web): explain Watch vs Violations on the Tax wash-sales tab
-* feat(web): tooltip on wash-sale 'to safe' countdown
-* feat(web): default Harvest queue to 'currently harvestable only'
-* feat(web): inline tax-projection setup form replacing YAML snippet
-* feat(web): per-input helper text and missing-quote message on Sim form
-* feat(web): aria-label and tooltip on top-nav imports badge
-* test(web): pin Holdings tab links to Options and Stocks views
-* chore: ruff format sweep
 
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6db84c0`](https://github.com/chen-star/net_alpha/commit/6db84c0ed29457306fa4ac3aeb16a03d9cdb8c1b))
+
+### Test
+
+* test(web): pin Holdings tab links to Options and Stocks views
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`30cb782`](https://github.com/chen-star/net_alpha/commit/30cb782e966b7bffae6cd2d401aa5188546476ab))
 
 
 ## v0.37.0 (2026-04-30)
