@@ -72,6 +72,10 @@ def test_portfolio_body_fragment_returns_overview_panels(tmp_path):
     assert "Unrealized" in html
     # Equity curve panel.
     assert "Equity curve" in html
+    # Allocation row contains both the concentration donut AND the
+    # cash-vs-positions deployment chart, side by side.
+    assert 'id="portfolio-allocation"' in html
+    assert 'id="portfolio-deployment"' in html
     # Wash-sale watch lives on /tax now — must NOT be in the portfolio body.
     assert "Wash-sale watch" not in html
     assert 'id="portfolio-wash-watch"' not in html

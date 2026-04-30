@@ -1,0 +1,107 @@
+{# Inputs: allocation: AllocationView from portfolio.allocation.build_allocation()
+
+   Companion to _portfolio_allocation.html that focuses purely on the
+   cash-vs-positions split: how much of the account is deployed in equities
+   vs sitting in cash (and within cash, how much is pledged as CSP collateral
+   and therefore not freely deployable). #}
+
+{% set positions_color = '#0A84FF' %}
+{% set cash_color = 'rgba(142,142,147,0.6)' %}
+{% set cash_pledged_color = 'rgba(255,159,10,0.65)' %}
+
+{% set ns = namespace(free_cash=0.0, pledged_cash=0.0) %}
+{% for s in allocation.slices %}
+  {% if s.is_pledged_cash %}
+    {% set ns.pledged_cash = s.market_value|float %}
+  {% elif s.is_cash %}
+    {% set ns.free_cash = s.market_value|float %}
+  {% endif %}
+{% endfor %}
+{% set total_val = allocation.total_market_value|float %}
+{% set positions_val = total_val - ns.free_cash - ns.pledged_cash %}
+
+{% if total_val <= 0 %}
+  <div class="text-label-2 text-[12px] py-4 text-center">
+    No account value in scope.
+  </div>
+{% else %}
+  {% set positions_pct = (positions_val / total_val * 100) if total_val > 0 else 0 %}
+  {% set free_pct = (ns.free_cash / total_val * 100) if total_val > 0 else 0 %}
+  {% set pledged_pct = (ns.pledged_cash / total_val * 100) if total_val > 0 else 0 %}
+  {% set cash_pct = free_pct + pledged_pct %}
+
+  <div class="panel-head">
+    <h4>Deployment</h4>
+    <span class="meta">Cash vs positions</span>
+  </div>
+
+  {# Hero stat: % of account deployed in positions #}
+  <div class="flex items-baseline gap-3 mb-3">
+    <div class="num text-[28px] font-bold tracking-tight">
+      {{ "%.1f"|format(positions_pct) }}%
+    </div>
+    <div class="text-[12px] text-label-2">
+      deployed · ${{ "%.1f"|format(positions_val / 1000) }}k of ${{ "%.1f"|format(total_val / 1000) }}k
+    </div>
+  </div>
+
+  {# Stacked horizontal bar — Positions | Cash·free | Cash·pledged #}
+  <div class="flex h-3 rounded-full overflow-hidden mb-3"
+       style="background: rgba(255,255,255,0.05);"
+       title="Positions {{ '%.1f'|format(positions_pct) }}% · Cash·free {{ '%.1f'|format(free_pct) }}% · Cash·pledged {{ '%.1f'|format(pledged_pct) }}%">
+    {% if positions_pct > 0 %}
+      <div style="background: {{ positions_color }}; width: {{ '%.2f'|format(positions_pct) }}%; box-shadow: 0 0 6px rgba(10,132,255,0.35);"></div>
+    {% endif %}
+    {% if free_pct > 0 %}
+      <div style="background: {{ cash_color }}; width: {{ '%.2f'|format(free_pct) }}%;"></div>
+    {% endif %}
+    {% if pledged_pct > 0 %}
+      <div style="background: {{ cash_pledged_color }}; width: {{ '%.2f'|format(pledged_pct) }}%;"></div>
+    {% endif %}
+  </div>
+
+  {# Legend rows — one per segment with $ and % #}
+  <div class="flex flex-col gap-[6px]">
+    <div class="flex items-center justify-between text-[12px]">
+      <span class="inline-flex items-center gap-2">
+        <span style="width:8px; height:8px; border-radius:2px; background:{{ positions_color }};"></span>
+        <span class="font-semibold tracking-tightish">Positions</span>
+      </span>
+      <span class="num">
+        <span class="text-label-2">${{ "%.1f"|format(positions_val / 1000) }}k</span>
+        <span class="ml-2 font-semibold">{{ "%.1f"|format(positions_pct) }}%</span>
+      </span>
+    </div>
+    <div class="flex items-center justify-between text-[12px]"
+         title="Cash not pledged to any open option position.">
+      <span class="inline-flex items-center gap-2">
+        <span style="width:8px; height:8px; border-radius:2px; background:{{ cash_color }};"></span>
+        <span class="font-semibold tracking-tightish">Cash · free</span>
+      </span>
+      <span class="num">
+        <span class="text-label-2">${{ "%.1f"|format(ns.free_cash / 1000) }}k</span>
+        <span class="ml-2 font-semibold">{{ "%.1f"|format(free_pct) }}%</span>
+      </span>
+    </div>
+    <div class="flex items-center justify-between text-[12px]"
+         title="Cash currently securing open short puts (CSP collateral). Cannot be deployed elsewhere until the puts close, expire, or are bought back.">
+      <span class="inline-flex items-center gap-2">
+        <span style="width:8px; height:8px; border-radius:2px; background:{{ cash_pledged_color }};"></span>
+        <span class="font-semibold tracking-tightish">Cash · pledged</span>
+      </span>
+      <span class="num">
+        <span class="text-label-2">${{ "%.1f"|format(ns.pledged_cash / 1000) }}k</span>
+        <span class="ml-2 font-semibold">{{ "%.1f"|format(pledged_pct) }}%</span>
+      </span>
+    </div>
+  </div>
+
+  {# Summary: total cash share so the user can read the inverse at a glance #}
+  <div class="mt-3 pt-3 text-[11px] text-label-3"
+       style="border-top: 0.5px solid rgba(255,255,255,0.08);">
+    Total cash: ${{ "%.1f"|format((ns.free_cash + ns.pledged_cash) / 1000) }}k · {{ "%.1f"|format(cash_pct) }}%
+    {% if ns.pledged_cash > 0 %}
+      · pledged share of cash: {{ "%.0f"|format(ns.pledged_cash / (ns.free_cash + ns.pledged_cash) * 100) }}%
+    {% endif %}
+  </div>
+{% endif %}
