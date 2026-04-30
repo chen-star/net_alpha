@@ -597,3 +597,93 @@ def assess_trade(
         suggestion=None,
         lot_method_recommended="HIFO" if is_loss else None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Harvest plan builder (PR #2 of pre-launch UX polish)
+# ---------------------------------------------------------------------------
+
+
+class HarvestPlan(BaseModel):
+    """Output of build_plan: selected candidates + summary math."""
+
+    selected: list[HarvestOpportunity]
+    skipped_locked: list[HarvestOpportunity]
+    realized_gains_ytd: Decimal
+    ordinary_offset_used: Decimal
+    gain_offset_used: Decimal
+    total_loss_harvested: Decimal
+    estimated_tax_saved: Decimal
+    target_budget: Decimal
+    used_auto_budget: bool
+
+
+def _tax_saved_for(opp: HarvestOpportunity, rates: TaxBrackets | None) -> Decimal:
+    abs_loss = abs(opp.loss)
+    if rates is None:
+        return abs_loss
+    if opp.lt_st == "ST":
+        rate = rates.federal_marginal_rate + rates.state_marginal_rate
+    else:
+        rate = rates.ltcg_rate
+    return abs_loss * rate
+
+
+def build_plan(
+    candidates: list[HarvestOpportunity],
+    realized_gains_ytd: Decimal,
+    marginal_rates: TaxBrackets | None,
+    target_budget: Decimal | None = None,
+    exclude_locked: bool = True,
+) -> HarvestPlan:
+    """Greedy by estimated tax saved per candidate, ST-first on ties.
+
+    See spec: docs/superpowers/specs/2026-04-29-prelaunch-ux-polish-design.md §5.
+    """
+    used_auto = target_budget is None
+    if target_budget is not None:
+        target = target_budget
+    else:
+        target = max(Decimal("0"), realized_gains_ytd) + Decimal("3000")
+
+    skipped_locked: list[HarvestOpportunity] = []
+    pool: list[HarvestOpportunity] = []
+    for c in candidates:
+        if exclude_locked and c.lockout_clear is not None:
+            skipped_locked.append(c)
+        else:
+            pool.append(c)
+
+    pool.sort(
+        key=lambda c: (-_tax_saved_for(c, marginal_rates), 0 if c.lt_st == "ST" else 1)
+    )
+
+    selected: list[HarvestOpportunity] = []
+    total_loss = Decimal("0")
+    tax_saved_sum = Decimal("0")
+    for c in pool:
+        next_total = total_loss + abs(c.loss)
+        if next_total > target:
+            break
+        selected.append(c)
+        total_loss = next_total
+        tax_saved_sum += _tax_saved_for(c, marginal_rates)
+
+    cap = Decimal("3000")
+    excess_over_gains = max(
+        Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd)
+    )
+    ordinary_offset = min(cap, excess_over_gains)
+    gain_offset = total_loss - ordinary_offset
+
+    return HarvestPlan(
+        selected=selected,
+        skipped_locked=skipped_locked,
+        realized_gains_ytd=realized_gains_ytd,
+        ordinary_offset_used=ordinary_offset,
+        gain_offset_used=gain_offset,
+        total_loss_harvested=total_loss,
+        estimated_tax_saved=tax_saved_sum,
+        target_budget=target,
+        used_auto_budget=used_auto,
+    )
