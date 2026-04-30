@@ -44,6 +44,36 @@ def imports_page(
     missing_basis_rows = collect_missing_basis_rows(repo)
     prefs = repo.list_user_preferences()
     profile = resolve_effective_profile(prefs=prefs, filter_account_id=None)
+
+    DQ_LABELS = {
+        "missing_basis": "Missing basis",
+        "no_quote": "No price quote",
+        "missing_dates": "Missing dates",
+    }
+
+    def _bucket_for(issue) -> str:
+        cat = getattr(issue, "category", None) or ""
+        if cat == "basis_unknown":
+            return "missing_basis"
+        if cat == "unpriced":
+            return "no_quote"
+        # Fall back to text-matching on summary/detail for unknown categories
+        text = (
+            (getattr(issue, "summary", None) or "") + " " + (getattr(issue, "detail", None) or "")
+        ).lower()
+        if "basis" in text:
+            return "missing_basis"
+        if "quote" in text or "no price" in text or "unpriced" in text:
+            return "no_quote"
+        if "date" in text or "orphan" in text or "no matching" in text:
+            return "missing_dates"
+        return "missing_dates"  # default fallback bucket
+
+    other_issues = [i for i in issues if getattr(i, "category", None) != "basis_unknown"]
+    dq_groups: dict[str, list] = {"missing_basis": [], "no_quote": [], "missing_dates": []}
+    for w in other_issues:
+        dq_groups[_bucket_for(w)].append(w)
+
     return request.app.state.templates.TemplateResponse(
         request,
         "imports.html",
@@ -51,6 +81,8 @@ def imports_page(
             "imports": records,
             "issues": issues,
             "missing_basis_rows": missing_basis_rows,
+            "dq_groups": dq_groups,
+            "dq_labels": DQ_LABELS,
             "profile": profile,
             "page_key": "/imports",
             "account_id": None,

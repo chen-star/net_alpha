@@ -40,38 +40,56 @@
         {{ other_issues|length }} item{{ "s" if other_issues|length != 1 else "" }} need attention from your imports.
       </p>
     </div>
-    <ul class="divide-y" style="border-color: rgba(255,255,255,0.06);">
-      {% for issue in other_issues %}
-        <li class="px-4 py-3 flex items-start gap-3" data-category="{{ issue.category }}">
-          <span class="badge badge-{{ issue.severity }}">{{ issue.severity }}</span>
-          <div class="flex-1">
-            <div class="text-sm font-medium">{{ issue.summary }}</div>
-            <div class="text-xs text-label-2 mt-1">{{ issue.detail }}</div>
-            {% if issue.fix_url %}
-              <a class="text-xs underline mt-2 inline-block" href="{{ issue.fix_url }}">go fix →</a>
-            {% endif %}
-            {% if issue.fix_form %}
-              <form class="mt-2 flex gap-2 items-center"
-                    hx-post="{{ issue.fix_form.action }}"
-                    hx-target="closest li"
-                    hx-swap="outerHTML">
-                {% for k, v in issue.fix_form.hidden.items() %}
-                  <input type="hidden" name="{{ k }}" value="{{ v }}">
-                {% endfor %}
-                {% for name, ftype in issue.fix_form.fields.items() %}
-                  <label class="text-xs">
-                    {{ name|replace("_", " ") }}:
-                    <input type="{{ ftype }}" name="{{ name }}"
-                           class="border border-label-3 px-1 py-0.5 text-xs ml-1"
-                           required>
-                  </label>
-                {% endfor %}
-                <button type="submit" class="text-xs px-2 py-0.5 bg-pos text-bg rounded">save</button>
-              </form>
-            {% endif %}
-          </div>
-        </li>
+    <div class="px-4 py-3 space-y-2">
+      {% set _first_open = namespace(done=false) %}
+      {% for key, label in [("missing_basis", "Missing basis"), ("no_quote", "No price quote"), ("missing_dates", "Missing dates")] %}
+        {% if dq_groups is defined %}
+          {% set group = dq_groups[key] %}
+        {% else %}
+          {% set group = other_issues | selectattr("category", "equalto", key) | list %}
+        {% endif %}
+        {% if group %}
+          <details class="mb-2" {% if not _first_open.done %}open{% set _first_open.done = true %}{% endif %} data-testid="dq-bucket-{{ key }}">
+            <summary class="cursor-pointer text-sm select-none">
+              <span class="font-medium text-text">{{ group|length }}</span>
+              <span class="text-label-2">{{ label }}</span>
+            </summary>
+            <ul class="mt-2 divide-y" style="border-color: rgba(255,255,255,0.06);">
+              {% for issue in group %}
+                <li class="py-3 flex items-start gap-3" data-category="{{ issue.category }}">
+                  <span class="badge badge-{{ issue.severity }}">{{ issue.severity }}</span>
+                  <div class="flex-1">
+                    <div class="text-sm font-medium">{{ issue.summary }}</div>
+                    <div class="text-xs text-label-2 mt-1">{{ issue.detail }}</div>
+                    {% if issue.fix_url %}
+                      <a class="text-xs underline mt-2 inline-block" href="{{ issue.fix_url }}">go fix →</a>
+                    {% endif %}
+                    {% if issue.fix_form %}
+                      <form class="mt-2 flex gap-2 items-center"
+                            hx-post="{{ issue.fix_form.action }}"
+                            hx-target="closest li"
+                            hx-swap="outerHTML">
+                        {% for k, v in issue.fix_form.hidden.items() %}
+                          <input type="hidden" name="{{ k }}" value="{{ v }}">
+                        {% endfor %}
+                        {% for name, ftype in issue.fix_form.fields.items() %}
+                          <label class="text-xs">
+                            {{ name|replace("_", " ") }}:
+                            <input type="{{ ftype }}" name="{{ name }}"
+                                   class="border border-label-3 px-1 py-0.5 text-xs ml-1"
+                                   required>
+                          </label>
+                        {% endfor %}
+                        <button type="submit" class="text-xs px-2 py-0.5 bg-pos text-bg rounded">save</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          </details>
+        {% endif %}
       {% endfor %}
-    </ul>
+    </div>
   </section>
 {% endif %}
