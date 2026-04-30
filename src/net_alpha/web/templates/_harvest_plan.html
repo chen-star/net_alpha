@@ -2,7 +2,8 @@
 
    Inputs:
      plan: HarvestPlan
-     rows: list[HarvestOpportunity]                 (full pool, decorated with __tax_saved)
+     rows: list[HarvestOpportunity]                 (full pool)
+     tax_saved_by_key: dict[(symbol, account_label), Decimal]
      selected_keys: set[(symbol, account_label)]    (rows currently checked)
      mode: "auto" | "manual" | "custom"             (current budget mode)
      custom_budget: str                             (last custom value or "")
@@ -98,8 +99,9 @@
           {% endif %}
         </td>
         <td class="r num">
-          {% if has_tax_config and row.__tax_saved is defined %}
-            <span class="text-pos">${{ "%.2f"|format(row.__tax_saved|float) }}</span>
+          {% if has_tax_config %}
+          {% set _ts = tax_saved_by_key[(row.symbol, row.account_label)] %}
+            <span class="text-pos">${{ "%.2f"|format(_ts|float) }}</span>
           {% else %}
             <span class="text-label-3">—</span>
           {% endif %}

@@ -220,9 +220,7 @@ def harvest_plan(
         )
         budget_str = ""
 
-    # Decorate rows with __tax_saved for the per-row column.
-    for r in rows:
-        r.__dict__["__tax_saved"] = _tax_saved_for(r, brackets)
+    tax_saved_by_key = {(r.symbol, r.account_label): _tax_saved_for(r, brackets) for r in rows}
 
     selected_keys = {(c.symbol, c.account_label) for c in plan.selected}
 
@@ -233,6 +231,7 @@ def harvest_plan(
             "plan": plan,
             "rows": rows,
             "selected_keys": selected_keys,
+            "tax_saved_by_key": tax_saved_by_key,
             "mode": mode,
             "custom_budget": budget_str,
             "exclude_locked": exclude_locked,

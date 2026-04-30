@@ -17,6 +17,10 @@ from net_alpha.models.domain import Lot, Trade
 from net_alpha.portfolio.positions import consume_lots_fifo
 from net_alpha.pricing.service import PricingService
 
+# §1211: capital losses can offset up to $3,000 of ordinary income per year.
+# Excess flows to next year's carryforward.
+ORDINARY_LOSS_CAP = Decimal("3000")
+
 # ---------------------------------------------------------------------------
 # Tax projection models (Task 15)
 # ---------------------------------------------------------------------------
@@ -454,7 +458,7 @@ def compute_offset_budget(
     """
     losses, gains = _realized_in_year(repo, year)
     net = losses + gains
-    cap = Decimal("3000")
+    cap = ORDINARY_LOSS_CAP
     used = Decimal("0")
     carry = Decimal("0")
     if net < 0:
@@ -496,7 +500,7 @@ class OffsetBudget(BaseModel):
     realized_losses_ytd: Decimal  # signed (negative magnitude)
     realized_gains_ytd: Decimal  # positive
     net_realized: Decimal  # gains + losses (signed)
-    cap_against_ordinary: Decimal = Decimal("3000")
+    cap_against_ordinary: Decimal = ORDINARY_LOSS_CAP
     used_against_ordinary: Decimal  # min(|net_loss|, cap), >= 0
     carryforward_projection: Decimal  # |net_loss| - cap, clamped to >= 0
     planned_delta: Decimal  # change in net_realized that would result from planned_trades
@@ -644,7 +648,7 @@ def build_plan(
     if target_budget is not None:
         target = target_budget
     else:
-        target = max(Decimal("0"), realized_gains_ytd) + Decimal("3000")
+        target = max(Decimal("0"), realized_gains_ytd) + ORDINARY_LOSS_CAP
 
     skipped_locked: list[HarvestOpportunity] = []
     pool: list[HarvestOpportunity] = []
@@ -667,7 +671,7 @@ def build_plan(
         total_loss = next_total
         tax_saved_sum += _tax_saved_for(c, marginal_rates)
 
-    cap = Decimal("3000")
+    cap = ORDINARY_LOSS_CAP
     excess_over_gains = max(Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd))
     ordinary_offset = min(cap, excess_over_gains)
     gain_offset = total_loss - ordinary_offset
@@ -704,7 +708,7 @@ def summarize_manual_picks(
         (_tax_saved_for(c, marginal_rates) for c in selected),
         Decimal("0"),
     )
-    cap = Decimal("3000")
+    cap = ORDINARY_LOSS_CAP
     excess_over_gains = max(Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd))
     ordinary_offset = min(cap, excess_over_gains)
     gain_offset = total_loss - ordinary_offset
