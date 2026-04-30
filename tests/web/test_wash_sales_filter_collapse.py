@@ -35,3 +35,14 @@ def test_filter_open_when_ticker_param_set():
     end = html.find(">", idx)
     open_tag = html[idx:end]
     assert "open" in open_tag, f"filter should be expanded when a filter is active; got {open_tag!r}"
+
+
+def test_tax_wash_tab_shows_explanatory_header():
+    with _client() as c:
+        r = c.get("/tax?view=wash-sales")
+    assert r.status_code == 200
+    text = r.text
+    # The Watch label is inside a <span>, so match on the text that follows.
+    assert ("— open positions where you closed a loss recently" in text) or \
+           ("&mdash; open positions where you closed a loss recently" in text), \
+        "explainer header missing"

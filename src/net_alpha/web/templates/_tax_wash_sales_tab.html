@@ -145,6 +145,10 @@
 
 {# Wash-sale watch — recent loss closes you shouldn't buy back yet. Lives at
    the top of both views so it's always visible while reviewing wash sales. #}
+  <p class="text-[12px] text-label-2 mb-2 leading-[1.55]">
+    <span class="text-label-1 font-medium">Watch</span> — open positions where you closed a loss recently and a re-buy here would still trigger a wash sale.
+    <span class="text-label-1 font-medium">Violations</span> — realized wash sales below.
+  </p>
 <div class="panel mb-4">
   {% include "_portfolio_wash_watch.html" %}
 </div>
