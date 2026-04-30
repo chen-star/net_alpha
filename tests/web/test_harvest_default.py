@@ -1,5 +1,6 @@
 """When the user lands on /tax?view=harvest with no params, the
 'Currently harvestable only' checkbox is checked by default."""
+
 import pathlib
 import tempfile
 

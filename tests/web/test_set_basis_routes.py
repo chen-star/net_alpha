@@ -1,4 +1,5 @@
 """HTTP tests for the inline set-basis routes."""
+
 from __future__ import annotations
 
 import datetime as dt

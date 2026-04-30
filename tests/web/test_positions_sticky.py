@@ -1,4 +1,5 @@
 """Each Positions view's <thead> uses sticky positioning."""
+
 import pathlib
 import tempfile
 

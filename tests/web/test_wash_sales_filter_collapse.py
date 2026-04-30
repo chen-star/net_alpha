@@ -1,4 +1,5 @@
 """Wash-sales filter collapsible behavior."""
+
 import pathlib
 import tempfile
 
@@ -43,6 +44,6 @@ def test_tax_wash_tab_shows_explanatory_header():
     assert r.status_code == 200
     text = r.text
     # The Watch label is inside a <span>, so match on the text that follows.
-    assert ("— open positions where you closed a loss recently" in text) or \
-           ("&mdash; open positions where you closed a loss recently" in text), \
-        "explainer header missing"
+    assert ("— open positions where you closed a loss recently" in text) or (
+        "&mdash; open positions where you closed a loss recently" in text
+    ), "explainer header missing"

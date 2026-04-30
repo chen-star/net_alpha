@@ -1,4 +1,5 @@
 """Tests for the trade_date extension to Repository.update_trade_basis."""
+
 from __future__ import annotations
 
 import datetime as dt

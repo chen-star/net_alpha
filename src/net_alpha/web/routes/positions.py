@@ -113,9 +113,7 @@ def positions_page(
     if selected_view == "at-loss":
         _falsey = ("", "0", "false", "off")
         # Default to True (checkbox checked) when the param is absent.
-        only_harvestable_bool = (
-            only_harvestable is None or only_harvestable.lower() not in _falsey
-        )
+        only_harvestable_bool = only_harvestable is None or only_harvestable.lower() not in _falsey
         rows = compute_harvest_queue(
             repo=repo,
             pricing=pricing,

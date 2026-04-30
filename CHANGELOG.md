@@ -2,6 +2,28 @@
 
 
 
+## v0.37.1 (2026-04-29)
+
+### Polish
+
+Pre-launch UX polish (Phase A of three sequential PRs). All template/CSS only,
+no behavior changes.
+
+* feat(web): add tooltips to remaining four portfolio KPI tiles
+* feat(web): sticky thead on Positions table views
+* feat(web): sticky thead on remaining Holdings/Portfolio table fragments
+* feat(web): collapse wash-sales filter behind a Filter summary
+* feat(web): explain Watch vs Violations on the Tax wash-sales tab
+* feat(web): tooltip on wash-sale 'to safe' countdown
+* feat(web): default Harvest queue to 'currently harvestable only'
+* feat(web): inline tax-projection setup form replacing YAML snippet
+* feat(web): per-input helper text and missing-quote message on Sim form
+* feat(web): aria-label and tooltip on top-nav imports badge
+* test(web): pin Holdings tab links to Options and Stocks views
+* chore: ruff format sweep
+
+
+
 ## v0.37.0 (2026-04-30)
 
 ### Feature

@@ -1,6 +1,7 @@
 """End-to-end: import → render positions pane → submit multi-lot split →
 re-render → assert the row is no longer in basis-missing state and N
 siblings exist with correct dates/qtys/basises."""
+
 from __future__ import annotations
 
 import datetime as dt

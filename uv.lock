@@ -1576,7 +1576,7 @@ wheels = [
 
 [[package]]
 name = "wash-alpha"
-version = "0.27.0"
+version = "0.37.1"
 source = { editable = "." }
 dependencies = [
     { name = "loguru" },

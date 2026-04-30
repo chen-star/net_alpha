@@ -26,6 +26,7 @@ def _post_basis_save_recompute(repo: Repository, etf_pairs: dict) -> None:
             stitch_account(repo, acct.id)
     recompute_all_violations(repo, etf_pairs)
     from net_alpha.audit._badge_cache import _cache
+
     _cache.invalidate()
 
 
@@ -195,9 +196,7 @@ def set_basis_single(
             "_positions_pane_set_basis_saved.html",
             {"sym": trade.ticker},
         )
-    return HTMLResponse(
-        '<div class="text-pos text-[12px]">Saved.</div>'
-    )
+    return HTMLResponse('<div class="text-pos text-[12px]">Saved.</div>')
 
 
 @router.get("/audit/set-basis/multi/{trade_id}", response_class=HTMLResponse)
@@ -350,6 +349,7 @@ def set_basis_multi(
     # split_imported_transfer already calls recompute_all_violations internally,
     # so we don't double-call it. We do still need to invalidate the badge cache.
     from net_alpha.audit._badge_cache import _cache
+
     _cache.invalidate()
 
     if caller == "pane":

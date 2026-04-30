@@ -1,4 +1,5 @@
 """Top-nav imports badge has aria-label and title for accessibility."""
+
 import re
 from datetime import date, datetime
 
@@ -40,7 +41,5 @@ def test_imports_badge_has_aria_and_title(client: TestClient, repo: Repository):
     html = response.text
 
     # The badge span should have aria-label="N imports" and title="N imports"
-    assert re.search(r'aria-label="\d+ imports"', html), \
-        "imports badge missing aria-label"
-    assert re.search(r'title="\d+ imports"', html), \
-        "imports badge missing title"
+    assert re.search(r'aria-label="\d+ imports"', html), "imports badge missing aria-label"
+    assert re.search(r'title="\d+ imports"', html), "imports badge missing title"

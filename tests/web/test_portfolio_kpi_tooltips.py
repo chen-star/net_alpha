@@ -1,4 +1,5 @@
 """Every KPI tile carries a title= tooltip after the polish PR."""
+
 import pathlib
 import tempfile
 
@@ -25,6 +26,4 @@ def test_all_four_target_kpis_have_title():
         tag_start = html.rfind("<div", 0, i)
         tag_end = html.index(">", i)
         opening_tag = html[tag_start : tag_end + 1]
-        assert "title=" in opening_tag, (
-            f"slot {slot!r} missing title= tooltip; opening tag: {opening_tag!r}"
-        )
+        assert "title=" in opening_tag, f"slot {slot!r} missing title= tooltip; opening tag: {opening_tag!r}"
