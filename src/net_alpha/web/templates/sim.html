@@ -58,18 +58,23 @@
         <datalist id="ticker-list">
           {% for t in tickers %}<option value="{{ t }}">{% endfor %}
         </datalist>
+        <p class="text-[11px] text-label-2 mt-1">Symbol exactly as it appears on your statement.</p>
       </div>
       <div>
         <label class="block label-uc">Quantity</label>
         <input type="number" name="qty" step="0.01" value="{{ qty or '' }}" required
                class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
+        <p class="text-[11px] text-label-2 mt-1">Shares for stock; contracts for options.</p>
       </div>
       <div>
         <label class="block label-uc">Price{% if price_hint %} <span class="text-label-2 text-[10px]">(quote ${{ price_hint }})</span>{% endif %}</label>
         <input type="number" name="price" step="0.01" value="{{ price_hint }}" required
                class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
+        {% if not price_hint and ticker %}
+          <p class="text-[11px] text-warn mt-1">No quote available — enter manually.</p>
+        {% endif %}
       </div>
       <div>
         <label class="block label-uc">
@@ -88,6 +93,7 @@
         <input type="date" name="trade_date" value="{{ today_iso }}" required
                class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[13px] w-full"
                style="border:0.5px solid rgba(255,255,255,0.08);"/>
+        <p class="text-[11px] text-label-2 mt-1">When the trade would settle.</p>
       </div>
     </div>
     <div class="mt-4 text-right">
