@@ -1,4 +1,5 @@
 """Each Holdings row carries a 'Simulate sale' link to /sim with prefill params."""
+
 import pathlib
 import tempfile
 
@@ -32,7 +33,5 @@ def test_portfolio_table_renders_sim_link_in_thead_or_tbody():
     # Fallback: assert the template defines the link
     template_path = pathlib.Path("src/net_alpha/web/templates/_portfolio_table.html")
     template_text = template_path.read_text()
-    assert "/sim?ticker=" in template_text, \
-        "template missing per-row sim link"
-    assert "Simulate sale" in template_text, \
-        "template missing 'Simulate sale' label"
+    assert "/sim?ticker=" in template_text, "template missing per-row sim link"
+    assert "Simulate sale" in template_text, "template missing 'Simulate sale' label"

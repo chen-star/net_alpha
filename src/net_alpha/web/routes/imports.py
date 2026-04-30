@@ -58,9 +58,7 @@ def imports_page(
         if cat == "unpriced":
             return "no_quote"
         # Fall back to text-matching on summary/detail for unknown categories
-        text = (
-            (getattr(issue, "summary", None) or "") + " " + (getattr(issue, "detail", None) or "")
-        ).lower()
+        text = ((getattr(issue, "summary", None) or "") + " " + (getattr(issue, "detail", None) or "")).lower()
         if "basis" in text:
             return "missing_basis"
         if "quote" in text or "no price" in text or "unpriced" in text:

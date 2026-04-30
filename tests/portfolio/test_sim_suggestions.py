@@ -1,4 +1,5 @@
 """Tests for sim_suggestions.top_suggestions chip picker."""
+
 from datetime import date
 from decimal import Decimal
 
@@ -77,9 +78,7 @@ def test_wash_risk_only_when_unexpired():
             last_price=Decimal("50"),
         ),
     ]
-    chips = top_suggestions(
-        [_pos("LOSS", 5, 100, 80)], losses_expired, today=date(2026, 4, 29)
-    )
+    chips = top_suggestions([_pos("LOSS", 5, 100, 80)], losses_expired, today=date(2026, 4, 29))
     assert all(c.kind != "wash_risk" for c in chips)
 
 

@@ -2,6 +2,36 @@
 
 
 
+## v0.39.0 (2026-04-29)
+
+### Features
+
+Pre-launch UX polish (Phase C of three sequential PRs). Increases discoverability
+of pre-trade simulation — the product's killer feature — and tames the imports
+data-quality firehose.
+
+* feat(sim): top_suggestions pure-function chip picker — new
+  `portfolio/sim_suggestions.py` module. Picks up to three chips: largest
+  unrealized loss, wash-sale risk, and largest unrealized gain. Empty
+  portfolios get a single demo chip ("Try a demo: TSLA 10 @ $180").
+* feat(web): /sim/suggestions chip strip on Sim page — new endpoint returns
+  a chip-strip fragment that lazy-loads on the Sim page. Each chip is a
+  one-click prefill of the simulator with the suggested ticker, qty, price,
+  and action.
+* feat(web): per-row 'Simulate sale' action on Holdings — every row in the
+  Portfolio positions table now carries a trailing `↗ Sim` link that opens
+  the Sim page prefilled with the row's symbol, qty, and last price.
+* feat(web): collapsible data-quality groups on Imports page — replaces the
+  flat warnings list with three `<details>` buckets (Missing basis, No price
+  quote, Missing dates), most-actionable bucket open by default.
+
+### Tests
+
+7 unit tests for sim_suggestions + 3 endpoint tests + 1 row-action test +
+2 imports-grouping tests (13 new tests total).
+
+
+
 ## v0.38.0 (2026-04-29)
 
 ### Features

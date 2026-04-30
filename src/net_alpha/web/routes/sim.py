@@ -190,9 +190,7 @@ def sim_suggestions(
         qty = sum((Decimal(str(lot.quantity)) for lot in lot_list), Decimal("0"))
         if qty <= 0:
             continue
-        basis = sum(
-            (Decimal(str(lot.adjusted_basis)) for lot in lot_list), Decimal("0")
-        )
+        basis = sum((Decimal(str(lot.adjusted_basis)) for lot in lot_list), Decimal("0"))
         q = quotes.get(symbol)
         if q is None or q.price is None:
             continue
@@ -221,9 +219,7 @@ def sim_suggestions(
         if pnl >= 0:
             continue
         q = quotes.get(t.ticker)
-        last = (
-            Decimal(str(q.price)) if q is not None and q.price is not None else Decimal("0")
-        )
+        last = Decimal(str(q.price)) if q is not None and q.price is not None else Decimal("0")
         losses.append(
             LossClose(
                 symbol=t.ticker,

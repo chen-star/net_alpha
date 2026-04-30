@@ -1,4 +1,5 @@
 """Tests for the GET /sim/suggestions chip-strip endpoint."""
+
 import pathlib
 import tempfile
 

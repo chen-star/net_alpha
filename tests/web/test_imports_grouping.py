@@ -1,5 +1,6 @@
 """The Imports data-quality section uses collapsible groups (Missing basis,
 No price quote, Missing dates), most-actionable open by default."""
+
 import pathlib
 import tempfile
 
@@ -29,7 +30,4 @@ def test_imports_template_uses_dq_groups_structure():
         if "dq_groups" in text and "Missing basis" in text:
             found = True
             break
-    assert found, (
-        "Expected dq_groups + 'Missing basis' bucket in either imports.html "
-        "or _data_hygiene.html"
-    )
+    assert found, "Expected dq_groups + 'Missing basis' bucket in either imports.html or _data_hygiene.html"
