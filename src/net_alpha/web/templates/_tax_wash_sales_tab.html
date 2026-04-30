@@ -6,7 +6,13 @@
 #}
 
 {# Unified filter bar — fields used by both views #}
-<form method="get" class="panel mb-4 flex gap-3 flex-wrap items-end">
+{% set _has_filters = filter_ticker or filter_account or filter_confidence or filter_year_explicit %}
+<details class="mb-4" {% if _has_filters %}open{% endif %}>
+  <summary class="cursor-pointer text-sm text-label-2 mb-2 select-none">
+    <span class="text-label-1 font-medium">Filter</span>
+    {% if _has_filters %}<span class="text-label-3">— {% if filter_ticker %}{{ filter_ticker }} · {% endif %}{% if filter_account %}{{ filter_account }} · {% endif %}{% if filter_year %}{{ filter_year }} · {% endif %}{% if filter_confidence %}{{ filter_confidence }}{% endif %}</span>{% endif %}
+  </summary>
+<form method="get" class="panel flex gap-3 flex-wrap items-end">
   <input type="hidden" name="view" value="{{ view }}"/>
   <div>
     <label class="block label-uc">Ticker</label>
@@ -61,6 +67,7 @@
   <button type="submit" class="btn">Apply</button>
   <a href="/tax?view={{ view }}" class="btn-ghost">Reset</a>
 </form>
+</details>
 
 {# W2: active-filter chip summary row with ⌫ reset link. Always rendered so
    the reset anchor (data-testid="filter-reset") is always in the DOM. #}

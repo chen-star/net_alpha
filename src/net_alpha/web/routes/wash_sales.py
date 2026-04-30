@@ -110,6 +110,8 @@ def _wash_sales_context(
         "filter_account": account or "",
         # filter_year reflects what's pre-filled in the input. None / 0 => effective default.
         "filter_year": effective_year if effective_year is not None else "",
+        # True only when the user explicitly passed ?year=...; False on the default load.
+        "filter_year_explicit": year is not None,
         "all_years": effective_year is None,
         "filter_confidence": confidence or "",
         "tickers": repo.list_distinct_tickers(),
