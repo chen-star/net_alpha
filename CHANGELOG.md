@@ -2,6 +2,59 @@
 
 
 
+## v0.40.1 (2026-05-01)
+
+### Chore
+
+* chore: scrub references to internal docs/ folder
+
+Removes dangling pointers to docs/superpowers/specs/* now that the docs/
+folder is local-only and excluded from the repo.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`16be1ab`](https://github.com/chen-star/net_alpha/commit/16be1ab8871174c447e0171ca5dcaa6f83a67ee9))
+
+* chore: scrub AI scaffolding, generated artifacts, and internal docs from repo
+
+Untracks third-party AI skill plugin data (.agent/, .agents/, .junie/,
+.claude/skills/), generated coverage report, skills-lock.json, the empty
+&#39;nano&#39; file, and the docs/ folder. Adds matching .gitignore entries plus
+.DS_Store / editor swap files. Files remain on local disk; only their
+tracked status is removed.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3048af6`](https://github.com/chen-star/net_alpha/commit/3048af6f66bc4f4200359790e0089268c5fb6626))
+
+### Documentation
+
+* docs: add monthly PyPI downloads badge to README
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fe82b14`](https://github.com/chen-star/net_alpha/commit/fe82b14c4819c938cb342f338a315d574e43e3fd))
+
+* docs: refresh AGENTS.md, CLAUDE.md, README.md for v0.40.0
+
+Bring the top-level docs in line with the matured codebase: web UI is now
+the primary interactive surface (Portfolio, Positions, Tax, Sim, Imports,
+Ticker, Settings), with new subsystems (audit/reconciliation, splits,
+position targets, harvest planner, sim suggestions, manual trade CRUD).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e736073`](https://github.com/chen-star/net_alpha/commit/e736073709a655428e246f100c70ec646682a39c))
+
+### Fix
+
+* fix(packaging): add PyPI metadata, project URLs, and LICENSE
+
+The PyPI page rendered with no README, no GitHub link, and no classifiers,
+giving installers no path back to the repo. Adds:
+
+- readme = &#34;README.md&#34; so the full README renders on PyPI
+- [project.urls] with Homepage / Repository / Issues / Changelog so the
+  PyPI sidebar links to GitHub
+- license, classifiers, and keywords for category browsing and search
+- LICENSE file to back the MIT claim in the README
+- Star call-to-action near the top of the README to convert PyPI readers
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cfdc046`](https://github.com/chen-star/net_alpha/commit/cfdc046b47ae395f1e3886663fa61bf6beddbfaa))
+
+
 ## v0.40.0 (2026-04-30)
 
 ### Feature
@@ -21,7 +74,7 @@
   six controls share the same horizontal baseline regardless of helper-text
   presence.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`22f039f`](https://github.com/chen-star/net_alpha/commit/22f039f6de4e81aa55372d4c6a86a9e9cc6e115b))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ee2006c`](https://github.com/chen-star/net_alpha/commit/ee2006cc111eaf3a060dd0646cff14af8e7a4d04))
 
 * feat(web): wire real content into Profile / ETF pairs / About drawer tabs
 
@@ -31,7 +84,7 @@ to Jinja so the new tabs can render, and updates the regression test to assert
 real content rather than placeholder copy. Also bumps GitNexus index counts
 in AGENTS.md / CLAUDE.md.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0b2862e`](https://github.com/chen-star/net_alpha/commit/0b2862e439969782e080b9047425cb43b8f1a570))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9227416`](https://github.com/chen-star/net_alpha/commit/92274160b1b5a169192dd826da635509f871b84f))
 
 ### Refactor
 
@@ -42,7 +95,7 @@ ORDINARY_LOSS_CAP (replacing 4 bare Decimal(&#34;3000&#34;) literals). Replace t
 fragile Pydantic __dict__ smuggle in the harvest_plan endpoint with a plain
 parallel dict passed explicitly to the template context.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`83ccd36`](https://github.com/chen-star/net_alpha/commit/83ccd362e0b5e781502c1e634f64084c95b7882c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3b99eeb`](https://github.com/chen-star/net_alpha/commit/3b99eebda54cb71058551cd7cb020206ae1fa42d))
 
 
 ## v0.39.0 (2026-04-30)
@@ -55,7 +108,7 @@ Groups hygiene warnings into Missing basis / No price quote / Missing dates
 buckets rendered as &lt;details&gt; elements; the first non-empty bucket is open
 by default, replacing the previous flat list in _data_hygiene.html.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7a216b2`](https://github.com/chen-star/net_alpha/commit/7a216b2ba97238093da312dd515c6b57bfa5ddcd))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f8acc78`](https://github.com/chen-star/net_alpha/commit/f8acc786b30f2ce59fcc633fbc99be50e8ea665a))
 
 * feat(web): per-row &#39;Simulate sale&#39; action on Holdings
 
@@ -64,7 +117,7 @@ the Sim page prefilled with ticker, qty, action=sell, and derived price
 (market_value ÷ qty when available), making Sim discoverable from the
 table without opening the row-actions menu.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cf039ed`](https://github.com/chen-star/net_alpha/commit/cf039edd7ebe16ab2385b0e9781da344c8e35b70))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b0c2846`](https://github.com/chen-star/net_alpha/commit/b0c2846d669b3fda0f170aa41a07cf1bc9fe5eb1))
 
 * feat(web): /sim/suggestions chip strip on Sim page
 
@@ -72,11 +125,11 @@ Add GET /sim/suggestions HTMX fragment endpoint that surfaces up to 3
 one-click prefill chips (largest loss, wash-sale risk, largest gain)
 above the sim form; falls back to a demo TSLA chip on empty DB.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eadbdc2`](https://github.com/chen-star/net_alpha/commit/eadbdc21dfd5e9cdf3b5088554d7f583f3ba0f8d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4d11259`](https://github.com/chen-star/net_alpha/commit/4d1125947c8a5564023c711f2a2aa82a92071e8c))
 
 * feat(sim): top_suggestions pure-function chip picker
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`89e4fec`](https://github.com/chen-star/net_alpha/commit/89e4fec550aa86641397b8e102a737fc7889ea85))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e69c385`](https://github.com/chen-star/net_alpha/commit/e69c38594d40ca6d0be4eb96274c39f946400fc1))
 
 
 ## v0.38.0 (2026-04-30)
@@ -91,47 +144,26 @@ via an HTMX loading shell replacing the old inline table. Updated two
 compat test files (test_phase1_positions_tabs, test_phase2_at_loss_columns)
 to hit the new fragment endpoint directly since headers are now lazy-loaded.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`db1885e`](https://github.com/chen-star/net_alpha/commit/db1885e6bb4e7f0cecbf4727ffaee9314dbb9654))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ad4fa93`](https://github.com/chen-star/net_alpha/commit/ad4fa933f2fc9dfb2695335a9b5650e6fe00933f))
 
-* feat(web): _harvest_plan.html fragment skeleton ([`21d2d84`](https://github.com/chen-star/net_alpha/commit/21d2d8448724643242095a5e5dde7712d81e4bba))
+* feat(web): _harvest_plan.html fragment skeleton ([`79bc178`](https://github.com/chen-star/net_alpha/commit/79bc178afd9a3bd1123d8a04185be9b1ed6f7021))
 
 * feat(planner): summarize_manual_picks for user-edited selection
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`88cf4e5`](https://github.com/chen-star/net_alpha/commit/88cf4e59e1810ff3a2804198d025927ff9a48602))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b0fa656`](https://github.com/chen-star/net_alpha/commit/b0fa6569ec25728b264f2c987e151f69c391f6b4))
 
 * feat(planner): build_plan greedy harvest planner with tax-saved ranking
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8bf7987`](https://github.com/chen-star/net_alpha/commit/8bf7987d6b75083ea8b5571eb62df0ea2b97c08d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ccb4e7a`](https://github.com/chen-star/net_alpha/commit/ccb4e7ac6bc0841a53e7a0db4091c4df19429b69))
 
 
 ## v0.37.1 (2026-04-30)
 
-### Documentation
-
-* docs(plan): pre-launch UX polish implementation plan
-
-Three-phase task breakdown covering PR #1 (polish, v0.36.1), PR #2
-(harvest plan assistant, v0.37.0), and PR #3 (sim chips + holdings
-row action + imports grouping, v0.38.0). TDD throughout, with each
-task scoped to ~2-5 minutes of work.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0efa846`](https://github.com/chen-star/net_alpha/commit/0efa846e773b94b07eacda4d67d8faab2e356553))
-
-* docs(spec): pre-launch UX polish design
-
-Three-PR plan to address ~25 UX issues from the PM evaluation: a
-template-only polish PR, a Tax→Harvest plan-builder feature PR, and
-a discoverability PR (sim chips + holdings row action + imports
-data-quality grouping). Mobile redesign and export work deferred to
-separate brainstorms.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`731689f`](https://github.com/chen-star/net_alpha/commit/731689fec8c1dec21577417210550aa7a0b306a2))
-
 ### Feature
 
-* feat(web): aria-label and tooltip on top-nav imports badge ([`416385e`](https://github.com/chen-star/net_alpha/commit/416385eb63c1530860a02035a80c4c56b1f7d393))
+* feat(web): aria-label and tooltip on top-nav imports badge ([`d6de0d3`](https://github.com/chen-star/net_alpha/commit/d6de0d34e943264be8682470765e9ed5bdd3fae3))
 
-* feat(web): per-input helper text and missing-quote message on Sim form ([`2590d6e`](https://github.com/chen-star/net_alpha/commit/2590d6e766078fe1c32f87fe6c3f693e8054ab19))
+* feat(web): per-input helper text and missing-quote message on Sim form ([`b17349a`](https://github.com/chen-star/net_alpha/commit/b17349ab17cde3093cace76cdce6141bfc6c4bc2))
 
 * feat(web): inline tax-projection setup form replacing YAML snippet
 
@@ -141,39 +173,39 @@ btn). Makes state and state_marginal_rate optional (blank = federal-only)
 to match TaxConfig defaults. Route handler updated to use Form(&#34;&#34;) /
 Form(0.0) defaults accordingly.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`02b5a3f`](https://github.com/chen-star/net_alpha/commit/02b5a3fc46e0dca0045ec109121fe248f2067de6))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`de22f61`](https://github.com/chen-star/net_alpha/commit/de22f61eb940e21254fe3e6cecce7210342c7a0e))
 
 * feat(web): default Harvest queue to &#39;currently harvestable only&#39;
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5074ce5`](https://github.com/chen-star/net_alpha/commit/5074ce580b107308a9167c489018e38c9d6e8f88))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`19a8cc7`](https://github.com/chen-star/net_alpha/commit/19a8cc7dcf9d0f3f9f0dd5b91e93811dc8779321))
 
-* feat(web): tooltip on wash-sale &#39;to safe&#39; countdown ([`2981c95`](https://github.com/chen-star/net_alpha/commit/2981c95a9b36c3caadd91e2b8a14612e76d0877b))
+* feat(web): tooltip on wash-sale &#39;to safe&#39; countdown ([`a1e8421`](https://github.com/chen-star/net_alpha/commit/a1e8421dfa7321e0eefd3571ad7d345415af4a37))
 
 * feat(web): explain Watch vs Violations on the Tax wash-sales tab
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b175d52`](https://github.com/chen-star/net_alpha/commit/b175d5227c99ffa9733065959c9fc7fc2a6c579c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`38f14de`](https://github.com/chen-star/net_alpha/commit/38f14de7a09aeb991d5f00b5132438cf038d8cc2))
 
 * feat(web): collapse wash-sales filter behind a Filter summary
 
 Wraps the filter form in a &lt;details&gt; element that is collapsed by default and auto-opens only when at least one filter is explicitly set by the user (ticker, account, confidence, or year). Adds filter_year_explicit context flag to _wash_sales_context so the template can distinguish a user-chosen year from the default current-year preset. Applied to both wash_sales.html and _tax_wash_sales_tab.html (the live route).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`38e4f78`](https://github.com/chen-star/net_alpha/commit/38e4f781fdbd8133c138bddcddc746ba80d869cb))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8061aa0`](https://github.com/chen-star/net_alpha/commit/8061aa0b4afe4c7f52ed5de4ef185bbaf2d726fe))
 
-* feat(web): sticky thead on remaining Holdings/Portfolio table fragments ([`f8c5552`](https://github.com/chen-star/net_alpha/commit/f8c55526420e1b382d8c51d686c46b9b97bbd387))
+* feat(web): sticky thead on remaining Holdings/Portfolio table fragments ([`dd74df0`](https://github.com/chen-star/net_alpha/commit/dd74df056c3e216225f4cd6776c952019f55ec32))
 
 * feat(web): sticky thead on Positions table views
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`520e33e`](https://github.com/chen-star/net_alpha/commit/520e33eabd6cb444e00901c725c2b8c52b3fa403))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2c0efa2`](https://github.com/chen-star/net_alpha/commit/2c0efa2f1ebc198ad914bf190d2cee1180b80851))
 
 * feat(web): add tooltips to remaining four portfolio KPI tiles
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6db84c0`](https://github.com/chen-star/net_alpha/commit/6db84c0ed29457306fa4ac3aeb16a03d9cdb8c1b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`639edd2`](https://github.com/chen-star/net_alpha/commit/639edd29b739e4ec0eb8264c53bb7b8e849d5979))
 
 ### Test
 
 * test(web): pin Holdings tab links to Options and Stocks views
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`30cb782`](https://github.com/chen-star/net_alpha/commit/30cb782e966b7bffae6cd2d401aa5188546476ab))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5ae21e8`](https://github.com/chen-star/net_alpha/commit/5ae21e84ea43279eca6ce24c9537f66f888b6fd6))
 
 
 ## v0.37.0 (2026-04-30)
@@ -188,7 +220,7 @@ Cash·free · Cash·pledged), and a per-segment legend so the user can
 read deployment ratio at a glance — the data already lived on
 AllocationView, so no compute changes.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c80b94d`](https://github.com/chen-star/net_alpha/commit/c80b94d30ddd127cac6adee20dc29d9c4b441d2e))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3e6598e`](https://github.com/chen-star/net_alpha/commit/3e6598e6719c36a70d787dbbdd9308331eebc133))
 
 
 ## v0.36.0 (2026-04-30)
@@ -204,7 +236,7 @@ the user can see the full target portfolio size at a glance.
 Share-unit targets without a quote are excluded from the sum; the
 footer indicates partial coverage as &#34;(X/Y priced)&#34; when that happens.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6fece9c`](https://github.com/chen-star/net_alpha/commit/6fece9c8709acdcf26273c61e5469fa5cf0aaa90))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4339a71`](https://github.com/chen-star/net_alpha/commit/4339a71fd58e9dd07153651ec21397464edb1d07))
 
 
 ## v0.35.1 (2026-04-30)
@@ -223,38 +255,10 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6f
   `/holdings/short-options` is a backwards-compat alias for
   `/holdings/options`, so the same long+short table was rendering twice.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9caca5e`](https://github.com/chen-star/net_alpha/commit/9caca5eef3481587e189d95452cce0fe3fc08dd8))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`11006d9`](https://github.com/chen-star/net_alpha/commit/11006d9804cbc6286145be7f96a2a47adfab1c6c))
 
 
 ## v0.35.0 (2026-04-30)
-
-### Documentation
-
-* docs: add Overview redesign + position targets implementation plan
-
-Bite-sized TDD-style task list covering all spec sections: KPI restructure
-(Task 1), Top Movers (2-3), SPY benchmark line (4-7), targets schema (8),
-domain models (9), repository (10), Plan view-model (11), Plan tab UI
-(12-15), Target column (16), and end-to-end verification (17).
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`68eb510`](https://github.com/chen-star/net_alpha/commit/68eb510dbef920f6d6ed172f47005f5350b03198))
-
-* docs: fix spec paths to match actual codebase layout
-
-Storage is db/, not storage/; migrations are inline Python in
-db/migrations.py keyed by integer schema_version (currently at 11).
-PositionRow is the OpenPosition shape. Spec edits align all references.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9469cfb`](https://github.com/chen-star/net_alpha/commit/9469cfb4a7da098e68c3a00015a521ee0d4bc282))
-
-* docs: add Overview redesign + position targets spec
-
-Drafts the Overview KPI restructure (drop TODAY, promote Total Return,
-add SPY benchmark line, add Top Movers panel) and the new Plan tab on
-the Positions page (per-symbol $ or share targets, gap to fill, % filled
-progress bar, Target column in shared positions table).
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`98363b1`](https://github.com/chen-star/net_alpha/commit/98363b1cdcbc5dd67c6ada2db0e35d0819d8b04e))
 
 ### Feature
 
@@ -264,12 +268,12 @@ Injects a target column into the shared _portfolio_table.html partial
 whenever any PositionTarget rows exist; shows current vs target with a
 progress bar and color-coded fill percentage.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5f52135`](https://github.com/chen-star/net_alpha/commit/5f521350429d0902da29b4f68a6a1e6a7444f98e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d3e4d5c`](https://github.com/chen-star/net_alpha/commit/d3e4d5c904a88f4d5e785166ac6c6a48f0efac35))
 
 * feat(web): plan target delete endpoint
 
 Adds DELETE /positions/plan/target/{symbol} that removes a target and returns
-the updated plan body fragment; idempotent for unknown symbols (200 in both cases). ([`10ce6f7`](https://github.com/chen-star/net_alpha/commit/10ce6f7a61d55d8753ed2fbba347c8ea701039f1))
+the updated plan body fragment; idempotent for unknown symbols (200 in both cases). ([`a645853`](https://github.com/chen-star/net_alpha/commit/a6458532098bfd2b1fa33974b6511429011dba49))
 
 * feat(web): plan target add/edit modal + upsert endpoint
 
@@ -277,13 +281,13 @@ Extracts _build_plan_view_for_request helper from the inline plan branch so
 GET ?view=plan, POST /positions/plan/target, and future DELETE can all share
 the same view-model assembly. Adds modal template and two new routes.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2c0cead`](https://github.com/chen-star/net_alpha/commit/2c0cead99b44902f08c7d08803bcb87f60f5fdeb))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f3e56fd`](https://github.com/chen-star/net_alpha/commit/f3e56fde2320926b789929806cab2bea4af075cb))
 
 * feat(web): full Plan tab render with progress bars + footer
 
 Replace placeholder div with a complete position-targets table: per-row progress bars (blue/yellow/green/red by fill %), target/current/gap cells, and a footer summarising Total to fill, Free cash, and coverage. Free-cash calculation is now CSP-aware (subtracts cash_secured_total from open short-option positions).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`94fb912`](https://github.com/chen-star/net_alpha/commit/94fb9122f223648155872145aa71c872868dca05))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`91ce04c`](https://github.com/chen-star/net_alpha/commit/91ce04ca0a20e028d3df765ff25d6f691441a55d))
 
 * feat(web): add Plan tab navigation + empty state
 
@@ -294,11 +298,11 @@ positions_page route to validate &#34;plan&#34; as a view, fetch targets for
 the tab badge count, and build + inject plan_view for the plan branch
 (with a bare cash-balance free_cash that Task 13 will upgrade).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3d83911`](https://github.com/chen-star/net_alpha/commit/3d83911ba23e190a027452442f1dbdd6e0d3feb4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`306e941`](https://github.com/chen-star/net_alpha/commit/306e941850ce37ec75d79b777f233d28165a6789))
 
 * feat(targets): add build_plan_view pure function
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6b48c35`](https://github.com/chen-star/net_alpha/commit/6b48c35c66d11f5073d137c2302d68fc8f625850))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cd22cf7`](https://github.com/chen-star/net_alpha/commit/cd22cf7aa73ff6416e43986082af6aec98745608))
 
 * feat(db): add Repository.{list,get,upsert,delete}_target
 
@@ -306,14 +310,14 @@ Adds four public methods and one static helper to Repository for
 reading and writing position_targets rows, using the existing ORM
 select() pattern. Uppercases symbols on write and lookup.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`51c4c61`](https://github.com/chen-star/net_alpha/commit/51c4c610456ffc49702add6a9756b97cf02226fd))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ab9b988`](https://github.com/chen-star/net_alpha/commit/ab9b988eb41968532f29605354749b84b4a25697))
 
 * feat(targets): add PositionTarget domain model + SQLModel row
 
 Introduces TargetUnit enum (usd/shares), frozen PositionTarget dataclass,
 and PositionTargetRow SQLModel mapped to the existing position_targets table.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`07a463a`](https://github.com/chen-star/net_alpha/commit/07a463a8328dde4f762755940bd8db2d74c74345))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`36d8939`](https://github.com/chen-star/net_alpha/commit/36d89393bc3f2b9007bb246694e508d091e2e1b4))
 
 * feat(web): add SPY benchmark line on equity curve
 
@@ -321,7 +325,7 @@ Wire benchmark_symbol from PricingConfig into the equity-curve chart as a
 dashed gray ApexCharts series; gracefully degrades to empty list on any
 failure or when remote pricing is disabled.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4417f16`](https://github.com/chen-star/net_alpha/commit/4417f16a6fe5fb8a9ddd5eeb9e306b66c6c1fc2d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fc097ae`](https://github.com/chen-star/net_alpha/commit/fc097aee0ccc88c5f072d08df5e1e71985812c51))
 
 * feat(portfolio): add benchmark shadow-account series builder
 
@@ -329,7 +333,7 @@ Adds BenchmarkPoint dataclass to models.py and build_benchmark_series()
 pure function in portfolio/benchmark.py that simulates a shadow account
 buying the benchmark index with the same cash flows as the user&#39;s account.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`451ec05`](https://github.com/chen-star/net_alpha/commit/451ec05ae3773f7bdf93aff15ad1ffa9e5dc9e74))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c13f155`](https://github.com/chen-star/net_alpha/commit/c13f1551507b4d7ddff2d17fafc755f610cd402b))
 
 * feat(pricing): add cached get_historical_close on PricingService
 
@@ -337,7 +341,7 @@ Read-through historical close cache: _MISS sentinel distinguishes
 no-row from negative-cache (None), so Yahoo is hit at most once per
 (symbol, date) pair even when the close is unavailable.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c045889`](https://github.com/chen-star/net_alpha/commit/c0458897e54fc200a6740d552dc999f34963224b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e07c81c`](https://github.com/chen-star/net_alpha/commit/e07c81c20beb3572eb284b9f7acfe06f2ac9745f))
 
 * feat(db): add v11→v12 migration (position_targets + historical_price_cache)
 
@@ -348,7 +352,7 @@ chain so v10→v11 assigns current=11 instead of early-returning,
 allowing v12 to run. Bumps CURRENT_SCHEMA_VERSION to 12 and updates
 all tests that hardcoded version &#34;11&#34;.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`03fb1a3`](https://github.com/chen-star/net_alpha/commit/03fb1a3c7cc092f04daee53dc9233af1110d0ad6))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7156f10`](https://github.com/chen-star/net_alpha/commit/7156f1020883ae597feef9fdd04bfff6021919dc))
 
 * feat(pricing): add get_historical_close to provider + Yahoo impl
 
@@ -356,7 +360,7 @@ Adds a default no-op get_historical_close(symbol, on) to the PriceProvider
 ABC and a full yfinance implementation on YahooPriceProvider that fetches a
 single-day window and returns Decimal or None on any failure.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ead11b9`](https://github.com/chen-star/net_alpha/commit/ead11b97ac8d92c1471cf4d5a7237b8c7a808764))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`15a8d0d`](https://github.com/chen-star/net_alpha/commit/15a8d0d09757842ce9fb184723bae3fbc273432a))
 
 * feat(web): add Top Movers panel on Overview
 
@@ -364,13 +368,13 @@ Renders the top-3 unrealized $ winners and losers among open positions
 on the portfolio body fragment; panel is caller-gated and omitted when
 no priced positions exist.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4b122a6`](https://github.com/chen-star/net_alpha/commit/4b122a64ccf5caf8e9933f8ce7aa7c9d67dd7b2e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`17219ac`](https://github.com/chen-star/net_alpha/commit/17219ac2be77d4441581cc9a8e1e2d79835072ff))
 
-* feat(portfolio): add top_movers pure function ([`5d4691d`](https://github.com/chen-star/net_alpha/commit/5d4691ddcc7f4dcc4f2f29189957306df9c6bfd9))
+* feat(portfolio): add top_movers pure function ([`4b7410f`](https://github.com/chen-star/net_alpha/commit/4b7410f90fe09a59884a7c801c91de00fc0cffc7))
 
 * feat(web): drop TODAY tile, promote Total Return to top row
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6b242f6`](https://github.com/chen-star/net_alpha/commit/6b242f61737110d257e60c81e00d1dfbd2d344bd))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`56e8a80`](https://github.com/chen-star/net_alpha/commit/56e8a805cd3f634dc46e2e462c89bb7d65f9c759))
 
 ### Fix
 
@@ -386,7 +390,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6b242f6`](htt
 - Tests: strengthen test_post_rejects_empty_symbol/zero_amount with HX-Retarget assertion;
   drop unused dt import from test_positions_pane_context.py (pre-existing ruff F401)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a0ba9b7`](https://github.com/chen-star/net_alpha/commit/a0ba9b7e031ba6a19acdd275b091b68c3fcfe1fe))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`63b0e14`](https://github.com/chen-star/net_alpha/commit/63b0e14f31ca72a1a7a2d4db9c92e1c6a0492697))
 
 ### Style
 
@@ -398,11 +402,11 @@ TargetUnit (enum.Enum) → StrEnum, eliminating the redundant str+Enum
 inheritance. Pre-existing ruff issues outside the feature scope are not
 touched.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ecd0613`](https://github.com/chen-star/net_alpha/commit/ecd0613dc0627dee87e0c9a82244f629a38ea633))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`980f715`](https://github.com/chen-star/net_alpha/commit/980f715a3db1d775bc44d79382968e5773496f94))
 
 * style(web): rename misleading test, remove blank-line artifact
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`93290cb`](https://github.com/chen-star/net_alpha/commit/93290cbc4eba240f8af5f3502b0a193e17a4fbee))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3d59a28`](https://github.com/chen-star/net_alpha/commit/3d59a289a63782f5971b2d06b60df4fec5e07394))
 
 ### Unknown
 
@@ -415,33 +419,10 @@ Overview page redesign + position targets (17 tasks):
 - Plan tab on Positions with full CRUD via HTMX modal
 - Target column on shared positions table
 - New SQLite tables: position_targets, historical_price_cache (v11→v12)
-- 31 new tests, full suite 1095 passing ([`9d902b0`](https://github.com/chen-star/net_alpha/commit/9d902b0a299e3eac76adafe355e07d9c43154248))
+- 31 new tests, full suite 1095 passing ([`6207632`](https://github.com/chen-star/net_alpha/commit/6207632eec564a1326a9845916dc6932993d66e7))
 
 
 ## v0.34.0 (2026-04-29)
-
-### Documentation
-
-* docs(plan): multi-lot transfer basis &amp; date implementation plan
-
-Eight TDD tasks: extend update_trade_basis with optional trade_date;
-add transfer-context to positions pane; add date input to single-lot
-form; add multi-lot fragment + GET swap routes; wire split link;
-implement POST /audit/set-basis/multi; integration test; manual UI
-verification.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`edb537c`](https://github.com/chen-star/net_alpha/commit/edb537c6d18faa0e01dce228befe08f4f2f55750))
-
-* docs(spec): multi-lot basis &amp; date for transfer-in positions
-
-Design for replacing the single-input &#34;Set basis&#34; panel on the Portfolio
-positions table with a tiered inline form: default single-row (date +
-basis) with a &#34;+ Split into multiple lots&#34; link that expands into a
-row-table with live qty-sum validation. Reuses
-Repository.split_imported_transfer() and the existing transfer_group_id
-infrastructure — no schema change.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`11f5697`](https://github.com/chen-star/net_alpha/commit/11f56979e2551b0462dbf740b9791f863f56426c))
 
 ### Feature
 
@@ -455,14 +436,14 @@ get_trades_in_transfer_group used by tests. Extracts a shared
 _post_basis_save_recompute helper to avoid a third copy of the
 post-save side effects.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2c63437`](https://github.com/chen-star/net_alpha/commit/2c634370f83f5f336ca7c2340f859c9c1e508fae))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8c1712e`](https://github.com/chen-star/net_alpha/commit/8c1712e26f7e7641062f8b255ff81c28fe390500))
 
 * feat(web): split-into-multiple-lots link on single-lot form
 
 HTMX-driven swap: clicking the link replaces the single-lot panel
 with the multi-lot row table fragment. Removes the Task 4 xfail.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`86a2966`](https://github.com/chen-star/net_alpha/commit/86a2966720c5854346ca0edb1d71d9efd93f5898))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e1d1c45`](https://github.com/chen-star/net_alpha/commit/e1d1c4570e89159e2f1a02d95814d6be01daf4c5))
 
 * feat(web): multi-lot set-basis fragment and HTMX swap routes
 
@@ -471,7 +452,7 @@ GET /audit/set-basis/single/{trade_id} (back-to-single swap target).
 Multi-lot fragment uses Alpine for live qty-sum validation against
 the transferred quantity.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`462e0f2`](https://github.com/chen-star/net_alpha/commit/462e0f280da64c064c6d70babc95da2cacb2ff2a))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`522258c`](https://github.com/chen-star/net_alpha/commit/522258c4ad961b10c4874b13abfe2ea0637755f6))
 
 * feat(web): single-lot set-basis form takes acquisition date
 
@@ -480,7 +461,7 @@ server-side validation (date format, future date, date &gt; transfer
 date, negative basis). Legacy POST /audit/set-basis remains for
 timeline-cell and imports-drawer callers.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f9f1f86`](https://github.com/chen-star/net_alpha/commit/f9f1f86fa7bbd7abbf406d39e00beb19c387ec55))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1dfdce3`](https://github.com/chen-star/net_alpha/commit/1dfdce333e978c4d476763ec84297b35825ee7a4))
 
 * feat(web): expose transfer qty + date on positions pane
 
@@ -488,7 +469,7 @@ Wire transfer_qty and transfer_date through positions_pane render
 context so the upcoming multi-lot split UI can validate qty-sum and
 enforce acquisition_date &lt;= transfer_date.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1f31fb9`](https://github.com/chen-star/net_alpha/commit/1f31fb9c5a0dbb0f2839ce976b32b1b2460299c2))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f520dd1`](https://github.com/chen-star/net_alpha/commit/f520dd1651700c1b04d0d9788ed86ff79f18bf78))
 
 * feat(db): update_trade_basis accepts optional trade_date
 
@@ -496,7 +477,7 @@ The &#34;Set basis &amp; date&#34; inline form on the positions pane needs to se
 acquisition date alongside cost_basis on transfer-in trades. Add an
 optional trade_date parameter; when None, behavior is unchanged.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`de5448e`](https://github.com/chen-star/net_alpha/commit/de5448e712a146450a09b9698b792b28054509a6))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7d7a9fc`](https://github.com/chen-star/net_alpha/commit/7d7a9fc0a7f673c3e72d35b3a0c04acb879a70c9))
 
 ### Fix
 
@@ -513,7 +494,7 @@ Three browser-side bugs found in final review:
   htmx:beforeSwap handler so validation error fragments render in
   the form panel as the spec calls for.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`071d7eb`](https://github.com/chen-star/net_alpha/commit/071d7eb2560d9483092690e411bf5d31bfeeada6))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6d585cf`](https://github.com/chen-star/net_alpha/commit/6d585cf2e6f1331671d7287f944d621deb242503))
 
 * fix(db): clear basis_unknown when transfer rows get user-supplied basis
 
@@ -523,14 +504,14 @@ basis_unknown=True, so the audit/hygiene checker kept flagging rows
 the user had already reconciled. Clear the flag in both methods and
 add a regression assertion to the integration test.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ac29232`](https://github.com/chen-star/net_alpha/commit/ac29232236e74d4e900dbfc8b039abd9af12e0f6))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9a0cea6`](https://github.com/chen-star/net_alpha/commit/9a0cea6ce619140ba0feb7e7e63aa46de040ce11))
 
 * fix(web): don&#39;t echo raw user input in multi-lot date error
 
 Mirror the wording from set_basis_single so a malformed date doesn&#39;t
 get reflected back into the error fragment.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fb048a0`](https://github.com/chen-star/net_alpha/commit/fb048a05cd2d0cef05c1034960e1247339be9db8))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c229387`](https://github.com/chen-star/net_alpha/commit/c2293877b1b38165f18b2113b7cdee8eac8c8bb3))
 
 * fix(web): tighten multi-lot fragment JS — Alpine clone + float tolerance
 
@@ -542,7 +523,7 @@ with the server-side check; otherwise fractional shares
 (e.g., 33.33+33.33+33.34) leave Save permanently disabled. Tidy the
 back-to-single confirm handler.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f8b8f37`](https://github.com/chen-star/net_alpha/commit/f8b8f37d63e96dcfc4a1981d8ba3283d9e87d419))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`81af69c`](https://github.com/chen-star/net_alpha/commit/81af69ce6352f1d25c19a3aa7ae4d9151954e5a1))
 
 * fix(web): test the existing /positions/pane route (no shim)
 
@@ -550,7 +531,7 @@ The test URL was wrong; remove the redundant /portfolio/positions-pane/{sym}
 shim that was added to match it, and call the production route directly.
 The transfer-context behavior verified by the test is unchanged.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d832814`](https://github.com/chen-star/net_alpha/commit/d832814b42f991041ff9499412679e271d93132f))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1d5e4e1`](https://github.com/chen-star/net_alpha/commit/1d5e4e1ed95b43d99e8178ecd2489d8268b52080))
 
 * fix(portfolio): YTD Net Contributed card now matches its provenance modal
 
@@ -566,7 +547,7 @@ from in-period events only, and bind the card to it. Lifetime
 money in is correctly lifetime-bounded). The cash-balance series semantics
 used by the cash chart are unchanged.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`67c3756`](https://github.com/chen-star/net_alpha/commit/67c3756b6e87aa3cc4d86c0c81e4c8eff20959e3))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4c83c97`](https://github.com/chen-star/net_alpha/commit/4c83c97ade371a2d0ffa0030145ad4d9808c9a73))
 
 ### Refactor
 
@@ -577,14 +558,14 @@ Guard int(trade_id) so a non-numeric id returns 400 instead of 500.
 Add tests for the invalid-date-format and trade-not-found branches
 that were uncovered.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3304a8f`](https://github.com/chen-star/net_alpha/commit/3304a8f24b3ccdd207b75ec0575bccb66e24eba1))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0585493`](https://github.com/chen-star/net_alpha/commit/0585493e9b4a5d68bb96ebedb0600a1ecc0816a0))
 
 * refactor(web): remove duplicate imports in positions.py + conftest.py
 
 Single `import datetime as dt` in positions.py replaces the dual
 import; same for the inlined Trade import in seed_transfer_in.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d014742`](https://github.com/chen-star/net_alpha/commit/d014742c3afdf1c15c5ccbf1ce2dc96ff76c1498))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fb79689`](https://github.com/chen-star/net_alpha/commit/fb796895753ec30b61ac1a5782cfc1b5fb06a47a))
 
 ### Test
 
@@ -594,7 +575,7 @@ Imports a transfer-in row with no basis, walks through the HTMX swap
 to the multi-lot fragment, submits a 3-lot split, and verifies the
 basis-missing warning clears on re-render.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`283cd1c`](https://github.com/chen-star/net_alpha/commit/283cd1caaa53a67f18f0638c686951159be0146b))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`79256e8`](https://github.com/chen-star/net_alpha/commit/79256e8e0fb330668eb38a65e34aba27efa3cc89))
 
 ### Unknown
 
@@ -607,7 +588,7 @@ Into Multiple Lots flow that calls Repository.split_imported_transfer
 under the hood — no schema change. End-to-end integration test covers
 the full flow.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e217db5`](https://github.com/chen-star/net_alpha/commit/e217db5eeb1f2fe04cd46a2accfd0f5da536059b))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`86aefd0`](https://github.com/chen-star/net_alpha/commit/86aefd04f961d058f9035ff27dfd4113a73eefa1))
 
 
 ## v0.33.0 (2026-04-29)
@@ -616,37 +597,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e2
 
 * docs: tax correctness 1.0 — §1256 + explainability + after-tax performance
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`94185b3`](https://github.com/chen-star/net_alpha/commit/94185b313b13e5285dcace3ea7251951adfb65b3))
-
-* docs(plan): tax correctness 1.0 (P+M+O3) implementation plan
-
-21-task plan with bite-sized TDD steps, full code in every step,
-exact commands and commit messages. Phased: foundation (universe +
-data model + migration), engine changes (detector + classifier +
-recompute), P explainer (templates + violation + exempt + HTMX
-fragment + CLI renderer), M after-tax (niit_enabled + AfterTaxBreakdown
-+ /tax?view=performance), wrap-up (e2e test + docs).
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`19f0151`](https://github.com/chen-star/net_alpha/commit/19f0151a4f99ac4e5a0b4660e1c06bcd20f74739))
-
-* docs(spec): tax correctness 1.0 — §1256 + explainability + after-tax (P+M+O3)
-
-Brainstormed slice from trader-perspective gap analysis. Bundles three
-tightly-coupled features into one spec because M&#39;s tax-drag math is
-wrong without O3&#39;s 60/40 split, and P needs to render §1256 exemptions
-to be complete.
-
-Covers: ExemptMatch sibling table for §1256 wash-sale exemptions,
-Section1256Classification for closed-trade 60/40 splits, inline-expand
-explanation panels with rule citations and source trades, /tax?view=performance
-panel using existing TaxBrackets config (+ niit_enabled field).
-
-Open §1256 mark-to-market, Form 6781 export, capital-loss carryforward
-modeling, MAGI-based NIIT thresholds, and other O-series rules
-(§1092 straddles, §1259 constructive sale, IRA permanent disallowance,
-spousal/household) explicitly out of scope — caveats documented.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a80f78b`](https://github.com/chen-star/net_alpha/commit/a80f78bd840a3baeb1dd25ba670f9bed67f213ba))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`045dc9f`](https://github.com/chen-star/net_alpha/commit/045dc9f9809503fc236a05eb49c0df3790d9aa2d))
 
 ### Feature
 
@@ -656,7 +607,7 @@ Replaces Task 18 placeholder with full Tier-2 panel: pre-tax/tax-bill/
 after-tax/drag KPI cards, stacked mix bar with legend, wash-sale impact
 row, effective tax rate, expandable caveats, and disclaimer footer.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`325a912`](https://github.com/chen-star/net_alpha/commit/325a912afe6e02a7d5dacb5430336a1764efe7f0))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`63c49bd`](https://github.com/chen-star/net_alpha/commit/63c49bd504f5b569ff6cbc3bf5d27531e5f58ba1))
 
 * feat(web): /tax?view=performance route uses compute_after_tax
 
@@ -666,7 +617,7 @@ compute_after_tax, and renders _tax_performance_panel.html. Adds the
 Performance tab to tax.html. Minimal placeholder template satisfies
 the pre-tax / after-tax text assertions; Task 19 will flesh it out.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0acc81b`](https://github.com/chen-star/net_alpha/commit/0acc81bcbf8ccca5206e9ac582f99722eb83c27f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`132c9b9`](https://github.com/chen-star/net_alpha/commit/132c9b96526c3ae6d06df22da95dcf1de38dd0bb))
 
 * feat(portfolio): compute_after_tax + AfterTaxBreakdown (M&#39;s pure compute)
 
@@ -677,9 +628,9 @@ wash-sale marginal-cost calculation. Add three Repository helpers
 by RealizedGLLotRow, Section1256ClassificationRow, and WashSaleViolationRow.
 12/12 unit tests pass; full suite 1013 passed.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`91a34a8`](https://github.com/chen-star/net_alpha/commit/91a34a8110dd9c02e49102e3133b881c798cf679))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`805d7fb`](https://github.com/chen-star/net_alpha/commit/805d7fb35b37b3cf49efe63765dd99108e73d614))
 
-* feat(tax_planner): add niit_enabled field to TaxBrackets (default True) ([`bd1309f`](https://github.com/chen-star/net_alpha/commit/bd1309f6ddbc40649f068da35192f4fa82916a4b))
+* feat(tax_planner): add niit_enabled field to TaxBrackets (default True) ([`6875926`](https://github.com/chen-star/net_alpha/commit/687592628e78f18d593c95e922f5da9284bd435f))
 
 * feat(cli): --detail prints per-violation explanations + §1256 exempt matches
 
@@ -687,7 +638,7 @@ Adds cli_renderer.py with render_explanation() that formats an ExplanationModel
 as a printable ASCII block; wires _print_detail() into the default command&#39;s
 --detail branch to render each WashSaleViolation and §1256 exempt match.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b7b2cba`](https://github.com/chen-star/net_alpha/commit/b7b2cba33644c33f26be2b5cb25639b2c7df8a5e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`028453e`](https://github.com/chen-star/net_alpha/commit/028453ef37fcbc1358c629542250233055b86bb4))
 
 * feat(web): wire HTMX inline-expand trigger on wash-sale rows
 
@@ -696,11 +647,11 @@ hx-target, hx-swap, and an Alpine @click toggle. A sibling explain &lt;tr&gt; wi
 provides the lazy-load target for the /tax/violation/{id}/explain fragment. Rows are
 wrapped per-violation in their own &lt;tbody x-data&gt; so Alpine scope covers both rows.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f391876`](https://github.com/chen-star/net_alpha/commit/f391876daa7e4167105a35bbdd7f6ea5e4eb8685))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bf3571d`](https://github.com/chen-star/net_alpha/commit/bf3571de1d4579f04319c7a3efb0f63c88c19f13))
 
 * feat(web): HTMX inline-expand explain fragments for violations + exempt matches
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e114a29`](https://github.com/chen-star/net_alpha/commit/e114a29dedbf656d3550e6c6e27ee961b298d40a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ade0792`](https://github.com/chen-star/net_alpha/commit/ade0792cf148b4e4534922beb4a817a0892138cb))
 
 * feat(explain): explain_exempt mirrors explain_violation for ExemptMatch
 
@@ -708,7 +659,7 @@ Pure function explain_exempt() builds ExplanationModel with is_exempt=True
 and adjusted_basis_target=None for §1256 exempt matches; re-exported from
 net_alpha.explain.__init__.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bb7eed4`](https://github.com/chen-star/net_alpha/commit/bb7eed4eb664b5d4852de509514f075526fdc795))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0dfe3e7`](https://github.com/chen-star/net_alpha/commit/0dfe3e745926ae531bddb6dfbd842ee3ee49136e))
 
 * feat(explain): explain_violation + ExplanationModel
 
@@ -716,11 +667,11 @@ Pure function that builds a structured ExplanationModel from a
 WashSaleViolationRow, covering exact-ticker, ETF-pair, and option-chain
 matches with cross-account detection and partial-wash-sale math strings.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1eab8fc`](https://github.com/chen-star/net_alpha/commit/1eab8fc484d922e56f20cc8ea4b4b17ffd34b3ae))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e0747f2`](https://github.com/chen-star/net_alpha/commit/e0747f20e431c08d037836b988904abc066e1be4))
 
 * feat(explain): rule citations, match-reason, disallowed-math, confidence-reason templates
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`dd941b1`](https://github.com/chen-star/net_alpha/commit/dd941b180a8b31094177d4c28efaf36d1d75510f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cb1f5a5`](https://github.com/chen-star/net_alpha/commit/cb1f5a59c499cfd414b666db7cb616f0d7f86c48))
 
 * feat(engine): one-shot migration recompute reclassifies stale §1256 violations
 
@@ -736,7 +687,7 @@ DB after upgrade from v10. Adds repository helpers delete_violations_by_id
 and set_section_1256_flag. Six new integration tests cover reclassification,
 no-op on equity violations, flag backfill, idempotency, and classifier output.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c5f610a`](https://github.com/chen-star/net_alpha/commit/c5f610ac3f51d45ab76be48f3d043bc3c90cf1cc))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1616137`](https://github.com/chen-star/net_alpha/commit/16161372fe2dfa0bfb4018c5717e5260a59af926))
 
 * feat(engine): recompute persists ExemptMatch + §1256 classifications; universe-hash trigger
 
@@ -750,11 +701,11 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c5f610a`](htt
   the DB (was missing, causing trades loaded from DB to always have
   is_section_1256=False, silently breaking exempt-match detection).
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b923965`](https://github.com/chen-star/net_alpha/commit/b9239652ed5b375e04763e41ac87d920eb3a8bec))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`bf0bf85`](https://github.com/chen-star/net_alpha/commit/bf0bf85b110160525dd26de827917a4aa343772f))
 
 * feat(section_1256): 60/40 classifier for closed §1256 trades
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`93538bc`](https://github.com/chen-star/net_alpha/commit/93538bcb71a522ccaf7aa4cbfe69ac7a40688167))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a466988`](https://github.com/chen-star/net_alpha/commit/a466988f2d54091b7bb4b404ea78aabe58aff3b1))
 
 * feat(engine): emit ExemptMatch for §1256 contracts (Approach 2)
 
@@ -763,14 +714,14 @@ When either side of a candidate wash-sale match is a §1256 contract
 instead of WashSaleViolation and does not adjust replacement-lot basis.
 Applies to both detect_wash_sales and detect_in_window.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7252a53`](https://github.com/chen-star/net_alpha/commit/7252a53509047125436a27582f8e50a7d3d2ff82))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`37321d4`](https://github.com/chen-star/net_alpha/commit/37321d46f76a1a74340ede3d6ee0ea7873468321))
 
 * feat(db): repository methods for ExemptMatch + Section1256Classification
 
 Add save/clear/list methods for ExemptMatch and Section1256Classification
 to Repository, with int() FK conversions mirroring _violation_to_row.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bec906e`](https://github.com/chen-star/net_alpha/commit/bec906ed6886a5d4062455b6ec08410edf123972))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d814d58`](https://github.com/chen-star/net_alpha/commit/d814d58a05a122675752c1288609465777e656c1))
 
 * feat(db): migration v10→v11 — exempt_matches + section_1256_classifications + is_section_1256
 
@@ -784,17 +735,17 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bec906e`](htt
 - Add tests/db/test_migration_v11.py (5 new tests, all passing).
 - Update version assertions in test_migration_v1_v2.py and test_migrations.py.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5f4e5a0`](https://github.com/chen-star/net_alpha/commit/5f4e5a083cafd6fed5184693cab37d64e7278b24))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4e4c9fa`](https://github.com/chen-star/net_alpha/commit/4e4c9fa0df8e5011bf8893d9a78a41d801598e36))
 
 * feat(db): row tables for ExemptMatch + Section1256Classification + TradeRow.is_section_1256
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`db3906e`](https://github.com/chen-star/net_alpha/commit/db3906ea50f0571b2f85ee6bf81204f1a4c8a822))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d20b2c3`](https://github.com/chen-star/net_alpha/commit/d20b2c3880f6769873cd453b5d227550939a3dc6))
 
 * feat(models): ExemptMatch + Section1256Classification + Trade.is_section_1256
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`64cb032`](https://github.com/chen-star/net_alpha/commit/64cb032d718c4664a4bf062ce755ce62708da8cc))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`02b42b0`](https://github.com/chen-star/net_alpha/commit/02b42b0e7aa7fac3c76e95f18a2e95fcf0a1beaa))
 
-* feat(section_1256): bundled universe + is_section_1256 detection ([`895ab32`](https://github.com/chen-star/net_alpha/commit/895ab3221c85628a2bdb21133ba0f97193dbcc3d))
+* feat(section_1256): bundled universe + is_section_1256 detection ([`fcee2f4`](https://github.com/chen-star/net_alpha/commit/fcee2f4404f3cc63b7f7d64d4315a04c01c37a1a))
 
 ### Fix
 
@@ -809,7 +760,7 @@ swap inserts into a valid container — a &lt;div&gt; inside a bare &lt;tr&gt; i
 hoisted out of the table by browsers. Applied to both violation and exempt
 match rows. hx-target updated to point directly to the &lt;td id&gt;.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`57213f2`](https://github.com/chen-star/net_alpha/commit/57213f23e1bdbe26fd67eb0c39d461b5fe7260b4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6982045`](https://github.com/chen-star/net_alpha/commit/6982045dd6baff9d4a9b10010365bc777d6bc93d))
 
 * fix(engine): persist ExemptMatch + classifications in recompute_all_violations (C2, C3)
 
@@ -821,7 +772,7 @@ C3: should_full_recompute() now checks both the universe hash AND the
 wash_sale_engine_version meta key, triggering a full recompute on binary
 upgrades. _stamp_universe_hash() also stamps the engine version.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c05a8f5`](https://github.com/chen-star/net_alpha/commit/c05a8f592cb8eeaa7dbcf0da8a3e8841f7f452fb))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a86df73`](https://github.com/chen-star/net_alpha/commit/a86df73c21620e7b283448f9d9ffb7feeb9eac78))
 
 * fix(db): set Trade.is_section_1256 in add_import (C1: was always False on import)
 
@@ -829,11 +780,11 @@ Auto-detect §1256 status via is_section_1256() when the broker parser
 does not set the flag explicitly. Respects any explicit True already on
 the trade object.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2bb8f66`](https://github.com/chen-star/net_alpha/commit/2bb8f66408fc10d21e9b497fbf5e92eb5ee8dc53))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`afc0bf8`](https://github.com/chen-star/net_alpha/commit/afc0bf88b66f7a651da64213faec0e83e0b286aa))
 
-* fix(db): exclude §1256 from realized_pnl_split to avoid double-count with section_1256_pnl ([`f38da33`](https://github.com/chen-star/net_alpha/commit/f38da3326ad9a790b8cccf75676b8a470a3e8a51))
+* fix(db): exclude §1256 from realized_pnl_split to avoid double-count with section_1256_pnl ([`3559fee`](https://github.com/chen-star/net_alpha/commit/3559feeb81a345842163ef790e5599110423ebbd))
 
-* fix(explain): use Repository.get_trade_by_id (was nonexistent get_trade) ([`0bbe21b`](https://github.com/chen-star/net_alpha/commit/0bbe21b1019286333553b3f0f747cb3fa5b60ecd))
+* fix(explain): use Repository.get_trade_by_id (was nonexistent get_trade) ([`b683596`](https://github.com/chen-star/net_alpha/commit/b683596ffc48762f47e14603153a34abdab3e34a))
 
 * fix(db,engine): use bindparams + ORM update; replace typer.echo with print in db layer
 
@@ -841,7 +792,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2bb8f66`](htt
 - repository.py: rewrite set_section_1256_flag to use ORM table.update().where().values() pattern matching delete_violations_by_id; signature changed to list[int]
 - recompute.py: cast Trade.id to int at set_section_1256_flag call site; add idempotency invariant comments for exempt-match save and classifier save steps; ruff-fixed import sort
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d651d0a`](https://github.com/chen-star/net_alpha/commit/d651d0a93939a959bc5e655a232e7d120f63eb1c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`575ffd8`](https://github.com/chen-star/net_alpha/commit/575ffd89a22f533589c6450e8cd38f7568805928))
 
 * fix(engine): stamp universe hash only when recompute ran; add is_section_1256 round-trip test
 
@@ -850,7 +801,7 @@ call to recompute_all does not lock out should_full_recompute when trades
 are added later. Add focused add_import → all_trades round-trip test for
 the is_section_1256 field to give direct coverage of the repository fix.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`25b0471`](https://github.com/chen-star/net_alpha/commit/25b0471d179d5030c5cfc1524d3c561b650dbc1e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1a14355`](https://github.com/chen-star/net_alpha/commit/1a1435589a33e2872d56ecdaa312259ee857e05e))
 
 * fix(section_1256): classifier uses is_sell() predicate (was lowercase string compare)
 
@@ -860,7 +811,7 @@ existing `Trade.is_sell()` casing-insensitive predicate. Update test fixtures
 to use title-case actions matching production broker output; remove unused
 `import pytest`.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c956484`](https://github.com/chen-star/net_alpha/commit/c956484094efc9804df730234e98db65fafaf003))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d4b6c1f`](https://github.com/chen-star/net_alpha/commit/d4b6c1febffa2b33c7adadf8b0b732fb6c060e3a))
 
 * fix(db): repository fixups — account filter consistency, RuntimeError catch, cascade delete on remove_import
 
@@ -869,7 +820,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c956484`](htt
 - remove_import: cascade-delete ExemptMatchRow (loss_trade_id OR triggering_buy_id) and Section1256ClassificationRow (trade_id) so no orphaned rows persist after import removal
 - tests: 2 new filter-path tests (account subset + unknown account → []) bringing file to 6 tests
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4c6c88a`](https://github.com/chen-star/net_alpha/commit/4c6c88a2f5d6c04cd43696778b64d8883d21a1f4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8a4b902`](https://github.com/chen-star/net_alpha/commit/8a4b9029969701ffcf6a34a03106ca0e226d4bff))
 
 * fix(db): stamp §1256 meta keys on fresh DB init (was upgrade-only)
 
@@ -879,9 +830,9 @@ gets section_1256_universe_hash + wash_sale_engine_version in meta.
 Also changes hardcoded &#39;11&#39; to str(CURRENT_SCHEMA_VERSION) for
 extensibility. Adds regression test test_fresh_db_stamps_section_1256_meta_keys.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2fa724b`](https://github.com/chen-star/net_alpha/commit/2fa724b83c35b59c894c30ac4cbfa912350b5e65))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f91f003`](https://github.com/chen-star/net_alpha/commit/f91f003b45797947252c75c160464e708e551978))
 
-* fix(test): remove unused imports flagged by ruff F401 ([`6a0c1c1`](https://github.com/chen-star/net_alpha/commit/6a0c1c1605cd21253b33f6ae4320e08a87f2b731))
+* fix(test): remove unused imports flagged by ruff F401 ([`5e5d23d`](https://github.com/chen-star/net_alpha/commit/5e5d23db2913546ebda7c1a8c9f0c71337d52770))
 
 ### Test
 
@@ -892,7 +843,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2fa724b`](htt
 - recompute_all_violations persists exempt matches and classifications
 - recompute_all_violations stamps universe hash + engine version in meta
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`afc36ca`](https://github.com/chen-star/net_alpha/commit/afc36ca52bc128105e6d50124e78aae6adfc9164))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`42fad23`](https://github.com/chen-star/net_alpha/commit/42fad233dfe7032e956ced45f27ab7ff8ddf0642))
 
 * test(integration): end-to-end §1256 recognition + ETF pair preservation
 
@@ -902,9 +853,9 @@ recompute_all, and asserts the full expected mix: 2 regular wash-sale violations
 call pair, and 1 Section1256Classification with correct 60/40 LT/ST split on
 the closed SPX 5000C profit trade.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d7097ad`](https://github.com/chen-star/net_alpha/commit/d7097ad2a31310a6a4b3cc17b3bc692c015223ec))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4e0dc25`](https://github.com/chen-star/net_alpha/commit/4e0dc25f69b425a2112272d90a4f6fb4ab0bdeec))
 
-* test(explain): cover fallback branches in templates ([`3aaaf5a`](https://github.com/chen-star/net_alpha/commit/3aaaf5a14e0554f82e2b2561715af553d5e2f186))
+* test(explain): cover fallback branches in templates ([`ec27f63`](https://github.com/chen-star/net_alpha/commit/ec27f635ac6e8eabda352d5d0745a28c9cde02cf))
 
 * test(engine): cover §1256 candidate-only flag + detect_in_window exempt path
 
@@ -915,13 +866,11 @@ branch with asymmetric flags. Add two detect_in_window tests: one asserting
 the §1256 exempt match is included when both trades fall inside the window,
 and one asserting it is excluded when both fall outside.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a8740f0`](https://github.com/chen-star/net_alpha/commit/a8740f050cfc3f25d144e35239e26c68f53a5b9e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`775f768`](https://github.com/chen-star/net_alpha/commit/775f7686e565cc09ccb2f7b3ae1adf869fe717af))
 
 ### Unknown
 
-* Merge branch &#39;feature/tax-correctness-pmo3&#39; — Tax Correctness 1.0 (P+M+O3) ([`d8173ce`](https://github.com/chen-star/net_alpha/commit/d8173ced8fed0b5424d4782b5f113b759e2ff00e))
-
-* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`6247493`](https://github.com/chen-star/net_alpha/commit/6247493b5371dc8b255e108efe63c888be33ed9d))
+* Merge branch &#39;feature/tax-correctness-pmo3&#39; — Tax Correctness 1.0 (P+M+O3) ([`9058a3d`](https://github.com/chen-star/net_alpha/commit/9058a3dda109e07717813edfadc1b405ba295454))
 
 
 ## v0.32.1 (2026-04-29)
@@ -950,7 +899,7 @@ Tests: 14 new (11 aggregator unit + 3 route smoke) covering realized P/L
 sign, period filter, account filter, sort order, term passthrough, wash-sale
 fields, option vs equity display_symbol, empty input.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d93e226`](https://github.com/chen-star/net_alpha/commit/d93e226792a2b8c2673277ae1804cc2568398526))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`464e4ba`](https://github.com/chen-star/net_alpha/commit/464e4badc6acd4b902793dcd6978908891f5c3e5))
 
 
 ## v0.32.0 (2026-04-29)
@@ -963,25 +912,25 @@ Add laptop (1024×768) and desktop-wide (1440×900); refit desktop to
 1280×800.  Rewrite tablet/desktop baselines in place; add 16 new
 laptop/desktop-wide PNGs.  32 pass in verify mode, 0 diff leaks.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bbd1e0a`](https://github.com/chen-star/net_alpha/commit/bbd1e0ab5a96db9fc1eae319fef8eab0ed3f6b16))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d2351e9`](https://github.com/chen-star/net_alpha/commit/d2351e9edc437832832bc0cb1da9e3aaa9786076))
 
 * feat(web): ticker tabs gain aria-controls + role=tabpanel (I4)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0bbca74`](https://github.com/chen-star/net_alpha/commit/0bbca7422b5779c9a772b6c770ee560a3852df15))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`499ab7e`](https://github.com/chen-star/net_alpha/commit/499ab7ebafe16ee847094c818b76bac7a5fc0418))
 
 * feat(web): side pane + Settings drawer go full-width at narrow widths (§3.9)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a367995`](https://github.com/chen-star/net_alpha/commit/a3679950020a8abafdafe01f3239fbdca612e4cc))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5588db0`](https://github.com/chen-star/net_alpha/commit/5588db05d3de1790efbe1742a42ed10d43f78517))
 
 * feat(web): wide tables get overflow-x-auto wrapper at narrow widths (§3.9)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c4e83f9`](https://github.com/chen-star/net_alpha/commit/c4e83f96261cc153cc48c16258df1d260f043f92))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e67193a`](https://github.com/chen-star/net_alpha/commit/e67193a837d77ee1ea67f391460730a214d1ce76))
 
 * feat(web): KPI grids reflow at 768/1024 (§3.9)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1253863`](https://github.com/chen-star/net_alpha/commit/1253863b12277d9539641b4d362b8b6c7571e8b4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3a5a24f`](https://github.com/chen-star/net_alpha/commit/3a5a24f29220403602f786e53131d74df5d8f022))
 
-* feat(web): drop width=1024 viewport, add &lt; 768 banner (§3.9) ([`8b5cfca`](https://github.com/chen-star/net_alpha/commit/8b5cfcacfd9e616c3e7ddb5756c869dd3fbfe7bf))
+* feat(web): drop width=1024 viewport, add &lt; 768 banner (§3.9) ([`eb66911`](https://github.com/chen-star/net_alpha/commit/eb669112797637eed9f9efc3452252812ed2a3b7))
 
 ### Fix
 
@@ -993,11 +942,11 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1253863`](htt
 - Update test_baseline_screens.py docstring for 4-width matrix
 - Recapture tablet snapshots affected by topbar visibility
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9fd2a72`](https://github.com/chen-star/net_alpha/commit/9fd2a72e19280e6e08966c395b9747ec94fd9151))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`29a1c25`](https://github.com/chen-star/net_alpha/commit/29a1c2588ccceb7ea663bad322a194b2cb8a6821))
 
 ### Test
 
-* test(web): smoke every page returns 200 (Phase 5) ([`9afcd9c`](https://github.com/chen-star/net_alpha/commit/9afcd9c10a7ed33b4b9eee5e097a80b9e8a12276))
+* test(web): smoke every page returns 200 (Phase 5) ([`37a5237`](https://github.com/chen-star/net_alpha/commit/37a5237e7c0c3aa75d75800e06e4f541dc2fc975))
 
 ### Unknown
 
@@ -1014,17 +963,7 @@ Phase 5 of the UI/UX redesign (spec §3.9, §7).
 - Snapshot suite expanded to 768/1024/1280/1440 (32 baselines)
 - 768 smoke tests for every page
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`32d8f6c`](https://github.com/chen-star/net_alpha/commit/32d8f6ccb45a98504865a0d50a9790bb286aa4c7))
-
-* plan(web): Phase 5 — Responsive (iPad-width usable)
-
-Sections A-F: viewport drop, KPI grid reflow, table overflow-x,
-side pane/drawer full-width, ticker a11y polish, snapshot suite
-at 768/1024/1280/1440 + 768 smoke tests.
-
-Refs: docs/superpowers/specs/2026-04-28-ui-ux-evaluation-design.md §3.9, §7.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a22edc7`](https://github.com/chen-star/net_alpha/commit/a22edc71b4f953ec4c2afc77acab660e86a11802))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6d64635`](https://github.com/chen-star/net_alpha/commit/6d6463556338f3d8616ebf37d26db6453c0ccbde))
 
 
 ## v0.31.0 (2026-04-29)
@@ -1045,7 +984,7 @@ already handled by Alpine and is not duplicated here.
 Adds nav-link aria-keyshortcuts attributes for assistive tech.
 Adds a .kbd token style and the cheatsheet modal (Alpine x-data).
 
-Section G3 of Phase 4 plan. ([`caab763`](https://github.com/chen-star/net_alpha/commit/caab7631dc693ea99fe0c8082fb23e9af4a802c9))
+Section G3 of Phase 4 plan. ([`ea6d98e`](https://github.com/chen-star/net_alpha/commit/ea6d98ec6f1b3f6ed65c4ba990a8eed6a71190f6))
 
 * feat(web): apply --ring-focus to all interactive elements (§5.14)
 
@@ -1055,14 +994,14 @@ Adds a single :focus-visible block that applies the --ring-focus token
 inputs. Outlines are nullified so the indigo halo is the canonical
 keyboard-focus indicator.
 
-Section G2 of Phase 4 plan. ([`791cc91`](https://github.com/chen-star/net_alpha/commit/791cc914577905f86adeb429040d5e0b30be1f3f))
+Section G2 of Phase 4 plan. ([`7be9de6`](https://github.com/chen-star/net_alpha/commit/7be9de6c3e3f78ff970ac22c4ab3d7c021963d3f))
 
 * feat(web): main container 1280px → 1536px (max-w-screen-2xl) (H8)
 
 Bumps the main and footer containers from max-w-[1280px] to
 max-w-screen-2xl (1536px) to give the wider Positions table and
 Tax view more horizontal room. Snapshot baselines will be
-re-captured in Section H. ([`2210e22`](https://github.com/chen-star/net_alpha/commit/2210e22ae1c0f04e0eb4e545deb5a2d47a5110a1))
+re-captured in Section H. ([`d6dde36`](https://github.com/chen-star/net_alpha/commit/d6dde36c30eae9a07e2ddda1cdcb5dd27db4028b))
 
 * feat(web): options panel header is a 3-card mini-summary (H7)
 
@@ -1070,20 +1009,20 @@ re-captured in Section H. ([`2210e22`](https://github.com/chen-star/net_alpha/co
 avg_dte) to _portfolio_open_options.html. Net premium signs short premium
 received as a credit and long cost paid as a debit; avg DTE is qty-weighted.
 The 3-card grid renders above the row list, mirroring the kpi-numeric
-pattern used elsewhere. ([`3a8b20d`](https://github.com/chen-star/net_alpha/commit/3a8b20dcc445378031012341efb363b255bedb3f))
+pattern used elsewhere. ([`7635012`](https://github.com/chen-star/net_alpha/commit/76350123f9b3999a1a920202443608fe4d90079e))
 
 * feat(web): LT/ST mixed shows as single &#39;lt+st&#39; chip in Account column (H5)
 
 Adds account_chip (joined sub-account suffixes) and account_displays
 (full labels) to PositionRow. Single-account rows render the label in
 mono; multi-account rows render a single chip whose tooltip lists
-every full label. ([`184bdda`](https://github.com/chen-star/net_alpha/commit/184bdda691170e4577ad6edb5360f666f1a79be1))
+every full label. ([`c1da698`](https://github.com/chen-star/net_alpha/commit/c1da698218bde389ef34cc86ef9ada531c620af2))
 
 * feat(web): all quantity cells use fmt_quantity (H2)
 
 Replaces &#34;%.4f&#34;|format(r.qty) and &#34;%g&#34;|format(r.lt_qty|float) ST splits
 with fmt_quantity, so whole shares render as integers and fractional
-quantities trim trailing zeros consistently with other tables. ([`4847c17`](https://github.com/chen-star/net_alpha/commit/4847c172729be8a5db1eb39f48f40f6e3b6cddc2))
+quantities trim trailing zeros consistently with other tables. ([`64abe94`](https://github.com/chen-star/net_alpha/commit/64abe949351ecf7744d3b385108c3b9dfdeaf744))
 
 * feat(web): missing-basis chip + em-dash empties on Positions table (H1)
 
@@ -1091,29 +1030,29 @@ Adds PositionRow.basis_known derived from any open lot having non-null,
 non-zero cost_basis. The Positions table now renders the new chip
 &#39;⚠ basis missing&#39; when basis is provably missing on an open position
 instead of showing $0.00, and falls back to fmt_currency (em-dash for
-None) elsewhere. ([`5f4e1d7`](https://github.com/chen-star/net_alpha/commit/5f4e1d767358dac372e8f191c468d5a71327136a))
+None) elsewhere. ([`da5490f`](https://github.com/chen-star/net_alpha/commit/da5490fbc1a5dd9201a5935d10ef876bcaaca0be))
 
 * feat(web): inline Set-basis chip on Timeline rows missing basis (Tk5)
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c43c384`](https://github.com/chen-star/net_alpha/commit/c43c384f7ee50cbe3f4ee438b7debbfdd14995e6))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c9227ea`](https://github.com/chen-star/net_alpha/commit/c9227ea8c4ea335ac852b3ac7c8107ebc4f3411f))
 
-* feat(web): /ticker accepts ?view=timeline|lots|recon and serves fragments (Tk4) ([`8b41417`](https://github.com/chen-star/net_alpha/commit/8b41417f012629a9069c787dc403372cb0c39028))
+* feat(web): /ticker accepts ?view=timeline|lots|recon and serves fragments (Tk4) ([`8fbba8e`](https://github.com/chen-star/net_alpha/commit/8fbba8e35087af8d31ab57010af7093cb5b2d1a2))
 
-* feat(web): /ticker uses Timeline / Open lots / Broker reconciliation tabs (Tk4) ([`6efa53d`](https://github.com/chen-star/net_alpha/commit/6efa53deacd2b15ff2836d60999ccb00327403ab))
+* feat(web): /ticker uses Timeline / Open lots / Broker reconciliation tabs (Tk4) ([`a9684c2`](https://github.com/chen-star/net_alpha/commit/a9684c2b2f2c35766f15ce3af7c83890a53cb99d))
 
 * feat(web): reconciliation /reconciliation accepts variant=badge for Ticker KPI (Tk3)
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`50d73bc`](https://github.com/chen-star/net_alpha/commit/50d73bcdd17ad91416c72755063184251e7317d6))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`82d11ec`](https://github.com/chen-star/net_alpha/commit/82d11ec6e12d4a773de6a463902a1af9254fd543))
 
 * feat(web): ticker KPIs use sans + fmt_currency; mono only on identifiers (Tk1)
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fd50318`](https://github.com/chen-star/net_alpha/commit/fd503184387b75d386c29f16bde7c23a67076651))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b6edace`](https://github.com/chen-star/net_alpha/commit/b6edaced71f74817f9525a16db03c6729a011594))
 
 * feat(web): ticker page h1 is sans Inter, white (Tk1, Tk2)
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`86da6b8`](https://github.com/chen-star/net_alpha/commit/86da6b81f0769c6b4bcfac9c1fbf45e6c7401ee7))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`dd49f11`](https://github.com/chen-star/net_alpha/commit/dd49f117ba7717d6c7f71157eda5ccae131aa8e5))
 
-* feat(web): calendar strip shows N events YTD (N3) ([`d599c58`](https://github.com/chen-star/net_alpha/commit/d599c5874089c9f3df3fb36b82fda04102c74e57))
+* feat(web): calendar strip shows N events YTD (N3) ([`983d5e2`](https://github.com/chen-star/net_alpha/commit/983d5e235b1de0709a2df8d1981127f41e44be83))
 
 ### Fix
 
@@ -1127,7 +1066,7 @@ ticker.html: Realized P/L (YTD and Lifetime) used &gt;= 0 as the green
 threshold, painting $0.00 green. Mirror the Disallowed pattern: &gt; 0
 positive, &lt; 0 negative, else neutral text-label-2.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`677fa94`](https://github.com/chen-star/net_alpha/commit/677fa94ee3a171a391fc077b0d0b1653ec50205b))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`00b3f47`](https://github.com/chen-star/net_alpha/commit/00b3f47d97acfc28c1b5a3d01d68fd617e1e93bf))
 
 * fix(web): inline Set basis chip swaps the basis cell, not affordance cell
 
@@ -1137,7 +1076,7 @@ save. Add id=&#34;trade-basis-{id}&#34; to the basis td, retarget the chip
 form, and update the timeline-caller branch of /audit/set-basis to
 return matching markup including the saved cost-basis value.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ca807c2`](https://github.com/chen-star/net_alpha/commit/ca807c256e7ee8b5dc532bedd6f94e970062ba4d))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5abe8be`](https://github.com/chen-star/net_alpha/commit/5abe8bee87b068640a0d690518fe79e065fb8953))
 
 * fix(web): drop HTMX swap on ticker tabs to preserve active state
 
@@ -1146,20 +1085,20 @@ only replaced inner content, leaving the highlight stuck on the old tab.
 Convert to plain &lt;a&gt; nav matching the _positions_tabs.html pattern. The
 route already returns full HTML for non-HX requests.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`727d456`](https://github.com/chen-star/net_alpha/commit/727d4563b88f7fd87dd68aa7657069a567d47ef9))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`41bab74`](https://github.com/chen-star/net_alpha/commit/41bab743ff97eaee1c01c15175ab22086a24dbe9))
 
-* fix(web): wash-sale filter chips × is clickable, drops that filter (N2) ([`709e26c`](https://github.com/chen-star/net_alpha/commit/709e26c94ecbbba758687c00733770c415008126))
+* fix(web): wash-sale filter chips × is clickable, drops that filter (N2) ([`3b41b59`](https://github.com/chen-star/net_alpha/commit/3b41b59ed8399913ce4d0527671e16a3fe463c8d))
 
-* fix(web): sim Account label flips to (required) when Sell selected (N1) ([`72a9d5c`](https://github.com/chen-star/net_alpha/commit/72a9d5ca3fdd3ea478f332084e8b13afda179528))
+* fix(web): sim Account label flips to (required) when Sell selected (N1) ([`00290c6`](https://github.com/chen-star/net_alpha/commit/00290c6c6887f525293c0f21a20d9edd3a490804))
 
-* fix(web): projection form swap is outerHTML to avoid self-nesting (I1) ([`0e0a11e`](https://github.com/chen-star/net_alpha/commit/0e0a11e9ef6c6b1c3bb9d7c9e7d3a7b5c8732201))
+* fix(web): projection form swap is outerHTML to avoid self-nesting (I1) ([`c236f57`](https://github.com/chen-star/net_alpha/commit/c236f5769c7f1f623791030adecbf2cb0aa590a6))
 
 * fix(web): hero subhead &#39;vs contributed&#39; now equals total − net_contributed (I2)
 
 Adapted to actual codebase field name: cash_kpis.net_contributions (not
 net_contributed). Both kpis_fragment and body call sites now compute
 total_account_value - cash_kpis.net_contributions instead of
-period_realized + period_unrealized. ([`ca3a16a`](https://github.com/chen-star/net_alpha/commit/ca3a16accab720ab07c74d07a116bb9cf83a928d))
+period_realized + period_unrealized. ([`cdf19c1`](https://github.com/chen-star/net_alpha/commit/cdf19c10a6592984bf7c642a0054673a95d79770))
 
 ### Refactor
 
@@ -1173,7 +1112,7 @@ queue origin lines, profile descriptions, etc.) to label-2.
 Decorative `·` separators, em-dash placeholders for missing values,
 disabled pagination buttons, and chevron affordances stay at label-3.
 
-Section G1 of Phase 4 plan. ([`f95b2f1`](https://github.com/chen-star/net_alpha/commit/f95b2f11202cdfb6c28ed58674bb052834971e40))
+Section G1 of Phase 4 plan. ([`78426ec`](https://github.com/chen-star/net_alpha/commit/78426ecb54bf54fa2709881f5fd29ca41d7e266c))
 
 * refactor(web): open-options bar shows P/L only; DTE is a separate badge (H6)
 
@@ -1182,17 +1121,17 @@ which would require live option quotes we don&#39;t fetch). Per the
 H6 split, DTE becomes a discrete badge-muted with the existing
 text-warn / text-label-1 / text-label-2 colorization preserved
 based on time-to-expiry, so the row&#39;s right column reads as a
-standalone badge instead of a number with inline subscript. ([`b29c688`](https://github.com/chen-star/net_alpha/commit/b29c688317a686dcbc276c555cac54a28b73787e))
+standalone badge instead of a number with inline subscript. ([`78134e9`](https://github.com/chen-star/net_alpha/commit/78134e97d4efcb311e47be36a05bd9ecb9e65bfe))
 
 * refactor(web): rename CASH SUNK/SH → &#39;Cash invested / sh&#39; + tooltip (H3)
 
 Header now uses Title Case, plain English, with a clarifying tooltip on
 how the per-share number is derived (and that wash adjustments are
-included). ([`c9b21b9`](https://github.com/chen-star/net_alpha/commit/c9b21b91fa18ddbd6cd88fc2f4ffb103307ecc66))
+included). ([`220bb81`](https://github.com/chen-star/net_alpha/commit/220bb81c07a468ebc0dacb15cb8e9fe2a8f7531a))
 
 * refactor(web): drop above-table recon strips; badge + tab replace them (Tk3)
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`54f8760`](https://github.com/chen-star/net_alpha/commit/54f8760e9da524028050ea362c39434336d167f2))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7936d4d`](https://github.com/chen-star/net_alpha/commit/7936d4d9bb1306a695cf0d2bc81b67a5dab305e0))
 
 ### Test
 
@@ -1203,15 +1142,13 @@ HX-Request fragment-only response, and the variant=badge branch on
 /reconciliation/&lt;sym&gt;. Tests are tolerant of unseeded data so they pass
 in the default conftest.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`469ffd7`](https://github.com/chen-star/net_alpha/commit/469ffd78496ec8f626e9c3559b4b4ad9a5b624f5))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`52eba36`](https://github.com/chen-star/net_alpha/commit/52eba36008e4fce1daadc3d957546cdafebefe39))
 
-* test(web): re-capture snapshot baselines after Phase 4 visual sweep ([`232646d`](https://github.com/chen-star/net_alpha/commit/232646ddb0f95faf4b2a3eedbbafc4751ade1e04))
+* test(web): re-capture snapshot baselines after Phase 4 visual sweep ([`3c5aa0f`](https://github.com/chen-star/net_alpha/commit/3c5aa0f9ca089fc33146278dda14f11b5eb5342d))
 
 ### Unknown
 
-* Merge branch &#39;phase4-ticker-visual&#39; — Phase 4 Ticker page + visual sweep ([`45fef5c`](https://github.com/chen-star/net_alpha/commit/45fef5cf55301f364e0597412c2bfc5ffaf5d598))
-
-* plan(web): Phase 4 — Ticker page + visual sweep ([`1a8becc`](https://github.com/chen-star/net_alpha/commit/1a8beccf03bf5ee1726073f1eb477105dd55a57a))
+* Merge branch &#39;phase4-ticker-visual&#39; — Phase 4 Ticker page + visual sweep ([`62187f9`](https://github.com/chen-star/net_alpha/commit/62187f976a7ae2486c2243d4a1d3a45ee046c315))
 
 
 ## v0.30.0 (2026-04-29)
@@ -1220,35 +1157,17 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`46
 
 * chore(web): delete dead _harvest_tab.html (Phase 1 redirected away; Phase 2 review #I6)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cbbd3f8`](https://github.com/chen-star/net_alpha/commit/cbbd3f8bce234d65e5d224d3a7309e97c951c59e))
-
-### Documentation
-
-* docs(plans): Phase 3 — Page polish implementation plan
-
-Covers Overview clutter removal + chart fixes + KPI restructure with
-Today tile; Tax page polish (mini-bar, budget bar, watch/violations
-labels, affirmative empty copy, filter chips, calendar strip); inline
-tax-projection form replacing the YAML snippet; Imports drawer
-one-explanation card + per-row inline form + drop-zone preview; Sim
-account-required validation + recent-sims-this-session panel; plus
-the Phase 2 review backlog (at-loss summary enrichment, bare-except
-removal, dead _harvest_tab.html, realized_delta dedup).
-
-Approximately 17 tasks across 8 sections (A–H). Section H is the
-verification gate; sections A–G ship working features incrementally.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5fea57a`](https://github.com/chen-star/net_alpha/commit/5fea57ae7b89f029ca061ebfe72c03d2a7ba9d53))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0431899`](https://github.com/chen-star/net_alpha/commit/043189918b93f99b4758947eb157dbef4b60f69b))
 
 ### Feature
 
 * feat(web): /sim — recent sims this-session panel (S2)
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`98e75f5`](https://github.com/chen-star/net_alpha/commit/98e75f5964389494a1fa22ad872bedd22be21125))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4101746`](https://github.com/chen-star/net_alpha/commit/410174648a17ff8747a9fb4f4ea39838a69fd9ff))
 
 * feat(web): /sim — account required for action=Sell with inline error (S3)
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`84266ec`](https://github.com/chen-star/net_alpha/commit/84266ecf3ecac619175efa5e4d46a28e18ed0a85))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b395c6f`](https://github.com/chen-star/net_alpha/commit/b395c6ff1246b60dbcf973d34284d2fb58142650))
 
 * feat(web): drop-zone preview on drag-over (I4)
 
@@ -1258,7 +1177,7 @@ element wrapping a [data-drop-zone] file input and shows a sibling
 Wires data-drop-zone onto the CSV upload input and adds the preview div
 to _drop_zone.html; loads the script via base.html.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0d6862b`](https://github.com/chen-star/net_alpha/commit/0d6862b605b156c1139c1fb4c29581c434c34726))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`73fcb76`](https://github.com/chen-star/net_alpha/commit/73fcb76a72fbba6e83c82d902f6f07d24f1326df))
 
 * feat(web): drawer Imports — one-explanation card + per-row inline form (I1, I2)
 
@@ -1267,7 +1186,7 @@ single shared explanation card (I1) and one compact HTMX inline form each
 (I2, caller=drawer).  Adds MissingBasisRow helper to hygiene.py and wires
 collect_missing_basis_rows into the imports route context.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f3bbf81`](https://github.com/chen-star/net_alpha/commit/f3bbf81e985a490e3fe1ef9a6b6f11ea43db9955))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0650385`](https://github.com/chen-star/net_alpha/commit/065038541c328ebadcf078f1661231c43430a1d8))
 
 * feat(web): inline tax-projection form replaces YAML snippet (Pr1, Pr2)
 
@@ -1276,7 +1195,7 @@ that persists to config.yaml and hot-reloads app.state, _projection_form.html
 with HTMX-wired form, and updated _projection_tab.html / _projection_card.html
 to remove the manual YAML-snippet copy.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3e8e6f0`](https://github.com/chen-star/net_alpha/commit/3e8e6f062f639c36e3ceacc32fa3aba5a6fd4ded))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`006b38b`](https://github.com/chen-star/net_alpha/commit/006b38bcce3ae7429a7632c59f533b278838c617))
 
 * feat(web): tax filter chips with reset (W2); calendar strip always visible (W3)
 
@@ -1286,7 +1205,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3e8e6f0`](htt
 - app.src.css: add .chip utility class for filter-bar chips
 - app.css: rebuilt
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0c6fd84`](https://github.com/chen-star/net_alpha/commit/0c6fd846edeac5246c7f3770983f9b8a72dca0d3))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bb910a5`](https://github.com/chen-star/net_alpha/commit/bb910a51ac729ae602bbfaa17a32eb100e2ccb84))
 
 * feat(web): wash-watch labeled forward; violations labeled backward, affirmative empty (W1, W1b)
 
@@ -1299,7 +1218,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0c6fd84`](htt
   match these filters.&#34;
 - test_detail_routes.py: updated to match new empty-state copy
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ae288a9`](https://github.com/chen-star/net_alpha/commit/ae288a9e988f9de55cd0a02fb6f79a06461384b6))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a9202d3`](https://github.com/chen-star/net_alpha/commit/a9202d3413a52132a9bef7fe5e152b4582e1f21e))
 
 * feat(web): tax realized-P/L stacked mini-bar (T5)
 
@@ -1308,7 +1227,7 @@ wash-sales tab can render a split loss/gain mini-bar. The bar shows
 realized_losses_ytd vs realized_gains_ytd; degrades to an empty-state
 message when no P/L has been realized this period.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3ff413d`](https://github.com/chen-star/net_alpha/commit/3ff413d7bd7b03aff761d92cbbd11949943fd407))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cb1e530`](https://github.com/chen-star/net_alpha/commit/cb1e5302d757354bb655c11a5afe8705f93f06f1))
 
 * feat(web): loss-harvest budget bar (T4)
 
@@ -1316,19 +1235,19 @@ Add data-testid=&#34;offset-budget&#34; to the tile wrapper and
 data-testid=&#34;offset-budget-bar&#34; to the existing progress bar in
 _offset_budget_tile.html so tests can assert the bar is present.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9269df3`](https://github.com/chen-star/net_alpha/commit/9269df30c87f95e8861f8747da860dd93034b141))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bc5315a`](https://github.com/chen-star/net_alpha/commit/bc5315aeb0d4f3dfe2d890b7d9ab7abb742e56ef))
 
 * feat(web): Overview KPI grid — hero + today + cash (3 large) over 4 small (P2/P4/NEW)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`395e813`](https://github.com/chen-star/net_alpha/commit/395e8136418a6a19f8c4a6300095e0dd33265bc3))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d9a16cc`](https://github.com/chen-star/net_alpha/commit/d9a16cc771161a68f12714bc7abad41dd2066b76))
 
 * feat(portfolio): compute_today_change for the Overview Today tile (P3 prep)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f5e1722`](https://github.com/chen-star/net_alpha/commit/f5e17223ac71ce72222344b938ba8e22df085465))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a06cdd0`](https://github.com/chen-star/net_alpha/commit/a06cdd0aaf015c9132d794fdca4248208c006e55))
 
 * feat(pricing): Quote exposes previous_close for the Today tile (Phase 3 prep)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`95a837c`](https://github.com/chen-star/net_alpha/commit/95a837c5620c42f1816fae547b6a39e108085b43))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`80362ab`](https://github.com/chen-star/net_alpha/commit/80362ab1613a5d08dce7041bb8e573330cffc3e9))
 
 * feat(web): freshness chip in toolbar — drop in-tile cached-prices copy (P5)
 
@@ -1338,7 +1257,7 @@ PricingSnapshot to a green/amber/red tier and label (&lt; 15m / 15m–24h /
 button in the toolbar. Remove the inline &#34;Cached prices…refresh&#34; copy from
 the KPI tile footer — the chip is now the single freshness surface.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a7d594a`](https://github.com/chen-star/net_alpha/commit/a7d594a07e038e4a1ac796f451821da0fea293ea))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`035cd2d`](https://github.com/chen-star/net_alpha/commit/035cd2db35a154f5c28d16c0ec3352e53aacb544))
 
 * feat(web): drop Portfolio section header and Tax planning footer (P1, P9)
 
@@ -1346,11 +1265,11 @@ Remove redundant &#34;Portfolio&#34; section-header div from the body fragment
 and drop the Tax planning footer panel (offset budget + year-end
 projection) from the Overview page — those panels belong on /tax.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`08ac60c`](https://github.com/chen-star/net_alpha/commit/08ac60c83a578db93a8738a74f8c85266d412ccb))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9fc2145`](https://github.com/chen-star/net_alpha/commit/9fc2145fdb00783ea6a215aa4947c301c3462f3f))
 
 * feat(web): at-loss summary strip — total unrealized, harvestable count, replacements count (Phase 2 review #I3)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`19d1706`](https://github.com/chen-star/net_alpha/commit/19d1706e501683b10c803b23cf2e968abef7d224))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b4d8d8d`](https://github.com/chen-star/net_alpha/commit/b4d8d8de58e06495f16360ad4ed253f34e1b0baf))
 
 ### Fix
 
@@ -1367,7 +1286,7 @@ I3: hygiene.py&#39;s _check_tax_config_missing still pointed users to a
 &#34;copy-paste config snippet&#34; — the YAML flow Phase 3 replaced with the
 inline form. Updated the copy.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f536a7c`](https://github.com/chen-star/net_alpha/commit/f536a7c4bd20048c2e3caa6860b13b2d7d649ee7))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7cb30d9`](https://github.com/chen-star/net_alpha/commit/7cb30d97271e0111b1796cec0b38fc6730a958b3))
 
 * fix(web): negative-sign rendering on Today tile + hero, plus text-loss/gain/success aliases
 
@@ -1382,7 +1301,7 @@ harvest-clear status, etc.) but never defined in app.src.css — the
 compiled bundle had only .text-neg / .text-pos / .text-warn /
 .text-info. Added aliases so the existing markup colors correctly.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`504e1b8`](https://github.com/chen-star/net_alpha/commit/504e1b8419f0a3f2290bc24332199320f3d4b5d0))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`be909a8`](https://github.com/chen-star/net_alpha/commit/be909a8a0691d5d82fc9c7e01e2345c1a400a3a7))
 
 * fix(web): equity x-axis tick density (P6); cash chart line semantics (P7)
 
@@ -1393,7 +1312,7 @@ Add data-series-solid=&#34;cash_balance&#34; and data-series-dashed=&#34;net_con
 attributes to the cash chart container — stable semantic hooks that confirm
 series ordering (cash balance = solid, net contributed = dashed, per §5.12).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`532d0e8`](https://github.com/chen-star/net_alpha/commit/532d0e8cd187c77bc4cab0e727a772e9ce995fb2))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`34f4d7c`](https://github.com/chen-star/net_alpha/commit/34f4d7c8f10d77f7106504fdecbc25feb563c210))
 
 * fix(web): CASH KPI rendered exactly once on Overview (P3 bug fix)
 
@@ -1403,23 +1322,23 @@ in the hero KPI grid; the second block now shows only Net contributed
 and Growth (unique data). Resize those two tiles from col-span-4 to
 col-span-6 to fill the 12-column grid.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`80d80f3`](https://github.com/chen-star/net_alpha/commit/80d80f3bf56e01f35f149d84feac2d57a678cb0b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`836911c`](https://github.com/chen-star/net_alpha/commit/836911cabb642a32732e164c74c416648446ad4f))
 
 * fix(web): positions_pane logs lookup failures instead of silent swallow (Phase 2 review #I4)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`83ac2c9`](https://github.com/chen-star/net_alpha/commit/83ac2c98a110d0abe596de5eeb765c4bd40feff8))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5db9481`](https://github.com/chen-star/net_alpha/commit/5db9481656f6900ecf38cdf84813e10a4655f87b))
 
 ### Refactor
 
 * refactor(web): realized_delta is loss — drop the duplicate compute (Phase 2 review #I5)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`50aff42`](https://github.com/chen-star/net_alpha/commit/50aff42a7f41d6f87b9301032d80b1022f6adc5f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`66c383b`](https://github.com/chen-star/net_alpha/commit/66c383b379feaf5c488191696e1369afd923d433))
 
 ### Style
 
 * style: fix import block sort order in positions.py (ruff I001)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ff50849`](https://github.com/chen-star/net_alpha/commit/ff508492a7e163a8e4f9f31d177c345d057284e1))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ffd92b9`](https://github.com/chen-star/net_alpha/commit/ffd92b9c950061bc7709560b51929afd027cb513))
 
 ### Test
 
@@ -1432,7 +1351,7 @@ class definitions land real color on previously-uncolored markup:
 - tax-wash: T5 mini-bar totals now red
 - overview: Today tile + hero negative-vs-contributed render correctly
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1b58bac`](https://github.com/chen-star/net_alpha/commit/1b58bac9328b82f74bca5f882a43bfc24251fd59))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`563ec3e`](https://github.com/chen-star/net_alpha/commit/563ec3edfd623c9270214738c369464d5748f76c))
 
 * test(web): re-capture snapshot baselines for Phase 3 page polish
 
@@ -1452,7 +1371,7 @@ Phase 3 changes:
 Plus ruff-format cleanups in pnl.py + test_provider.py picked up
 during the snapshot run.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5e008c1`](https://github.com/chen-star/net_alpha/commit/5e008c1120feebf2dfd0190ca16e3bb77d77345c))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0c992bd`](https://github.com/chen-star/net_alpha/commit/0c992bd4cf92210a45024eb8a24e8243c3bbb132))
 
 ### Unknown
 
@@ -1483,60 +1402,47 @@ error response shape, and stale hygiene copy.
 
 Phase 3 polishes page interiors. Phase 4 is the visual sweep
 (Ticker page mono → sans, KPI variants, label-3 → label-2 contrast,
-keyboard shortcuts). Phase 5 is responsive (drop viewport=1024). ([`ca87af4`](https://github.com/chen-star/net_alpha/commit/ca87af4f5e7a477ca1f5159bdd6c93a4e74b3ebd))
+keyboard shortcuts). Phase 5 is responsive (drop viewport=1024). ([`40a9848`](https://github.com/chen-star/net_alpha/commit/40a98489ac94229542ff6c70de71298abecfdfb7))
 
 
 ## v0.29.0 (2026-04-28)
 
 ### Documentation
 
-* docs(web): document /imports/_legacy_page is drawer-fetched only (review nit #12) ([`d822355`](https://github.com/chen-star/net_alpha/commit/d822355401aa93cc90d897a8df48289801af5d1e))
+* docs(web): document /imports/_legacy_page is drawer-fetched only (review nit #12) ([`430a4ab`](https://github.com/chen-star/net_alpha/commit/430a4ab6d942658157a51f078cff1b9c53a2e7aa))
 
-* docs(web): _density_toggle docstring no longer references /holdings (review nit #11) ([`e3884e8`](https://github.com/chen-star/net_alpha/commit/e3884e8dec29194adeb4c54704e6fed3ba7495f8))
-
-* docs(plans): Phase 2 — Positions canvas implementation plan
-
-Covers the at-loss column redesign (Lockout-clear, Replacement); the
-row-action menu (⋯ on hover with Open ticker / Sim sell / Set basis /
-Copy ticker); the non-modal #positions-pane side pane with sim-sell
-preview, set-basis form, and open-ticker link; Sim pre-fill from row
-action URL params; and the Phase 1 review-backlog cleanup items.
-
-Approximately 24 tasks across 7 sections (A–G). Section A clears the
-Phase 1 nits as a warmup; Section G is the verification gate.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2152afd`](https://github.com/chen-star/net_alpha/commit/2152afd97f159955ed7ca5a4b1bea02d1664a418))
+* docs(web): _density_toggle docstring no longer references /holdings (review nit #11) ([`2f2f02d`](https://github.com/chen-star/net_alpha/commit/2f2f02dfe33d47999371a179af0f7fb5b58092a5))
 
 ### Feature
 
 * feat(web): /sim accepts ?account= and ?action= for row-action pre-fill
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5df6b49`](https://github.com/chen-star/net_alpha/commit/5df6b495b76dfe30f706696a97c3aa945e75d5ea))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eeaee79`](https://github.com/chen-star/net_alpha/commit/eeaee7928ab04a4ad850e9076b375779d871c51a))
 
-* feat(web): pane set-basis form block (single-lot inline; multi-lot links out) ([`b9996bf`](https://github.com/chen-star/net_alpha/commit/b9996bf666e041248bab09a077bdd68532d5247b))
+* feat(web): pane set-basis form block (single-lot inline; multi-lot links out) ([`adce4a0`](https://github.com/chen-star/net_alpha/commit/adce4a0cce336d9d2c7b3d8e8b069c6e48e98e34))
 
-* feat(web): pane sim-sell preview block + run-full-sim deep link ([`8f69209`](https://github.com/chen-star/net_alpha/commit/8f69209428cff820005f4cb6ddea28559965f615))
+* feat(web): pane sim-sell preview block + run-full-sim deep link ([`de6a550`](https://github.com/chen-star/net_alpha/commit/de6a550a5398907a05e548d2542c7992bfb8c3e3))
 
-* feat(web): pane header — qty · account · last · basis · loss ([`df779b2`](https://github.com/chen-star/net_alpha/commit/df779b29fdc9d42347d6bb0e8baaafa4ab0030dc))
+* feat(web): pane header — qty · account · last · basis · loss ([`e239767`](https://github.com/chen-star/net_alpha/commit/e2397678e5d31058550bda2087fbc1572fdd2901))
 
 * feat(web): row click opens positions side pane (Alpine \$dispatch)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`935f75a`](https://github.com/chen-star/net_alpha/commit/935f75a48a87c130af8338b7a25e974f3595e0d6))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2ac41c1`](https://github.com/chen-star/net_alpha/commit/2ac41c1ad9207c3f5b7e656804a4025a3021f60a))
 
 * feat(web): /positions/pane returns side-pane body fragment
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e25b592`](https://github.com/chen-star/net_alpha/commit/e25b59218507515b63860c4600e0d030901767ab))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b14d4b1`](https://github.com/chen-star/net_alpha/commit/b14d4b1a52d59072c1f63fee0f130b3b455cd5e5))
 
 * feat(web): mount positions side pane skeleton (Alpine + HTMX)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1043808`](https://github.com/chen-star/net_alpha/commit/1043808555d10c1dd352d13ce5e467de05fbf7cd))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9252240`](https://github.com/chen-star/net_alpha/commit/9252240e68a3d876e09052eb9411bbb042595af7))
 
 * feat(web): drop &#39;click row to drill down&#39; hint (audit H9)
 
 The row action menu (§3.4) now provides explicit affordance for row
 interaction; the inline hint copy is redundant and adds visual noise.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`06e8d86`](https://github.com/chen-star/net_alpha/commit/06e8d866b30ad7ae8726dc1b1a77b607fa015c85))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fcec6f2`](https://github.com/chen-star/net_alpha/commit/fcec6f28553b09205018f4aefb5a7157b2b9a983))
 
 * feat(web): mount row action menu on All / Stocks tab rows
 
@@ -1545,7 +1451,7 @@ appends a matching w-10 header cell, and includes _row_actions.html
 in the trailing cell. Uses r.accounts[0] as account label and none
 for account_id (PositionRow is account-aggregated, not lot-scoped).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`dcdd678`](https://github.com/chen-star/net_alpha/commit/dcdd6785ea7f96292820a28e9be8425d9542bdbe))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ac762ec`](https://github.com/chen-star/net_alpha/commit/ac762ecaa77388fb64d1ca426e35f2aac229fcae))
 
 * feat(web): row action menu — Open ticker / Sim sell / Set basis / Copy
 
@@ -1554,7 +1460,7 @@ revealed ⋯ button, and aria-keyshortcuts for future Phase 4 bindings.
 Mounts on at-loss table rows. Vendors external-link.svg (Lucide 0.469.0).
 Adds .row-actions CSS utility. Adds test_phase2_row_actions.py.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e2a34c1`](https://github.com/chen-star/net_alpha/commit/e2a34c12f34a4c7fce6d5c2a4273f0028a11551f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`da504eb`](https://github.com/chen-star/net_alpha/commit/da504eb48bcd5075559cbf41915ca97ebca841bf))
 
 * feat(web): at-loss sorts clear rows first; renders &#39;clear&#39; for past dates
 
@@ -1563,7 +1469,7 @@ sort before future-locked rows (ascending date within each group). Passes
 `today` into template context so the lockout cell can compare
 `row.lockout_clear &gt; today` and display &#39;clear&#39; for past/None dates.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`42007a9`](https://github.com/chen-star/net_alpha/commit/42007a97e9adea68c5f62652978696f8f0c73eb9))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5dc8613`](https://github.com/chen-star/net_alpha/commit/5dc8613bf36985eb0ed29b5c47746f97b9b0a233))
 
 * feat(portfolio): HarvestOpportunity exposes open_basis for at-loss UI
 
@@ -1574,7 +1480,7 @@ the loop variable `basis`. Tightens the MKT/BASIS template guards from
 HarvestOpportunity directly (test_harvest_opportunity_minimal ×1,
 test_harvest_queue_render.py ×3).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a2e8dad`](https://github.com/chen-star/net_alpha/commit/a2e8dad292a80760f0161780712d99084af94ca2))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3190943`](https://github.com/chen-star/net_alpha/commit/319094321ce26f865e8fc934e641223a0f8230f6))
 
 * feat(web): at-loss table — new Lockout-clear + Replacement columns
 
@@ -1584,7 +1490,7 @@ LOCKOUT-CLEAR/REPLACEMENT). Also fixes budget field names (net_realized,
 cap_against_ordinary) and updates the stale Phase 1 test that expected
 the old &#34;Harvest queue&#34; heading.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`876e4a9`](https://github.com/chen-star/net_alpha/commit/876e4a986ce103eafba5a74bd12da311780b8826))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b127a14`](https://github.com/chen-star/net_alpha/commit/b127a14dc15cf05c9f50243feb0f3263c8159a74))
 
 ### Fix
 
@@ -1605,7 +1511,7 @@ the updated totals.
 Existing data-hygiene callers don&#39;t pass ?caller=pane, so they continue
 to receive the legacy _data_hygiene_set_basis.html response unchanged.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5e59074`](https://github.com/chen-star/net_alpha/commit/5e59074a79002b7007f2503b2b67c200fa8327d5))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2d8ccb3`](https://github.com/chen-star/net_alpha/commit/2d8ccb31be41025f07ff343ab4a72f751264adf2))
 
 * fix(web): row action menu — Alpine binding + None handling
 
@@ -1621,23 +1527,23 @@ so the rendered Alpine handler emitted `account_id: None` — a
 ReferenceError that broke the Set-basis menu item silently. Switched
 to explicit `account_id is not none` check.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cf993b4`](https://github.com/chen-star/net_alpha/commit/cf993b498afde8086196325c2819442061adb33e))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1547280`](https://github.com/chen-star/net_alpha/commit/15472806f4360451c9af91453210887dceff054a))
 
-* fix(web): /settings/* shows polite hint when drawer closed (review nit #6) ([`21a71a2`](https://github.com/chen-star/net_alpha/commit/21a71a27ad53748e6e0a3c219916bd38c4144bc5))
+* fix(web): /settings/* shows polite hint when drawer closed (review nit #6) ([`1b7ed78`](https://github.com/chen-star/net_alpha/commit/1b7ed78af0fad69e31668de2d2e97aadeeed980e))
 
-* fix(web): drawer placeholders say &#39;Coming soon&#39; not specific phase (review nit #9) ([`1856518`](https://github.com/chen-star/net_alpha/commit/1856518eaf9ce06b0d8efb241d0e87bfdf116c97))
+* fix(web): drawer placeholders say &#39;Coming soon&#39; not specific phase (review nit #9) ([`6c78e6b`](https://github.com/chen-star/net_alpha/commit/6c78e6bc17cb3157546acd573f35c3078fd02579))
 
-* fix(web): legacy imports page does not highlight Overview nav (review nit #7) ([`8eec5bb`](https://github.com/chen-star/net_alpha/commit/8eec5bbfb679092c79d0053458e32791124b5dba))
+* fix(web): legacy imports page does not highlight Overview nav (review nit #7) ([`ba1857e`](https://github.com/chen-star/net_alpha/commit/ba1857e39464a46c92189f682ff481091b00e086))
 
-* fix(web): empty-state CTA targets /settings/imports directly (review nit #8) ([`40c409c`](https://github.com/chen-star/net_alpha/commit/40c409c89c376af8ad7bd9b8b7098c4fba28c858))
+* fix(web): empty-state CTA targets /settings/imports directly (review nit #8) ([`78f9927`](https://github.com/chen-star/net_alpha/commit/78f9927feb8c3e4c8fee6df7a903e07a851f307e))
 
 ### Style
 
 * style: ruff format fixes for B1/B2 test files
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3c1f1db`](https://github.com/chen-star/net_alpha/commit/3c1f1db85938ddb6290884c834e82b0951997a4d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1a1edb5`](https://github.com/chen-star/net_alpha/commit/1a1edb5d81f4c8039d3cdebc88c4276ae6d120b3))
 
-* style: ruff format test_phase2_review_backlog.py ([`978b012`](https://github.com/chen-star/net_alpha/commit/978b01215c028593e03ad59470db5ce12a5f451a))
+* style: ruff format test_phase2_review_backlog.py ([`5d0831a`](https://github.com/chen-star/net_alpha/commit/5d0831a8356cdb819981952cd2717ada835f69b8))
 
 ### Test
 
@@ -1653,7 +1559,7 @@ Phase 2 changes:
 - settings-imports: &#39;polite hint&#39; copy added when drawer is closed
 - minor pixel diffs across other pages from .row-actions CSS additions
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d0eb698`](https://github.com/chen-star/net_alpha/commit/d0eb6987b8d5cf77a2c17da4513bb9f1eeae9d1d))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`44fed8c`](https://github.com/chen-star/net_alpha/commit/44fed8c8d0dcd36e00d3b628cd5b5842bb6ea12d))
 
 ### Unknown
 
@@ -1676,27 +1582,10 @@ set-basis form success state.
 
 Phase 2 stays structural — page interiors of Overview, Tax, Imports,
 and Ticker are untouched. Phase 3 polishes those; Phase 5 makes the
-side pane and drawer responsive at &lt;1024px. ([`60233af`](https://github.com/chen-star/net_alpha/commit/60233af62ef50b8dbaf826b3cdf88be2747e1b31))
+side pane and drawer responsive at &lt;1024px. ([`ddece0a`](https://github.com/chen-star/net_alpha/commit/ddece0a09f04792b5a5d7b9c3e45916ee8b2a3cb))
 
 
 ## v0.28.0 (2026-04-28)
-
-### Documentation
-
-* docs(plans): Phase 1 — IA migration implementation plan
-
-7 sections / ~25 bite-sized tasks: 301 redirects (/holdings →
-/positions, /tax?view=harvest → /positions?view=at-loss, /imports →
-/settings/imports), top nav rewrite (Overview · Positions · Tax · Sim
-+ gear icon), settings drawer with tab strip and functional Imports +
-Density tabs, density toggle relocated from per-page to global, and
-positions tabs (All / Stocks / Options / At a loss / Closed) with
-at-loss serving the existing harvest queue HTML for now.
-
-Visible IA shift; no page-interior content rebuilds (those are
-Phases 2-4). Phase 5 ships the responsive viewport fix.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`af2f264`](https://github.com/chen-star/net_alpha/commit/af2f264f1bbd4d0908be7f973b03da5644c2943b))
 
 ### Feature
 
@@ -1707,7 +1596,7 @@ harvest view for profile-default routing, but the tab link is gone. Updates
 test_tax_default_tab to assert new behaviour (no nav link, content still
 renders).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`778dc70`](https://github.com/chen-star/net_alpha/commit/778dc7067812cb73af6202627809230ba2b60f41))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cf66f12`](https://github.com/chen-star/net_alpha/commit/cf66f1294335b6ced5900f98739419ade20d4d2d))
 
 * feat(web): positions tab views — at-loss serves harvest queue
 
@@ -1715,7 +1604,7 @@ Wires harvest queue context (rows, only_harvestable, budget) into
 positions_page when selected_view == &#39;at-loss&#39;, replicating the context
 that /tax?view=harvest used to build before it became a redirect.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6be555a`](https://github.com/chen-star/net_alpha/commit/6be555a9b8975b40bfea4381e1f5581cef419313))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`459a8ff`](https://github.com/chen-star/net_alpha/commit/459a8ffef08f67c62808889fafdfd59840e1d0c0))
 
 * feat(web): positions tab strip — All/Stocks/Options/At-a-loss/Closed
 
@@ -1723,7 +1612,7 @@ Renames holdings.html → positions.html, updates route to render positions.html
 and accept ?view= param. Adds _positions_tabs.html with 5-tab strip wired into
 positions.html with view-based partial switching.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b3472d9`](https://github.com/chen-star/net_alpha/commit/b3472d9a0e6b9cca51cd5e51f2d01482d4f28fda))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`458e715`](https://github.com/chen-star/net_alpha/commit/458e715f23d9247fc986799979714d2ab1cf1559))
 
 * feat(web): remove inline density toggle from page chrome (audit H4/T1)
 
@@ -1734,27 +1623,27 @@ presence instead of per-page chrome, updated test_phase3_smoke.py&#39;s
 stale page-key assertion, and added test_phase1_density_relocation.py
 to guard against per-page regression.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`67ce51b`](https://github.com/chen-star/net_alpha/commit/67ce51b17375a1e62a214318700cb238e4bbe98a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8d6f011`](https://github.com/chen-star/net_alpha/commit/8d6f01162e8d5ccca9e15a2896574190896fa00c))
 
 * feat(web): drawer Density tab — global preference
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0ef49b5`](https://github.com/chen-star/net_alpha/commit/0ef49b5a9153b1d55eb072c0e403fc2242cb5241))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b43f89d`](https://github.com/chen-star/net_alpha/commit/b43f89d70963fe2654623ea1654b278a0b2aa4ef))
 
 * feat(web): drawer Imports tab — lazy-load content from legacy page
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d21940a`](https://github.com/chen-star/net_alpha/commit/d21940a9f8d76098537b1e277736d92bbbaf0c1a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2873c07`](https://github.com/chen-star/net_alpha/commit/2873c0717cb2f54d981c5745b9cb7ed0c40b6d82))
 
 * feat(web): settings drawer tab strip + placeholders
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c60ea57`](https://github.com/chen-star/net_alpha/commit/c60ea572ac213a9d95b0ed1c7cfc8795ae465b13))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`494c477`](https://github.com/chen-star/net_alpha/commit/494c477acd75988bffb8ef43304f2f0f809776ee))
 
 * feat(web): auto-open settings drawer on /settings/imports load
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`74c97e9`](https://github.com/chen-star/net_alpha/commit/74c97e9479ea082f5647765374d95459a7567ec5))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ee94a24`](https://github.com/chen-star/net_alpha/commit/ee94a246845269daa907edc3dd6d24054273e4f5))
 
 * feat(web): add gear icon to topbar with drawer-open dispatch
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f04064d`](https://github.com/chen-star/net_alpha/commit/f04064d6b426950146ee5daaa898fadbfebc070c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`af02141`](https://github.com/chen-star/net_alpha/commit/af021419d2fdfbc4578730d1d46a49fea72b8ee6))
 
 * feat(web): drop redundant topbar pills (audit P10)
 
@@ -1762,7 +1651,7 @@ Remove account-count and period pills from portfolio and holdings topbar_right
 blocks — they duplicate info already shown in the page subhead. Update
 test_positions_routes and test_phase1_topnav to match new nav labels.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1142f6e`](https://github.com/chen-star/net_alpha/commit/1142f6e4e303e1d43a8641ca6130713e021db398))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`21314f8`](https://github.com/chen-star/net_alpha/commit/21314f8d9a1983edc26e33b3bcde5d68f2a07937))
 
 * feat(web): update active_page values for new nav (overview/positions)
 
@@ -1770,17 +1659,17 @@ portfolio→overview, holdings→positions, wash_sales→tax, imports→overview
 Also updates deprecated nav-badge test assertions to match Phase 1 design
 (badge removed from nav, will move to gear icon in Section C).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`92e62a4`](https://github.com/chen-star/net_alpha/commit/92e62a4eb4e7cf12ea30933e18724b2d85839ac4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`de09100`](https://github.com/chen-star/net_alpha/commit/de0910059ab2a8f3a1d6c1186f771abee8e2e77a))
 
 * feat(web): rewrite top nav — Overview · Positions · Tax · Sim
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`406871f`](https://github.com/chen-star/net_alpha/commit/406871fc718b227474152992632fc890c3ceb8a2))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b34ffa8`](https://github.com/chen-star/net_alpha/commit/b34ffa8dcf84bdf6e601dfb286f01e76b5389a2c))
 
-* feat(web): 301 /imports → /settings/imports; add settings drawer entry routes ([`4dc8703`](https://github.com/chen-star/net_alpha/commit/4dc87033229ccda8a82d73586fb5782fde855509))
+* feat(web): 301 /imports → /settings/imports; add settings drawer entry routes ([`4918311`](https://github.com/chen-star/net_alpha/commit/4918311728ba1d83b008b4223ccda507e2d4487d))
 
-* feat(web): 301 /tax?view=harvest → /positions?view=at-loss ([`5fb023d`](https://github.com/chen-star/net_alpha/commit/5fb023d0124cdf16ca26d5faf2c1de01e6a3a130))
+* feat(web): 301 /tax?view=harvest → /positions?view=at-loss ([`e6dd5f0`](https://github.com/chen-star/net_alpha/commit/e6dd5f03033abb7eaa953517b9d1bdf8285a33cb))
 
-* feat(web): 301 /holdings → /positions (preserves query string) ([`3cee147`](https://github.com/chen-star/net_alpha/commit/3cee1471935a11a28ece48eb85330a3b2bfdec78))
+* feat(web): 301 /holdings → /positions (preserves query string) ([`a655fdf`](https://github.com/chen-star/net_alpha/commit/a655fdfb6220e7278afdf37d9b6e302a208bde95))
 
 ### Fix
 
@@ -1793,7 +1682,7 @@ removed the dead plumbing and changed the redirect target to
 /settings/imports so the user lands on the drawer&#39;s Imports tab where
 the new import is visible in the past-imports table.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f1751b6`](https://github.com/chen-star/net_alpha/commit/f1751b667ae3c8c001ccaf8e3639386433482156))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9cb5c63`](https://github.com/chen-star/net_alpha/commit/9cb5c63f4382df881f390a6f89020179ab59d77e))
 
 * fix(web): harvest queue routing — at-loss owns the toggle, /tax fully redirects
 
@@ -1811,19 +1700,19 @@ profile.default_tax_tab() so &#39;active&#39;/&#39;options&#39; default to &#39;
 deleted the dead harvest-render branch in routes/tax.py and its include
 in tax.html.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`002fcbc`](https://github.com/chen-star/net_alpha/commit/002fcbcf8206250c505290be3c2fdd94260a7a47))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0438dc8`](https://github.com/chen-star/net_alpha/commit/0438dc846745dd913a873f4fa21c6629e9d7d1d6))
 
 ### Refactor
 
-* refactor(web): /holdings → /positions (redirects come in next commit) ([`ac0e0ce`](https://github.com/chen-star/net_alpha/commit/ac0e0ce42e68f4d48ad94bd68e7d88d1f4aa7fe5))
+* refactor(web): /holdings → /positions (redirects come in next commit) ([`b7a8aa5`](https://github.com/chen-star/net_alpha/commit/b7a8aa5604f048835584a886df7ae6e382627afe))
 
-* refactor(web): rename holdings router to positions (no path change yet) ([`20c25f2`](https://github.com/chen-star/net_alpha/commit/20c25f2562a53b854f45597897f715080db731c5))
+* refactor(web): rename holdings router to positions (no path change yet) ([`e3a5e44`](https://github.com/chen-star/net_alpha/commit/e3a5e4419531bc8e2082b02f777eb303f4389c3b))
 
 ### Style
 
 * style(web): ruff format Phase 1 touchpoints
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1abe3f2`](https://github.com/chen-star/net_alpha/commit/1abe3f2d09b272e4697a033dd5c8b7c0b8cd8c22))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ad6da8c`](https://github.com/chen-star/net_alpha/commit/ad6da8cadbd53ab4a33c99c880854e9ff5f38f0e))
 
 ### Test
 
@@ -1834,7 +1723,7 @@ positions-at-loss / tax-wash / tax-proj / settings-imports / sim /
 ticker-nvda. The old `holdings`, `tax-harvest`, `imports`, and `portfolio`
 baseline directories are gone — those URLs now 301 to the new locations.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4ef15a6`](https://github.com/chen-star/net_alpha/commit/4ef15a604d796927592613da2c4eba5ccb3f9b39))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8a676bb`](https://github.com/chen-star/net_alpha/commit/8a676bb36042514b08e3ac36231bc2e015bcfbde))
 
 * test(web): nav-link round-trip smoke test
 
@@ -1842,7 +1731,7 @@ Adds docstring clarifying the B4 round-trip parametrize purpose: each of
 the four nav destinations (/, /positions, /tax, /sim) must appear as an
 href on the home page and return HTTP 200 with the label in the HTML.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ce92f48`](https://github.com/chen-star/net_alpha/commit/ce92f484d73c1c80e8f25612ae2e9d816da50cc7))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7038442`](https://github.com/chen-star/net_alpha/commit/70384427ae4d81ea4d21f951e098caed13518729))
 
 ### Unknown
 
@@ -1862,7 +1751,7 @@ scaffold), G (final verification), plus review-feedback fixes for the
 harvest queue toggle wiring and CSV upload redirect target.
 
 Phase 1 is structural only — page-interior content stays untouched.
-Phase 2 rebuilds the at-loss tab; Phase 3 polishes page interiors. ([`7379f6d`](https://github.com/chen-star/net_alpha/commit/7379f6d4343701cc04e029fd7e479fb24a344f38))
+Phase 2 rebuilds the at-loss tab; Phase 3 polishes page interiors. ([`6d00c2f`](https://github.com/chen-star/net_alpha/commit/6d00c2ffdd8535a475547fcd9a5652739e0432c2))
 
 
 ## v0.27.0 (2026-04-28)
@@ -1871,30 +1760,17 @@ Phase 2 rebuilds the at-loss tab; Phase 3 polishes page interiors. ([`7379f6d`](
 
 * build: add snapshot-test/-update targets; exclude from default suite
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`61ab652`](https://github.com/chen-star/net_alpha/commit/61ab65257f60c0d6baf2da4d306af47c69d238bb))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5946130`](https://github.com/chen-star/net_alpha/commit/59461304581af5b56abb6e491086fd64b35fa5b1))
 
 * build: add pytest-playwright + playwright to [dev] extras
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1e7b148`](https://github.com/chen-star/net_alpha/commit/1e7b148c7e7d04684699916a8fe61df8d930d502))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`47e5de2`](https://github.com/chen-star/net_alpha/commit/47e5de2278421d71e2642b7b97527936773748a3))
 
-* build: add vendor-lucide Makefile target (§5.4) ([`f8d83d5`](https://github.com/chen-star/net_alpha/commit/f8d83d5ce971000003ba6e5af6ea818af729bf94))
+* build: add vendor-lucide Makefile target (§5.4) ([`1a1f395`](https://github.com/chen-star/net_alpha/commit/1a1f3952ce4e2f07fa2ce999ed6f443317981eca))
 
-* build(css): rebuild app.css after Phase 0 token additions ([`8092106`](https://github.com/chen-star/net_alpha/commit/8092106b08c7992b5e83510f8a7f3f35abec1e7f))
+* build(css): rebuild app.css after Phase 0 token additions ([`01ae997`](https://github.com/chen-star/net_alpha/commit/01ae9973af8c1e2f597191018f400b332f8b7ebb))
 
 ### Documentation
-
-* docs(plans): Phase 0 — Foundations implementation plan
-
-Bite-sized TDD-first tasks across six sections: centralized format helpers
-(fmt_quantity / fmt_currency / fmt_percent / fmt_date) registered as Jinja
-globals; new design tokens added to app.src.css; 24 vendored Lucide SVGs
-under web/static/icons; empty Settings drawer skeleton mounted in base.html;
-pytest-playwright snapshot-test infrastructure with baselines for every
-page at desktop + tablet widths.
-
-Phases 1–5 each get their own plan after Phase 0 ships.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c234417`](https://github.com/chen-star/net_alpha/commit/c23441794374c3209719d456e3ab2577c68d4fde))
 
 * docs: UI/UX evaluation &amp; redesign spec (Approach B)
 
@@ -1906,27 +1782,27 @@ setup with an inline form, and lays out a polish pass against ~50 audit
 findings. Stack and visual tokens kept; five-phase sequencing with snapshot
 tests as part of the work.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b4e5b62`](https://github.com/chen-star/net_alpha/commit/b4e5b62e36c4f6dc37b0223bbeca603d3547c316))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`099d54b`](https://github.com/chen-star/net_alpha/commit/099d54b2e121ec95b6941aa726fc552e28b84aaf))
 
 ### Feature
 
-* feat(web): mount settings drawer skeleton in base.html ([`ccb602a`](https://github.com/chen-star/net_alpha/commit/ccb602a5c8665bd4b7c69bfb70f060e8fe514abe))
+* feat(web): mount settings drawer skeleton in base.html ([`4ce1ec4`](https://github.com/chen-star/net_alpha/commit/4ce1ec49c4dba045d85d4e6d4985d4ec7968d558))
 
-* feat(web): add empty settings drawer skeleton (§3.6) ([`3337328`](https://github.com/chen-star/net_alpha/commit/3337328cc0ac667d8ad24c33c38119069b45414a))
+* feat(web): add empty settings drawer skeleton (§3.6) ([`d6ca51d`](https://github.com/chen-star/net_alpha/commit/d6ca51d0eb105d20c0c294a28b5ddbf20205b0aa))
 
-* feat(web/static): vendor Lucide icons (§5.4) ([`2522584`](https://github.com/chen-star/net_alpha/commit/252258409722792b0d53461ef5ad01d272af33e7))
+* feat(web/static): vendor Lucide icons (§5.4) ([`43e71fa`](https://github.com/chen-star/net_alpha/commit/43e71fa646aa7408ebc9c6613be321c1ce2549c0))
 
-* feat(web/css): add Phase 0 design tokens (§5.1) ([`c8725a3`](https://github.com/chen-star/net_alpha/commit/c8725a3996384df5617c34f3292a864e8ec4caf3))
+* feat(web/css): add Phase 0 design tokens (§5.1) ([`46e8a95`](https://github.com/chen-star/net_alpha/commit/46e8a95ce4d0a1cc549dafca3e9c67a06f262e88))
 
-* feat(web): register fmt_* helpers as Jinja globals ([`89faed2`](https://github.com/chen-star/net_alpha/commit/89faed2f7533ac1b828b3e9dd549a8ebaaa75f30))
+* feat(web): register fmt_* helpers as Jinja globals ([`4ba38d7`](https://github.com/chen-star/net_alpha/commit/4ba38d7360b1d7310b67cc255560523753b8804e))
 
-* feat(web/format): add fmt_date (§5.9) ([`a00849a`](https://github.com/chen-star/net_alpha/commit/a00849a88b74f91cb992446ef9b67be8c8268d3e))
+* feat(web/format): add fmt_date (§5.9) ([`1e89922`](https://github.com/chen-star/net_alpha/commit/1e89922ae9ae52de74a026487578cc7411b18ba2))
 
-* feat(web/format): add fmt_percent (§5.9) ([`7632746`](https://github.com/chen-star/net_alpha/commit/763274621e6fce79d56bc9eec6e15ec79679448d))
+* feat(web/format): add fmt_percent (§5.9) ([`514e1f7`](https://github.com/chen-star/net_alpha/commit/514e1f7be20861877c17dc00b73594c5371f41bb))
 
-* feat(web/format): add density-aware fmt_currency (§5.9) ([`e77be98`](https://github.com/chen-star/net_alpha/commit/e77be9824b38237c15086139666b01f0875dffcf))
+* feat(web/format): add density-aware fmt_currency (§5.9) ([`7cb0546`](https://github.com/chen-star/net_alpha/commit/7cb0546b8a4e9506b3678a3f2df9d65dd9e2d385))
 
-* feat(web/format): add fmt_quantity (§5.9) ([`565cb5f`](https://github.com/chen-star/net_alpha/commit/565cb5fdcecc38b870cadc172d9723a80720c51c))
+* feat(web/format): add fmt_quantity (§5.9) ([`baaf815`](https://github.com/chen-star/net_alpha/commit/baaf8152350e7bcaff7cd959daf53b0b494f3e45))
 
 ### Fix
 
@@ -1950,7 +1826,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b4
 
 237 tests pass, 16 snapshots pass, lint clean.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`66c8e60`](https://github.com/chen-star/net_alpha/commit/66c8e60162d63d1255a9fc5243997d9df22adba4))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a184483`](https://github.com/chen-star/net_alpha/commit/a184483e629ce1de7123e8930aad33a8a83dbb64))
 
 ### Style
 
@@ -1960,29 +1836,29 @@ Trailing pass over tests touched by Section B/C/E to satisfy
 `ruff format --check` (re-flowed long Path expressions, set literals,
 and an f-string that fit on one line).
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b1c26e6`](https://github.com/chen-star/net_alpha/commit/b1c26e6cbdc306c3d3255308262728d8283d74d2))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`be29b80`](https://github.com/chen-star/net_alpha/commit/be29b80223360f0660016497aed6a297420c2613))
 
 ### Test
 
 * test(web): capture Phase 0 baseline page snapshots
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c299942`](https://github.com/chen-star/net_alpha/commit/c299942000cf17e491aa0561f83f6fd379d2073c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9f23727`](https://github.com/chen-star/net_alpha/commit/9f237272aa1d633605c87acce8c7b8dd21a99e3b))
 
 * test(web): baseline-snapshot test scaffolding (no baselines yet)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`962e61a`](https://github.com/chen-star/net_alpha/commit/962e61a29842c07db591ea7851706e7b8584938b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6e8ba63`](https://github.com/chen-star/net_alpha/commit/6e8ba6356f0591bf911d0ff6a046046f3eb36ad5))
 
 * test(web): add Playwright snapshot test scaffolding
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`56203f9`](https://github.com/chen-star/net_alpha/commit/56203f9a3cd87f64cbf8bde01be048b9b1cf3f97))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`495a468`](https://github.com/chen-star/net_alpha/commit/495a4685cefae9f8b2586a2a9814d76fa1a19f18))
 
-* test(web): assert vendored Lucide icons present ([`0150602`](https://github.com/chen-star/net_alpha/commit/01506027ce1a3fec71ea8adc23d85d3ede550dda))
+* test(web): assert vendored Lucide icons present ([`08b60b9`](https://github.com/chen-star/net_alpha/commit/08b60b902403a80b04dda7eb86b658ddd4e02315))
 
 ### Unknown
 
-* Merge branch &#39;phase0-foundations&#39; — Phase 0 Foundations ([`cb0b7bb`](https://github.com/chen-star/net_alpha/commit/cb0b7bb5381db7fa422bd38d59d410aa248453e1))
+* Merge branch &#39;phase0-foundations&#39; — Phase 0 Foundations ([`ff3fe65`](https://github.com/chen-star/net_alpha/commit/ff3fe654a6c978de937406a0d1e2309662588de7))
 
-* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`73b4be6`](https://github.com/chen-star/net_alpha/commit/73b4be69c37a6c7c9e4d240ac09fede9b42ef97a))
+* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`cd9675b`](https://github.com/chen-star/net_alpha/commit/cd9675b671980e7c88e4718a6bd8c61634b45ddb))
 
 
 ## v0.26.0 (2026-04-28)
@@ -2008,7 +1884,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`56203f9`](htt
 
 - Allocation modal: was a wall of low-density rows with no way to find
   a symbol. Adds a typeahead filter (Alpine), sticky table header, and
-  compact row padding. Two keystrokes to find any holding. ([`d90d765`](https://github.com/chen-star/net_alpha/commit/d90d765fd456540725010081e7b6390a8d72630b))
+  compact row padding. Two keystrokes to find any holding. ([`a8e7363`](https://github.com/chen-star/net_alpha/commit/a8e7363371a12189c75961c2b2cf477922c496d4))
 
 
 ## v0.25.0 (2026-04-28)
@@ -2043,7 +1919,7 @@ Route:
 Tests cover single-segment edits (legacy behavior), 3-segment splits, and
 sum-mismatch rejection.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`410b3a6`](https://github.com/chen-star/net_alpha/commit/410b3a6ca13ba1e00968bfb2e00d520ce71ab7d9))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`493654e`](https://github.com/chen-star/net_alpha/commit/493654eb92e374314ffda7b7784958ff6027f7c7))
 
 * feat(web): portfolio reorg, allocation modal, sortable holdings, all-options panel
 
@@ -2064,7 +1940,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`41
   user edits modify only the acquisition date, preserving the transfer date for
   audit. transfer_group_id reserved for the upcoming multi-segment split.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1010b24`](https://github.com/chen-star/net_alpha/commit/1010b245c671b716d685fc3eaaf13a1ba1ab9d25))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6673ba7`](https://github.com/chen-star/net_alpha/commit/6673ba72bf41acd5f22dd6c1840ceeda109a2ee1))
 
 
 ## v0.24.4 (2026-04-28)
@@ -2100,7 +1976,7 @@ Five issues, all on the ticker drilldown page:
    number propagated to FRMI as well. FRMI YTD 2026 now reads -$157.32
    (one closed cycle: STO +129.34 paired with BTC -286.66).
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`297fbdd`](https://github.com/chen-star/net_alpha/commit/297fbddbf11feef9ea9a93d29b0c21099165b814))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`af8fb2d`](https://github.com/chen-star/net_alpha/commit/af8fb2d5ccbfef17375ddc54bd59d071b3312226))
 
 
 ## v0.24.3 (2026-04-28)
@@ -2142,7 +2018,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`29
    /holdings/short-options fragment). Holdings is the inventory page;
    Portfolio stays focused on KPIs / allocation / wash watch / cash.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0f271f3`](https://github.com/chen-star/net_alpha/commit/0f271f30f93d9c3a559f039e5df66f54db102d27))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1171620`](https://github.com/chen-star/net_alpha/commit/1171620da98d413d8027fee2b9bd3c44c5038427))
 
 
 ## v0.24.2 (2026-04-28)
@@ -2163,7 +2039,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0f
 - imports: dup-cluster key includes price-per-share to allow average-down trades
 - repo: add _acct_display_cache to Repository __init__ to eliminate N+1
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0cf15d9`](https://github.com/chen-star/net_alpha/commit/0cf15d9396761054b758e4bb059d84e40369af12))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2e0abd2`](https://github.com/chen-star/net_alpha/commit/2e0abd2e0cda196c52084d4d6241a2e71f9b951f))
 
 
 ## v0.24.1 (2026-04-28)
@@ -2180,102 +2056,98 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0c
   secured) shown when shorts exist
 - density/profile forms switched to hx-post so HX-Refresh response actually
   refreshes the page
-- tax: add .tabs/.tab/.tab--active styles, _harvest_queue uses .net-table ([`66d0c92`](https://github.com/chen-star/net_alpha/commit/66d0c920612eeedc948bf6d88054a42bf34cc786))
+- tax: add .tabs/.tab/.tab--active styles, _harvest_queue uses .net-table ([`077694b`](https://github.com/chen-star/net_alpha/commit/077694b1a7fe8ae26097259eb180a9ca0e3d128c))
 
 ### Unknown
 
-* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`ba3c1cd`](https://github.com/chen-star/net_alpha/commit/ba3c1cd0f229b4dacfcea9e30c3cdde7f329dc33))
+* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`4c1e0fb`](https://github.com/chen-star/net_alpha/commit/4c1e0fb3c5eab131a64fe0e98e36ce9216083b44))
 
 
 ## v0.24.0 (2026-04-28)
 
 ### Chore
 
-* chore: ruff format fixes on Section F test files ([`1cad1bf`](https://github.com/chen-star/net_alpha/commit/1cad1bfbf4337d490413386df9186b96a9881783))
+* chore: ruff format fixes on Section F test files ([`aebb5cd`](https://github.com/chen-star/net_alpha/commit/aebb5cdf93f31fc03118e89e3ee6597e482e4ee4))
 
 * chore(web): ruff UP017 fix — use datetime.UTC alias in Section D files
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`48eb0b1`](https://github.com/chen-star/net_alpha/commit/48eb0b18058add81fdc1c1200307107dee5d9c0c))
-
-### Documentation
-
-* docs: phase 3 implementation plan ([`cd5c2c1`](https://github.com/chen-star/net_alpha/commit/cd5c2c13dadadf2add800ba45295fa746bf28628))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0e66192`](https://github.com/chen-star/net_alpha/commit/0e66192c8226d10db510395bcaf799f3100f0ca8))
 
 ### Feature
 
 * feat(web): switcher label reflects current request&#39;s account filter
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a6aa566`](https://github.com/chen-star/net_alpha/commit/a6aa566aa88ff692f82dd2e078e4ac039afcb02b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f87cb33`](https://github.com/chen-star/net_alpha/commit/f87cb3396edc64bcf860961c37949d2f02ed0674))
 
 * feat(web): /tax default tab from ProfileSettings.default_tax_tab
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bc6588b`](https://github.com/chen-star/net_alpha/commit/bc6588b8ba9ee425f4ff8b5eb32dd143ec8e9298))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8edabc6`](https://github.com/chen-star/net_alpha/commit/8edabc64bbd41045dfd8117b786cd73e25174295))
 
-* feat(web): density toggle on /holdings, /tax, /imports ([`0c0d6a3`](https://github.com/chen-star/net_alpha/commit/0c0d6a34634407d054ef57d02e331ab3fabf2257))
+* feat(web): density toggle on /holdings, /tax, /imports ([`687f085`](https://github.com/chen-star/net_alpha/commit/687f085ea570b5339e001ba575643044ffa070d1))
 
-* feat(web): localStorage density override shim ([`d61f59b`](https://github.com/chen-star/net_alpha/commit/d61f59be27efc1f709588206b8ad2570f7312ac3))
+* feat(web): localStorage density override shim ([`eafcec1`](https://github.com/chen-star/net_alpha/commit/eafcec17daef8af85d687fd4877ed9cc20553e76))
 
-* feat(web): density toggle template (Compact / Comfortable / Tax-view) ([`08bd159`](https://github.com/chen-star/net_alpha/commit/08bd159c76b68fe9c290cf97f4911cc8e5838f73))
+* feat(web): density toggle template (Compact / Comfortable / Tax-view) ([`8ea6b14`](https://github.com/chen-star/net_alpha/commit/8ea6b14763e5dcf74cd6ab077e2fd8b6f62aaf9b))
 
-* feat(web): profile-driven extra columns in holdings table ([`092a714`](https://github.com/chen-star/net_alpha/commit/092a714492414633eeb886f7aa19d58091fcebe4))
+* feat(web): profile-driven extra columns in holdings table ([`6f139b1`](https://github.com/chen-star/net_alpha/commit/6f139b1f8f12155e1c28f2e6be394c46e5aec2bd))
 
-* feat(portfolio): premium_received per position for options profile ([`6719116`](https://github.com/chen-star/net_alpha/commit/67191163c3135c0e23723cdbec9eeff005afe4c8))
+* feat(portfolio): premium_received per position for options profile ([`7ddf561`](https://github.com/chen-star/net_alpha/commit/7ddf5615d0e6d97941bf7308965e5d58e1d6ad96))
 
-* feat(portfolio): position rows expose days_held + lt/st split ([`434544c`](https://github.com/chen-star/net_alpha/commit/434544cfa3800da796c04a122bc598f6783cad96))
+* feat(portfolio): position rows expose days_held + lt/st split ([`38aab14`](https://github.com/chen-star/net_alpha/commit/38aab14b9e02d5cb8d04a0d3887a6fb3f7f50849))
 
 * feat(web): KPI hero ordering driven by ProfileSettings.order
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`732f1c3`](https://github.com/chen-star/net_alpha/commit/732f1c3d1aa949697fcd57942a00d1a5cdc52398))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f7a4265`](https://github.com/chen-star/net_alpha/commit/f7a4265d7433078bdcc478017c79dda303c3c905))
 
 * feat(web): conservative profile collapses wash-watch by default
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2ef4b29`](https://github.com/chen-star/net_alpha/commit/2ef4b291559f2b49da50dbbe5658c12710de2f9e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ce240a3`](https://github.com/chen-star/net_alpha/commit/ce240a340c6f97751fe36135d4b44734c34660b1))
 
 * feat(web): pass ProfileSettings into /portfolio context
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`194fe9d`](https://github.com/chen-star/net_alpha/commit/194fe9d09b1aede7ad42c16d6c5b82ede76724b9))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ffedb56`](https://github.com/chen-star/net_alpha/commit/ffedb567059b1c552b59b32388aca45d37a8883c))
 
 * feat(web): first-visit profile picker modal
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a1d8378`](https://github.com/chen-star/net_alpha/commit/a1d8378dac9bd2bdb170f6e53ccd6a04ac3a42af))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0505c5b`](https://github.com/chen-star/net_alpha/commit/0505c5b030dd2688f107cf22bdad3832a08a964d))
 
 * feat(web): render profile switcher in base topbar
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eab81ab`](https://github.com/chen-star/net_alpha/commit/eab81ab73df1ee7b6719ae614763005a8612d814))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`84f27f6`](https://github.com/chen-star/net_alpha/commit/84f27f6d492d0f19c8fb78d70bf5bf8923017fe1))
 
 * feat(web): toolbar profile switcher template
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`aa4966f`](https://github.com/chen-star/net_alpha/commit/aa4966fdb829b5d38642ae8ac3164a8ceaeeca5b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fd7b732`](https://github.com/chen-star/net_alpha/commit/fd7b7326221347576b36853f4dddf40412f63748))
 
 * feat(web): POST /preferences writes per-account or all-account prefs
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`642062f`](https://github.com/chen-star/net_alpha/commit/642062f3d293abbfa45cd2156987301bc48dd197))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b3d79aa`](https://github.com/chen-star/net_alpha/commit/b3d79aa141533fc44f27337e4371425f6dfea7a6))
 
 * feat(web): get_profile_settings FastAPI dependency
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bd79a7c`](https://github.com/chen-star/net_alpha/commit/bd79a7c9a4dc77969a00636f4e79d04f18541a8c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3cb25ce`](https://github.com/chen-star/net_alpha/commit/3cb25ceb9f8378ca6d85b21b10e5835f6b49d9a2))
 
 * feat(prefs): resolve_effective_profile across single/all-account views
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`df3d989`](https://github.com/chen-star/net_alpha/commit/df3d989fa96eaba65a4dbc457eefbeeb9156aeb7))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9a7fee9`](https://github.com/chen-star/net_alpha/commit/9a7fee9ef7fbe0ed3ad39d0d858fab3a788a298f))
 
-* feat(prefs): default_columns() and default_tax_tab() ([`213a077`](https://github.com/chen-star/net_alpha/commit/213a077c68d459445fbb04095dfe83289c26bfab))
+* feat(prefs): default_columns() and default_tax_tab() ([`e758b53`](https://github.com/chen-star/net_alpha/commit/e758b531939d59f40717396e7cd8f623ed26e3b6))
 
-* feat(prefs): ProfileSettings.order() for KPI hero slots ([`8678f45`](https://github.com/chen-star/net_alpha/commit/8678f454e9cd3560270c5af59ef0d65078a91b32))
+* feat(prefs): ProfileSettings.order() for KPI hero slots ([`3b397ca`](https://github.com/chen-star/net_alpha/commit/3b397caf1559a4adf6fa1c8102a1574c7ffade4a))
 
-* feat(prefs): ProfileSettings.shows() rule table ([`5119abd`](https://github.com/chen-star/net_alpha/commit/5119abd4966371d312548752067616ddc5f890e5))
+* feat(prefs): ProfileSettings.shows() rule table ([`a586965`](https://github.com/chen-star/net_alpha/commit/a5869652d323ef7b8f39a272e461bdef89a01683))
 
 * feat(db): repository methods for user preferences
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cbf5acf`](https://github.com/chen-star/net_alpha/commit/cbf5acffd8fe764d4ae59db594c281b7f6dcd35a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1e8ed24`](https://github.com/chen-star/net_alpha/commit/1e8ed249015f7f90e84a5fcb7445116dada606a3))
 
 * feat(db): v8 -&gt; v9 migration adds user_preferences
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8376221`](https://github.com/chen-star/net_alpha/commit/83762217872f7dd9641784ca8a95ec1a508c7f6e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e3a9cbb`](https://github.com/chen-star/net_alpha/commit/e3a9cbb0a309efda6639bb7123285b2a13afd495))
 
 * feat(db): add UserPreferenceRow for v9 schema
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f0ed016`](https://github.com/chen-star/net_alpha/commit/f0ed0169a36d10410d551766ba47139b5d7158ae))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9062bca`](https://github.com/chen-star/net_alpha/commit/9062bcae14827dbb25fc64a47be5d75a6b6b645d))
 
 ### Fix
 
@@ -2290,7 +2162,7 @@ Move the premium accumulator below the existing _SKIP_AGG_SOURCES guard
 so the same skip applies. Adds a regression test exercising the
 assigned-put chain.
 
-Caught in Phase 3 final code review. ([`81881bf`](https://github.com/chen-star/net_alpha/commit/81881bf6b2d0c098ccbbd564169523346bdc53f4))
+Caught in Phase 3 final code review. ([`21b4ad5`](https://github.com/chen-star/net_alpha/commit/21b4ad5510008bf48eb515f6e4ab542c6a7fabbf))
 
 * fix: emit data-col markers in holdings.html wrapper for empty-state path
 
@@ -2301,13 +2173,13 @@ fragment entirely, so data-col attributes never appeared in the HTML.
 Add a hidden cols-meta span directly in holdings.html so column markers
 are always present in the page regardless of import state.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4ff9ac4`](https://github.com/chen-star/net_alpha/commit/4ff9ac4568df8979698dd3b5ea932665cd327bd5))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`713ed6b`](https://github.com/chen-star/net_alpha/commit/713ed6b9eab2cf1612a2bf7679b927e2ed233078))
 
 ### Style
 
 * style: ruff format
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6195963`](https://github.com/chen-star/net_alpha/commit/61959636e7a976f9197b82580bdcdce377e1269a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ecc7be1`](https://github.com/chen-star/net_alpha/commit/ecc7be14c1050c985899d7e6d750ef2bec5e4e14))
 
 ### Unknown
 
@@ -2333,7 +2205,7 @@ density toggle (Compact/Comfortable/Tax-view) per spec Section 3.
 
 Phase 3d (smart suggestion) is explicitly deferred per spec.
 
-29 commits, +78 tests (672 → 750 pass + 1 skip). ([`5576c2a`](https://github.com/chen-star/net_alpha/commit/5576c2a0642731436feb38620611db9951bcafaf))
+29 commits, +78 tests (672 → 750 pass + 1 skip). ([`198afa1`](https://github.com/chen-star/net_alpha/commit/198afa1ce22a59960577fbd6d890d310dc34c041))
 
 
 ## v0.23.0 (2026-04-28)
@@ -2346,7 +2218,7 @@ Update base.html nav link from /wash-sales (active_page=&#39;wash_sales&#39;)
 to /tax (active_page=&#39;tax&#39;). The /tax route sets active_page=&#39;tax&#39; in
 context so the nav link highlights correctly.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cf6792e`](https://github.com/chen-star/net_alpha/commit/cf6792ecdd351562b7fdaa1f7269c92c444a5630))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ddd6f1a`](https://github.com/chen-star/net_alpha/commit/ddd6f1ade0ce35bb480834978f608de10e86ea11))
 
 * feat(web): /wash-sales -&gt; /tax 301 redirect (preserves query string)
 
@@ -2355,7 +2227,7 @@ Old sub-views ?view=table|calendar are normalised to view=wash-sales.
 Update test_calendar.py and test_wash_sales_route.py to follow redirects
 or target /tax directly. Add test_tax_redirects.py (3 tests).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cfebaca`](https://github.com/chen-star/net_alpha/commit/cfebacad2ba502f05e25f05aae9fd25b76a183a2))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`074ce26`](https://github.com/chen-star/net_alpha/commit/074ce26d7684b8e7b68dbd15a987558895466c7a))
 
 * feat(web): tax.html 4-tab page (wash-sales | harvest | budget | projection)
 
@@ -2365,7 +2237,7 @@ Extract wash-sales tab inner content into _tax_wash_sales_tab.html
 Add _offset_budget_tab.html and _projection_tab.html for budget and
 projection tabs.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`40c3d03`](https://github.com/chen-star/net_alpha/commit/40c3d03c55998f9c42a2c246772d1623ca3cc1b1))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6d26543`](https://github.com/chen-star/net_alpha/commit/6d26543623fa537f907b6048c61d4f0a4846f0c2))
 
 * feat(web): add /tax route with tabbed view dispatcher
 
@@ -2373,65 +2245,65 @@ Extract _wash_sales_context helper from wash_sales.py and wire up new
 /tax route supporting wash-sales | harvest | budget | projection tabs.
 Register tax_routes.router in app.py. Add test_tax_route.py (4 tests).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b6cd07b`](https://github.com/chen-star/net_alpha/commit/b6cd07bcade9f5d38deda11d62290fd08c1d595e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`78c597e`](https://github.com/chen-star/net_alpha/commit/78c597ed5e8a672f15e09978921494140ad47fca))
 
 * feat(web): load etf_replacements into app.state at startup
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3f74e29`](https://github.com/chen-star/net_alpha/commit/3f74e293cf19404a31fc667728a81e7939171f3e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c4a5c8e`](https://github.com/chen-star/net_alpha/commit/c4a5c8edfe80f136f3eba11492fba9b4c90448f5))
 
 * feat(web): pre-trade traffic-light on /sim result
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b9bc9ac`](https://github.com/chen-star/net_alpha/commit/b9bc9ac61e61b8d549015c82840e57862301ffac))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2ab3abc`](https://github.com/chen-star/net_alpha/commit/2ab3abc0c15568b15683784bbdda5c2c3749007f))
 
 * feat(tax): assess_trade — bracket-push yellow + lot-method hint
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b4550e9`](https://github.com/chen-star/net_alpha/commit/b4550e90fca37c6a62ca5d510ca952ccad226a21))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e77e7de`](https://github.com/chen-star/net_alpha/commit/e77e7de4ac738c824d7d1996f2178fb8864d893d))
 
 * feat(tax): assess_trade — wash-sale red verdict
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c264f74`](https://github.com/chen-star/net_alpha/commit/c264f74d2899179356b7821bf2e36da67c3a87c6))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b736e20`](https://github.com/chen-star/net_alpha/commit/b736e2000a795270fec50a34e423869adf57f499))
 
 * feat(tax): TaxLightSignal model
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e07b632`](https://github.com/chen-star/net_alpha/commit/e07b632b1a77586a5c7d7774c3fb297b763f7d3d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`094cb06`](https://github.com/chen-star/net_alpha/commit/094cb068ceb11c058b4fa064b07e8a3eaf4a5830))
 
 * feat(web): year-end projection card on portfolio (with config-missing placeholder)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eac368f`](https://github.com/chen-star/net_alpha/commit/eac368fa7d6acdd32c85f14adbd2c5285ba54262))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4466164`](https://github.com/chen-star/net_alpha/commit/4466164cf053a15d7339ec464a6594ca8f3c2b70))
 
 * feat(tax): year-end tax projection (single marginal rate) + planned trades + bracket-push warnings
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`86e9d43`](https://github.com/chen-star/net_alpha/commit/86e9d4367beb47ce78b9a84a7350439245d32954))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a72dca4`](https://github.com/chen-star/net_alpha/commit/a72dca4326679fa0a2ab40f11d3031fc1f1ea60b))
 
 * feat(tax): TaxBrackets, TaxProjection, MissingTaxConfig
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eda2ca9`](https://github.com/chen-star/net_alpha/commit/eda2ca9fbf83f5e9e9b87557c6fe8c717612d848))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`25782af`](https://github.com/chen-star/net_alpha/commit/25782af5ad8ffdd4fe0fd06493b189e8db02b9ee))
 
 * feat(web): offset-budget tile on portfolio KPI strip
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7fce1c1`](https://github.com/chen-star/net_alpha/commit/7fce1c14829258921bf10fe89a20187e1c59f17a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1b10e6a`](https://github.com/chen-star/net_alpha/commit/1b10e6a255ede31c47a614745bb843fd01eed0de))
 
 * feat(tax): compute_offset_budget with $3K cap + carryforward + planned delta
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9c5b33d`](https://github.com/chen-star/net_alpha/commit/9c5b33d434bfa65a27f3391c27e1dc71af0e7f7b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8011099`](https://github.com/chen-star/net_alpha/commit/801109931ded21b2afd6a283a4a3cc2c53aef35d))
 
 * feat(tax): OffsetBudget and PlannedTrade models
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0da2f70`](https://github.com/chen-star/net_alpha/commit/0da2f70cb29490fec9626aa5cd1fc6bf79b801ab))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c8405b4`](https://github.com/chen-star/net_alpha/commit/c8405b4e8205606c68f0e4ca4f4d79cea57f913d))
 
 * feat(web): _harvest_queue.html template
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a32bb05`](https://github.com/chen-star/net_alpha/commit/a32bb05257a141fbe752a694d31be72869027986))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9d126a8`](https://github.com/chen-star/net_alpha/commit/9d126a8d38ab8e5d795bf10b2a2818e4e747bd8b))
 
 * feat(tax): compute_harvest_queue with LT/ST split + account filter
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5bd4543`](https://github.com/chen-star/net_alpha/commit/5bd4543c8e6abc6debf3b625cbc2ae173e47c0f5))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0d1c0f4`](https://github.com/chen-star/net_alpha/commit/0d1c0f432eefc2b45e202ec76ac8afd288ffe2c7))
 
-* feat(tax): HarvestOpportunity model + portfolio test conftest ([`6bb47f6`](https://github.com/chen-star/net_alpha/commit/6bb47f63a98a21d57bb00f55b971abc0935df42f))
+* feat(tax): HarvestOpportunity model + portfolio test conftest ([`73cf160`](https://github.com/chen-star/net_alpha/commit/73cf16024b048c5c0209131eb1d2f306e3d6e412))
 
 * feat(engine): cross-asset lockout — open CSP locks out underlying
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bc98513`](https://github.com/chen-star/net_alpha/commit/bc98513c86d9662477181d62d6e736002be90596))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3c55520`](https://github.com/chen-star/net_alpha/commit/3c55520625d915e96c8616a3abec5458c74050f9))
 
 * feat(engine): same-symbol lockout-clear date computation
 
@@ -2440,7 +2312,7 @@ and an as-of date, returns the first wash-sale-safe sale date (most recent buy +
 days) or None when no buy is in the 30-day window. Handles cross-account buys and
 substantially-identical ETF pairs. Structured for Task 6 cross-asset extension.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`02a11d9`](https://github.com/chen-star/net_alpha/commit/02a11d99ef751766339a23c7cbb0965da1811879))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bb0b90b`](https://github.com/chen-star/net_alpha/commit/bb0b90b3a4520251d763e0aead2a9d9e58aebfda))
 
 * feat(tax): premium origin extraction for CSP-assigned lots
 
@@ -2448,11 +2320,11 @@ Adds CSPAssigned / CCAssigned / PremiumOriginEvent models and
 extract_premium_origin() to portfolio/tax_planner.py; recovers the
 put premium from the STO→BTC-assigned chain for wheel-strategy lots.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9d7dd8c`](https://github.com/chen-star/net_alpha/commit/9d7dd8cba16bf4788138b696e385c2f8d0ba5bd4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e93a701`](https://github.com/chen-star/net_alpha/commit/e93a7013ea433ccff2dd9fcf387de1b09f176748))
 
 * feat(engine): bundled etf_replacements.yaml + loader with consistency check
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`51a8df5`](https://github.com/chen-star/net_alpha/commit/51a8df50034f451ddbaf7555a88bd2086b8dcd0e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d95febf`](https://github.com/chen-star/net_alpha/commit/d95febf3415a0da265a3eca54ff9345358fd0445))
 
 * feat(audit): hygiene category &#39;tax_config_missing&#39;
 
@@ -2461,51 +2333,51 @@ when no `tax:` section exists in config.yaml. Threads `settings` through
 `collect_issues` and `get_imports_badge_count` as an optional kwarg so
 all existing callers remain backwards-compatible.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ca23b10`](https://github.com/chen-star/net_alpha/commit/ca23b10f97395fee5ad512adf936dcabd695c3ff))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c7e6212`](https://github.com/chen-star/net_alpha/commit/c7e62129d22ec3b4f7f6eb1c309085c183c52261))
 
 * feat(config): add TaxConfig model and loader
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bd7539e`](https://github.com/chen-star/net_alpha/commit/bd7539ee2dd1a642ed02417029ee699d0836055d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`20c756f`](https://github.com/chen-star/net_alpha/commit/20c756fa277cffe59a506a2bb032ad50f67d60f7))
 
 ### Fix
 
 * fix(engine): bundled SCHD replacement DGRO to avoid etf_pairs conflict
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fb045a7`](https://github.com/chen-star/net_alpha/commit/fb045a772aa679cd1304b857127f48860ee19783))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`564dc1c`](https://github.com/chen-star/net_alpha/commit/564dc1cfb5ca8c308fe344fed22c780b85646dc1))
 
 ### Refactor
 
 * refactor(test): promote seed_lots to portfolio conftest fixture
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`88a3048`](https://github.com/chen-star/net_alpha/commit/88a30485948a4ef2143b22cedcfe8eccc9b290ce))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3b32bc3`](https://github.com/chen-star/net_alpha/commit/3b32bc38d96f41c66092c2f65cfffb7ed26b95d7))
 
 ### Style
 
 * style: ruff import sort + drop unused TaxProjection test import
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fe822ec`](https://github.com/chen-star/net_alpha/commit/fe822ec2234097c12b70d42c7106785bc8f01759))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`876cdf9`](https://github.com/chen-star/net_alpha/commit/876cdf9e8fd4ea058a3bc1dfd65a661b8574b179))
 
 ### Test
 
 * test(tax): phase-2 smoke — /tax tabs, portfolio embeds, /sim traffic light
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`27877cf`](https://github.com/chen-star/net_alpha/commit/27877cf0ac1701d233a7b1a951ab09ff54dc81bb))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3180be9`](https://github.com/chen-star/net_alpha/commit/3180be9ad0ed25ce2891f9b48ad77ecd6a1d4f50))
 
 * test(tax): CSP origin round-trips through Repository
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6fc8e53`](https://github.com/chen-star/net_alpha/commit/6fc8e538bc1a9d9a528dc7c7019bbd54eaa55c94))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ad1a1fd`](https://github.com/chen-star/net_alpha/commit/ad1a1fd1ba5aa34cfb595a893b12882ac9e78cef))
 
 * test(tax): cross-asset wheel-strategy lockout coverage
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bb41be9`](https://github.com/chen-star/net_alpha/commit/bb41be9db347615ada732eb5314e29b4ea7500d4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2f03414`](https://github.com/chen-star/net_alpha/commit/2f03414eea006f3d3905b000e4bf2b0e18719183))
 
 * test(tax): replacement-suggestion wiring in harvest queue
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8b70a01`](https://github.com/chen-star/net_alpha/commit/8b70a0140d6daf2ed6a81e24095ea3bd54790399))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`390ce2e`](https://github.com/chen-star/net_alpha/commit/390ce2e639e154bc92a3e4313974afbd44a84fe0))
 
 * test(tax): premium offset and only_harvestable filter coverage
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e23ab52`](https://github.com/chen-star/net_alpha/commit/e23ab525fa02be980f30baef9b720beebe510884))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5481d49`](https://github.com/chen-star/net_alpha/commit/5481d49a7f77bb0d51caf69059ddb50091cec1f4))
 
 ### Unknown
 
@@ -2530,58 +2402,22 @@ section in ~/.net_alpha/config.yaml; absence renders a placeholder card on
 Plan: docs/superpowers/plans/2026-04-27-tax-planner.md
 Spec: docs/superpowers/specs/2026-04-27-provenance-tax-planner-density-design.md (Section 2)
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4428486`](https://github.com/chen-star/net_alpha/commit/4428486ea26979f10b41d5b3a26703c970045be1))
-
-* plan: phase 2 — forward tax planner
-
-30 TDD tasks covering harvest queue, offset budget, year-end projection,
-pre-trade traffic light, wheel-strategy awareness, etf_replacements, and
-the /wash-sales -&gt; /tax route rename.
-
-Follows the spec at docs/superpowers/specs/2026-04-27-provenance-tax-
-planner-density-design.md (Section 2). No DB schema changes — wheel
-awareness is computed on read from the existing synthetic
-option_short_open_assigned trade chain.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6499768`](https://github.com/chen-star/net_alpha/commit/6499768ec3c84bae12f70515fe3ec213f52bc4d8))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3510997`](https://github.com/chen-star/net_alpha/commit/351099755155d2c8f8ee6099a63027b3b606d89c))
 
 
 ## v0.22.0 (2026-04-28)
-
-### Documentation
-
-* docs(plan): Phase 1 implementation plan — Provenance layer
-
-28 TDD tasks covering Sections 1a (drillable KPI tiles), 1b
-(reconciliation strip + BrokerGLProvider abstraction), and 1c (data
-hygiene queue + nav badge). Phases 2 and 3 deferred to separate plans.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`27a1293`](https://github.com/chen-star/net_alpha/commit/27a1293115cf351d7d9be565ab3f8c32f3377a91))
-
-* docs(spec): provenance, forward tax planner, and style-aware density
-
-Three new feature areas that reposition net-alpha as portfolio tracker
-plus tax tool: drillable provenance for every KPI, forward-looking tax
-planning (harvest queue, offset budget, year-end projection, pre-trade
-traffic light, wheel-strategy aware), and per-account profile picker
-with density toggle. Zero new top-level pages; one route rename
-(/wash-sales -&gt; /tax) with 301; one DB migration (v8 -&gt; v9 for
-user_preferences); one optional config section (tax). Phased
-Provenance -&gt; Tax Planner -&gt; Density.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`db68b8a`](https://github.com/chen-star/net_alpha/commit/db68b8a7dc62e4e02449aa321b1d24d0e80e233d))
 
 ### Feature
 
 * feat(audit): nav-bar Imports badge with 30s TTL cache
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`266afbd`](https://github.com/chen-star/net_alpha/commit/266afbdc179448889d69c361a8df82e5952b676b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`812bc22`](https://github.com/chen-star/net_alpha/commit/812bc2215f0a3336f92125784209100898cde669))
 
 * feat(audit): POST /audit/set-basis updates trade basis with HTMX swap
 
 Also clears basis_unknown=False in update_trade_basis when cost_basis is set.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`72d77d3`](https://github.com/chen-star/net_alpha/commit/72d77d339643fa68ff0d1cc4e90ac2d72a5052ac))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6417d46`](https://github.com/chen-star/net_alpha/commit/6417d468fffe14cf1b92b40954997346751ecb2c))
 
 * feat(audit): embed data-hygiene section on /imports
 
@@ -2589,15 +2425,15 @@ Adds _data_hygiene.html partial with severity badges and inline HTMX
 fix-forms; wires collect_issues(repo) into the imports_page route so
 the section appears when issues exist and is hidden when the DB is clean.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3d22b5c`](https://github.com/chen-star/net_alpha/commit/3d22b5c9f5f8dab0a1a0f8095e655de83f83422f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1c29466`](https://github.com/chen-star/net_alpha/commit/1c29466e94fbcbe8bcca3e6aec345177ef2c3d45))
 
-* feat(audit): hygiene check — duplicate natural-key clusters ([`e911034`](https://github.com/chen-star/net_alpha/commit/e911034d24095f4298106a52759f90ed9f74e3b5))
+* feat(audit): hygiene check — duplicate natural-key clusters ([`943abc2`](https://github.com/chen-star/net_alpha/commit/943abc2d4eb2a07614951d713fcb7b4ed56e50e6))
 
-* feat(audit): hygiene check — orphan sells ([`6dbe94f`](https://github.com/chen-star/net_alpha/commit/6dbe94f0f84c97fcb1e6bd2bd0d36f6cd9ac40ec))
+* feat(audit): hygiene check — orphan sells ([`bd44ad8`](https://github.com/chen-star/net_alpha/commit/bd44ad8cb7bb454d7c589cc456891d7e48ad7ace))
 
 * feat(audit): hygiene check — basis-unknown buys with inline fix form
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e9b16db`](https://github.com/chen-star/net_alpha/commit/e9b16db0f1ea62b6bb96404991e513b3ec59f4e2))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ed37ce2`](https://github.com/chen-star/net_alpha/commit/ed37ce272ea515584651178f8bdf2401a81cf36f))
 
 * feat(audit): hygiene check — unpriced symbols
 
@@ -2605,9 +2441,9 @@ Add _get_unpriced_symbols helper (monkeypatchable seam) and implement
 _check_unpriced to emit a warn-severity HygieneIssue per equity symbol
 with no cached price quote, with fix_url pointing to /holdings?symbol=X.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8397ae7`](https://github.com/chen-star/net_alpha/commit/8397ae731fd56ff19b6e20694dd01be2ecd4ff29))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7195d8d`](https://github.com/chen-star/net_alpha/commit/7195d8dcfb5c8c8c3e9a181120e5dee4fb73dcc8))
 
-* feat(audit): hygiene scaffold with HygieneIssue model + collect_issues dispatcher ([`b31fe7a`](https://github.com/chen-star/net_alpha/commit/b31fe7ac3c74dfcf7e41fc4ff811b8a2a87906a5))
+* feat(audit): hygiene scaffold with HygieneIssue model + collect_issues dispatcher ([`76ba3d6`](https://github.com/chen-star/net_alpha/commit/76ba3d6e9f54d9ad39eaca3d806c19af6893d0aa))
 
 * feat(audit): embed reconciliation strip on ticker page (lazy HTMX load)
 
@@ -2615,7 +2451,7 @@ Passes account_ids (derived from all accounts with trades for the symbol)
 to the ticker template; the template renders one hx-get=&#34;load&#34; div per
 account that triggers the /reconciliation/{symbol}?account_id= fragment.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`96570a9`](https://github.com/chen-star/net_alpha/commit/96570a9b856869a8dbf5b00311965d2404873536))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ec7a5cd`](https://github.com/chen-star/net_alpha/commit/ec7a5cdcaa58e1688d352275613ddc1c9e45c9b6))
 
 * feat(audit): /reconciliation/{symbol} route + strip + diff fragments
 
@@ -2623,7 +2459,7 @@ Appends GET /reconciliation/{symbol}?account_id=&amp;expanded= to audit_routes,
 renders _reconciliation_strip.html (match/near_match/diff states with HTMX
 investigate button) or _reconciliation_diff.html (per-lot table with collapse).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1eb8f31`](https://github.com/chen-star/net_alpha/commit/1eb8f31c55eaa7eb2eca8e579c1a8a9050b90872))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d13fd71`](https://github.com/chen-star/net_alpha/commit/d13fd71c26145baad6bc37e6311cdbf366caf522))
 
 * feat(audit): per_lot_diffs() with cause hints
 
@@ -2631,7 +2467,7 @@ Appends LotDiff model, per_lot_diffs(), and _cause_hint() to
 reconciliation.py; pairs broker G/L lots against net-alpha sell
 trades by close date and returns deltas with heuristic cause labels.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d8d30c1`](https://github.com/chen-star/net_alpha/commit/d8d30c11cc7f733affb2094b5d915757e2b6ad6a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1921056`](https://github.com/chen-star/net_alpha/commit/192105675ccee6375d1a3a832382a592686ac73a))
 
 * feat(audit): reconcile() with tolerance + status enum
 
@@ -2639,20 +2475,20 @@ Adds ReconciliationResult + reconcile() comparing net_alpha realized P/L
 against broker G/L lots, classifying results as MATCH / NEAR_MATCH / DIFF /
 UNAVAILABLE based on a configurable tolerance threshold (default $0.50).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4555c55`](https://github.com/chen-star/net_alpha/commit/4555c5557ee96a93bcb0eb8d9c275a8672c763cf))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1f32e96`](https://github.com/chen-star/net_alpha/commit/1f32e96e15cb3782c09c476b24f576e071ed8312))
 
-* feat(audit): broker provider registry ([`9f363ce`](https://github.com/chen-star/net_alpha/commit/9f363ce5a5631e85b75f6e446435a9402f36886b))
+* feat(audit): broker provider registry ([`15b2628`](https://github.com/chen-star/net_alpha/commit/15b262803494cd2dc7764777c8f2a65b90031b92))
 
 * feat(audit): SchwabGLProvider over existing get_gl_lots_for_ticker
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`da643b7`](https://github.com/chen-star/net_alpha/commit/da643b7f021b9f23cc4c08eb52a6ea7130869b4e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`30cb22d`](https://github.com/chen-star/net_alpha/commit/30cb22d89b17c7ce2227bc0c53ab9c6fc7846110))
 
 * feat(audit): BrokerLot + BrokerGLProvider ABC
 
 Define normalized broker lot row and abstract provider interface for
 reconciliation. Supports flexibility across broker GL formats.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`325bf22`](https://github.com/chen-star/net_alpha/commit/325bf228f5a46f3d0072bb9bfc153a3e44b34fa8))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`51efb7d`](https://github.com/chen-star/net_alpha/commit/51efb7d9291f3e400f30d9d94d672e62c96e92e6))
 
 * feat(audit): wire provenance triggers into Portfolio KPIs and Ticker page
 
@@ -2663,11 +2499,11 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`32
 - Build RealizedPLRef per symbol in ticker_drilldown, decorate YTD Realized P/L
 - Add integration tests (TDD: 3 fail → 3 pass)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`68d54fc`](https://github.com/chen-star/net_alpha/commit/68d54fc66a9867c6fc81e8b46fb1d85253491fe4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6b91ec9`](https://github.com/chen-star/net_alpha/commit/6b91ec9b6dc567b88001ec46dfb1dfa46333ed16))
 
 * feat(audit): provenance_link Jinja macro with HTMX trigger
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5cce62d`](https://github.com/chen-star/net_alpha/commit/5cce62d72a4a90553622f9b57f8d9e97396662f9))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`44c4899`](https://github.com/chen-star/net_alpha/commit/44c489966bf7ee39871b8b112b6b15bc23b3d900))
 
 * feat(audit): full provenance modal template with three sections
 
@@ -2675,28 +2511,28 @@ Replace placeholder _provenance_modal.html with the complete template
 rendering contributing trades, applied wash-sale adjustments (with rule
 citation), and contributing cash events in styled tables.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3eacc91`](https://github.com/chen-star/net_alpha/commit/3eacc91a5da9888ffcfa3d9ce464774fe355ecb9))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`610b8f6`](https://github.com/chen-star/net_alpha/commit/610b8f6a250ca1193b94ae83eecdd72316e63e9d))
 
 * feat(audit): GET /provenance/{encoded} returns trace fragment with error fallback
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`35b8f8d`](https://github.com/chen-star/net_alpha/commit/35b8f8dd010a915d2219a6fddd15596f2d7ae9ca))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4745359`](https://github.com/chen-star/net_alpha/commit/4745359cf4e75e7a905a974c073dae4ff3ae1a84))
 
-* feat(audit): re-export public API from package root ([`5d62e95`](https://github.com/chen-star/net_alpha/commit/5d62e95af5c7c32a1eae9fc60678b8c27d43c792))
+* feat(audit): re-export public API from package root ([`1537fc9`](https://github.com/chen-star/net_alpha/commit/1537fc985cc04edc88f4c100537bb26c48507070))
 
 * feat(audit): provenance_for handles CashRef and NetContributedRef variants
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5653357`](https://github.com/chen-star/net_alpha/commit/5653357c7b3c60edf083d72e11956d64fbe7f93c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4004180`](https://github.com/chen-star/net_alpha/commit/4004180d380781ffc9bd4f4bd33e9cfe1d1d1c31))
 
 * feat(audit): provenance_for handles WashImpactRef variant
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`168e534`](https://github.com/chen-star/net_alpha/commit/168e534c8ccf16f1a184bd43d824c43d2831ff47))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`53b0417`](https://github.com/chen-star/net_alpha/commit/53b041713c9b5ea59b5264b280c870e82c7423bd))
 
 * feat(audit): provenance_for handles UnrealizedPLRef variant
 
 Adds _unrealized_pl dispatcher and _account_id_match helper; refactors
 _trade_account_match to delegate to the new shared helper (DRY).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b8c841f`](https://github.com/chen-star/net_alpha/commit/b8c841fbc1bd8237f778703c82e23300389c52cd))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`50c0750`](https://github.com/chen-star/net_alpha/commit/50c0750b260dac64f06c639ab8171fbaee568bff))
 
 * feat(audit): provenance_for handles RealizedPLRef variant
 
@@ -2705,17 +2541,17 @@ variant _realized_pl, which filters repo.all_trades() by period,
 symbol, and account_id to build a ProvenanceTrace with signed amounts
 and a human-readable metric_label.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`180d1d7`](https://github.com/chen-star/net_alpha/commit/180d1d778072820b2f43869342ec493707ff2c47))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c7c7388`](https://github.com/chen-star/net_alpha/commit/c7c738871c5e8400b02235a2cdcbf95b3d0f3258))
 
 * feat(audit): add ProvenanceTrace, ContributingTrade, AppliedAdjustment types
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f7add98`](https://github.com/chen-star/net_alpha/commit/f7add98055533a6a5b5ae889533ce028f27653d4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`76fb429`](https://github.com/chen-star/net_alpha/commit/76fb42946c650498129f5615aa892a1f2ac19834))
 
 * feat(audit): add MetricRef discriminated union + base64 encoding
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`538422b`](https://github.com/chen-star/net_alpha/commit/538422bf388c91bb357302309b55df094ef4084b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9bfcff5`](https://github.com/chen-star/net_alpha/commit/9bfcff531a8eaf7ba1b48919768b77bf631b5adf))
 
-* feat(audit): scaffold audit package with shared test fixture ([`0384521`](https://github.com/chen-star/net_alpha/commit/03845211d031646418e25d766f22afb547fb6b27))
+* feat(audit): scaffold audit package with shared test fixture ([`2f3ea76`](https://github.com/chen-star/net_alpha/commit/2f3ea76030950cec3aa9111d8f6460d0f16a1843))
 
 ### Fix
 
@@ -2726,7 +2562,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`538422b`](htt
 - POST /audit/set-basis now triggers stitch + recompute_all_violations and
   invalidates the badge cache so engine state matches the DB immediately.
 - Export reconcile, collect_issues, and related types from audit/__init__.py
-  per the plan&#39;s stable-import-path contract. ([`70973bd`](https://github.com/chen-star/net_alpha/commit/70973bdeb0eb1cc5748d2c0e3a1048b8d0a726dc))
+  per the plan&#39;s stable-import-path contract. ([`d4932c9`](https://github.com/chen-star/net_alpha/commit/d4932c953c26162c01bd886e9e97c00a81c7a45c))
 
 ### Refactor
 
@@ -2735,23 +2571,23 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`538422b`](htt
 Eliminates the last N+1 in _unrealized_pl (was iterating list_accounts() per
 open lot). All three dispatcher branches now share one helper.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e6b7507`](https://github.com/chen-star/net_alpha/commit/e6b75077aca12f45a62ea0f541b2bceeec57576d))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`75e6414`](https://github.com/chen-star/net_alpha/commit/75e6414a9ae71e2573ff44df881d1636dcfd74de))
 
 * refactor(audit): hoist all_trades lookup + lift Repository/Trade imports to top
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`953be61`](https://github.com/chen-star/net_alpha/commit/953be611663f9400a00cb7c7ec4f803386284eee))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`08dd71b`](https://github.com/chen-star/net_alpha/commit/08dd71b8c0b0152b75f5d578741fe48dacfa9875))
 
-* refactor(audit): lift seed_import helper into conftest for reuse ([`e7bd860`](https://github.com/chen-star/net_alpha/commit/e7bd8603a22f4047268e9563d821c610e2362e8b))
+* refactor(audit): lift seed_import helper into conftest for reuse ([`1dc613f`](https://github.com/chen-star/net_alpha/commit/1dc613f548c8bac2735d46b213c35d27be4f71ac))
 
 ### Style
 
-* style(audit): move pytest import to module top in test_metric_ref_encoding ([`49ed3a6`](https://github.com/chen-star/net_alpha/commit/49ed3a63fa00844c8da1fdd5e683ec48665a0048))
+* style(audit): move pytest import to module top in test_metric_ref_encoding ([`6322e1a`](https://github.com/chen-star/net_alpha/commit/6322e1a90e80fdf7c0ccb254ee8985a7f8e82467))
 
 ### Test
 
 * test(audit): phase-1 smoke test — provenance + reconciliation + hygiene
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e39cb5b`](https://github.com/chen-star/net_alpha/commit/e39cb5b3cc237977785ec96f6054b7832e8a5394))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9be039d`](https://github.com/chen-star/net_alpha/commit/9be039dfd73bd5b98e7e5353f8b1c38f82f4e925))
 
 ### Unknown
 
@@ -2780,7 +2616,7 @@ Section 1c — Data hygiene queue:
 Smoke test exercises all three end-to-end. 603 passing, 1 skipped, zero
 regressions.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`17ecf85`](https://github.com/chen-star/net_alpha/commit/17ecf85e314342dc203d75ef1c7762ba3d919fd6))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2b9bd7f`](https://github.com/chen-star/net_alpha/commit/2b9bd7f5a419a87da89df658776c4209308df341))
 
 
 ## v0.21.0 (2026-04-27)
@@ -2842,18 +2678,18 @@ Tests: ~750 LOC of new coverage across brokers, db, detector, stitch,
 positions, holdings routes, plus a new tests/ingest/test_option_parser.py
 for the corp-action ticker regression.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b0ade79`](https://github.com/chen-star/net_alpha/commit/b0ade79dfe1eec5453e210f36b03d272430686a9))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`67282c0`](https://github.com/chen-star/net_alpha/commit/67282c06be3d6b2f00ef3fb190c32b44886f18cb))
 
 
 ## v0.20.1 (2026-04-27)
 
 ### Chore
 
-* chore: update agent instructions and coverage ([`09436a9`](https://github.com/chen-star/net_alpha/commit/09436a98d268dbd9e1c2adc157226cf5bd39dd7a))
+* chore: update agent instructions and coverage ([`11c82a2`](https://github.com/chen-star/net_alpha/commit/11c82a2ec4802b001d3e9b10aa7b3d02b404a169))
 
 ### Ci
 
-* ci: fix tests by installing all extras ([`e75da23`](https://github.com/chen-star/net_alpha/commit/e75da23913fa563783844667b722aa96252ca7d9))
+* ci: fix tests by installing all extras ([`0915b39`](https://github.com/chen-star/net_alpha/commit/0915b39a3d839cd5cc470930e3ac34769f98f745))
 
 ### Fix
 
@@ -2870,73 +2706,60 @@ The drop-zone&#39;s `#csv-input` now declares `form=&#34;import-form&#34;` and t
 modal form carries that id. The modal&#39;s redundant file picker, &#34;Choose
 files&#34; button, file-chip, and re-attach hint are removed.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0d31044`](https://github.com/chen-star/net_alpha/commit/0d31044fadc473f21097e483272e81a43a886e79))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1a7d4c0`](https://github.com/chen-star/net_alpha/commit/1a7d4c022d1dd246d9b04706abe541b26386b6cc))
 
 
 ## v0.20.0 (2026-04-27)
 
 ### Chore
 
-* chore: ruff format + lift in-function imports to module top ([`06ceb80`](https://github.com/chen-star/net_alpha/commit/06ceb80ac672ab7f542012f2e8b07e8ed2fbd2dc))
-
-### Documentation
-
-* docs(plan): cash flow &amp; balance tracking implementation plan
-
-23 tasks, TDD-ordered, covering: CashEvent domain model, cash_events
-table + v8 migration, gross_cash_impact column on trades, Schwab
-parser cash-event extraction (13 action types), repository methods,
-pure-function computation layer (build_cash_balance_series,
-compute_cash_kpis, cash_allocation_slice), Portfolio web layout
-update, fixture-based integration tests using both ST and LT CSVs.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e16caa1`](https://github.com/chen-star/net_alpha/commit/e16caa14ad8e8e925de100f3ef6b455b9520d123))
+* chore: ruff format + lift in-function imports to module top ([`4331f86`](https://github.com/chen-star/net_alpha/commit/4331f867f8aa7c5648e16c24ba62153def5c69b3))
 
 ### Feature
 
-* feat(web): show cash_event_count on imports list summary and detail row ([`1ecf0ab`](https://github.com/chen-star/net_alpha/commit/1ecf0ab8906f8b970fac652b4e744c1eae32acec))
+* feat(web): show cash_event_count on imports list summary and detail row ([`1a56a47`](https://github.com/chen-star/net_alpha/commit/1a56a47a7c5d9c55bb656954e2bc06ed234a4164))
 
-* feat(web): portfolio body — equity + cash side by side, allocation full width ([`3253a2e`](https://github.com/chen-star/net_alpha/commit/3253a2e345c3ea1b9399a524ea3e90db23025aa1))
+* feat(web): portfolio body — equity + cash side by side, allocation full width ([`5e3d60c`](https://github.com/chen-star/net_alpha/commit/5e3d60ca4fee504746edb805165e04e6dfc6a5be))
 
 * feat(portfolio): allocation donut shows Cash slice
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e588ac9`](https://github.com/chen-star/net_alpha/commit/e588ac9eb73d58027bd06bcff02a9ef0271016d8))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1a47e3e`](https://github.com/chen-star/net_alpha/commit/1a47e3e5473f1c9f0cf6917e3f9655290e7f2300))
 
-* feat(web): add Cash / Net contributed / Growth KPI tiles ([`596a458`](https://github.com/chen-star/net_alpha/commit/596a458de50f8c85aca4fc740666868e4e0b3acf))
+* feat(web): add Cash / Net contributed / Growth KPI tiles ([`945e162`](https://github.com/chen-star/net_alpha/commit/945e16252845957bc2c452ec0d35bed6669cee44))
 
-* feat(web): add _portfolio_cash_curve.html — ApexCharts balance + contributions ([`2f806af`](https://github.com/chen-star/net_alpha/commit/2f806affdd73c4f75450b1480a7f807ea14a98b9))
+* feat(web): add _portfolio_cash_curve.html — ApexCharts balance + contributions ([`348c0ee`](https://github.com/chen-star/net_alpha/commit/348c0eeae1bcb29196e199824d7bb4613fb671b7))
 
 * feat(web): wire cash KPIs/points/slice into /portfolio/body context
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2dc909e`](https://github.com/chen-star/net_alpha/commit/2dc909eba9ee8dd687f6051cebd460121ae538e1))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`bc19806`](https://github.com/chen-star/net_alpha/commit/bc1980691fb6349216a6f0150f4e16014a7e5c30))
 
-* feat(portfolio): cash_allocation_slice for donut integration ([`f7a4dfe`](https://github.com/chen-star/net_alpha/commit/f7a4dfebd3a7d3e781a654d73f654fb6b532e395))
+* feat(portfolio): cash_allocation_slice for donut integration ([`234c422`](https://github.com/chen-star/net_alpha/commit/234c422c5d91da81a8bf30a841226a60bc81835e))
 
-* feat(portfolio): compute_cash_kpis ([`c490b09`](https://github.com/chen-star/net_alpha/commit/c490b09c884ef0d04badb4dfd1cf647b40e28739))
+* feat(portfolio): compute_cash_kpis ([`2ea7503`](https://github.com/chen-star/net_alpha/commit/2ea7503ab1c0cc432e2bb85833b586035501093b))
 
-* feat(portfolio): add CashFlowKPIs dataclass alongside CashBalancePoint ([`cba5218`](https://github.com/chen-star/net_alpha/commit/cba5218630abd576ac0b8e000ead09be53979e90))
+* feat(portfolio): add CashFlowKPIs dataclass alongside CashBalancePoint ([`dff17aa`](https://github.com/chen-star/net_alpha/commit/dff17aa41279cd8390741b3a9308adf47c024828))
 
 * feat(portfolio): build_cash_balance_series with period and account scoping
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`55b6058`](https://github.com/chen-star/net_alpha/commit/55b60584688cb0f8571f79f5df49557b287da04f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`25b768f`](https://github.com/chen-star/net_alpha/commit/25b768f198821efac8dbac993da2b522f4a3d9dd))
 
-* feat(import): wire cash_events through add_import and Schwab callers ([`3fca8fd`](https://github.com/chen-star/net_alpha/commit/3fca8fd98b85d822455b6c2adae1e9d84a426235))
+* feat(import): wire cash_events through add_import and Schwab callers ([`aa3dee0`](https://github.com/chen-star/net_alpha/commit/aa3dee08c2331a227befe41b15e445c7a431959a))
 
-* feat(schwab): emit CashEvent for transfers, dividends, interest, fees, sweeps ([`e5690f4`](https://github.com/chen-star/net_alpha/commit/e5690f436abf35b07a42375c6014c72a7d9d7c1d))
+* feat(schwab): emit CashEvent for transfers, dividends, interest, fees, sweeps ([`134fe4b`](https://github.com/chen-star/net_alpha/commit/134fe4b2204043dec5084b69d2e5fb986a14be5f))
 
-* feat(schwab): populate gross_cash_impact from CSV Amount on every trade ([`6933d1d`](https://github.com/chen-star/net_alpha/commit/6933d1dcbf63068dbda7e7ed22b309480061b09e))
+* feat(schwab): populate gross_cash_impact from CSV Amount on every trade ([`a629b19`](https://github.com/chen-star/net_alpha/commit/a629b19eb4981799dd8b55ed412483ca420d8f21))
 
-* feat(models): add ImportResult for parser return value ([`348c6e4`](https://github.com/chen-star/net_alpha/commit/348c6e483e5688aa4adca38b2fa9d51a1c86a848))
+* feat(models): add ImportResult for parser return value ([`bea7e36`](https://github.com/chen-star/net_alpha/commit/bea7e36ac15b77c11e4f0a4ac668877e97fe7f9b))
 
-* feat(repo): list_cash_events with account/date scoping ([`b7e52f0`](https://github.com/chen-star/net_alpha/commit/b7e52f06e9effa6a0b07b6595a4b564b63a5a0cd))
+* feat(repo): list_cash_events with account/date scoping ([`832f870`](https://github.com/chen-star/net_alpha/commit/832f8708f9c8bc3d41f59c8a6c4cc45788daf699))
 
-* feat(repo): add_cash_events with dedup on (account_id, natural_key) ([`25494d6`](https://github.com/chen-star/net_alpha/commit/25494d68b97b4392076ef7e4d0f6e722aa89742d))
+* feat(repo): add_cash_events with dedup on (account_id, natural_key) ([`2d682d3`](https://github.com/chen-star/net_alpha/commit/2d682d3c5da5f4a474cf9f19bb8536f5d5bc5946))
 
-* feat(db): v7→v8 migration for cash_events + gross_cash_impact + cash_event_count ([`0ebbc94`](https://github.com/chen-star/net_alpha/commit/0ebbc94009854e2545c48ccdcf269bcf06a31ec7))
+* feat(db): v7→v8 migration for cash_events + gross_cash_impact + cash_event_count ([`f63828b`](https://github.com/chen-star/net_alpha/commit/f63828b13d1f7c37427ee6fdeb1530c467e87e9d))
 
-* feat(db): add cash_events table; add gross_cash_impact and cash_event_count columns ([`35b5159`](https://github.com/chen-star/net_alpha/commit/35b51590d29e726134fc10534dcdaaee6dcab428))
+* feat(db): add cash_events table; add gross_cash_impact and cash_event_count columns ([`e401c91`](https://github.com/chen-star/net_alpha/commit/e401c914fb47fe9f8fb8fe309763e37d4dcee647))
 
-* feat(models): add CashEvent domain model with natural_key dedup ([`25a9c5f`](https://github.com/chen-star/net_alpha/commit/25a9c5f4a0a6dd5ca7cbf76b87a8b4a79b9a941e))
+* feat(models): add CashEvent domain model with natural_key dedup ([`5b0e645`](https://github.com/chen-star/net_alpha/commit/5b0e645bbebdf5aaf3c49bfc54cf90e778ae4308))
 
 ### Fix
 
@@ -2954,61 +2777,22 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`55b6058`](htt
    distributions are widely used; the previous mapping silently lost them
    as &#34;Unknown action&#34; warnings).
 
-Adds regression tests for each. ([`7d6ce33`](https://github.com/chen-star/net_alpha/commit/7d6ce334a1b5022735ce0b1c56da59c8b6574bac))
+Adds regression tests for each. ([`7769970`](https://github.com/chen-star/net_alpha/commit/776997020345d98f38e832af48ae809f7ed755c2))
 
-* fix: skip option-side actions in parse_full; clarify add_import commit ordering ([`fccd8c3`](https://github.com/chen-star/net_alpha/commit/fccd8c3cf063dca8c2664874b471952628b8b241))
+* fix: skip option-side actions in parse_full; clarify add_import commit ordering ([`72590a1`](https://github.com/chen-star/net_alpha/commit/72590a1e959ce4e17db4e4d088ba58dfe227f739))
 
-* fix(repo): cascade-delete cash_events on remove_import ([`73704ad`](https://github.com/chen-star/net_alpha/commit/73704ad6f3a7f33971c198f3ebed99de5f360fa7))
+* fix(repo): cascade-delete cash_events on remove_import ([`531175d`](https://github.com/chen-star/net_alpha/commit/531175d65f8bab4ee9fd618f9bee559bbc6e0f8a))
 
 ### Test
 
 * test(integration): cash events round-trip through both Schwab CSV fixtures
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9f0b6f7`](https://github.com/chen-star/net_alpha/commit/9f0b6f7fd454c6d8b3345f3a9cbede0648cf92b0))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a8e0667`](https://github.com/chen-star/net_alpha/commit/a8e06674a368efc08df4bbac3b288d37b2770e1d))
 
-* test(fixtures): add anonymized Schwab Short/Long Term Transactions CSVs ([`ce173d3`](https://github.com/chen-star/net_alpha/commit/ce173d33363690f89219c1bb561e2ae0be1cb1c9))
+* test(fixtures): add anonymized Schwab Short/Long Term Transactions CSVs ([`406d8fc`](https://github.com/chen-star/net_alpha/commit/406d8fc4dfc9926717cbf219e26e29055731dbec))
 
 
 ## v0.19.0 (2026-04-27)
-
-### Documentation
-
-* docs(spec): cash flow &amp; balance tracking design
-
-Persist non-trade Schwab CSV rows (transfers, dividends, interest,
-sweeps, fees) into a new cash_events table. Compute running cash
-balance, net contributions vs growth, and cash share of portfolio.
-Surface in the existing Portfolio page as a new chart alongside the
-realized P&amp;L curve, plus KPI tiles and a cash slice in the allocation
-donut.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9fe73d2`](https://github.com/chen-star/net_alpha/commit/9fe73d2f7470c090609e10b23a405ccc60448b7a))
-
-* docs: implementation plan for portfolio bugfixes + wash sales merge + splits
-
-Maps the spec into 13 task-by-task steps in 5 phases. Phase 1 quick UI
-fixes (items 1+6), Phase 2 Alpine extraction (item 4), Phase 3 page
-merge with redirects (item 2), Phase 4 split handling subsystem (item 5),
-Phase 5 e2e + manual smoke.
-
-Notes architectural refinement: lots are regenerated on every
-recompute_all_violations call, so split + manual-override application
-must happen as the final step inside that function (not just at import).
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d4de4a0`](https://github.com/chen-star/net_alpha/commit/d4de4a088898e5cf4eac595c3bec8b3f05b9a3d4))
-
-* docs: portfolio bugfixes + wash sales merge + split handling spec
-
-Covers items 1, 2, 4, 5, 6 from the user&#39;s bug/improvement report:
-- Holdings table column cleanup ($ + % unrealized)
-- Multi-symbol filter dropdown extraction to a named Alpine component
-- Toolbar form action stays on current page
-- Detail+Calendar merge into /wash-sales (table/calendar toggle)
-- Stock-split handling via Yahoo + manual lot-edit fallback
-
-Item 3 (Portfolio panel additions) deferred per user request.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fc7f685`](https://github.com/chen-star/net_alpha/commit/fc7f6852600f7ca1b4476b43bd6f39df91cfcca8))
 
 ### Feature
 
@@ -3019,7 +2803,7 @@ reason=&#39;manual&#39;. apply_manual_overrides replays the latest edit per
 (trade_id, field) at the end of every recompute, so manual edits survive
 re-import / unimport / future recomputes.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`31f57ff`](https://github.com/chen-star/net_alpha/commit/31f57ff4a9d514e50c3cb598a9eb826ab0c3b09e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2257a5e`](https://github.com/chen-star/net_alpha/commit/2257a5ec44c256607ea8894f0176756428035b28))
 
 * feat(splits): auto-sync on first import of a new symbol (item 5)
 
@@ -3028,7 +2812,7 @@ sync_splits for those symbols so existing wash-sale data stays accurate
 without manual intervention. Re-imports of known symbols do NOT trigger
 fetch -- avoids burning network on every CSV upload.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`251bf76`](https://github.com/chen-star/net_alpha/commit/251bf76d5089abde4dc8ae8e93d865a26364536e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`69062d2`](https://github.com/chen-star/net_alpha/commit/69062d2842cb490025487cfd6e19b94b1cd7c6b1))
 
 * feat(splits): /splits/sync endpoint + toolbar Sync splits button (item 5)
 
@@ -3036,7 +2820,7 @@ PricingService.sync_splits orchestrates fetch -&gt; upsert -&gt; apply. Honors
 the prices.enable_remote flag (returns error_symbols when disabled, no
 network call). Toolbar button POSTs symbols=ALL and reloads the page.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2105171`](https://github.com/chen-star/net_alpha/commit/2105171a98d74982758cec2c3e75f8aaa14dd5d2))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9b48931`](https://github.com/chen-star/net_alpha/commit/9b489312722570ad7b00d893a666e3b38ec635d2))
 
 * feat(engine): apply_splits as final step of recompute (item 5)
 
@@ -3044,7 +2828,7 @@ apply_splits mutates regenerated lots whose date is before each known
 split&#39;s ex-date. Multiplies qty by ratio, preserves total basis (basis is
 dollar, not per-share). Idempotent via (trade_id, split_id) check in
 lot_overrides. Wired into recompute_all_violations so re-imports and
-unimports keep the split-adjustment intact. ([`861c924`](https://github.com/chen-star/net_alpha/commit/861c9248932c64b6bdbb8325c9a3675e3690b4a4))
+unimports keep the split-adjustment intact. ([`e772201`](https://github.com/chen-star/net_alpha/commit/e7722013fa7ff953c83ce182aff06707fdc211cc))
 
 * feat(pricing): YahooPriceProvider.fetch_splits (item 5)
 
@@ -3052,14 +2836,14 @@ Wraps yfinance.Ticker.splits with the same error-swallowing pattern as
 get_quotes (per-symbol failures return empty list, never raise). Default
 on the ABC is to return [] so providers without split data are unaffected.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`50ec151`](https://github.com/chen-star/net_alpha/commit/50ec1517a4a5979549cd588f01e2b8af541b804a))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`71251bf`](https://github.com/chen-star/net_alpha/commit/71251bf642033729e9ccf1181e5fc7a4db00d7f6))
 
 * feat(db): repository methods for splits + lot_overrides (item 5)
 
 add_split is idempotent on (symbol, split_date). lot_overrides keyed by
 trade_id since lots are regenerated on every recompute.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`51d4885`](https://github.com/chen-star/net_alpha/commit/51d4885d8082aa6a0f5701f1930eb0aafd3b8bee))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f2b8a37`](https://github.com/chen-star/net_alpha/commit/f2b8a370a8cf7e4dca809e693751d28b1f6d17e0))
 
 * feat(db): schema v7 — splits + lot_overrides tables (item 5)
 
@@ -3067,7 +2851,7 @@ splits: keyed (symbol, split_date) UNIQUE, holds ratio + source + fetched_at.
 lot_overrides: audit trail of qty/basis changes, keyed by trade_id (stable
 across recompute since lots are regenerated). split_id FK lets apply_split
 check idempotency. Also bumps hardcoded version assertions in older migration
-tests from 6 → 7. ([`299179b`](https://github.com/chen-star/net_alpha/commit/299179b64e62201bd5ed27f74c76c58fbab54c8f))
+tests from 6 → 7. ([`0fa6c37`](https://github.com/chen-star/net_alpha/commit/0fa6c37f57bde1deea89d0cd3e56deefaf31452b))
 
 * feat(web): merge Detail+Calendar into /wash-sales (item 2)
 
@@ -3076,7 +2860,7 @@ filter bar (ticker, account, year, confidence). Old paths 301-redirect
 preserving query string. Top-nav &#39;Detail&#39; becomes &#39;Wash sales&#39;;
 &#39;Calendar&#39; link removed.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a00ffcc`](https://github.com/chen-star/net_alpha/commit/a00ffcc0ee6d82186e7ee4fd9483a38d25ac6d3d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`be3dc16`](https://github.com/chen-star/net_alpha/commit/be3dc164c7a4d02c0da47d3f86430604bb36c86c))
 
 * feat(web): drop Realized col, add % to Unrealized on Holdings (item 1)
 
@@ -3084,7 +2868,7 @@ The {period} Realized column was redundant with Portfolio KPIs and the
 Timeline. Unrealized now stacks dollar and percent inline, color-coded
 together. Percent is unrealized_pl / open_cost.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`663c1e2`](https://github.com/chen-star/net_alpha/commit/663c1e28b641bf0f03f21ca8dd0dff470e505f6c))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`62f545d`](https://github.com/chen-star/net_alpha/commit/62f545d66ae0ca020a17b2bc544d56b237f4aea0))
 
 ### Fix
 
@@ -3105,7 +2889,7 @@ The lot_overrides table for splits is now purely an audit log.
 Adds regression test test_split_survives_repeated_recompute that
 fails without this fix.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`38a77dd`](https://github.com/chen-star/net_alpha/commit/38a77dd0f84d78d70e7486dcecbb8f17d1e83f50))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`950f988`](https://github.com/chen-star/net_alpha/commit/950f988c166b5c8714ffef014b7d35c4adfe1501))
 
 * fix: route CLI lot replacement through recompute_all_violations
 
@@ -3119,7 +2903,7 @@ after apply_splits so manual edits retain precedence after a sync.
 Polish: SplitRow imports lifted to module top, repository methods now
 return list[Split]/list[LotOverride] instead of bare list.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6138f3e`](https://github.com/chen-star/net_alpha/commit/6138f3ee623f028be7631e53d4885fd1556a7f53))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`07be6ca`](https://github.com/chen-star/net_alpha/commit/07be6ca1e8e3a188eb0c8f30d3e199b89d5d269f))
 
 * fix(web): extract holdings symbol filter to named Alpine component (item 4)
 
@@ -3129,7 +2913,7 @@ JS file as a named Alpine.data(&#39;symbolFilter&#39;, ...) component, so the on
 inline content is the call site. Also fixes the dropdown&#39;s mis-positioning
 (secondary symptom of the same parse failure).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5bfa80f`](https://github.com/chen-star/net_alpha/commit/5bfa80f9dbbaa9ec0884abc3d902dbdb6a5a6841))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3aad68f`](https://github.com/chen-star/net_alpha/commit/3aad68fbb7dc8833dc599f9bc45b99d435be90d3))
 
 * fix(web): toolbar form stays on the current page (item 6)
 
@@ -3137,7 +2921,7 @@ Previously the period/account toolbar always submitted to /, bouncing the
 user from /holdings back to portfolio when they changed Account. Now each
 page passes its own toolbar_action.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2374ec0`](https://github.com/chen-star/net_alpha/commit/2374ec0de6e995d4e2ce9987c51e7ed70d2bed7d))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8638369`](https://github.com/chen-star/net_alpha/commit/86383690b6cc1262af05d59799c766a7a7a11579))
 
 ### Test
 
@@ -3148,7 +2932,7 @@ full lifecycle of import -&gt; sync -&gt; unimport -&gt; reimport. Includes fix
 to remove_import to clean up lot_overrides for deleted trades, allowing
 splits to be re-applied on reimport.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a161b94`](https://github.com/chen-star/net_alpha/commit/a161b944bec4944679db45f87f42e957c8bd7d71))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0806438`](https://github.com/chen-star/net_alpha/commit/0806438cdd4dc7644bfee6ce3a2bf3026231fefa))
 
 
 ## v0.18.0 (2026-04-27)
@@ -3157,46 +2941,17 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a1
 
 * chore: sync uv.lock to pyproject v0.17.0 wash-alpha version
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`16a73e5`](https://github.com/chen-star/net_alpha/commit/16a73e58c64c250a80de127484cc293e3879039b))
-
-### Documentation
-
-* docs: implementation plans for portfolio polish + perf and manual trade CRUD
-
-Two TDD-structured plans (one per spec). Plan A is 7 tasks; Plan B is
-14 tasks. Each task lists exact files, complete code, exact test
-commands, and a commit step.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fa508ad`](https://github.com/chen-star/net_alpha/commit/fa508ad485e6aad2e5787844bfff8b68f6a5939b))
-
-* docs: manual trade CRUD spec (Spec B of 2)
-
-Adds add/edit/delete trades on the per-symbol Timeline. Imported
-transfer rows become editable for date + basis only; manual rows
-are full CRUD. Re-import idempotency preserved via stable
-natural_key on edits.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7dc1cdc`](https://github.com/chen-star/net_alpha/commit/7dc1cdcec52d331b4ade88bcdbb04a3210882783))
-
-* docs: portfolio polish + perf spec (Spec A of 2)
-
-Bundles five UI/perf items: consolidate /portfolio fragment fan-out,
-move holdings to /holdings tab, multi-select symbol filter, restyle
-import-modal file input, equal-width equity/allocation panels.
-
-Manual trade CRUD on the timeline is intentionally deferred to Spec B.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b9b675e`](https://github.com/chen-star/net_alpha/commit/b9b675ef7f3bae8bc9db96ace47e9733c2eef041))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cf192c4`](https://github.com/chen-star/net_alpha/commit/cf192c43fa5dca0d18088ef4034053efb1ba679a))
 
 ### Feature
 
-* feat(web): Add-trade button + per-row affordances + form modals on ticker page ([`124a128`](https://github.com/chen-star/net_alpha/commit/124a128fa57030bfc8916ef4416769a7fa937b41))
+* feat(web): Add-trade button + per-row affordances + form modals on ticker page ([`8b096bf`](https://github.com/chen-star/net_alpha/commit/8b096bf5e270e9b92ea11c0896073659d9feb7b6))
 
-* feat(web): POST /trades/{id}/delete ([`881e59e`](https://github.com/chen-star/net_alpha/commit/881e59e302a3b7d97cc68d4da791e3b33c174d5e))
+* feat(web): POST /trades/{id}/delete ([`055e9f6`](https://github.com/chen-star/net_alpha/commit/055e9f6a76e23fb0cba769fc68420c003b453b8c))
 
-* feat(web): POST /trades/{id}/edit-manual ([`def487a`](https://github.com/chen-star/net_alpha/commit/def487ae02e5f05ec3836e24971114f7580035bc))
+* feat(web): POST /trades/{id}/edit-manual ([`ee29587`](https://github.com/chen-star/net_alpha/commit/ee29587080d4068bbe0e6e9f67da3c1aa55050c8))
 
-* feat(web): POST /trades/{id}/edit-transfer ([`12b97c1`](https://github.com/chen-star/net_alpha/commit/12b97c1aee41cfab684ee83db997083de9880a20))
+* feat(web): POST /trades/{id}/edit-transfer ([`dbc8066`](https://github.com/chen-star/net_alpha/commit/dbc80663cc10247963f1b97a9fecbb9daa7faa99))
 
 * feat(web): POST /trades — create manual trade
 
@@ -3204,21 +2959,21 @@ Form-driven endpoint mapping Buy/Sell/Transfer In/Transfer Out to
 (action, basis_source), validates account/date/quantity, calls
 repo.create_manual_trade, and redirects to /ticker/{symbol}.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`38ca20d`](https://github.com/chen-star/net_alpha/commit/38ca20d9da605723b0da1df57d3f9ba08f437329))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b5bde27`](https://github.com/chen-star/net_alpha/commit/b5bde27dadcde8b0e55d521ddc0ed319c587a7a0))
 
 * feat(web): Timeline shows Transfer In/Out + provenance badges
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`939de89`](https://github.com/chen-star/net_alpha/commit/939de898b4bcd3dd5265412ed83b3dfc62270c6c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`001b606`](https://github.com/chen-star/net_alpha/commit/001b606583e4fdf18c65d0eaac40b24e912ac577))
 
-* feat(web): display_action helper for transfer-aware Timeline labels ([`45f7706`](https://github.com/chen-star/net_alpha/commit/45f7706805a5453ea2b128b211dd48f1df35b250))
+* feat(web): display_action helper for transfer-aware Timeline labels ([`76b03cc`](https://github.com/chen-star/net_alpha/commit/76b03ccc93465702aea6d7202dd52b9bf258165d))
 
-* feat(db): Repository.delete_manual_trade ([`94417cc`](https://github.com/chen-star/net_alpha/commit/94417cc378235a78f3ab53681b92acaca1b374a3))
+* feat(db): Repository.delete_manual_trade ([`d7a26c6`](https://github.com/chen-star/net_alpha/commit/d7a26c6a73adb8d623a1077bcdef0eaeacc249d1))
 
-* feat(db): Repository.update_manual_trade ([`3685ea3`](https://github.com/chen-star/net_alpha/commit/3685ea3af7303026befb5b8200683e5e0b6b4f61))
+* feat(db): Repository.update_manual_trade ([`b7bb8fb`](https://github.com/chen-star/net_alpha/commit/b7bb8fb8d6fa2f37c73d805f0ec1151270aa1cdf))
 
-* feat(db): Repository.update_imported_transfer (date + basis|proceeds, immutable natural_key) ([`14e4be5`](https://github.com/chen-star/net_alpha/commit/14e4be591f4f7a58fb55facba23cfd3533990776))
+* feat(db): Repository.update_imported_transfer (date + basis|proceeds, immutable natural_key) ([`8111a2c`](https://github.com/chen-star/net_alpha/commit/8111a2c9623e76500bc9d6f5977a738d65654019))
 
-* feat(db): Repository.create_manual_trade + manual: natural_key namespace ([`0e8a4a4`](https://github.com/chen-star/net_alpha/commit/0e8a4a4202c6eb2acff912f00ca2bd3019c67e27))
+* feat(db): Repository.create_manual_trade + manual: natural_key namespace ([`34451d8`](https://github.com/chen-star/net_alpha/commit/34451d8daed4280afac37edf0ff8e430d1744a1c))
 
 * feat(models): Trade.is_manual + Trade.transfer_basis_user_set
 
@@ -3227,45 +2982,45 @@ model and TradeRow SQLModel, relax TradeRow.import_id to nullable, and
 propagate both flags through _row_to_trade so all_trades() carries them.
 Update v5→v6 migration tests to reflect completed Task 2 state.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ac08d3c`](https://github.com/chen-star/net_alpha/commit/ac08d3c8e19778dfe2c17f4ecb24042c74e60b0b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3ebc0e4`](https://github.com/chen-star/net_alpha/commit/3ebc0e4cb2d5c10768dec3d499fa29ef64983ed7))
 
 * feat(db): v5→v6 — add trades.is_manual + transfer_basis_user_set; nullable import_id
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1414a3c`](https://github.com/chen-star/net_alpha/commit/1414a3cabacaf2393a46fa4f2a9a49eee44cafee))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4acec5f`](https://github.com/chen-star/net_alpha/commit/4acec5f3bfeea9ecc6a863a51da3edcbab1f9a6a))
 
 * feat(web): multi-select symbol filter popover on holdings table
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a388fcf`](https://github.com/chen-star/net_alpha/commit/a388fcf9c4c314380c1888da1c91c7c9d5602a1c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fc62c7a`](https://github.com/chen-star/net_alpha/commit/fc62c7aaa0a372c42e9bb5901b8ddf88495a0fb7))
 
-* feat(web): replace ?q= with ?symbols= multi-select filter on /portfolio/positions ([`ea460fc`](https://github.com/chen-star/net_alpha/commit/ea460fc765d01bcccb2c0534987b1834514bab81))
+* feat(web): replace ?q= with ?symbols= multi-select filter on /portfolio/positions ([`6da8634`](https://github.com/chen-star/net_alpha/commit/6da8634346e27606f31893e7b042e748f84a8d88))
 
 * feat(web): /holdings page + nav link
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`be60977`](https://github.com/chen-star/net_alpha/commit/be60977cf2940491b706a6de017bf3592fbc3193))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`de0467f`](https://github.com/chen-star/net_alpha/commit/de0467fb1adf05794f91d83da70c5cb5f8ee72c1))
 
-* feat(web): single-fragment load on /portfolio (5x→1x request) ([`9a496c2`](https://github.com/chen-star/net_alpha/commit/9a496c2d923019b43bb8215c6503fe12e1a832bc))
+* feat(web): single-fragment load on /portfolio (5x→1x request) ([`6d7806e`](https://github.com/chen-star/net_alpha/commit/6d7806e20bd1b18fe37770b229ba268312a8ca72))
 
 * feat(web): /portfolio/body bundled fragment
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ef99fc2`](https://github.com/chen-star/net_alpha/commit/ef99fc2fb1d0bf7a5347c53a328e107941be5cea))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`04936bc`](https://github.com/chen-star/net_alpha/commit/04936bcaf79257a7dc0df296dab51a2b775c3a82))
 
-* feat(web): styled Choose Files button + file-count chip in import modal ([`5467aa9`](https://github.com/chen-star/net_alpha/commit/5467aa995c5b7c8ff167b85447a46bea3decc8cc))
+* feat(web): styled Choose Files button + file-count chip in import modal ([`5ea9c5e`](https://github.com/chen-star/net_alpha/commit/5ea9c5ed6e6454faab93f37fae102d9813bd8100))
 
-* feat(web): equalize equity-curve and allocation panel widths ([`f5e03aa`](https://github.com/chen-star/net_alpha/commit/f5e03aa75a4222727288a5a3c538bf873629f28e))
+* feat(web): equalize equity-curve and allocation panel widths ([`4c94c9f`](https://github.com/chen-star/net_alpha/commit/4c94c9f76f649ee9d6d0948d944dc79308998991))
 
 ### Fix
 
 * fix(web): account allow-list from list_accounts; add duplicate-count and violation-removal tests
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`678f6f9`](https://github.com/chen-star/net_alpha/commit/678f6f92a181140f67cbebd6738db0e8151bcfa9))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fc4384f`](https://github.com/chen-star/net_alpha/commit/fc4384f8726dd58a1ba0e694144e1d4fa21e8864))
 
-* fix(test): include is_manual + transfer_basis_user_set in raw trade insert ([`d93f05b`](https://github.com/chen-star/net_alpha/commit/d93f05b848fb6937e0db93779d787e4d738caffb))
+* fix(test): include is_manual + transfer_basis_user_set in raw trade insert ([`bc154bd`](https://github.com/chen-star/net_alpha/commit/bc154bd71a1d3408a8ab3f1a53bad6205c1ab018))
 
 * fix(web): correct hx-target and smart-quote regressions in holdings table fragment
 
 Replace legacy hx-target=&#34;#portfolio-positions&#34; with &#34;#holdings-positions&#34; across all Show/Pagesize/Pagination buttons; fix Unicode smart quotes (U+201C/201D) on the status-hint span class attribute; add two regression tests covering both issues.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b4f95b4`](https://github.com/chen-star/net_alpha/commit/b4f95b4aeee76b9a106564ac020fe1eb49607d5d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`af8fb92`](https://github.com/chen-star/net_alpha/commit/af8fb92fed5d1b9d549e65b2050a6dd74cd96e4b))
 
 ### Test
 
@@ -3274,7 +3029,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b4f95b4`](htt
 End-to-end check that editing a transfer-in row&#39;s date+basis survives
 a re-import of the same Schwab CSV (idempotent dedup via natural_key).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ab83c0c`](https://github.com/chen-star/net_alpha/commit/ab83c0c4ddaf4f5a4c84edccb1b208dea830c8bc))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`abb426b`](https://github.com/chen-star/net_alpha/commit/abb426befc281b28159cf1dc5aac0fd13b8df822))
 
 ### Unknown
 
@@ -3291,7 +3046,7 @@ Includes:
 - repository/migrations/tables/domain: small alignment changes
 - AGENTS.md / CLAUDE.md: stale GitNexus stat refresh
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e36e663`](https://github.com/chen-star/net_alpha/commit/e36e66371f820a86db1ad8d1c9a7f5f0b9ee92f4))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d7c56d8`](https://github.com/chen-star/net_alpha/commit/d7c56d84b286ead08ba75c13343b121cbeb2099b))
 
 
 ## v0.17.0 (2026-04-27)
@@ -3311,15 +3066,13 @@ Following the cross-cutting code review, addresses five gaps:
 - `tests/web/test_static.py`: add file-existence smoke tests for the
   ApexCharts vendor JS+CSS and `charts.js`.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`42f7c54`](https://github.com/chen-star/net_alpha/commit/42f7c547b124e6232a3e1ea9bf5aa770f8724367))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c25aa76`](https://github.com/chen-star/net_alpha/commit/c25aa7675b1239afd4ac77958d9b8dbe246a0d35))
 
-* chore: remove treemap module, template, tests, and TreemapTile model ([`df70598`](https://github.com/chen-star/net_alpha/commit/df70598d623516d0800bcea09e9c62bf0d568a61))
+* chore: remove treemap module, template, tests, and TreemapTile model ([`73ec625`](https://github.com/chen-star/net_alpha/commit/73ec625df9227f37311531ff2fa3c9d19615939a))
 
 ### Documentation
 
-* docs: UI visual theme design spec + implementation plan ([`937eda8`](https://github.com/chen-star/net_alpha/commit/937eda842f0af6d23b80d5bbff332424333ce98a))
-
-* docs: update CLAUDE.md — treemap → allocation + add wash_watch in portfolio module list ([`8f0a69c`](https://github.com/chen-star/net_alpha/commit/8f0a69c0a2f0c994d63ca3d7f2346f16cd82f2b2))
+* docs: update CLAUDE.md — treemap → allocation + add wash_watch in portfolio module list ([`b5777b4`](https://github.com/chen-star/net_alpha/commit/b5777b461c5ad7f245188dbaf6240052c339dcd6))
 
 ### Feature
 
@@ -3338,7 +3091,7 @@ Apply Apple-dark design tokens across all remaining web pages:
 - error.html: panel centered card, text-label-2 detail, bg-surface-2 traceback,
   btn-ghost &#34;← Back&#34; link
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c83ac70`](https://github.com/chen-star/net_alpha/commit/c83ac707e17b93000942235bfa19ee914d9ab8e3))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fa9daee`](https://github.com/chen-star/net_alpha/commit/fa9daeec51e8009270a2f15ff4490301eff90240))
 
 * feat(web): restyle imports + drop zone + modal + toast
 
@@ -3347,11 +3100,11 @@ wrappers, dashed drop zone with rgba border, surface-variant modal,
 pos/warn colours in detection cards, label-uc labels, and bg-pos toast.
 Adds {% set active_page = &#39;imports&#39; %} for topbar highlight.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`93ac3f5`](https://github.com/chen-star/net_alpha/commit/93ac3f56634d84092824588d2e7a6c1b5a63ad19))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b115a71`](https://github.com/chen-star/net_alpha/commit/b115a71816f4064546f1a0c5700b02692a3435be))
 
 * feat(web): restyle calendar pages — Apple-system colors for ribbons + dots
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5717400`](https://github.com/chen-star/net_alpha/commit/571740003c17ce74151c8edd783e8c3283c2a6de))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4f9aade`](https://github.com/chen-star/net_alpha/commit/4f9aade9ee60037faf00febac19556ac4395127e))
 
 * feat(web): restyle positions table, toolbar, empty state under new tokens
 
@@ -3361,11 +3114,11 @@ seg-active, label-uc, btn, text-pos/neg, text-label-*, bg-surface-*).
 Adds ticker-initial icon block to the Symbol cell and hairline borders
 on select and pagination controls via CSS variable.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7502a6d`](https://github.com/chen-star/net_alpha/commit/7502a6d3dcf601a9eb4afe5b88b1ae6bb310d896))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8e7e1e5`](https://github.com/chen-star/net_alpha/commit/8e7e1e590b3e896a0fd27376ab8758f84a1ea72a))
 
-* feat(web): equity curve via ApexCharts area chart with violet &#39;+ unrealized&#39; marker ([`632df82`](https://github.com/chen-star/net_alpha/commit/632df82ddffce85e92e5bfc8f3aaf39112f8b1a5))
+* feat(web): equity curve via ApexCharts area chart with violet &#39;+ unrealized&#39; marker ([`7efac86`](https://github.com/chen-star/net_alpha/commit/7efac865b5b1587e0f620f1ad7353e10a1bcb904))
 
-* feat(web): shared ApexCharts dark theme + merge helper at /static/charts.js ([`b69d2ad`](https://github.com/chen-star/net_alpha/commit/b69d2adb62fc626382d573b688bdeca91b7a1679))
+* feat(web): shared ApexCharts dark theme + merge helper at /static/charts.js ([`952357f`](https://github.com/chen-star/net_alpha/commit/952357ff4c72c5962bad53241d1ba03495753159))
 
 * feat(web): /portfolio/wash-watch fragment route
 
@@ -3373,11 +3126,11 @@ Wire recent_loss_closes() into a GET handler that renders the
 _portfolio_wash_watch.html partial; supports ?account= and ?window_days=
 query params.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`220926a`](https://github.com/chen-star/net_alpha/commit/220926ada0a45246b45f1376ef025eecba2153df))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9a7dc8c`](https://github.com/chen-star/net_alpha/commit/9a7dc8cf307783094928bf8d0aa7ab8815bdafff))
 
 * feat(web): wash-watch partial — countdown rows w/ red→amber→green safe-bar
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4218b2c`](https://github.com/chen-star/net_alpha/commit/4218b2ccfe4b66c6ca411d5c195d602d12b1fb93))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a0b7266`](https://github.com/chen-star/net_alpha/commit/a0b72666792489168dd35d17ef4c3db33d77fc7e))
 
 * feat(portfolio): recent_loss_closes — wash-sale watch aggregation
 
@@ -3386,27 +3139,27 @@ aggregates sell trades with negative realized P/L in the last N days,
 collapsed per symbol (most recent close, summed loss), sorted by
 close_date desc.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5e7d58c`](https://github.com/chen-star/net_alpha/commit/5e7d58c0157a5d788f00cf3b6e348b4ded905c2b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e1b5b4a`](https://github.com/chen-star/net_alpha/commit/e1b5b4a6365cdf9af379862b2dc67e21a7b0450a))
 
-* feat(web): portfolio.html — equity+allocation row, wash-watch slot, drop treemap ([`e511171`](https://github.com/chen-star/net_alpha/commit/e5111715583cbe13e136dd044b4858eec0c894d8))
+* feat(web): portfolio.html — equity+allocation row, wash-watch slot, drop treemap ([`31ac787`](https://github.com/chen-star/net_alpha/commit/31ac7879325f575116a1ae48bb3640c8ee431869))
 
-* feat(web): replace /portfolio/treemap route with /portfolio/allocation ([`83d2717`](https://github.com/chen-star/net_alpha/commit/83d2717f3d2e57c0a61919a40a8b4f3c7384f3be))
+* feat(web): replace /portfolio/treemap route with /portfolio/allocation ([`0bd2fed`](https://github.com/chen-star/net_alpha/commit/0bd2fedbfd9b7c02bf092d94aaabb2fc81a196e5))
 
-* feat(web): allocation partial — donut + concentration stats + ranked chips ([`e8ee4ba`](https://github.com/chen-star/net_alpha/commit/e8ee4ba6eb54c89d734e217e9df63a05a541f166))
+* feat(web): allocation partial — donut + concentration stats + ranked chips ([`27ec5dd`](https://github.com/chen-star/net_alpha/commit/27ec5ddc6dd206c841912ce90e3e788ef2079044))
 
 * feat(portfolio): build_allocation — donut/leaderboard view + concentration stats
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9feac9d`](https://github.com/chen-star/net_alpha/commit/9feac9d0f267692808cb1ad3c07d7211d18e97c7))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`063c7dc`](https://github.com/chen-star/net_alpha/commit/063c7dc4b9d1fa88f86a1043d580982f068b3ff5))
 
 * feat(web): combined hero KPI cards (Realized/Unrealized) + Open$/Wash mini
 
 Collapse 6-card KPI partial into 4-card grid-cols-12 layout: Realized hero (4 cols, kpi-hero halo) with YTD+Lifetime side-by-side, Unrealized hero (4 cols), Open position $ mini (2 cols), Wash impact mini (2 cols). Route now calls compute_wash_impact and passes wash_impact_total + wash_violations into template context.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a90b19f`](https://github.com/chen-star/net_alpha/commit/a90b19f4375c70d58644c07959210897bee6996d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bf49788`](https://github.com/chen-star/net_alpha/commit/bf497883e6cb18c76bd28233ac186a197e30f831))
 
 * feat(web): restyle base.html — vibrancy topbar, Inter+JBM, ApexCharts include
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`414984d`](https://github.com/chen-star/net_alpha/commit/414984dd94c1cdd036dc0dd3d6c444dd8ea06ef6))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`536640d`](https://github.com/chen-star/net_alpha/commit/536640dc9eb2242a28df83cf7e51dd6c34e3ed5a))
 
 * feat(web): @font-face Inter+JBM, type scale, full component library
 
@@ -3419,7 +3172,7 @@ Replace minimal @layer components with full design-system library:
 back-compat aliases; var(--color-*) used directly where @apply text-*
 tokens conflict with Tailwind v4 reserved names.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9c93d2c`](https://github.com/chen-star/net_alpha/commit/9c93d2cfa53c603754fe81cbdf4b4e02e897f0a0))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`564feb2`](https://github.com/chen-star/net_alpha/commit/564feb211a02b8142ce3ac052d7a6eaa504e4ffd))
 
 * feat(web): new Apple-dark color tokens, font stack, radii in tailwind config
 
@@ -3430,15 +3183,15 @@ syntax required by pytailwindcss 0.1.4 (bundles Tailwind v4). Back-compat
 aliases (confirmed, probable, unclear, primary, secondary, accent, ink) keep
 existing templates rendering until they are restyled.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`51d6aa3`](https://github.com/chen-star/net_alpha/commit/51d6aa3d56ea9aed73149f40f9766bd125e34593))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`804a90c`](https://github.com/chen-star/net_alpha/commit/804a90cc07f11b7a101ea84912747a77872005a6))
 
 * feat(web): vendor ApexCharts 3.51 (no runtime npm)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7c73a80`](https://github.com/chen-star/net_alpha/commit/7c73a80acff31729d8f9b6d580eb0c762c007c09))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ad44837`](https://github.com/chen-star/net_alpha/commit/ad448379992368cc5ef2fdc7949a32cbdb20771f))
 
 * feat(web): vendor Inter and JetBrains Mono woff2 fonts
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0b98082`](https://github.com/chen-star/net_alpha/commit/0b980820b753017200db5c5ab352c7193a5d5916))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f60fb20`](https://github.com/chen-star/net_alpha/commit/f60fb200926ce980ab9bbb734eb89a1c7db12b33))
 
 
 ## v0.16.1 (2026-04-26)
@@ -3453,64 +3206,60 @@ year on a fresh slate) was missing — the page header still selected it via
 today.year, but the user couldn&#39;t pick it from the dropdown. Union trade
 years and the current year into the option set, sorted newest-first.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1facffc`](https://github.com/chen-star/net_alpha/commit/1facffc422a63dd9d11d0fcfef7d8a55bec573d4))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`621fc36`](https://github.com/chen-star/net_alpha/commit/621fc36671c0f168a7ff4d480fe6041fe2e9f31c))
 
 
 ## v0.16.0 (2026-04-26)
 
 ### Chore
 
-* chore: ruff format ([`1a75a54`](https://github.com/chen-star/net_alpha/commit/1a75a54c2cfc215b374e860f083c3e64967f8816))
+* chore: ruff format ([`9d7efb5`](https://github.com/chen-star/net_alpha/commit/9d7efb5efbc74385f8731d669f5079aa9034528c))
 
 * chore: refresh gitnexus index stats and sync uv.lock to v0.15.1
 
 - AGENTS.md / CLAUDE.md: gitnexus symbol/relationship/flow counts
   refreshed after the Phase 2 merge (1711 → 2436 symbols).
 - uv.lock: wash-alpha version pinned to 0.15.1 to match the
-  current pyproject.toml after the semantic-release bump (8d09649).
+  current pyproject.toml after the semantic-release bump (d5deb1a).
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f0a3421`](https://github.com/chen-star/net_alpha/commit/f0a34219d1078dacc5b4c9d83d9ce70046301501))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`431e05f`](https://github.com/chen-star/net_alpha/commit/431e05f39ae3f762db02adde98430e1b752050cf))
 
 ### Feature
 
-* feat(web): detail page totals bar + group-by-ticker + Lag/Source columns ([`1ced6b8`](https://github.com/chen-star/net_alpha/commit/1ced6b83eee82dca73e67fcdcc5b6a90ca01b812))
+* feat(web): detail page totals bar + group-by-ticker + Lag/Source columns ([`887c676`](https://github.com/chen-star/net_alpha/commit/887c6767ac17d0284177db66f09e28bdaa9677c7))
 
-* feat(web): wire detail summary, ticker grouping, and lag-sort into the route ([`26279a1`](https://github.com/chen-star/net_alpha/commit/26279a18fb19690a89b2803b14d75ea88bd12525))
+* feat(web): wire detail summary, ticker grouping, and lag-sort into the route ([`bb2a9b8`](https://github.com/chen-star/net_alpha/commit/bb2a9b8c0f5d39eef19923a628d0dfa06dcd304b))
 
-* feat(portfolio): add detail-page aggregations (summary, grouping, lag, source label) ([`3f92461`](https://github.com/chen-star/net_alpha/commit/3f92461b7b22aa16b191301a30a690fab88feef4))
+* feat(portfolio): add detail-page aggregations (summary, grouping, lag, source label) ([`889a422`](https://github.com/chen-star/net_alpha/commit/889a4225158557e010869df0e2fd04e7b3c75723))
 
-* feat(web): POST /sim dispatches BUY/SELL with date and renders new result partials ([`55dd5ca`](https://github.com/chen-star/net_alpha/commit/55dd5ca4b6914ea20c1a77d1741e8eecdb219d1d))
+* feat(web): POST /sim dispatches BUY/SELL with date and renders new result partials ([`d10180f`](https://github.com/chen-star/net_alpha/commit/d10180f37121c8497ddafe3ce0f049c0c72a7af9))
 
-* feat(web): unified sim form with BUY/SELL toggle and date picker ([`c71cfee`](https://github.com/chen-star/net_alpha/commit/c71cfeebc0c068c2bf33cf17678235d87a4e6d19))
+* feat(web): unified sim form with BUY/SELL toggle and date picker ([`4acd4e0`](https://github.com/chen-star/net_alpha/commit/4acd4e04e3747ba0e8e2e630e253aebe36e0f4a4))
 
 * feat(engine): add simulate_buy() pure function with per-account FIFO loss matching
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5a9f544`](https://github.com/chen-star/net_alpha/commit/5a9f5444fc2f8414145156f52c16a7ae8cb6670f))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`885de0f`](https://github.com/chen-star/net_alpha/commit/885de0f2004353bab348be50132580de06eb49ce))
 
 ### Test
 
-* test(web): integration coverage for detail totals, grouping, lag sort, source ([`749e798`](https://github.com/chen-star/net_alpha/commit/749e798df8af50dc768253c5d629704fa3012364))
+* test(web): integration coverage for detail totals, grouping, lag sort, source ([`1c15594`](https://github.com/chen-star/net_alpha/commit/1c15594b5c701665f897bd8d733fc062352c71ad))
 
-* test(web): cover BUY/SELL dispatch on POST /sim with date and account ([`6fd7cc1`](https://github.com/chen-star/net_alpha/commit/6fd7cc179af282b1f82831e197d5545c8d6274a4))
+* test(web): cover BUY/SELL dispatch on POST /sim with date and account ([`38ebab6`](https://github.com/chen-star/net_alpha/commit/38ebab65dd542a4d56309c16e040a20e7049647c))
 
-* test(engine): add ETF substantially-identical pair tests for simulate_buy ([`e830d6e`](https://github.com/chen-star/net_alpha/commit/e830d6e1e92d348be560dfdae8e2cd7ce7a6395c))
+* test(engine): add ETF substantially-identical pair tests for simulate_buy ([`bb7d644`](https://github.com/chen-star/net_alpha/commit/bb7d644aeddd037f7f9ebe03f1ead9a517b689b4))
 
-* test(engine): add day-0/30/31 boundary tests for simulate_buy ([`d05dafb`](https://github.com/chen-star/net_alpha/commit/d05dafb9af7dd8625879fe2d9bd15f76d5f1472a))
+* test(engine): add day-0/30/31 boundary tests for simulate_buy ([`59a883a`](https://github.com/chen-star/net_alpha/commit/59a883a4075d4243b8b03b361f7ddd5c2dbb3c45))
 
 ### Unknown
 
-* Merge branch &#39;feat/phase3-sim-and-detail&#39; — Phase 3 sim BUY support + detail enhancements ([`cedb4de`](https://github.com/chen-star/net_alpha/commit/cedb4de9ef35f846f2dd945c960f4af6fae7e99a))
+* Merge branch &#39;feat/phase3-sim-and-detail&#39; — Phase 3 sim BUY support + detail enhancements ([`e5ac750`](https://github.com/chen-star/net_alpha/commit/e5ac7503938c6f47450cfa4f51068b7a222a3205))
 
 
 ## v0.15.1 (2026-04-26)
 
-### Documentation
-
-* docs(plan): add Phase 3 implementation plan — sim BUY support + detail enhancements ([`eedc08c`](https://github.com/chen-star/net_alpha/commit/eedc08cf4bea9a7991a55584ff37ef96d2acb364))
-
 ### Feature
 
-* feat(domain): add SimBuyMatch and SimulationBuyOption models ([`5020ec1`](https://github.com/chen-star/net_alpha/commit/5020ec1d88e60d8f798b10b81b5649c5be2e9eea))
+* feat(domain): add SimBuyMatch and SimulationBuyOption models ([`d8afe49`](https://github.com/chen-star/net_alpha/commit/d8afe496301ef20a63b7f4f2a4482714a9bbe2f7))
 
 ### Fix
 
@@ -3535,7 +3284,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5a
   unpriced tickers. Falls back to &#34;—&#34; only when every equity lot
   is unpriced (true no-data).
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f125d21`](https://github.com/chen-star/net_alpha/commit/f125d2116cae9b52160a048957a4537ffa00e933))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b166af6`](https://github.com/chen-star/net_alpha/commit/b166af6d83a318d434894147c78d585027b1774d))
 
 
 ## v0.15.0 (2026-04-26)
@@ -3544,51 +3293,45 @@ Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f1
 
 * chore: ruff format
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4b2c2f4`](https://github.com/chen-star/net_alpha/commit/4b2c2f4ba403c1c0c8a790d10b0b5a640e1215fc))
-
-### Documentation
-
-* docs(plan): add Phase 2 implementation plan — calendar dual-ribbon + imports notes
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ae0befc`](https://github.com/chen-star/net_alpha/commit/ae0befcd8a7c151118d4b0174b87b821a3d50bc4))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`223b2b8`](https://github.com/chen-star/net_alpha/commit/223b2b8360aaf05d316a21f57ace4de2d5e1ec9c))
 
 ### Feature
 
 * feat(web): embed drop zone on imports page
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e90fd9f`](https://github.com/chen-star/net_alpha/commit/e90fd9f04be6076a82358edf0afec39f0ef302c6))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f6e7a0b`](https://github.com/chen-star/net_alpha/commit/f6e7a0b0e998eb58274e223123c557c99c71a396))
 
 * feat(web): GET /imports/{id}/detail returns expandable detail panel
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a8e5bc1`](https://github.com/chen-star/net_alpha/commit/a8e5bc136eb4f7554e57324dd8f0cde750956241))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7d03ca5`](https://github.com/chen-star/net_alpha/commit/7d03ca5afb701468af474129ddb5dafb8ad8e363))
 
 * feat(web): summary line and expand toggle on imports table
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a266084`](https://github.com/chen-star/net_alpha/commit/a2660845d5161d550900d980fd7f74f3069dd23b))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`492c682`](https://github.com/chen-star/net_alpha/commit/492c68237b282f348a7dcc7b6a4ff0265b0268c2))
 
 * feat(web): compute and persist import aggregates on upload
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6d50d85`](https://github.com/chen-star/net_alpha/commit/6d50d85721b97249abaae3b55c7b1dff02f6400b))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`47d7fe8`](https://github.com/chen-star/net_alpha/commit/47d7fe88fc35cdfc2a367d5f9366bc78d034c124))
 
 * feat(db): backfill import aggregates on init_db
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`aedb6da`](https://github.com/chen-star/net_alpha/commit/aedb6da80c911c15641c3f1540afb3a1390b0cc0))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3321bcb`](https://github.com/chen-star/net_alpha/commit/3321bcb68191d1a24da2231c83acdfd5bdd44e2a))
 
 * feat(import): backfill aggregates for legacy import rows
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`14cbae7`](https://github.com/chen-star/net_alpha/commit/14cbae782c8668fcc262042f173d213cee1bceb8))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`068882c`](https://github.com/chen-star/net_alpha/commit/068882c962e48b74e15f1de0dbc8a688f776153a))
 
 * feat(repo): persist and surface import aggregates; add get_import_detail
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1fef99f`](https://github.com/chen-star/net_alpha/commit/1fef99f88745efe7c3c21c4146d354f4d6139968))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1086698`](https://github.com/chen-star/net_alpha/commit/1086698d9f285667c767d9593f79ceba5997200b))
 
 * feat(import): add compute_import_aggregates pure function
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1b86c73`](https://github.com/chen-star/net_alpha/commit/1b86c73a13a9bf4de211ee2768dce09249e7efd8))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b8fde73`](https://github.com/chen-star/net_alpha/commit/b8fde7324ab0b55480f0e6d129defd3fd72e79b1))
 
 * feat(models): extend ImportRecord and ImportSummary with v4 aggregate fields
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1b3a334`](https://github.com/chen-star/net_alpha/commit/1b3a334b4b5f2c7ebba530c033e7a16bd25cec07))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3fb4e4f`](https://github.com/chen-star/net_alpha/commit/3fb4e4f06aac96c4deb22de91232f9beaf64a71e))
 
 * feat(db): schema v4 — add aggregate columns to imports
 
@@ -3597,68 +3340,68 @@ equity/option/expiry counts, parse warnings JSON) for the calendar
 imports Phase 2 backfill. Updates existing migration tests to use
 CURRENT_SCHEMA_VERSION instead of hard-coded version literals.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b1790ec`](https://github.com/chen-star/net_alpha/commit/b1790ecb1f00998d0ef970b2999ac9ae0d26abd8))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7895223`](https://github.com/chen-star/net_alpha/commit/789522353f5be7f4a7fabcff3211727f2dde6285))
 
 * feat(web): stack monthly P&amp;L ribbon above wash-sale dots
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7d6406c`](https://github.com/chen-star/net_alpha/commit/7d6406c7b5ab5ba2812691f7d98b47024eb7f90f))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`877ab57`](https://github.com/chen-star/net_alpha/commit/877ab5786bad699ab769f71f7b6af4ae499cbdb0))
 
 * feat(web): add monthly P&amp;L ribbon partial
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3c71190`](https://github.com/chen-star/net_alpha/commit/3c711901affc25b6c2a7fff94c602a415ed5a772))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ddcc096`](https://github.com/chen-star/net_alpha/commit/ddcc0963050b4c6487133561761e9727738e18d1))
 
 * feat(portfolio): add monthly_realized_pl aggregator
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a51885d`](https://github.com/chen-star/net_alpha/commit/a51885da610263f6867e96c036d808b093f6c747))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a12192a`](https://github.com/chen-star/net_alpha/commit/a12192aa05c7599ffb246acf8d41cd56611b9613))
 
 * feat(portfolio): add MonthlyPnl model for calendar ribbon
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`30aaea6`](https://github.com/chen-star/net_alpha/commit/30aaea621e174d919c8d95b66d74f32d3bf4a137))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`deb2f5f`](https://github.com/chen-star/net_alpha/commit/deb2f5f446493181ac0d8dede10fb56933407bcd))
 
 ### Test
 
 * test(db): cover v3 → v4 migration
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3b4b652`](https://github.com/chen-star/net_alpha/commit/3b4b6529846969417da46f4ee2251f0e4b1c82c4))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`769d491`](https://github.com/chen-star/net_alpha/commit/769d49178b7c135a6bfd977cb05d0c7d5ae7fd90))
 
 * test(portfolio): add Dec-31/Jan-1 boundary case for monthly_realized_pl
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0d1f170`](https://github.com/chen-star/net_alpha/commit/0d1f170f8a56c8532008de0e1e5d331fc1ea8ed1))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7718274`](https://github.com/chen-star/net_alpha/commit/77182746d6a1e9d76570d374f80d35143ca5c851))
 
 ### Unknown
 
 * Merge branch &#39;feat/calendar-imports-phase2&#39; — Phase 2 calendar dual-ribbon + imports notes
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`53fac1f`](https://github.com/chen-star/net_alpha/commit/53fac1f2837801910f3178798eda3dfd69a497e8))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6de4f7f`](https://github.com/chen-star/net_alpha/commit/6de4f7fc4bcd16ff15543b0420ce2cba0a2f9e39))
 
 
 ## v0.14.0 (2026-04-26)
 
 ### Chore
 
-* chore: sync uv.lock wash-alpha version to 0.13.1 ([`6162d66`](https://github.com/chen-star/net_alpha/commit/6162d6632e20779687d1a9f2957411166451dee3))
+* chore: sync uv.lock wash-alpha version to 0.13.1 ([`4cd3ef3`](https://github.com/chen-star/net_alpha/commit/4cd3ef3e5a900e459e456610dd687f2dccb1ea38))
 
 * chore: apply ruff format to phase 1 files
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0b63a93`](https://github.com/chen-star/net_alpha/commit/0b63a93d00241c8d07488b75dabb97a792de21ac))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`faa7a6a`](https://github.com/chen-star/net_alpha/commit/faa7a6a915805ebe3fb0b7ef426406a19696ba8f))
 
-* chore(web): remove obsolete dashboard route, templates, and tests ([`1de3ee7`](https://github.com/chen-star/net_alpha/commit/1de3ee74acb6d107a71f31c6d3bd503532682729))
+* chore(web): remove obsolete dashboard route, templates, and tests ([`01608a4`](https://github.com/chen-star/net_alpha/commit/01608a43ca82b7ee713583e6cb55decfa1a78d9c))
 
 * chore(deps): add yfinance to [ui] extras for portfolio pricing
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9e1111d`](https://github.com/chen-star/net_alpha/commit/9e1111d0249aa1bf34fe9e629caaafd0eefabe6b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`259fe65`](https://github.com/chen-star/net_alpha/commit/259fe651dc4e13c2b6018d1b7337132212ec4b58))
 
 ### Documentation
 
-* docs(plan): add Phase 1 implementation plan — pricing foundation + portfolio
+* docs(spec): add UI/UX redesign design (portfolio + calendar + imports + sim + detail)
 
-25 bite-sized TDD tasks covering: yfinance dependency, ~/.net_alpha/config.yaml
-loader, schema v3 migration for price_cache, Pricing subsystem (Quote, ABC, cache,
-Yahoo provider, service), Portfolio modules (positions, P&amp;L/KPIs/wash-impact,
-treemap, equity curve, lot aging), Portfolio page shell + 5 HTMX fragments,
-disclaimer footer, dashboard removal, CLAUDE.md updates, and an end-to-end test.
+Three-phase plan: pricing foundation + portfolio rebuild, calendar dual-ribbon
++ imports relocation/notes, sim buy support + detail enhancements. Documents
+the no-remote-prices policy relaxation (symbols only, configurable).
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c969619`](https://github.com/chen-star/net_alpha/commit/c969619ff4f6cef5cd5ad12c5152ddda13d4dd1d))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1b66473`](https://github.com/chen-star/net_alpha/commit/1b66473d12a60a5293f133cfe74cf53ba3c091a6))
+
+* docs(claude.md): document price-data privacy + portfolio modules + UI conventions ([`804731a`](https://github.com/chen-star/net_alpha/commit/804731ad1086f1496b0b094aae8a44d8af7e1f28))
 
 * docs(spec): add UI/UX redesign design (portfolio + calendar + imports + sim + detail)
 
@@ -3666,103 +3409,83 @@ Three-phase plan: pricing foundation + portfolio rebuild, calendar dual-ribbon
 + imports relocation/notes, sim buy support + detail enhancements. Documents
 the no-remote-prices policy relaxation (symbols only, configurable).
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b799929`](https://github.com/chen-star/net_alpha/commit/b7999294fda0f7d63498e400592416d586c03b24))
-
-* docs(claude.md): document price-data privacy + portfolio modules + UI conventions ([`b402bf0`](https://github.com/chen-star/net_alpha/commit/b402bf075c1581cb6b6f716ac593c11c35925669))
-
-* docs(plan): add Phase 1 implementation plan — pricing foundation + portfolio
-
-25 bite-sized TDD tasks covering: yfinance dependency, ~/.net_alpha/config.yaml
-loader, schema v3 migration for price_cache, Pricing subsystem (Quote, ABC, cache,
-Yahoo provider, service), Portfolio modules (positions, P&amp;L/KPIs/wash-impact,
-treemap, equity curve, lot aging), Portfolio page shell + 5 HTMX fragments,
-disclaimer footer, dashboard removal, CLAUDE.md updates, and an end-to-end test.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5bfe284`](https://github.com/chen-star/net_alpha/commit/5bfe28497d8d36cde6070a1b7b3276da5018418d))
-
-* docs(spec): add UI/UX redesign design (portfolio + calendar + imports + sim + detail)
-
-Three-phase plan: pricing foundation + portfolio rebuild, calendar dual-ribbon
-+ imports relocation/notes, sim buy support + detail enhancements. Documents
-the no-remote-prices policy relaxation (symbols only, configurable).
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b5fcf92`](https://github.com/chen-star/net_alpha/commit/b5fcf92928a454c74315658143bbaaa77ccab8ba))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`eb5700a`](https://github.com/chen-star/net_alpha/commit/eb5700adca9ee802fc0d1481007ae7ef16e336ec))
 
 ### Feature
 
 * feat(web): add &#39;Prices via Yahoo Finance&#39; footer line when remote prices enabled
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f37b4d2`](https://github.com/chen-star/net_alpha/commit/f37b4d2fa2e5f87520bc64ca1d73ac450f8e523e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d1cfdaa`](https://github.com/chen-star/net_alpha/commit/d1cfdaa6a29e4ba26153ea3a66d5fe0233072516))
 
-* feat(web): treemap, equity curve, wash-impact, lot-aging fragments ([`5778838`](https://github.com/chen-star/net_alpha/commit/5778838522e7ec65f5d6e347bf3d232395c4b07e))
+* feat(web): treemap, equity curve, wash-impact, lot-aging fragments ([`036ed33`](https://github.com/chen-star/net_alpha/commit/036ed33bbffbeefd535c6619a54ab1dcd2ed6856))
 
 * feat(web): /portfolio/positions fragment + per-symbol table
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4f7b111`](https://github.com/chen-star/net_alpha/commit/4f7b11102af4c1c7a95ffb12369aca01147c6c5c))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4a79442`](https://github.com/chen-star/net_alpha/commit/4a794420a6e904a41bf402ff0f9b17f99eb3756d))
 
 * feat(web): /portfolio/kpis fragment + KPI partial
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c620f5d`](https://github.com/chen-star/net_alpha/commit/c620f5da874dd30003cfa568fb87a1218558753b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`102ab71`](https://github.com/chen-star/net_alpha/commit/102ab7144fb6fcaede347b8cdfdd372d528064fd))
 
 * feat(web): portfolio page shell with HTMX-loaded fragments + empty state
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`98b8dd6`](https://github.com/chen-star/net_alpha/commit/98b8dd657d259932af20dfaafa827359180dbea8))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8851203`](https://github.com/chen-star/net_alpha/commit/8851203e0c0a621abd8bf7e80f4e0806ec917d5f))
 
 * feat(portfolio): compute_wash_impact for portfolio mini-grid
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f478ef4`](https://github.com/chen-star/net_alpha/commit/f478ef49cec45b22ecd79dbb9cedb325e65e3b17))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`56032e5`](https://github.com/chen-star/net_alpha/commit/56032e5f30f43e6808830410333f357fdec3804b))
 
-* feat(portfolio): lot_aging — top-N lots crossing LTCG threshold ([`08fd319`](https://github.com/chen-star/net_alpha/commit/08fd319fcd7653a16d3000589975273a3765d363))
+* feat(portfolio): lot_aging — top-N lots crossing LTCG threshold ([`88d5571`](https://github.com/chen-star/net_alpha/commit/88d557144951c6a073e408a725fb837cc9394116))
 
 * feat(portfolio): equity curve — realized cumulative + present-day point
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b2ef8d0`](https://github.com/chen-star/net_alpha/commit/b2ef8d0a0be1130f7e050a27d9111649ae47efb8))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cb383e2`](https://github.com/chen-star/net_alpha/commit/cb383e2ee9831b8a722be53e9344776190f6d161))
 
 * feat(portfolio): slice-and-dice treemap layout
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0f03adf`](https://github.com/chen-star/net_alpha/commit/0f03adfac8c4f30e9ad73536fffc6560aa433370))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ea3be67`](https://github.com/chen-star/net_alpha/commit/ea3be6775904dc0c9a6f13d2874d784d82d9c794))
 
 * feat(portfolio): compute_kpis (period + lifetime, account-scoped)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`76c4614`](https://github.com/chen-star/net_alpha/commit/76c4614ab50dc3a882e907538fdb268fc50b8f34))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1babe96`](https://github.com/chen-star/net_alpha/commit/1babe966041fe1a8d61ea63b55c1d6325436f932))
 
 * feat(portfolio): compute_open_positions with account/period scoping
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f040f04`](https://github.com/chen-star/net_alpha/commit/f040f0487cc296115b1586f7738b9db750f7896f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2ffbfbc`](https://github.com/chen-star/net_alpha/commit/2ffbfbc5c4127fd896b4ed52afe193fa8ddd4088))
 
-* feat(portfolio): view-model dataclasses for positions/KPIs/charts ([`7ae3fef`](https://github.com/chen-star/net_alpha/commit/7ae3fefdaa83d678c80de6a34420462e5f545b38))
+* feat(portfolio): view-model dataclasses for positions/KPIs/charts ([`8ab0120`](https://github.com/chen-star/net_alpha/commit/8ab01202af8a9ef534f206dc9698095fbeb130a0))
 
 * feat(web): POST /prices/refresh — invalidate + refetch quotes
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8c0746c`](https://github.com/chen-star/net_alpha/commit/8c0746cb31d897fb77e07dd55765b84da141af5a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0b67abf`](https://github.com/chen-star/net_alpha/commit/0b67abfe69baeb92193a2ab375dcd362f9d3a510))
 
 * feat(web): wire PricingService into FastAPI app state and DI
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`39bfff0`](https://github.com/chen-star/net_alpha/commit/39bfff03a62061df2457b0f92880eb5f1048d3bc))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c5bddeb`](https://github.com/chen-star/net_alpha/commit/c5bddeb0302ab8dca72be1993c8cbee6730337b6))
 
 * feat(pricing): PricingService orchestrating provider + cache
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`598acfe`](https://github.com/chen-star/net_alpha/commit/598acfe5648b34227908bab6f2ac4119ee2e34da))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c26b74d`](https://github.com/chen-star/net_alpha/commit/c26b74d36dc1ddb0bfee9fbe320cc91b9fbfaa2c))
 
 * feat(pricing): YahooPriceProvider via yfinance + network test marker
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`310479d`](https://github.com/chen-star/net_alpha/commit/310479db6bf52397d25a451c4b22b558f60e3d78))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a1d4ff3`](https://github.com/chen-star/net_alpha/commit/a1d4ff34bbb3c7e94a8790337dc3542afac2402e))
 
 * feat(pricing): SQLite-backed PriceCache with TTL + stale detection
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ee90fbb`](https://github.com/chen-star/net_alpha/commit/ee90fbb030bc0e0a87becf2ed17520aaf723ecce))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`de48a4d`](https://github.com/chen-star/net_alpha/commit/de48a4d878cd7ea4b8163cb9b537ebdefbb4ad3f))
 
 * feat(pricing): Quote model and PriceProvider ABC
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3b812a3`](https://github.com/chen-star/net_alpha/commit/3b812a36d5c9bdd50d12b7660d53721c4bfb1c82))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`27f5010`](https://github.com/chen-star/net_alpha/commit/27f5010436c6a26898ffa34b3cc012551979f905))
 
 * feat(db): schema v3 — add price_cache table for pricing subsystem
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`93baf24`](https://github.com/chen-star/net_alpha/commit/93baf24f15d46fa3bed748fb7d58bde44679198d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`39f1fa7`](https://github.com/chen-star/net_alpha/commit/39f1fa7e706f55aa53e70cab0d1cd0d96e968c7e))
 
 * feat(config): PricingConfig + YAML loader from ~/.net_alpha/config.yaml
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2d80b15`](https://github.com/chen-star/net_alpha/commit/2d80b1563c894ad30265e78fce1dca46f7882bd6))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ab48329`](https://github.com/chen-star/net_alpha/commit/ab4832981164c71c075ed8a34f49960db757adc8))
 
 ### Fix
 
@@ -3780,17 +3503,17 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2d80b15`](htt
   it visually clear the chart is year-scoped regardless of toolbar period
 - Update test assertion to match new title-case heading text
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5de5ca0`](https://github.com/chen-star/net_alpha/commit/5de5ca05c3af771fe0ec58693125c81f7517a763))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`540c091`](https://github.com/chen-star/net_alpha/commit/540c09158dfc581602dcc328fa93e61425be7ec0))
 
 ### Test
 
 * test(integration): end-to-end portfolio page render with mocked prices
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`094b30c`](https://github.com/chen-star/net_alpha/commit/094b30c73a5c6a1faeb8947a50eaff2ea7e268a1))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`763f178`](https://github.com/chen-star/net_alpha/commit/763f17847301a9565ed4303e474e4e3b30a26fb1))
 
 ### Unknown
 
-* Merge branch &#39;feat/portfolio-phase1&#39; — Phase 1 portfolio + pricing subsystem ([`1f481cf`](https://github.com/chen-star/net_alpha/commit/1f481cf84391dadc32c1a24994422c9afd2ebe9a))
+* Merge branch &#39;feat/portfolio-phase1&#39; — Phase 1 portfolio + pricing subsystem ([`f595359`](https://github.com/chen-star/net_alpha/commit/f595359a0ce3da500fecd34fdcfab71509f35621))
 
 
 ## v0.13.1 (2026-04-26)
@@ -3813,7 +3536,7 @@ exception preserved is when the engine&#39;s original confidence was already
 &#34;Unclear&#34; — that label only comes from the substantially-identical/ETF-pair
 matcher branch, which Schwab cannot model and which still needs human review.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b997555`](https://github.com/chen-star/net_alpha/commit/b9975554ee67e1d5aab6d7144e23d3b497500b5e))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`43be6c2`](https://github.com/chen-star/net_alpha/commit/43be6c2f5688e2e225036d4195aaf235f6bb313c))
 
 
 ## v0.13.0 (2026-04-26)
@@ -3831,7 +3554,7 @@ Dashboard now defaults to the current year with a year dropdown above the
 watch list (years derived from existing violations, plus the current year
 and All time). KPI labels switch between YTD/FY&lt;year&gt;/All time accordingly.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b9c38c8`](https://github.com/chen-star/net_alpha/commit/b9c38c8f5719c1c3e05512366541b75536a64ec5))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2cdd8ce`](https://github.com/chen-star/net_alpha/commit/2cdd8ce42d9a913729976f16e9bbd6dba16f902e))
 
 ### Fix
 
@@ -3859,21 +3582,21 @@ Two bugs were producing wrong dashboard output:
    none match individually, preserving behavior for the case where Schwab
    splits a single sell across multiple cost-basis lots.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3504075`](https://github.com/chen-star/net_alpha/commit/3504075c97fb80921b1e306b00aaf8a7a418184d))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3cc9558`](https://github.com/chen-star/net_alpha/commit/3cc955808608859e1d7be1d7da0489367f9e7bcc))
 
 
 ## v0.12.1 (2026-04-26)
 
 ### Chore
 
-* chore: sync uv.lock to v0.12.0 ([`c50b56d`](https://github.com/chen-star/net_alpha/commit/c50b56d92d0efd343445a54af492e5a8154868bc))
+* chore: sync uv.lock to v0.12.0 ([`811817c`](https://github.com/chen-star/net_alpha/commit/811817cc7fe5c373fce9362303154e6192f9819a))
 
 * chore: sync uv.lock with v0.11.0 release version bump
 
 After pulling the v0.11.0 release commit, uv sync re-generated the lock
 to reflect wash-alpha&#39;s new version.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`deb44bf`](https://github.com/chen-star/net_alpha/commit/deb44bfb750264ca7878a24769c18fb125f65e8c))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2ca03e0`](https://github.com/chen-star/net_alpha/commit/2ca03e01095c7f040289d6e6a5ea1bd2d8d5c059))
 
 ### Fix
 
@@ -3885,11 +3608,11 @@ Unprocessable Entity (missing &#39;files&#39; field). Adding hx-include=&#34;#cs
 explicitly tells HTMX to serialize that input into the request body.
 
 Web tests pass (42/42) — they don&#39;t catch this because they POST directly
-without going through HTMX. ([`8ec2bef`](https://github.com/chen-star/net_alpha/commit/8ec2bef20296a99b0f049cb18a55c5645a0d51ba))
+without going through HTMX. ([`464408f`](https://github.com/chen-star/net_alpha/commit/464408f722d6baead6358f0adab18349fa6396ed))
 
 ### Unknown
 
-* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`f8e1ce8`](https://github.com/chen-star/net_alpha/commit/f8e1ce817a68c5dc7444dab13df323391416cb81))
+* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`a6181f4`](https://github.com/chen-star/net_alpha/commit/a6181f4d7e74b50f451023521b0371a9b970dbd8))
 
 
 ## v0.12.0 (2026-04-26)
@@ -3903,7 +3626,7 @@ without going through HTMX. ([`8ec2bef`](https://github.com/chen-star/net_alpha/
 - AGENTS.md / CLAUDE.md: refresh auto-managed GitNexus stats
 - uv.lock: pull in lock churn from feature branch dependencies
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3ffa602`](https://github.com/chen-star/net_alpha/commit/3ffa602cdf34e0cd1f1b4c0a4b5b087b0bf606be))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f34f843`](https://github.com/chen-star/net_alpha/commit/f34f8437eaef54deac7f1a4e7f4cf4bbfc6a673e))
 
 * chore(web): rebuild Tailwind CSS for new G/L hydration UI elements
 
@@ -3911,27 +3634,7 @@ Rebuilt via &#39;npx tailwindcss@3&#39; to capture the new utility classes
 introduced by the violation source badges, Schwab lot detail panel,
 and imports table G/L lots column. (pytailwindcss 0.1.4 now downloads
 a Tailwind v4 binary at runtime, which is incompatible with our v3
-config. Using npx pins the v3 tooling explicitly.) ([`8f2ce1d`](https://github.com/chen-star/net_alpha/commit/8f2ce1dfd157d47bb05d7682f8248de018493aed))
-
-### Documentation
-
-* docs: add Schwab Realized G/L hydration implementation plan
-
-13 tasks across 7 phases (foundation, parser, engine, web, polish, CLI,
-smoke). TDD with bite-sized steps, exact code per step, no placeholders.
-Maps directly to the design spec at
-docs/superpowers/specs/2026-04-25-schwab-gl-hydration-design.md.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`33d1354`](https://github.com/chen-star/net_alpha/commit/33d1354d70bcf7dcd58c1b061ef631a3772faca6))
-
-* docs: add Schwab Realized G/L hydration design spec
-
-Captures the brainstormed design for ingesting Schwab&#39;s Realized G/L
-CSV alongside Transaction History to populate cost basis on Sell trades,
-unblocking wash-sale detection. Covers parser, stitch algorithm,
-engine+Schwab merge rules, schema migration, UI changes, and tests.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`167bf82`](https://github.com/chen-star/net_alpha/commit/167bf82f4c6bf4952f20c85fd96ae5de6eded2ee))
+config. Using npx pins the v3 tooling explicitly.) ([`27357c2`](https://github.com/chen-star/net_alpha/commit/27357c2e26f83e362377f31789fc7a653a98f93b))
 
 ### Feature
 
@@ -3942,12 +3645,12 @@ invocation. Same stitch + merge pipeline as the web UI. Reports
 hydration counts and warnings on stdout. Now uses init_db() to ensure
 schema migrations run.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f85e585`](https://github.com/chen-star/net_alpha/commit/f85e5858e265b2b94d975b7e63fe40e1407fde3a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9ce28ad`](https://github.com/chen-star/net_alpha/commit/9ce28ad9c59a681f576640d834f92eb25b09dc63))
 
 * feat(web): show G/L lot count on imports list
 
 ImportSummary gains gl_lot_count. The imports table renders it as a
-new column so G/L-only imports are no longer confusing zero-trade rows. ([`0cabc88`](https://github.com/chen-star/net_alpha/commit/0cabc88458cee9cdeeea240ff48611d4a5bfc85e))
+new column so G/L-only imports are no longer confusing zero-trade rows. ([`4f2b1d7`](https://github.com/chen-star/net_alpha/commit/4f2b1d7d92ec10ffd7102a802dc22840a2ce881d))
 
 * feat(web): Schwab lot detail panel on ticker drilldown
 
@@ -3956,7 +3659,7 @@ wash sale flag, and disallowed loss for each G/L lot in this ticker.
 Lets users verify our hydrated cost basis against Schwab&#39;s source data.
 Hidden when no G/L rows exist for the ticker.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6172304`](https://github.com/chen-star/net_alpha/commit/6172304e573547f9952ace27e79f306761a0a1e4))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f332cd8`](https://github.com/chen-star/net_alpha/commit/f332cd880f2e60fa4ff63928f7d8a9694fed863b))
 
 * feat(web): violation source badges (Schwab / Cross-account / Engine)
 
@@ -3964,7 +3667,7 @@ Renders next to the existing confidence pill so the user knows whether
 a violation came from Schwab&#39;s 1099-B reporting, engine cross-account
 detection, or engine-only substantially-identical inference.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7cc86ed`](https://github.com/chen-star/net_alpha/commit/7cc86edda57d3dc1dbbb279f4b079c8afbce91a3))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f106827`](https://github.com/chen-star/net_alpha/commit/f106827bebc681f743f283711cb0c4f5af4ea696))
 
 * feat(web): multi-file upload with G/L hydration + merge
 
@@ -3973,7 +3676,7 @@ or any combination). Per-file detection cards in preview modal.
 Upload route runs each file through its parser, then stitch +
 detect + merge end-to-end, scoped to the affected ±30-day window.
 Flash message reports counts: trades, dups, G/L lots, hydrated sells,
-warnings. ([`6d85d7d`](https://github.com/chen-star/net_alpha/commit/6d85d7d9f16582cdb277456569e405dce67f626b))
+warnings. ([`177d6ba`](https://github.com/chen-star/net_alpha/commit/177d6ba16204cbb092f336a52ce3d525d32042a6))
 
 * feat(engine): merge_violations — combine engine output with Schwab verdicts
 
@@ -3988,7 +3691,7 @@ Rules:
 
 WashSaleViolation gains a source field; round-tripped via repository.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c79ef7d`](https://github.com/chen-star/net_alpha/commit/c79ef7dccca29df20133cda886fe0d0f589a74fc))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b56f373`](https://github.com/chen-star/net_alpha/commit/b56f373c9fa450e3455f667b531f6e7481fb32c2))
 
 * feat(engine): stitch — hydrate Sell cost_basis from G/L or FIFO
 
@@ -3996,7 +3699,7 @@ stitch_account walks every Sell trade in an account and populates
 cost_basis from realized_gl_lots (preferred, by symbol+closed_date)
 or FIFO buy-lot consumption (fallback). Records basis_source on
 each Sell so the UI can surface confidence/source. Returns a
-StitchSummary with counts and any quantity-mismatch warnings. ([`52bacc6`](https://github.com/chen-star/net_alpha/commit/52bacc6576c98347bb633ca07665686a6808b358))
+StitchSummary with counts and any quantity-mismatch warnings. ([`3e59740`](https://github.com/chen-star/net_alpha/commit/3e5974090955832ac28c52a91006ac53e532b196))
 
 * feat(brokers): SchwabRealizedGLParser produces RealizedGLLot rows
 
@@ -4007,28 +3710,28 @@ Disallowed Loss as 0.0. Registered after SchwabParser in the registry.
 BrokerParser Protocol relaxed to list[Any] since parsers may emit
 different value-object types.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8e1370b`](https://github.com/chen-star/net_alpha/commit/8e1370b2a0ef0b3638c8919ec0f7deee0d311253))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`23e9aa2`](https://github.com/chen-star/net_alpha/commit/23e9aa2940df384aab35173bfec667a8650b6288))
 
 * feat(db): repository methods for G/L lots and stitch helpers
 
 Adds add_gl_lots, get_gl_lots_for_match, get_gl_lots_for_ticker,
 get_sells_for_account, get_buys_before_date, update_trade_basis.
 Idempotent insert dedups on RealizedGLLot.compute_natural_key().
-Trade Pydantic gains basis_source field; round-tripped via repository. ([`1c52964`](https://github.com/chen-star/net_alpha/commit/1c5296492449a1a746c4eecb472fc3798791db6c))
+Trade Pydantic gains basis_source field; round-tripped via repository. ([`c773afa`](https://github.com/chen-star/net_alpha/commit/c773afa199cd388a00460648a5d1871e6c4671fd))
 
 * feat(db): schema v2 — realized_gl_lots table + basis_source/source columns
 
 Adds RealizedGLLotRow table, Trade.basis_source column (default &#39;unknown&#39;),
 and WashSaleViolation.source column (default &#39;engine&#39;). Wires
 migrate(session) into init_db() so v1 DBs upgrade in place. Migration
-is additive and idempotent. ([`2ad08de`](https://github.com/chen-star/net_alpha/commit/2ad08de29dc50e5116b42450fd912050ed778dc7))
+is additive and idempotent. ([`bf18031`](https://github.com/chen-star/net_alpha/commit/bf1803186efdf4d2642336a63c8827f3ce662c24))
 
 * feat(models): add RealizedGLLot domain model
 
 Pydantic value object for one tax-lot row from Schwab&#39;s Realized G/L
 CSV. Includes Schwab&#39;s per-lot wash sale flag and disallowed loss for
 later merge with engine output. compute_natural_key() supports
-idempotent dedup on re-imports. ([`1db4b62`](https://github.com/chen-star/net_alpha/commit/1db4b62b969749606a22f4108be2153a7518804b))
+idempotent dedup on re-imports. ([`578b8c0`](https://github.com/chen-star/net_alpha/commit/578b8c086545dd29c07b1c720202def0bf301daa))
 
 * feat(ingest): smart header detection in load_csv
 
@@ -4036,7 +3739,7 @@ Skips up to 5 preamble rows (title rows, blank rows) before the real
 header row. Required for Schwab Realized G/L CSVs which have a
 &#39;Realized Gain/Loss - Lot Details ...&#39; title above the column headers.
 Falls back to row 0 when no plausible header row is found, preserving
-backwards compat for files that already had headers on row 0. ([`76b4fd0`](https://github.com/chen-star/net_alpha/commit/76b4fd0f87661304aa65ed50beeff36adbdcf20b))
+backwards compat for files that already had headers on row 0. ([`eaf223e`](https://github.com/chen-star/net_alpha/commit/eaf223e238114daa22c31302c3cc2b047ac80669))
 
 ### Fix
 
@@ -4049,7 +3752,7 @@ corrupting wash-sale results.
 
 The web DELETE /imports/{id} route now also runs stitch_account before
 re-running detect_in_window, so sells that were hydrated from now-removed
-G/L data get demoted to FIFO/unknown as appropriate. ([`401dbfe`](https://github.com/chen-star/net_alpha/commit/401dbfecbcbd9c28e4d9d6e5ebe6b020dab2a5c8))
+G/L data get demoted to FIFO/unknown as appropriate. ([`e14196e`](https://github.com/chen-star/net_alpha/commit/e14196ef06867d3dc6cbe4a366dbe0adaf09d026))
 
 * fix(db): resolve real trade IDs for Schwab G/L violations
 
@@ -4059,19 +3762,19 @@ detects source=&#39;schwab_g_l&#39; and resolves loss_trade_id by looking
 up the matching Sell trade (account+ticker+date). When no matching
 Sell trade exists, raises LookupError; replace_violations_in_window
 catches and silently skips, supporting G/L-only imports without
-Transaction History. ([`a9efd42`](https://github.com/chen-star/net_alpha/commit/a9efd421b089c320305a294a9141289ed8816d8b))
+Transaction History. ([`9755993`](https://github.com/chen-star/net_alpha/commit/975599397b78de04ee7c306b5d0f164b4cd1b8d8))
 
 * fix(ingest): apply ruff format + clarify load_csv docstring
 
 Address code-review feedback for Task 1:
   - ruff format collapsed implicit string concatenation in tests
-    (same lint rule that blocked d8deb63 on master)
+    (same lint rule that blocked 79e7763 on master)
   - load_csv docstring references _HEADER_SCAN_LIMIT instead of
-    hardcoding the value 5 ([`2d62568`](https://github.com/chen-star/net_alpha/commit/2d62568e878f8e045cfe3389871238fea8ae10e4))
+    hardcoding the value 5 ([`bb3a557`](https://github.com/chen-star/net_alpha/commit/bb3a5578366ef6cf085452b27131c7c243d24a4f))
 
 ### Unknown
 
-* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`1f97f51`](https://github.com/chen-star/net_alpha/commit/1f97f5118ef86b980240f11e33cbdc109c88709b))
+* Merge branch &#39;master&#39; of https://github.com/chen-star/net_alpha ([`26ed5ba`](https://github.com/chen-star/net_alpha/commit/26ed5bab42411b79f7eeb009327a47164560386a))
 
 * Merge feature/schwab-gl-hydration — Schwab Realized G/L hydration (v2.2)
 
@@ -4093,102 +3796,56 @@ gets the same pipeline. Schema bumped 1→2 with idempotent migration.
 
 249 tests passing. Spec: docs/superpowers/specs/2026-04-25-schwab-gl-hydration-design.md
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cdea0c8`](https://github.com/chen-star/net_alpha/commit/cdea0c89ddf234bdfa17374032a44c97f8bd4b1e))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`beaf76c`](https://github.com/chen-star/net_alpha/commit/beaf76cddee4ac90f5388d1004722571f11291eb))
 
 
 ## v0.11.0 (2026-04-26)
 
 ### Build
 
-* build(web): tailwind config, source css, and built app.css; add make build-css ([`9ebd80d`](https://github.com/chen-star/net_alpha/commit/9ebd80d5c421dfb885ce228a0feb30b9ae89ce0d))
+* build(web): tailwind config, source css, and built app.css; add make build-css ([`cb13f90`](https://github.com/chen-star/net_alpha/commit/cb13f90bedecc8a28d9ccda79116734d9ed9feaf))
 
 ### Documentation
 
-* docs(plan): local UI implementation plan (20 tasks, TDD)
-
-20-task subagent-ready plan covering Phase A foundation (deps, app
-factory, conftest, Tailwind, static, base.html), Phase B repository
-extensions, Phase C read-only views (dashboard, imports, detail, sim),
-Phase D drag-drop import (drop zone, preview, upload), Phase E
-visualizations (calendar ribbon + focus, ticker drilldown), Phase F
-polish (errors, CLI ui command, docs). Each task carries the failing
-test, exact code, run command, expected output, and commit step.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`55df40d`](https://github.com/chen-star/net_alpha/commit/55df40dcb5d2479cb21187c81383e32532c4ac74))
-
-* docs(spec): local UI design — net-alpha ui (v2.1.0)
-
-Adds the design spec for an optional, ephemeral, local-only web UI that
-wraps the existing v2 engine. Drag-drop CSV import, wash-sale calendar
-(annual ribbon + ±30-day focus strip), ticker drilldown, and CLI parity
-views (sim, imports management, detail). Stack: FastAPI + Jinja + HTMX +
-Alpine + Tailwind, vendored static assets, no node/npm/Docker. Optional
-dependency group keeps CLI-only installs lean.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7373ea7`](https://github.com/chen-star/net_alpha/commit/7373ea79c8274242ba9320954a5ee5bff01c0a6e))
-
-* docs: document net-alpha ui command + web subsystem in README and CLAUDE.md ([`2b3e56e`](https://github.com/chen-star/net_alpha/commit/2b3e56eb63976f524324c0392803d0cd517e9dc7))
-
-* docs(plan): local UI implementation plan (20 tasks, TDD)
-
-20-task subagent-ready plan covering Phase A foundation (deps, app
-factory, conftest, Tailwind, static, base.html), Phase B repository
-extensions, Phase C read-only views (dashboard, imports, detail, sim),
-Phase D drag-drop import (drop zone, preview, upload), Phase E
-visualizations (calendar ribbon + focus, ticker drilldown), Phase F
-polish (errors, CLI ui command, docs). Each task carries the failing
-test, exact code, run command, expected output, and commit step.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9792dfb`](https://github.com/chen-star/net_alpha/commit/9792dfb10670b1e90c4e977169abec08ee7c75c7))
-
-* docs(spec): local UI design — net-alpha ui (v2.1.0)
-
-Adds the design spec for an optional, ephemeral, local-only web UI that
-wraps the existing v2 engine. Drag-drop CSV import, wash-sale calendar
-(annual ribbon + ±30-day focus strip), ticker drilldown, and CLI parity
-views (sim, imports management, detail). Stack: FastAPI + Jinja + HTMX +
-Alpine + Tailwind, vendored static assets, no node/npm/Docker. Optional
-dependency group keeps CLI-only installs lean.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c558b2a`](https://github.com/chen-star/net_alpha/commit/c558b2a6c13bfb707da68f8534dea7b0ae67ec0b))
+* docs: document net-alpha ui command + web subsystem in README and CLAUDE.md ([`030acfc`](https://github.com/chen-star/net_alpha/commit/030acfccf28b2f5660dbcce889f454758911da9f))
 
 ### Feature
 
-* feat(cli): net-alpha ui command (port picker, uvicorn boot, browser open) ([`b050e0d`](https://github.com/chen-star/net_alpha/commit/b050e0d50c5f8880a1fd6cf51e4d69edfbfed5cd))
+* feat(cli): net-alpha ui command (port picker, uvicorn boot, browser open) ([`08cc044`](https://github.com/chen-star/net_alpha/commit/08cc0446d132b53fb514ad814d547c5d6aba7cbb))
 
-* feat(web): 404/500 handlers render error.html with traceback toggle ([`a27cfeb`](https://github.com/chen-star/net_alpha/commit/a27cfeb1808bd838a1c9374483f5bf39475494a9))
+* feat(web): 404/500 handlers render error.html with traceback toggle ([`08d435d`](https://github.com/chen-star/net_alpha/commit/08d435d4d9c181ce84663065dab28dfe42f20414))
 
-* feat(web): GET /ticker/{symbol} drilldown with KPIs, timeline, lots, violations ([`56c5330`](https://github.com/chen-star/net_alpha/commit/56c5330639cb16372c2ea14988d019e5cb988651))
+* feat(web): GET /ticker/{symbol} drilldown with KPIs, timeline, lots, violations ([`5e57bab`](https://github.com/chen-star/net_alpha/commit/5e57bab84c71d579462d56e97a50f58ef4f34661))
 
-* feat(web): GET /calendar/focus/{id} renders ±30-day strip + violation card ([`367c201`](https://github.com/chen-star/net_alpha/commit/367c2010680d135a8337c66dfb0478e534da46fe))
+* feat(web): GET /calendar/focus/{id} renders ±30-day strip + violation card ([`48693b8`](https://github.com/chen-star/net_alpha/commit/48693b8bac2e3bb1456b73088df392b2e1ee576a))
 
-* feat(web): GET /calendar with annual ribbon (per-year violation markers) ([`4fb8f69`](https://github.com/chen-star/net_alpha/commit/4fb8f69cc303bac3c0cfe40c860d574eccb55b40))
+* feat(web): GET /calendar with annual ribbon (per-year violation markers) ([`af1ec79`](https://github.com/chen-star/net_alpha/commit/af1ec79e6e7239de092902479d89ed7ac44128a4))
 
-* feat(web): POST /imports/preview + POST /imports for drag-drop upload flow ([`e16f065`](https://github.com/chen-star/net_alpha/commit/e16f0658f8e383ad77f3a122ee53cb4e470be3c5))
+* feat(web): POST /imports/preview + POST /imports for drag-drop upload flow ([`50f3fae`](https://github.com/chen-star/net_alpha/commit/50f3fae5827591c231a29d69fe3325e05cdcd708))
 
-* feat(web): drag-drop zone partial on dashboard with Alpine drag-over highlight ([`d6ca656`](https://github.com/chen-star/net_alpha/commit/d6ca656734a9c5ad6a7a19d78502680a6c36b887))
+* feat(web): drag-drop zone partial on dashboard with Alpine drag-over highlight ([`03a6363`](https://github.com/chen-star/net_alpha/commit/03a6363a55055dd40dcb08ccd0fcbf17114ffe99))
 
-* feat(web): GET/POST /sim with HTMX-driven per-account result cards ([`9e9e94d`](https://github.com/chen-star/net_alpha/commit/9e9e94dd9a66092914df349c971628154a76b7c3))
+* feat(web): GET/POST /sim with HTMX-driven per-account result cards ([`66caad0`](https://github.com/chen-star/net_alpha/commit/66caad0b97173328d5d730a4a2123b1d0567c302))
 
-* feat(web): GET /detail page with ticker/account/year/confidence filters ([`51f397f`](https://github.com/chen-star/net_alpha/commit/51f397f6615816b096d43582bc65b2cca3b1d900))
+* feat(web): GET /detail page with ticker/account/year/confidence filters ([`8a1e5a4`](https://github.com/chen-star/net_alpha/commit/8a1e5a485a40213175cfe8f576a4d59e2d8b9e53))
 
-* feat(web): DELETE /imports/{id} removes import + recomputes wash sales ([`74086fd`](https://github.com/chen-star/net_alpha/commit/74086fdb732ea71af4f01e656e5f4d105babc92e))
+* feat(web): DELETE /imports/{id} removes import + recomputes wash sales ([`9037195`](https://github.com/chen-star/net_alpha/commit/9037195e72b61e75eb94718375d8453f322e5a19))
 
-* feat(web): GET /imports management page with HTMX-ready remove button ([`9ad18b0`](https://github.com/chen-star/net_alpha/commit/9ad18b08c442326eb5708d39758f629dab2e7fb5))
+* feat(web): GET /imports management page with HTMX-ready remove button ([`cb1d2f9`](https://github.com/chen-star/net_alpha/commit/cb1d2f9e35324be0e02fa2c362f54c1700e9c3b9))
 
-* feat(web): dashboard route with watch list + YTD KPI cards ([`76b6ae2`](https://github.com/chen-star/net_alpha/commit/76b6ae25680ad8f435ebb2ce2cd17635268a77fe))
+* feat(web): dashboard route with watch list + YTD KPI cards ([`2a24d82`](https://github.com/chen-star/net_alpha/commit/2a24d8233c782e5e4c6d54e02b773a74d3a248e1))
 
-* feat(db): repository read methods for UI (list_distinct_tickers, get_*_for_ticker) ([`cfa6357`](https://github.com/chen-star/net_alpha/commit/cfa6357ce04d9b36f169fbc9e53cba5ba78ef3eb))
+* feat(db): repository read methods for UI (list_distinct_tickers, get_*_for_ticker) ([`33bd930`](https://github.com/chen-star/net_alpha/commit/33bd930a08ba3445d72725d45d8976dabc4e2acf))
 
-* feat(web): base.html with nav and disclaimer footer; jinja env + etf pairs in app state ([`27fbbb3`](https://github.com/chen-star/net_alpha/commit/27fbbb377a0c868dbb0c279402391f469779a69d))
+* feat(web): base.html with nav and disclaimer footer; jinja env + etf pairs in app state ([`4c99556`](https://github.com/chen-star/net_alpha/commit/4c99556c8c02a161f667e9ab648f60fa1d76919f))
 
-* feat(web): vendor htmx + alpine static assets, mount /static via StaticFiles ([`4d19694`](https://github.com/chen-star/net_alpha/commit/4d19694265b77d099f798601542a081b15aed3ec))
+* feat(web): vendor htmx + alpine static assets, mount /static via StaticFiles ([`ac0f843`](https://github.com/chen-star/net_alpha/commit/ac0f8439e7784bae6ea46ba73b28856d929f41d6))
 
-* feat(web): create web package skeleton with FastAPI app factory ([`c533b7d`](https://github.com/chen-star/net_alpha/commit/c533b7d9ddc5c0bb164ec02371c23d00e47ec40e))
+* feat(web): create web package skeleton with FastAPI app factory ([`3159f4a`](https://github.com/chen-star/net_alpha/commit/3159f4a0cb2a3b4408f316ead0ec687013a7e3dc))
 
 ### Fix
 
-* fix(web): correct tailwind palette to match design spec (primary, secondary, accent, bg) ([`ce14d2a`](https://github.com/chen-star/net_alpha/commit/ce14d2a8db0bd2be10ff51aaca3bc7af34d59611))
+* fix(web): correct tailwind palette to match design spec (primary, secondary, accent, bg) ([`ec737d3`](https://github.com/chen-star/net_alpha/commit/ec737d3c02a94b8430c585f01a56a5cc1472313a))
 
 * fix(build): pin pytailwindcss to v3, restore @apply with custom color tokens
 
@@ -4198,15 +3855,15 @@ probable, unclear). Manually installed v3 via pytailwindcss.install(),
 added safelist for utility classes and component classes to ensure all
 needed styles are generated despite no templates yet.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b7ad2ff`](https://github.com/chen-star/net_alpha/commit/b7ad2ffdc87d6005ce929c446cce2d8c87f3698a))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3777561`](https://github.com/chen-star/net_alpha/commit/37775619b3cf973ac16b95becf3103f9746e926e))
 
 ### Style
 
-* style: ruff format + import sort across web subsystem ([`f171a16`](https://github.com/chen-star/net_alpha/commit/f171a1627e8f92a165dfb03ee797f852980e991c))
+* style: ruff format + import sort across web subsystem ([`30fd46a`](https://github.com/chen-star/net_alpha/commit/30fd46a446f8dc419e8b4d5fcfcf1a8eebf352b4))
 
 ### Test
 
-* test(web): add conftest with settings/engine/repo/client fixtures + trade builders ([`a20976f`](https://github.com/chen-star/net_alpha/commit/a20976f597486b940311cb5915a0e26ed10db759))
+* test(web): add conftest with settings/engine/repo/client fixtures + trade builders ([`881b14c`](https://github.com/chen-star/net_alpha/commit/881b14cdfe68bdfc108f79db2a69cb85a844231a))
 
 ### Unknown
 
@@ -4221,9 +3878,9 @@ uvicorn boot, browser open, --port/--no-browser/--reload flags).
 
 187 tests passing, ruff clean.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cd2486c`](https://github.com/chen-star/net_alpha/commit/cd2486c246c2bd4e7543ac486943c0ed96a81e94))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`07d8d92`](https://github.com/chen-star/net_alpha/commit/07d8d92a220d1a12de4e1a7878c48404798c440d))
 
-* deps(ui): add optional ui group (fastapi, jinja, uvicorn, multipart) + pytailwindcss/httpx for dev ([`0af0d14`](https://github.com/chen-star/net_alpha/commit/0af0d143505a0152bdbdcd7dfca74a9c408357ef))
+* deps(ui): add optional ui group (fastapi, jinja, uvicorn, multipart) + pytailwindcss/httpx for dev ([`9d42901`](https://github.com/chen-star/net_alpha/commit/9d429016cdf19825023ae7ef3e575ee1efaa3d52))
 
 
 ## v0.10.0 (2026-04-25)
@@ -4236,7 +3893,7 @@ Runtime dep set is now: pydantic, sqlmodel, typer[all], loguru, pyyaml.
 Description reflects the v2 simplified product. config.py migrated from
 BaseSettings to plain pydantic BaseModel; LLM-related config fields removed.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c19ba5f`](https://github.com/chen-star/net_alpha/commit/c19ba5fe32b194d0794f7bf4ea4691c42b85dd09))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7b2752b`](https://github.com/chen-star/net_alpha/commit/7b2752bb2db70a03add7b5b4b4893fa9565ef47b))
 
 * chore(v2): delete legacy import_/, cli/import_cmd, cli/simulate, unused models
 
@@ -4245,7 +3902,7 @@ prior import/check/simulate paths. Repository stubs and unused
 Pydantic models follow them out. MetaRepository remains for the
 migration boot in cli/app.py.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ae5ab0b`](https://github.com/chen-star/net_alpha/commit/ae5ab0b3c8b09f204fdb8cc4ab9788ae84913db8))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ceef1c3`](https://github.com/chen-star/net_alpha/commit/ceef1c34da1f833477f15d8c14435401de6cbdf5))
 
 * chore: move etf_pairs.yaml into package, wire loader through CLI
 
@@ -4254,7 +3911,7 @@ ships it. User override at ~/.net_alpha/etf_pairs.yaml extends bundled
 pairs (does not replace). Both CLI recompute call sites now use the
 real loader instead of an empty dict stub.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`82c2348`](https://github.com/chen-star/net_alpha/commit/82c2348add81832ddd66aafe412c05904cea12e8))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`17ad7cb`](https://github.com/chen-star/net_alpha/commit/17ad7cb648fd45bacd32e5333e94bf070994ba3d))
 
 * chore(v2): remove TUI, agent, wizard, and dropped CLI commands
 
@@ -4266,9 +3923,7 @@ importer.py respectively (both kept), since schema_detection.py and
 anonymizer.py were their sole definitions but still consumed by kept modules.
 Integration tests for the deleted commands were also removed.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4fde88e`](https://github.com/chen-star/net_alpha/commit/4fde88e26242a2b4e4412f2e4b5475670a3764c8))
-
-* chore(v2): branch start — implementing v2 simplification spec ([`60d7aba`](https://github.com/chen-star/net_alpha/commit/60d7aba5af3cd7653b812a2c3dbe3091b29fc62e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`88d893c`](https://github.com/chen-star/net_alpha/commit/88d893c9cff302cab83e98dade6e53d86a35d7fb))
 
 ### Documentation
 
@@ -4280,36 +3935,7 @@ subcommands). Replace with v2 command surface (default import+check,
 sim, imports, imports rm, migrate-from-v1) and bundled-Schwab-parser
 description throughout.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`85b7a26`](https://github.com/chen-star/net_alpha/commit/85b7a26a1e334e42da457bc873f3cc72a6d30a98))
-
-* docs(plans): add v2 simplification implementation plan
-
-21 tasks covering worktree setup, legacy module removal, schema
-rewrite, repository v2, brokers/ + ingest/ + output/ packages,
-detect_in_window, simulate_sell, CLI surface (default/sim/imports),
-migrate-from-v1 helper, dep cleanup, docs, and final verification.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`956e5eb`](https://github.com/chen-star/net_alpha/commit/956e5ebea9b637f2a2a642452700649c1925ff8b))
-
-* docs(specs): revise v2 sim — cross-account what-if planner
-
-Sim no longer requires --account; instead enumerates every account
-that holds the ticker and shows one option per account with FIFO
-lots, P&amp;L, and a cross-account wash-sale verdict per option.
---account becomes an optional filter. Resolves all open questions
-on sim, --detail, and account display format.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`eb0c404`](https://github.com/chen-star/net_alpha/commit/eb0c404b6dc9b4c4541ce91ef2cf8156ccc910d3))
-
-* docs(specs): add v2 simplification design
-
-v2 collapses 10 CLI commands + wizard + TUI + agent into 4 commands
-to address surface sprawl and setup ceremony in v1. Removes LLM CSV
-import, Robinhood, TUI, and agent surfaces. Estimated ~4000 LOC →
-~1800 LOC. Stateful/incremental persistence preserved with
-windowed wash-sale recompute and idempotent multi-account imports.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9c7f3b3`](https://github.com/chen-star/net_alpha/commit/9c7f3b38fc63cf519bb651dbadc816e8635dd9d2))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fa7344c`](https://github.com/chen-star/net_alpha/commit/fa7344cbf0afecc5e9bd90c9bc575527710701bd))
 
 ### Feature
 
@@ -4319,7 +3945,7 @@ Reads ~/.net_alpha/net_alpha.db (v1 schema) and writes a parallel
 v2 DB at ~/.net_alpha/net_alpha.db.v2. User then moves it into
 place. Refuses to overwrite an existing v2 file.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`be10af3`](https://github.com/chen-star/net_alpha/commit/be10af3731331d57a6fcde99262bd4911b744742))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ac7ac24`](https://github.com/chen-star/net_alpha/commit/ac7ac24f4489145c7f045804a93c41662ab7beb5))
 
 * feat(cli): v2 surface — default import/check, sim, imports, imports rm
 
@@ -4328,7 +3954,7 @@ a hidden &#39;run&#39; sub-command, enabling `net-alpha &lt;csv&gt; --account &l
 as the default entry point alongside explicit `sim` and `imports` sub-commands.
 Deletes test_simulate_lots.py (v1 simulate tests superseded by test_app_v2.py).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8d5f09e`](https://github.com/chen-star/net_alpha/commit/8d5f09e2a0241f06900e1a0d6928cd3415869920))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`973973b`](https://github.com/chen-star/net_alpha/commit/973973bb011007b498a46972e3fdec75efeb323d))
 
 * feat: thread ticker through WashSaleViolation for renderer enrichment
 
@@ -4336,22 +3962,22 @@ Add ticker field to WashSaleViolation domain model, WashSaleViolationRow
 table, detector emission, repository read/write paths, and watch_list
 renderer. Removes the hardcoded &#39;TKR&#39; placeholder.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6c19716`](https://github.com/chen-star/net_alpha/commit/6c1971618ae9a19bc930effa87873d28a7e46be8))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fb90b0e`](https://github.com/chen-star/net_alpha/commit/fb90b0e31e34cde9d8b8f16ae437aba5791295b1))
 
 * feat(output): renderers — disclaimer, watch_list, ytd_impact, sim_result, imports_table, detail
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c6784b5`](https://github.com/chen-star/net_alpha/commit/c6784b55bc32fc6510cc7cdb9bab25141c70d79b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`09a3697`](https://github.com/chen-star/net_alpha/commit/09a36972a7dab1f602e22ad47249283d10375093))
 
 * feat(brokers): protocol + registry + Schwab parser
 
 Add BrokerParser Protocol, detect_broker registry, and SchwabParser
 implementing buy/sell/reinvest/option action parsing for Schwab CSVs.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`450c6d9`](https://github.com/chen-star/net_alpha/commit/450c6d9d28e5f321944367e035f54998276d05b3))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`121c2ce`](https://github.com/chen-star/net_alpha/commit/121c2ce16c11395e5bdfdad61f16b089c24e3b16))
 
 * feat(ingest): csv_loader, option_parser port, dedup by natural_key
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`26e36dc`](https://github.com/chen-star/net_alpha/commit/26e36dc660deb08bf436c9d2f6638b2b6eaf83e9))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`57fafea`](https://github.com/chen-star/net_alpha/commit/57fafeab775669521cf36393b9c3366f0df1acbc))
 
 * feat(engine): simulate_sell — cross-account what-if planner
 
@@ -4359,7 +3985,7 @@ Implements Task 11: simulator.py with FIFO lot consumption, realized P&amp;L,
 cross-account wash sale detection, insufficient-shares flagging, and
 lookforward_block_until date. 7 new tests; full suite at 215.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`57a4311`](https://github.com/chen-star/net_alpha/commit/57a43119f4437f8843d9a757ac7979a4a29e9fae))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`65f8328`](https://github.com/chen-star/net_alpha/commit/65f8328f9d5ebc304e398f6af8bcdc215cbf3d20))
 
 * feat(engine): detect_in_window for incremental recompute
 
@@ -4368,7 +3994,7 @@ detection algorithm but emits only violations whose loss_sale_date falls
 within the supplied window. Caller is responsible for passing trades that
 include ±30 days around the window for correct cross-window matching.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9a5d854`](https://github.com/chen-star/net_alpha/commit/9a5d8543697ea57c532241f059ac0117afc92a48))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0b12d2c`](https://github.com/chen-star/net_alpha/commit/0b12d2c83e227593777d451a51777d910055947c))
 
 * feat(engine): violations carry loss_account, buy_account, sale/buy dates
 
@@ -4376,7 +4002,7 @@ Tightens the scaffolded _violation_to_row helper from Task 8 to use
 the new typed fields. Wash sale violations now have full provenance
 (which accounts, when) needed by the v2 watch list and YTD renderers.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fa5401f`](https://github.com/chen-star/net_alpha/commit/fa5401f8322fc031bb5cef95c7d74fad8616bde4))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f8b10cc`](https://github.com/chen-star/net_alpha/commit/f8b10cc479ffdf14f1ebb876b050965436e5c9a1))
 
 * feat(db): repository remove_import + replace_violations_in_window
 
@@ -4386,34 +4012,34 @@ import/trades/lots/violations + recompute window), replace_violations_in_window
 (scaffolded with getattr defaults for Task-9 fields loss_account_id,
 buy_account_id, loss_sale_date, triggering_buy_date).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8716132`](https://github.com/chen-star/net_alpha/commit/8716132626cde08b5f7a33fadc9c56015f9dee78))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`350f8a6`](https://github.com/chen-star/net_alpha/commit/350f8a6c6f933049b5dcabcf66122370918d05c4))
 
 * feat(db): repository reads — trades, lots, violations, windowed
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e20ac26`](https://github.com/chen-star/net_alpha/commit/e20ac266803aa3711229f1d9cae30d1d526bd02a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d5697b5`](https://github.com/chen-star/net_alpha/commit/d5697b5787efff8dde93f146ae70b5219706820f))
 
 * feat(db): add_import with dedup via natural_key UNIQUE constraint
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`76054c7`](https://github.com/chen-star/net_alpha/commit/76054c75128d321ece5e4f04c720e5d1f94600ee))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4fb5837`](https://github.com/chen-star/net_alpha/commit/4fb583764ed6ccc20d1f265b2980ad78d0f10794))
 
 * feat(db): repository v2 skeleton + account/import management methods
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`767c754`](https://github.com/chen-star/net_alpha/commit/767c7545251dd55ebf2dd39b7185567c2bf6af63))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`96c0cec`](https://github.com/chen-star/net_alpha/commit/96c0cec48acddf1b4d2045ba4af9e2012ebac1a9))
 
 * feat(models): add Trade.compute_natural_key for v2 idempotent imports
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`714a60c`](https://github.com/chen-star/net_alpha/commit/714a60c1fabe23a24239eb83f559792f2bbce2a0))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`aa53dd2`](https://github.com/chen-star/net_alpha/commit/aa53dd2237b8c5ee567216df0b5fc5458df6a369))
 
 * feat(db): replace tables with v2 schema (Account, Import, FKs, natural_key)
 
 v1 schema is dropped wholesale. Schema starts at version 1. v1 -&gt; v2
 upgrade lives in a separate migrate-from-v1 helper (Task 17).
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`934a73f`](https://github.com/chen-star/net_alpha/commit/934a73f5dda0163680d5db1a6b1657fae0af7313))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`da4992d`](https://github.com/chen-star/net_alpha/commit/da4992dcf53e06b145f3ff0c67d28a40b2508321))
 
 * feat(models): add v2 domain types — Account, ImportRecord, SimulationOption
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`80cc7ff`](https://github.com/chen-star/net_alpha/commit/80cc7ffe116ada255cafdee6e723b5f2f29a6e9a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e4635a8`](https://github.com/chen-star/net_alpha/commit/e4635a83a7fd8ae12454ff9ba140a857438cd176))
 
 ### Fix
 
@@ -4426,7 +4052,7 @@ import. Adds Repository.replace_lots_in_window mirroring the
 violations method, and updates both CLI handlers to persist both
 halves of the DetectionResult.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`daf22de`](https://github.com/chen-star/net_alpha/commit/daf22de3443f353198f4944fd2ace24a82585828))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`87691bb`](https://github.com/chen-star/net_alpha/commit/87691bbe13657f948801fd07a254f70173bb8440))
 
 * fix(cli,db): tighten violation_to_row session, account annotation, mark TODOs
 
@@ -4437,7 +4063,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`daf22de`](htt
 - Both etf_pairs={} sites tagged with TODO(Task 16) so the loader
   wire-up isn&#39;t missed.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8239395`](https://github.com/chen-star/net_alpha/commit/8239395aa452004e2cb37d13f21110453d911efd))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3234a50`](https://github.com/chen-star/net_alpha/commit/3234a50fcf5a15e0ebd6904c7971470e26df1c70))
 
 * fix(db): repository violation reads populate full field set
 
@@ -4449,7 +4075,7 @@ and produced &#39;None ... on None&#39; garbage from --detail.
 
 Also: drop hardcoded &#39;schwab&#39; from sim&#39;s no-such-account message.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1cd2dd5`](https://github.com/chen-star/net_alpha/commit/1cd2dd5bf877ed20c8f1313ee78f6a1574432f16))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7158775`](https://github.com/chen-star/net_alpha/commit/71587752ab4aac2eb4887eafcf1d91de2980cb9c))
 
 * fix(db): consolidate CURRENT_SCHEMA_VERSION; guard removed LLM path
 
@@ -4459,7 +4085,7 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1cd2dd5`](htt
   (eliminates duplicate constant).
 - migrations.py: add scaffolding comment for future schema versions.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3ac3671`](https://github.com/chen-star/net_alpha/commit/3ac3671b778664aa21c9d964f27b5e10bb950c74))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f9410c6`](https://github.com/chen-star/net_alpha/commit/f9410c6d244bffecb70708c5c3e456755cc4d4db))
 
 * fix(import_): rename ambiguous &#39;l&#39; var, drop dead _NUMERIC_PATTERN
 
@@ -4467,7 +4093,7 @@ Both regressions were introduced when inlining anonymizer.py and
 schema_detection.py during Task 1. Will be deleted entirely in Task 18,
 but fixing now to keep CI green.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4b82513`](https://github.com/chen-star/net_alpha/commit/4b82513548d8b731077efec6723dfba50e092da8))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`adb0bc0`](https://github.com/chen-star/net_alpha/commit/adb0bc01d6f36ca9f560be8b5c27819e9f43f2b3))
 
 ### Unknown
 
@@ -4490,253 +4116,219 @@ See:
 - docs/superpowers/specs/2026-04-25-v2-simplification-design.md
 - docs/superpowers/plans/2026-04-25-v2-simplification.md
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`14495ba`](https://github.com/chen-star/net_alpha/commit/14495ba56aaec0120e8c1ce49e45e75149fa91aa))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f17e185`](https://github.com/chen-star/net_alpha/commit/f17e18502721ef2579ff65c02c37f7120421fb3c))
 
 
 ## v0.9.1 (2026-04-19)
 
 ### Fix
 
-* fix: resolve all linting and formatting errors to fix failing CI ([`d8deb63`](https://github.com/chen-star/net_alpha/commit/d8deb631e5ec593fe776b77cdb146a5ff7b4bd21))
+* fix: resolve all linting and formatting errors to fix failing CI ([`79e7763`](https://github.com/chen-star/net_alpha/commit/79e7763339a88756e56f3d023ef52f10ab10de63))
 
 
 ## v0.9.0 (2026-04-18)
 
 ### Chore
 
-* chore: update GitNexus index statistics in documentation files ([`b0e940b`](https://github.com/chen-star/net_alpha/commit/b0e940b508fcdd7f58286dfe71184f5894dd5f70))
+* chore: update GitNexus index statistics in documentation files ([`4bce402`](https://github.com/chen-star/net_alpha/commit/4bce4027942a2a6528b10a561623e281045f517a))
 
 ### Documentation
 
-* docs: sync PRD commands with current implementation and update GitNexus stats ([`12d8616`](https://github.com/chen-star/net_alpha/commit/12d8616911551307a17d8427b16f9a44068f3abc))
+* docs: sync PRD commands with current implementation and update GitNexus stats ([`ecdb8ab`](https://github.com/chen-star/net_alpha/commit/ecdb8ab0059f1b3785b3150b0c2d8c72589a0634))
 
-* docs(plans): add api key fallback implementation plan ([`5c05dbf`](https://github.com/chen-star/net_alpha/commit/5c05dbfe83f509e51ea8990748c654a50276ed79))
-
-* docs(specs): add api key fallback design spec ([`48734bb`](https://github.com/chen-star/net_alpha/commit/48734bb8039da72f3b4bbb967dcb5a8c3e8005a3))
-
-* docs: modernize README and update agent configuration ([`1f5920b`](https://github.com/chen-star/net_alpha/commit/1f5920b5c323433deec649fac4fe700b99251e0d))
+* docs: modernize README and update agent configuration ([`ba80638`](https://github.com/chen-star/net_alpha/commit/ba80638260ddc713c6d625f373a9e906df98c798))
 
 ### Feature
 
-* feat(cli): remove eager api key prompt from interactive wizard ([`5759c10`](https://github.com/chen-star/net_alpha/commit/5759c10b5b2b5b24b513a39c0f4bbb2991a08d4d))
+* feat(cli): remove eager api key prompt from interactive wizard ([`26f11a5`](https://github.com/chen-star/net_alpha/commit/26f11a5a5d78c30e446d24c7442ee6d5a206af97))
 
-* feat(cli): make API key optional for import command ([`49edb65`](https://github.com/chen-star/net_alpha/commit/49edb65956ec01916b0720310afb0cfcf324bb4d))
+* feat(cli): make API key optional for import command ([`389eb5a`](https://github.com/chen-star/net_alpha/commit/389eb5ac0e58767059d1d41295b5e415b17d2830))
 
-* feat(import): run_import uses hardcoded schema if cache misses and no API key ([`4ca8bea`](https://github.com/chen-star/net_alpha/commit/4ca8beaf5939ebf675857debb0289d2768207e3e))
+* feat(import): run_import uses hardcoded schema if cache misses and no API key ([`59c7479`](https://github.com/chen-star/net_alpha/commit/59c747925332763fc2c232e97dc94ad7e20cb033))
 
-* feat(import): add hardcoded schemas for schwab and robinhood ([`0d8ab77`](https://github.com/chen-star/net_alpha/commit/0d8ab776d74fd169d20872a66307cc0a81383c48))
+* feat(import): add hardcoded schemas for schwab and robinhood ([`c0fda74`](https://github.com/chen-star/net_alpha/commit/c0fda74f0aa32d059659b9c22b1fe61ff9069d07))
 
 ### Test
 
-* test: update tests to test LLM branch using unknown_broker instead of known brokers ([`f576a66`](https://github.com/chen-star/net_alpha/commit/f576a66956110ae7d7edc94a28f521baf8d26fec))
+* test: update tests to test LLM branch using unknown_broker instead of known brokers ([`9da464c`](https://github.com/chen-star/net_alpha/commit/9da464cce56a1bc08e045fffd82e4c7c7695eda7))
 
 
 ## v0.8.0 (2026-04-18)
 
 ### Chore
 
-* chore: add textual dependency for TUI ([`2c3261a`](https://github.com/chen-star/net_alpha/commit/2c3261af9b71d1df80968fc6fe894074beb101c9))
+* chore: add textual dependency for TUI ([`57b6b64`](https://github.com/chen-star/net_alpha/commit/57b6b64fac7faf0232e19c7d01763a220d4b35e3))
 
-* chore: install ui-ux-pro-max-skill for cluade and antigravity ([`e0fcc72`](https://github.com/chen-star/net_alpha/commit/e0fcc721d8e3b40ca8e01bdec610265b71a3df37))
+* chore: install ui-ux-pro-max-skill for cluade and antigravity ([`f9c8919`](https://github.com/chen-star/net_alpha/commit/f9c8919ac63d12d1129950f318eae6d91686dce4))
 
 ### Documentation
 
-* docs: sync architecture, cli, and readme with tui implementation and update model versions ([`89558c2`](https://github.com/chen-star/net_alpha/commit/89558c27d088b314f45386fa9ecaba19b7aa3024))
-
-* docs: add interactive simulator TUI design spec ([`d8c4e0f`](https://github.com/chen-star/net_alpha/commit/d8c4e0f3125cc2cbd479c97db38db3a53cb335e1))
+* docs: sync architecture, cli, and readme with tui implementation and update model versions ([`188ab91`](https://github.com/chen-star/net_alpha/commit/188ab91971d9fd802ec7be040d5866186a0c8a89))
 
 ### Feature
 
-* feat(tui): accurately track and display virtual trade wash sales ([`283a238`](https://github.com/chen-star/net_alpha/commit/283a2381e80332d47666974f54125215bbf5a9e7))
+* feat(tui): accurately track and display virtual trade wash sales ([`cd03d50`](https://github.com/chen-star/net_alpha/commit/cd03d5064dfbedec93332e8b52d2faf15fe15d95))
 
-* feat(tui): wire reactive inputs to simulation engine ([`a6408a2`](https://github.com/chen-star/net_alpha/commit/a6408a25f31848fc451fcf9ca9725425c861bd81))
+* feat(tui): wire reactive inputs to simulation engine ([`60eef00`](https://github.com/chen-star/net_alpha/commit/60eef0037f30a743cab0bfb69bbc6cf5865fe315))
 
-* feat(tui): add simulation engine helper ([`5d146a9`](https://github.com/chen-star/net_alpha/commit/5d146a9059a89e35166017e551d83e4e02f799a2))
+* feat(tui): add simulation engine helper ([`6322c6c`](https://github.com/chen-star/net_alpha/commit/6322c6c73101dcef351550cd15c1c361d74dc134))
 
-* feat(tui): load and display database trades in DataTable ([`b1335b8`](https://github.com/chen-star/net_alpha/commit/b1335b868cc9f974989aa28fd487433257e1053a))
+* feat(tui): load and display database trades in DataTable ([`c45cfa0`](https://github.com/chen-star/net_alpha/commit/c45cfa07e86ce5f577a06e7232cdce463e809f44))
 
-* feat(tui): build split-pane dashboard layout ([`d7e5428`](https://github.com/chen-star/net_alpha/commit/d7e54280ea839401adf0cd571b72614913e134b8))
+* feat(tui): build split-pane dashboard layout ([`e2b4679`](https://github.com/chen-star/net_alpha/commit/e2b46794370f0c7e36d5c25f934424f0f67b59bd))
 
-* feat(tui): scaffold base textual app and cli command ([`a5338fb`](https://github.com/chen-star/net_alpha/commit/a5338fb2cdfba604dcc5281fefae3d03c82d93c0))
+* feat(tui): scaffold base textual app and cli command ([`ecf5dfe`](https://github.com/chen-star/net_alpha/commit/ecf5dfe606632fc90a130a0fae86a178e7cc7db1))
 
 
 ## v0.7.0 (2026-04-18)
 
 ### Chore
 
-* chore: remove tmp_skills from git ([`88aafed`](https://github.com/chen-star/net_alpha/commit/88aafed0856cfec30f651c21d0034f9970f4c728))
+* chore: remove tmp_skills from git ([`f8a8545`](https://github.com/chen-star/net_alpha/commit/f8a85450b3902ac712336a5d2cb5b93c76cd12ea))
 
 ### Documentation
-
-* docs(design): add interactive wizard CLI UX spec ([`6214582`](https://github.com/chen-star/net_alpha/commit/6214582dcc22d86d0ef1bbd1c92a27fd72bfd39e))
 
 * docs: fix verification failures and update codebase references
 
 - Resolve gitnexus tool reference failures in CLAUDE.md and AGENTS.md
 - Correct CI/CD workflow paths to .github/workflows/ in release plan
 - Update CLI test path to integration test location in CLI plan
-- Update project name to wash-alpha and fix SchemaCacheRow symbol ([`e9c31d0`](https://github.com/chen-star/net_alpha/commit/e9c31d0dbaf0b55cfbadce4f5f3487aa1db82ac8))
+- Update project name to wash-alpha and fix SchemaCacheRow symbol ([`f8de4e7`](https://github.com/chen-star/net_alpha/commit/f8de4e719ec13ca32c2ccb0b54193ca0b1ddd501))
 
-* docs: update project documentation ([`2f8113f`](https://github.com/chen-star/net_alpha/commit/2f8113fd68d2e1441e048c18fe1ce3d536a2a33e))
+* docs: update project documentation ([`24dede1`](https://github.com/chen-star/net_alpha/commit/24dede1eff43605c33e8b428104e10a8a02da527))
 
 ### Feature
 
-* feat(cli): add interactive wizard mode ([`dfec553`](https://github.com/chen-star/net_alpha/commit/dfec5538ed0c1d5727953e035519cb108cc6a498))
+* feat(cli): add interactive wizard mode ([`aa73887`](https://github.com/chen-star/net_alpha/commit/aa7388793404532fdabfa1422e811ac053d5b205))
 
 ### Unknown
 
-* merge: synchronize with origin/master and finalize v0.6.0 release ([`af439b3`](https://github.com/chen-star/net_alpha/commit/af439b3f789b0e467e6a22eb44d6dd37fff563c0))
+* merge: synchronize with origin/master and finalize v0.6.0 release ([`e431436`](https://github.com/chen-star/net_alpha/commit/e43143681a8e9f79aed4bac685b8dab0e3d89594))
 
 
 ## v0.6.0 (2026-04-16)
 
 ### Documentation
 
-* docs: update PyPI badge to Shields.io and refresh GitNexus index ([`e280434`](https://github.com/chen-star/net_alpha/commit/e2804340bf5a96ffb52f483f85e6db151145780f))
+* docs: update PyPI badge to Shields.io and refresh GitNexus index ([`b3ed7af`](https://github.com/chen-star/net_alpha/commit/b3ed7afeeff5150229c9b8868d1cf5f1fc87be1a))
 
-* docs: include design spec and implementation plan for README overhaul ([`2f16adc`](https://github.com/chen-star/net_alpha/commit/2f16adc24e390d11700aa279fc17c9697f1a539b))
+* docs: include design spec and implementation plan for README overhaul ([`52fa57a`](https://github.com/chen-star/net_alpha/commit/52fa57a085da7b1ae825b02fb120a273e540c978))
 
-* docs: add summary for README overhaul plan ([`c70433d`](https://github.com/chen-star/net_alpha/commit/c70433d77266fd1892ba661c2c86fe070b4a5673))
+* docs: add summary for README overhaul plan ([`79ee9e2`](https://github.com/chen-star/net_alpha/commit/79ee9e2a50096f67e1b80fcab0b80f6b8b576575))
 
-* docs: final polish of README overhaul ([`9a9968f`](https://github.com/chen-star/net_alpha/commit/9a9968fe57f38a14701543e172d1752e1316d5db))
+* docs: final polish of README overhaul ([`d02bf06`](https://github.com/chen-star/net_alpha/commit/d02bf06fe4187c505d3fa47f21eb9a6b4c789eda))
 
-* docs: add technical deep-dive and privacy section to README ([`057964f`](https://github.com/chen-star/net_alpha/commit/057964f984e342c54dac5d7aa9ddd8a8ede7da85))
+* docs: add technical deep-dive and privacy section to README ([`bd7cb81`](https://github.com/chen-star/net_alpha/commit/bd7cb81be103889e16eba379bb17032d291b16a1))
 
-* docs: add modern workflow walkthrough to README ([`676bd1c`](https://github.com/chen-star/net_alpha/commit/676bd1c2ebb9bd16997d637395be5c5a872a75d1))
+* docs: add modern workflow walkthrough to README ([`97a314a`](https://github.com/chen-star/net_alpha/commit/97a314a9dbe9fe1c1971d1b5077939bc1c31eba4))
 
-* docs: add hero header and value prop to README ([`4c197fa`](https://github.com/chen-star/net_alpha/commit/4c197faab0624aacb9a1a6f0081883332ea7a3db))
+* docs: add hero header and value prop to README ([`4dd472d`](https://github.com/chen-star/net_alpha/commit/4dd472d38d92c6bae640e6a75265f8ca3196c3bd))
 
 ### Feature
 
-* feat: add crypto and common ETF pairs for tax loss harvesting ([`4636381`](https://github.com/chen-star/net_alpha/commit/4636381fd1e9bb009bebc3b6121adb705422ad34))
+* feat: add crypto and common ETF pairs for tax loss harvesting ([`5546b33`](https://github.com/chen-star/net_alpha/commit/5546b3305178448f8c769fb88117671f4c613589))
 
 
 ## v0.5.0 (2026-04-16)
 
 ### Chore
 
-* chore: update release script, Makefile, and local lockfile ([`7cad10b`](https://github.com/chen-star/net_alpha/commit/7cad10b421152a9555aaef82e6ff52643a49cee9))
+* chore: update release script, Makefile, and local lockfile ([`5b31293`](https://github.com/chen-star/net_alpha/commit/5b312937fb9bc0e42dfef80a7f7b871c7ce048d7))
 
 ### Ci
 
-* ci: fix automated release and add manual release fallback ([`f6bd838`](https://github.com/chen-star/net_alpha/commit/f6bd838efd11d842befe0d4bf5b583ad1be5bc0b))
+* ci: fix automated release and add manual release fallback ([`93a16f6`](https://github.com/chen-star/net_alpha/commit/93a16f6cd6636b2b54441a5dbca18aef854c0192))
 
 ### Documentation
 
-* docs: update codecov badge with private token ([`1980c62`](https://github.com/chen-star/net_alpha/commit/1980c62eb47dc79708868bc791808350996de24b))
+* docs: update codecov badge with private token ([`f1b19b2`](https://github.com/chen-star/net_alpha/commit/f1b19b2bc918e30ffcf8343f23b03b8579ad55ee))
 
 ### Feature
 
-* feat: enhance README with AI agent and interactive TUI features ([`d7b75ae`](https://github.com/chen-star/net_alpha/commit/d7b75aef04d444f440d2ed623c752d8aebaa519d))
+* feat: enhance README with AI agent and interactive TUI features ([`c0f97cc`](https://github.com/chen-star/net_alpha/commit/c0f97cc2e3fa8c93a62a0af2110077241493a8ac))
 
 
 ## v0.4.2 (2026-04-16)
 
 ### Ci
 
-* ci: fix codecov badge and improve upload debugging ([`a865c7a`](https://github.com/chen-star/net_alpha/commit/a865c7ab58b01746da3a135b1ce8b2b15a9f7b51))
+* ci: fix codecov badge and improve upload debugging ([`e2e4f6b`](https://github.com/chen-star/net_alpha/commit/e2e4f6bc949ebc02b70aceaa8b7801a2b83cc2b8))
 
-* ci: remove [skip ci] from release commits to allow workflow triggering ([`bd3fd48`](https://github.com/chen-star/net_alpha/commit/bd3fd484f214c5f84954c848bbb542ec6219055c))
+* ci: remove [skip ci] from release commits to allow workflow triggering ([`2cbe312`](https://github.com/chen-star/net_alpha/commit/2cbe3125964476f9bb207dd14255b07baf74dcfe))
 
 ### Fix
 
-* fix: sync internal version and trigger release automation ([`a1e8063`](https://github.com/chen-star/net_alpha/commit/a1e806369cd7e1f9a222074be9aa49e73a0ebb46))
+* fix: sync internal version and trigger release automation ([`53739f4`](https://github.com/chen-star/net_alpha/commit/53739f445632405cc5e0a944c2f44417dde6cdca))
 
-* fix: trigger release automation verification ([`a138042`](https://github.com/chen-star/net_alpha/commit/a138042e96ac7a8b2d995944e116e7f9bb80bd21))
+* fix: trigger release automation verification ([`1c68a14`](https://github.com/chen-star/net_alpha/commit/1c68a149376d6d97ba74a55fd93b87c79704ab28))
 
 
 ## v0.4.1 (2026-04-16)
 
 ### Chore
 
-* chore: add MCP config and tax optimization suite plan ([`8234502`](https://github.com/chen-star/net_alpha/commit/823450251db8461d4b4e9f52f106ba2d97b8d61b))
+* chore: add MCP config and tax optimization suite plan ([`36b68a3`](https://github.com/chen-star/net_alpha/commit/36b68a34e092608e3f05df758620813b332138a3))
 
 ### Fix
 
-* fix: resolve linting and formatting issues to fix CI ([`5fd12d9`](https://github.com/chen-star/net_alpha/commit/5fd12d984837b3a0f1817dd65de3a58ffa10d72d))
+* fix: resolve linting and formatting issues to fix CI ([`56e2588`](https://github.com/chen-star/net_alpha/commit/56e2588b69885a2757a348cafc5187e0e5cd3986))
 
 
 ## v0.4.0 (2026-04-16)
 
 ### Chore
 
-* chore: update GitNexus metadata and bump version ([`47998bb`](https://github.com/chen-star/net_alpha/commit/47998bb131d3afc1b3fead9e8d717e83bbdd13c2))
-
-### Documentation
-
-* docs: add AI agent wrapper implementation plan
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`47c5220`](https://github.com/chen-star/net_alpha/commit/47c52208e127e5f9adacc25968380ab859535836))
-
-* docs: add AI agent wrapper design spec
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ccf2a03`](https://github.com/chen-star/net_alpha/commit/ccf2a033003e0402a96833f8e975c6c8b0347792))
+* chore: update GitNexus metadata and bump version ([`18925c3`](https://github.com/chen-star/net_alpha/commit/18925c3a4036812c1629293e15af9fd4095fcd71))
 
 ### Feature
 
-* feat: wire agent command into CLI app and add integration smoke test ([`cba39c8`](https://github.com/chen-star/net_alpha/commit/cba39c8549f6145d21a22565baf6cd36cb3ab10a))
+* feat: wire agent command into CLI app and add integration smoke test ([`8688b78`](https://github.com/chen-star/net_alpha/commit/8688b783a0e98b6a70846e944b3fdf9e421afc75))
 
-* feat: add agent REPL with local routing and session-start scan ([`61ecab9`](https://github.com/chen-star/net_alpha/commit/61ecab935888443e423cf2ea8853e99ee04dedba))
+* feat: add agent REPL with local routing and session-start scan ([`df5bca1`](https://github.com/chen-star/net_alpha/commit/df5bca182ccd5e7584f8772ad96966e1ae6e3c13))
 
-* feat: add ReAct loop for Claude tool-use agent ([`fcc8e08`](https://github.com/chen-star/net_alpha/commit/fcc8e085f43b1a8b30a4f84eda662a3d219cccb8))
+* feat: add ReAct loop for Claude tool-use agent ([`ec3d0a0`](https://github.com/chen-star/net_alpha/commit/ec3d0a00258a09fafc70836530458084b18cca2d))
 
-* feat: add agent system prompt assembly ([`a9f7334`](https://github.com/chen-star/net_alpha/commit/a9f733441d8ec6e76fa98711f32546428327b657))
+* feat: add agent system prompt assembly ([`84494a6`](https://github.com/chen-star/net_alpha/commit/84494a63b1a21b40a4318fe8fb6eda0cb78d5a31))
 
-* feat: add agent tool executors and Claude tool schemas ([`d67be5a`](https://github.com/chen-star/net_alpha/commit/d67be5a74de65cc5a1be3456b9996d522ef32967))
+* feat: add agent tool executors and Claude tool schemas ([`9356288`](https://github.com/chen-star/net_alpha/commit/9356288660a881225382d6caf206ca17d5233d3a))
 
-* feat: add agent_api_key, agent_model, resolved_agent_api_key to Settings ([`e32e4a9`](https://github.com/chen-star/net_alpha/commit/e32e4a95bd0c37f59f20492bd59f3966b90c75c8))
+* feat: add agent_api_key, agent_model, resolved_agent_api_key to Settings ([`3293bc4`](https://github.com/chen-star/net_alpha/commit/3293bc45a52029c3a06b5c19bad60dfd44e87129))
 
 
 ## v0.3.0 (2026-04-16)
 
-### Documentation
-
-* docs: add CLI UX improvements implementation plan
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9fc1222`](https://github.com/chen-star/net_alpha/commit/9fc12226a4f802bdd0eb979ae235c2eb149d6880))
-
-* docs: add CLI UX improvements design spec
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7c69862`](https://github.com/chen-star/net_alpha/commit/7c698625dbabf080ded29d61a8ccbd63efabf25b))
-
 ### Feature
 
-* feat: show example values in schema confirmation and add post-import nudge ([`9d0c8bd`](https://github.com/chen-star/net_alpha/commit/9d0c8bdbb54dc72340c53fcda35f5df971b28f01))
+* feat: show example values in schema confirmation and add post-import nudge ([`a74b75c`](https://github.com/chen-star/net_alpha/commit/a74b75c52dd88a4398b2c4f56033e9b8fedb50d8))
 
-* feat: add broker autocomplete and what-to-do-next panel to wizard ([`648c647`](https://github.com/chen-star/net_alpha/commit/648c647c30b79e9a1f414b5dcf719e4746383f4c))
+* feat: add broker autocomplete and what-to-do-next panel to wizard ([`91a3141`](https://github.com/chen-star/net_alpha/commit/91a3141e831efd1f71b562565b82a5c2f8dc5f23))
 
-* feat: add ticker validation with close-match suggestion to simulate sell ([`f1a2097`](https://github.com/chen-star/net_alpha/commit/f1a2097cec3a4b1cd02705efcec64d81773c3baf))
+* feat: add ticker validation with close-match suggestion to simulate sell ([`146c0b9`](https://github.com/chen-star/net_alpha/commit/146c0b9995308400a8fa458a3fe06e5c12f3061e))
 
-* feat: add --quiet flag to report command ([`9e4fd82`](https://github.com/chen-star/net_alpha/commit/9e4fd82b5c2d07f99075a2a1d2f19b978c142d92))
+* feat: add --quiet flag to report command ([`9c71723`](https://github.com/chen-star/net_alpha/commit/9c717232ae14c278331c33cb9f04ad373ebfde18))
 
-* feat: add --quiet flag, --type validation, hints, and last_check_at to check command ([`d002753`](https://github.com/chen-star/net_alpha/commit/d0027531daacf198766a90acffddb111059e0e7f))
+* feat: add --quiet flag, --type validation, hints, and last_check_at to check command ([`a1e5992`](https://github.com/chen-star/net_alpha/commit/a1e5992b14fabcbed96a688579907d065c97b7c4))
 
-* feat: add urgency coloring and cross-command hint to rebuys ([`6f75fa1`](https://github.com/chen-star/net_alpha/commit/6f75fa19f79b601ca79b9098824b010c6516f8ce))
+* feat: add urgency coloring and cross-command hint to rebuys ([`ba34bbb`](https://github.com/chen-star/net_alpha/commit/ba34bbbcf40d6f9fd3ca1fe57bc78a51365ae37d))
 
-* feat: color-code tax-position monetary values and add cross-command hint ([`2d2da80`](https://github.com/chen-star/net_alpha/commit/2d2da80a51789dfffd6ada28d990ff731234d51e))
+* feat: color-code tax-position monetary values and add cross-command hint ([`c819312`](https://github.com/chen-star/net_alpha/commit/c819312682caf189559b01e4b092728c2a6a9e61))
 
-* feat: add progress spinners to check, report, and import commands ([`854ba64`](https://github.com/chen-star/net_alpha/commit/854ba64f7a19ec2045deb56556ea3745f16038e9))
+* feat: add progress spinners to check, report, and import commands ([`63a00d8`](https://github.com/chen-star/net_alpha/commit/63a00d8877f59079b9b206f0fb3edcf476345fca))
 
-* feat: add net-alpha status dashboard command ([`e9be993`](https://github.com/chen-star/net_alpha/commit/e9be99349d5989bfb8c12442d898b49c45f5c5f9))
+* feat: add net-alpha status dashboard command ([`ebdc415`](https://github.com/chen-star/net_alpha/commit/ebdc4159215eb2e3bc45327af4c0a21ff4433456))
 
-* feat: add MetaRepository for reading and writing meta key-value pairs ([`31a759f`](https://github.com/chen-star/net_alpha/commit/31a759f68a9110a5dbf4ba9f5c9164ad2ccc082f))
+* feat: add MetaRepository for reading and writing meta key-value pairs ([`56864bb`](https://github.com/chen-star/net_alpha/commit/56864bb673f044c45fd9f7be2f2a767cff32d8ef))
 
 * feat: add print_hint and format_currency_colored output helpers
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ba78737`](https://github.com/chen-star/net_alpha/commit/ba78737f7f87d7af28d34b8b49eec581f1e4717d))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a376f45`](https://github.com/chen-star/net_alpha/commit/a376f45b1a9249f38b2e1cfa185d0b693c9920e6))
 
 ### Style
 
-* style: normalize error message formatting across CLI commands ([`477e5a6`](https://github.com/chen-star/net_alpha/commit/477e5a664a96c912e98307d0203df21275902c9b))
+* style: normalize error message formatting across CLI commands ([`557b672`](https://github.com/chen-star/net_alpha/commit/557b672fc2859b1b73ee92f32582a8bcee84c1e7))
 
 
 ## v0.2.0 (2026-04-15)
-
-### Documentation
-
-* docs: add tax optimization suite design spec
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c97cfe1`](https://github.com/chen-star/net_alpha/commit/c97cfe1ac2d45251c4732edf6d564f2f1a16e68f))
 
 ### Feature
 
@@ -4744,13 +4336,13 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c97cfe1`](htt
 
 When --price is given, shows FIFO/HIFO/LIFO comparison table with
 ST/LT gain/loss split, wash sale risk flags, and tax-aware
-recommendation. Reuses existing wash sale check logic. ([`ab9ced7`](https://github.com/chen-star/net_alpha/commit/ab9ced771773922811d850f07ff4362d06f93e26))
+recommendation. Reuses existing wash sale check logic. ([`590cb5b`](https://github.com/chen-star/net_alpha/commit/590cb5bf167ed0589fdf9203902da0bfb19754f1))
 
 * feat: add tax-position CLI command
 
 Shows YTD realized ST/LT gains and losses, net capital position,
 loss-to-zero-st, carryforward, and open lots with holding period
-tracker. Sorted by days-to-long-term ascending. ([`1f2e21c`](https://github.com/chen-star/net_alpha/commit/1f2e21c524deebafeabf29b13aa747aaeaf021f2))
+tracker. Sorted by days-to-long-term ascending. ([`2393ce0`](https://github.com/chen-star/net_alpha/commit/2393ce02cb1bb6c55df2085bc1415bd3e59011c9))
 
 * feat: implement tax position engine (Tasks 3-8)
 
@@ -4760,26 +4352,26 @@ tracker. Sorted by days-to-long-term ascending. ([`1f2e21c`](https://github.com/
 - select_lots: FIFO/HIFO/LIFO across accounts with ST/LT split
 - recommend_lot_method: rule-based decision tree with wash risk + fallback
 - 42 tests covering all edge cases: boundaries, per-account isolation,
-  basis_unknown, option exclusion, holding period, tiebreaks ([`fe59ea2`](https://github.com/chen-star/net_alpha/commit/fe59ea28d5831d561a817af3976cb4a84a9f2908))
+  basis_unknown, option exclusion, holding period, tiebreaks ([`9b5d774`](https://github.com/chen-star/net_alpha/commit/9b5d774ed7edc4e957dc9c82d0c94fd775ce9274))
 
-* feat: add OpenLotFactory and RealizedPairFactory test fixtures ([`5d55480`](https://github.com/chen-star/net_alpha/commit/5d5548059108a881b7d0e376598ac702ed912509))
+* feat: add OpenLotFactory and RealizedPairFactory test fixtures ([`b98443a`](https://github.com/chen-star/net_alpha/commit/b98443a192b644476dae1b2f4ae5d0854b5b4599))
 
 * feat: add domain models for tax optimization suite
 
 Add TaxPosition, OpenLot, LotSelection, LotRecommendation,
 AllocationResult, and RealizedPair to models/domain.py.
 Includes computed properties for net_st, net_lt, net_capital_gain,
-loss_needed_to_zero_st, and carryforward ($3,000 cap). ([`ca6cd6f`](https://github.com/chen-star/net_alpha/commit/ca6cd6f5667526bc8c6e2a5f1566981de563870a))
+loss_needed_to_zero_st, and carryforward ($3,000 cap). ([`10b93c7`](https://github.com/chen-star/net_alpha/commit/10b93c78447618345787bf92449e7f1382585657))
 
 ### Style
 
-* style: fix lint and formatting for tax optimization suite ([`6981633`](https://github.com/chen-star/net_alpha/commit/69816330e097105285e7a000af3bfd3f7cd7fe22))
+* style: fix lint and formatting for tax optimization suite ([`4302adc`](https://github.com/chen-star/net_alpha/commit/4302adca872a248b38feb67d9e8db763c461a41f))
 
 ### Test
 
 * test: fix lint and add missing tests for domain models
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c406523`](https://github.com/chen-star/net_alpha/commit/c4065237f3c1c6aa3986a5c81925400c120ffee8))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7acd573`](https://github.com/chen-star/net_alpha/commit/7acd57373a61e799cc01b2645498ee6843f35a6e))
 
 
 ## v0.1.3 (2026-04-14)
@@ -4791,24 +4383,24 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c406523`](htt
 Fixes CI lint failures (F401 unused imports, I001 unsorted imports) and
 reformats all files to match ruff format standards.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`19ff393`](https://github.com/chen-star/net_alpha/commit/19ff39347d8cbd6569d9a6a0aff1d7fe2faed182))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fde1085`](https://github.com/chen-star/net_alpha/commit/fde108584d18039bb2e2cd38d3d4771b7515172e))
 
 ### Unknown
 
-* Update gitnexus index. ([`b6658f0`](https://github.com/chen-star/net_alpha/commit/b6658f0152eec361b86aeb1dd48a30a70febea10))
+* Update gitnexus index. ([`97cb253`](https://github.com/chen-star/net_alpha/commit/97cb253837342447ab09752d55607eb5d4648d24))
 
 
 ## v0.1.2 (2026-04-14)
 
 ### Chore
 
-* chore: update GitNexus index stats ([`7345672`](https://github.com/chen-star/net_alpha/commit/734567247c059715716421b3a910d8c291fd2b6e))
+* chore: update GitNexus index stats ([`bcd9de8`](https://github.com/chen-star/net_alpha/commit/bcd9de82767c8bdce3006db5295f2c546dfcf5e3))
 
 ### Fix
 
-* fix: set line-length to 120 and fix remaining lint errors ([`90b47e6`](https://github.com/chen-star/net_alpha/commit/90b47e6e48d4567812ba1b68354f00af69bf5a13))
+* fix: set line-length to 120 and fix remaining lint errors ([`6abcae6`](https://github.com/chen-star/net_alpha/commit/6abcae62cd7ef5be20418ff8ef28d6eed330e24d))
 
-* fix: use --extra dev to install optional dev dependencies in CI ([`8d1f1cb`](https://github.com/chen-star/net_alpha/commit/8d1f1cbf95f4ecbbf6f0cf7b5a8ed9c1b1e71782))
+* fix: use --extra dev to install optional dev dependencies in CI ([`deef5b9`](https://github.com/chen-star/net_alpha/commit/deef5b94b11a120cb6c30a18b3c44fddd8aaef53))
 
 
 ## v0.1.1 (2026-04-14)
@@ -4818,47 +4410,27 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`19ff393`](htt
 
 ### Chore
 
-* chore: rename PyPI package to wash-alpha ([`ae94c5e`](https://github.com/chen-star/net_alpha/commit/ae94c5e53218d09d8f335b9f4bbe5cf2695193f8))
+* chore: rename PyPI package to wash-alpha ([`7189777`](https://github.com/chen-star/net_alpha/commit/7189777bcac4ee6a8351de7f7afddc795df2b3cb))
 
-* chore: add python-semantic-release config ([`5d89abc`](https://github.com/chen-star/net_alpha/commit/5d89abc88171c4d2790749dbe257d0bb0bd70053))
+* chore: add python-semantic-release config ([`62c3a91`](https://github.com/chen-star/net_alpha/commit/62c3a9198e4d17cade4b6c8e5e8326436020c769))
 
-* chore: add .gitignore with worktrees and Python artifacts ([`0936286`](https://github.com/chen-star/net_alpha/commit/0936286d95c864464d363badcf63db93e68bd2d9))
+* chore: add .gitignore with worktrees and Python artifacts ([`c77363c`](https://github.com/chen-star/net_alpha/commit/c77363c3dafad828c893b8c3af2e51dad26d8f32))
 
 ### Ci
 
-* ci: add explicit tag push step; gate codecov upload to py3.11 ([`73c586a`](https://github.com/chen-star/net_alpha/commit/73c586a0e912c6f473c0969cbe2ed19e3b31c100))
+* ci: add explicit tag push step; gate codecov upload to py3.11 ([`40c582f`](https://github.com/chen-star/net_alpha/commit/40c582fc5c5927d68b3a9fd26b46a8869f6c6d11))
 
-* ci: add release workflow (hatch build, PyPI OIDC publish, GitHub Release) ([`b9590ce`](https://github.com/chen-star/net_alpha/commit/b9590cecc12489b40a874545f454faaf71097e5b))
+* ci: add release workflow (hatch build, PyPI OIDC publish, GitHub Release) ([`617ec50`](https://github.com/chen-star/net_alpha/commit/617ec50c4a7885be7bf65e1580260ebec924d311))
 
-* ci: pin python-semantic-release to v8 range ([`5fdc4a4`](https://github.com/chen-star/net_alpha/commit/5fdc4a49590dd1c855bfd2f9970ef6f745f7428b))
+* ci: pin python-semantic-release to v8 range ([`47eab42`](https://github.com/chen-star/net_alpha/commit/47eab4224f0bdab87e269bbdf376ec3add7009e5))
 
-* ci: add version bump workflow (conventional commits + manual override) ([`919df11`](https://github.com/chen-star/net_alpha/commit/919df111234c1635c215175512a9fa4bf492b92c))
+* ci: add version bump workflow (conventional commits + manual override) ([`ecf4d8c`](https://github.com/chen-star/net_alpha/commit/ecf4d8cb556eb739f64a71648e4219d2a7f0baee))
 
-* ci: add CI workflow (lint, test, coverage on push/PR/nightly) ([`50cd408`](https://github.com/chen-star/net_alpha/commit/50cd408048c31d43c3105cb9e3a40cad88c77bbc))
+* ci: add CI workflow (lint, test, coverage on push/PR/nightly) ([`4f54c9b`](https://github.com/chen-star/net_alpha/commit/4f54c9bc8b2c8206b928b25ba04cd1740c6dc1b1))
 
 ### Documentation
 
-* docs: update spec with wash-alpha package name ([`d6f1a72`](https://github.com/chen-star/net_alpha/commit/d6f1a722a8760d644d68d0d1bdc005b2387c1ee8))
-
-* docs: update plan with wash-alpha package name ([`6ffac86`](https://github.com/chen-star/net_alpha/commit/6ffac86c11c2bc2f04a10bb50640efdbf5ae5ba4))
-
-* docs: add CI, PyPI, and coverage badges to README ([`1aa70c7`](https://github.com/chen-star/net_alpha/commit/1aa70c7551ce9808d7de310768d10f5e33f2c107))
-
-* docs: add CI/CD release implementation plan
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8b3b969`](https://github.com/chen-star/net_alpha/commit/8b3b969a363c4b789f8f23bc8652805897deb5d4))
-
-* docs: add CI/CD, release publishing, and PyPI packaging design spec
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f895ca3`](https://github.com/chen-star/net_alpha/commit/f895ca33e9f293fcc50dddcfcc37a28a94b7f91a))
-
-* docs: add integration test suite implementation plan
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`85a671b`](https://github.com/chen-star/net_alpha/commit/85a671ba0060eca8ddd8a31ee8c6eaad3c021e5b))
-
-* docs: add integration test suite design spec
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`079587b`](https://github.com/chen-star/net_alpha/commit/079587b139853c4a8b2e00677ffb981236a4e591))
+* docs: add CI, PyPI, and coverage badges to README ([`c19d0fd`](https://github.com/chen-star/net_alpha/commit/c19d0fd8c87340c3abf89a57eb9ef889f74c9daa))
 
 ### Feature
 
@@ -4868,13 +4440,13 @@ Implements the interactive wizard that runs on first launch, prompting
 for an Anthropic API key, importing broker CSVs, and running an initial
 wash sale check.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`152c161`](https://github.com/chen-star/net_alpha/commit/152c161851b4c27d524cca17cc044d1930e50ab7))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1f3f191`](https://github.com/chen-star/net_alpha/commit/1f3f191b91c9e52e5515c9b02751e766ae5afc74))
 
 * feat: add annual wash sale report command with CSV export
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`52b84fd`](https://github.com/chen-star/net_alpha/commit/52b84fdf1556ea58cc41f6c38d2171a5ce8059a3))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8ca38b6`](https://github.com/chen-star/net_alpha/commit/8ca38b686990a726e57c0e50aa456a80793eece0))
 
-* feat: add safe-to-rebuy tracker command ([`f9cc4a3`](https://github.com/chen-star/net_alpha/commit/f9cc4a38392935b124143cfc88aef02a259ba87f))
+* feat: add safe-to-rebuy tracker command ([`25ee889`](https://github.com/chen-star/net_alpha/commit/25ee88958efd09fb8a5271bb8f5acb0a34c8078d))
 
 * feat: add simulate sell command with look-back detection
 
@@ -4883,7 +4455,7 @@ the 30-day look-back window for existing buys that would trigger a wash
 sale, shows the triggering trade with confidence label and safe-to-sell
 date, and estimates the disallowed loss when a price is provided.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f9cc536`](https://github.com/chen-star/net_alpha/commit/f9cc536eea55976be3d3b2f7866a302a717eb45f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3d3a0af`](https://github.com/chen-star/net_alpha/commit/3d3a0afb82a50a3928dda83d43d5e4e8f086a587))
 
 * feat: add check command with summary, detail, and staleness warnings
 
@@ -4891,76 +4463,76 @@ Implements `net-alpha check` with year/ticker/type filtering, per-account
 staleness warnings, wash sale summary table, violation detail table,
 rebuy hint, and basis-unknown/option-expiration caveats.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2238af5`](https://github.com/chen-star/net_alpha/commit/2238af5c14ddc657124d8011cf4d3e75b334f9f2))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`65466a2`](https://github.com/chen-star/net_alpha/commit/65466a2d0b247d6ec8e860e38b2f84db041a7031))
 
-* feat: add CSV import command with schema confirmation ([`d65e17b`](https://github.com/chen-star/net_alpha/commit/d65e17b24753ededd8d89ddac8ce1a9ccb9bfc9a))
+* feat: add CSV import command with schema confirmation ([`e24fb59`](https://github.com/chen-star/net_alpha/commit/e24fb59408fd3a0b732df3eac73ddbde01c1ef16))
 
-* feat: add Typer app entry point with DB bootstrap ([`3ede198`](https://github.com/chen-star/net_alpha/commit/3ede19850f9cc692513a9be3d6792b751afe3dfd))
+* feat: add Typer app entry point with DB bootstrap ([`12591e9`](https://github.com/chen-star/net_alpha/commit/12591e90ee95f7599d9425e5417e50e166a3149a))
 
-* feat: add CLI output helpers and disclaimer ([`b4eb9af`](https://github.com/chen-star/net_alpha/commit/b4eb9af6b2d84f97629165378307588334d68650))
+* feat: add CLI output helpers and disclaimer ([`ba743ed`](https://github.com/chen-star/net_alpha/commit/ba743ed1287fd9f8325da0e73b00d88e90061e1d))
 
 * feat: add main import orchestrator
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2a51c8e`](https://github.com/chen-star/net_alpha/commit/2a51c8e04210c1d85831a147dc5a04c472a2a454))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`88acb60`](https://github.com/chen-star/net_alpha/commit/88acb60a87c5dff65f5e1b6952b32a11967bbc59))
 
 * feat: add trade deduplication with hash and semantic key signals
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9011a19`](https://github.com/chen-star/net_alpha/commit/9011a19d7b7edb32e8c030b579a89ee69c6e76ac))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`040eca4`](https://github.com/chen-star/net_alpha/commit/040eca4d5cf3b1731039c942e190de4180371457))
 
 * feat: add CSV reader with schema mapping and option parsing
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`539ef2e`](https://github.com/chen-star/net_alpha/commit/539ef2e2c9bfd08b1f0472165e683e55956ab344))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b144405`](https://github.com/chen-star/net_alpha/commit/b14440574d118ea01d1b1c19bc481f0e689483c3))
 
 * feat: add LLM schema detection with retry and exponential backoff
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3806ce1`](https://github.com/chen-star/net_alpha/commit/3806ce12ef4c3b9a05b2d273f48ce1176d461e93))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d5156b1`](https://github.com/chen-star/net_alpha/commit/d5156b15724af9e1346a99bc1016660117946971))
 
 * feat: add option symbol regex parsers (OCC, Schwab, Robinhood)
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7aa4ef7`](https://github.com/chen-star/net_alpha/commit/7aa4ef717c8b1caed00fc0da3dadada3391029cf))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d48a098`](https://github.com/chen-star/net_alpha/commit/d48a098af9a509e6e7b4ed9f04fae6bff2bccd0e))
 
 * feat: add row anonymizer for LLM schema detection
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`65c88ab`](https://github.com/chen-star/net_alpha/commit/65c88ab982addb2191bc9fc518b84efbbe1a279a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`553d46b`](https://github.com/chen-star/net_alpha/commit/553d46b6ec548354d6df182a6a68d46a859109d0))
 
 * feat: add repositories with domain ↔ table mapping
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5fc36db`](https://github.com/chen-star/net_alpha/commit/5fc36dbc9e865aa4cc56e08b4b5a844d629cd912))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`18e1bf5`](https://github.com/chen-star/net_alpha/commit/18e1bf5ee41d5f8a3cd0597bcaae235202fda403))
 
 * feat: add schema migration framework with v0→v1
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a8d9f42`](https://github.com/chen-star/net_alpha/commit/a8d9f4259f5b9fcf1215648f279c1953ab90862f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b3ef87f`](https://github.com/chen-star/net_alpha/commit/b3ef87fcdb7cc578b3d5f638f8743c10bda5c6f2))
 
 * feat: add DB connection and init with schema versioning
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9aeda37`](https://github.com/chen-star/net_alpha/commit/9aeda372a88326d8965038393dde1bb8a10c2e25))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e3ed6a1`](https://github.com/chen-star/net_alpha/commit/e3ed6a15f417d729391a470e4afdebf344bb7a34))
 
 * feat: add SQLModel table classes for all entities
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4606271`](https://github.com/chen-star/net_alpha/commit/4606271e32932572a1d131fc43131af2180864f2))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`96af8a7`](https://github.com/chen-star/net_alpha/commit/96af8a7392a637b822a019c3c97d334ee71bebc7))
 
 * feat: add Settings config via pydantic-settings
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`55b0e98`](https://github.com/chen-star/net_alpha/commit/55b0e980f9bc3096a8fc21bb3e049662d00a389a))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ec96913`](https://github.com/chen-star/net_alpha/commit/ec969132973f985e7b30dc78171e4fcfa2d227c2))
 
-* feat: implement core wash sale detection engine ([`48237e6`](https://github.com/chen-star/net_alpha/commit/48237e65604d172f303f4405577101ea192b003c))
+* feat: implement core wash sale detection engine ([`21e590e`](https://github.com/chen-star/net_alpha/commit/21e590eb09101c58126a5b1ca36b9e034f9c7429))
 
-* feat: add ETF pairs loader with user override support ([`d00a3ec`](https://github.com/chen-star/net_alpha/commit/d00a3ece9b136ecb250290cea6c761897d2a90d2))
+* feat: add ETF pairs loader with user override support ([`aa33a91`](https://github.com/chen-star/net_alpha/commit/aa33a912dc53f87d8698f6cd1d7ad240f6902b57))
 
 * feat: implement equity match confidence with ETF pair support
 
 - Add get_match_confidence for all equity/option/ETF scenarios
-- Tests cover confirmed, probable, unclear, and no-match cases ([`c32ea31`](https://github.com/chen-star/net_alpha/commit/c32ea318649ab69c073bcafa7fa7bb81cb35b53b))
+- Tests cover confirmed, probable, unclear, and no-match cases ([`d94c022`](https://github.com/chen-star/net_alpha/commit/d94c02258dd2ea1ca35ab290e2e62139c4d034ef))
 
-* feat: implement 30-day wash sale window check ([`fb5c122`](https://github.com/chen-star/net_alpha/commit/fb5c122f4fadfa5f8c6b8168096831c72162a5cb))
+* feat: implement 30-day wash sale window check ([`0d16b00`](https://github.com/chen-star/net_alpha/commit/0d16b0037127f69993b95a6b4186d19115ea8d9b))
 
-* feat: add factory_boy test fixtures for Trade and Lot ([`b447115`](https://github.com/chen-star/net_alpha/commit/b4471156d53460e6a1c9ecd4ac22d52456295459))
+* feat: add factory_boy test fixtures for Trade and Lot ([`2942c0d`](https://github.com/chen-star/net_alpha/commit/2942c0ddcf32d101c650ccb123190fab73ea4073))
 
-* feat: add Lot, WashSaleViolation, and DetectionResult models ([`384e90a`](https://github.com/chen-star/net_alpha/commit/384e90ada3719ad89313ecf27a1bf1808361c082))
+* feat: add Lot, WashSaleViolation, and DetectionResult models ([`6c88d0a`](https://github.com/chen-star/net_alpha/commit/6c88d0a4ba7ae9f072775009c55866138166badc))
 
-* feat: add Trade and OptionDetails domain models ([`8a3039f`](https://github.com/chen-star/net_alpha/commit/8a3039f4b65c59fc6faa2d77a1df35abb8564964))
+* feat: add Trade and OptionDetails domain models ([`77cb8cd`](https://github.com/chen-star/net_alpha/commit/77cb8cd87873d554a4eca415e0da2898c8531d9d))
 
-* feat: initialize project structure with uv and hatch ([`4acbeff`](https://github.com/chen-star/net_alpha/commit/4acbeff7992804852327849ea5d3d2a389833c0b))
+* feat: initialize project structure with uv and hatch ([`c370488`](https://github.com/chen-star/net_alpha/commit/c3704880f9ede0833229a2edc825bbe3b85ebabb))
 
 ### Fix
 
@@ -4969,66 +4541,58 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`55b0e98`](htt
 Replace Optional[X] with X | None, fix line-length violations,
 and clean up unused imports across domain model, matcher, and tests.
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2f71493`](https://github.com/chen-star/net_alpha/commit/2f71493b729425045d8d7efdc3f817f612ced1c7))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`25d778d`](https://github.com/chen-star/net_alpha/commit/25d778de009d04d9fb8935f85571fd3534f2b1dd))
 
 ### Test
 
-* test: complete integration test suite — CLI and engine tiers ([`89a09b5`](https://github.com/chen-star/net_alpha/commit/89a09b51da4a5bb23b2898400f99f95ff87aae6f))
+* test: complete integration test suite — CLI and engine tiers ([`0c8a5dd`](https://github.com/chen-star/net_alpha/commit/0c8a5dd6942a6bc7cd808b5195952ce891ee6000))
 
-* test: add CLI integration tests for report command ([`d02147b`](https://github.com/chen-star/net_alpha/commit/d02147bfcfcc493e3bc88deb1353fd7458eef5ae))
+* test: add CLI integration tests for report command ([`bd4223e`](https://github.com/chen-star/net_alpha/commit/bd4223e1c4c9b1961afd068dbeff7b9ea156b0dd))
 
-* test: add CLI integration tests for rebuys command ([`4317a7b`](https://github.com/chen-star/net_alpha/commit/4317a7b2972307b584e19ed00837fe14974bc86c))
+* test: add CLI integration tests for rebuys command ([`ef484fa`](https://github.com/chen-star/net_alpha/commit/ef484fa8883754ba2e747d3c6a97231de564e30e))
 
-* test: add CLI integration tests for simulate sell command ([`f11a7e9`](https://github.com/chen-star/net_alpha/commit/f11a7e96767018aa7f32e095af2b3f997e9fcc98))
+* test: add CLI integration tests for simulate sell command ([`9c99f5f`](https://github.com/chen-star/net_alpha/commit/9c99f5fdd20b6a911308ebf1dd930de69b327472))
 
-* test: add CLI integration tests for check command ([`ef01988`](https://github.com/chen-star/net_alpha/commit/ef01988211f5fe17f9f412738c8edb79186faf62))
+* test: add CLI integration tests for check command ([`f3a9012`](https://github.com/chen-star/net_alpha/commit/f3a9012f47247a02c573e424f330902f3d05c70f))
 
-* test: add CLI integration tests for import command ([`4f466b1`](https://github.com/chen-star/net_alpha/commit/4f466b131ec8c2ff4bc0d50d05f5ddb45cfbe714))
+* test: add CLI integration tests for import command ([`2416c11`](https://github.com/chen-star/net_alpha/commit/2416c119de4cf61d070f1ea8375d0b8ec299b71b))
 
-* test: add engine integration tests for wash sale detector ([`6e35aff`](https://github.com/chen-star/net_alpha/commit/6e35affe4623fa3e8e79c5129227ad64d94acc76))
+* test: add engine integration tests for wash sale detector ([`68e22ac`](https://github.com/chen-star/net_alpha/commit/68e22acf4c859802746ace0a8deda9a9827d9682))
 
-* test: add engine integration tests for import pipeline ([`a8c05d5`](https://github.com/chen-star/net_alpha/commit/a8c05d50ed4c2fb6e1d4908649832bbaf461354c))
+* test: add engine integration tests for import pipeline ([`ffc49aa`](https://github.com/chen-star/net_alpha/commit/ffc49aab1ce17dce6dcd66f8a19783e8ffdbbea0))
 
 * test: add engine integration tests for import pipeline
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`745d546`](https://github.com/chen-star/net_alpha/commit/745d546b544b1ee5e383f822d6973d8b52f18d1e))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`45ed76d`](https://github.com/chen-star/net_alpha/commit/45ed76de64d10281d6b88aac867b9c4ef716f4f3))
 
-* test: add CLI integration conftest with patched _bootstrap ([`f9b02ae`](https://github.com/chen-star/net_alpha/commit/f9b02ae779796a2b2be8d69967f60dbd7cac59cf))
+* test: add CLI integration conftest with patched _bootstrap ([`5f6e4e3`](https://github.com/chen-star/net_alpha/commit/5f6e4e310912321f5c189cd12d5576e9fe91e774))
 
-* test: scaffold integration test directory and shared conftest ([`66975f0`](https://github.com/chen-star/net_alpha/commit/66975f01f52a0a38b2ce3a4b28c1bb0e1860d99b))
+* test: scaffold integration test directory and shared conftest ([`7ebd6ac`](https://github.com/chen-star/net_alpha/commit/7ebd6ac53f843e1a30c6570eae38e26c79fde66a))
 
 * test: add golden file integration tests for Schwab and Robinhood CSV
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a1c3e14`](https://github.com/chen-star/net_alpha/commit/a1c3e148726fc91916505d2c4ab1a2f3a610e96b))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f7a36ee`](https://github.com/chen-star/net_alpha/commit/f7a36ee12870164cbdec583c5aab6cc714a6d9da))
 
 * test: add Lot, Violation, and SchemaCache repository tests
 
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a086464`](https://github.com/chen-star/net_alpha/commit/a08646430f6229f59b4b4319522f503d290cff9f))
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`645eb69`](https://github.com/chen-star/net_alpha/commit/645eb6956e4ce192cbbcfc28e1f3612e6f4d308e))
 
-* test: options and ETF wash sale detection scenarios ([`c8a5519`](https://github.com/chen-star/net_alpha/commit/c8a551905348a6fe2cda06c1d2c36987cc2716ee))
+* test: options and ETF wash sale detection scenarios ([`4f9240b`](https://github.com/chen-star/net_alpha/commit/4f9240be4675fbf9a873eb2f75bb66e997aa1ecc))
 
-* test: cross-account, cross-year, basis_unknown, and edge cases ([`6bc1eb7`](https://github.com/chen-star/net_alpha/commit/6bc1eb7a683b529ada18278a39878fada67b862b))
+* test: cross-account, cross-year, basis_unknown, and edge cases ([`d42cb0c`](https://github.com/chen-star/net_alpha/commit/d42cb0c9f1328ad4dc5ac8096d508512182bac7f))
 
-* test: FIFO allocation, partial wash sales, and basis adjustment ([`43f4282`](https://github.com/chen-star/net_alpha/commit/43f4282cf85bc993f750647469d9614b01c6325a))
+* test: FIFO allocation, partial wash sales, and basis adjustment ([`a902aff`](https://github.com/chen-star/net_alpha/commit/a902aff5317dfb877821cf8b764a858ff6a10c9b))
 
 ### Unknown
 
-* Delete liscense in README.md. ([`e7d88c9`](https://github.com/chen-star/net_alpha/commit/e7d88c9cbf0d2116c215a0bf1427fa321619e9c3))
+* Delete liscense in README.md. ([`bbb78b5`](https://github.com/chen-star/net_alpha/commit/bbb78b5ff83232959391d3ac499da8713d9cce31))
 
-* Add README.md. ([`3cda8e5`](https://github.com/chen-star/net_alpha/commit/3cda8e5b830adba74f38fc2a759167a3816c8300))
+* Add README.md. ([`d5152b5`](https://github.com/chen-star/net_alpha/commit/d5152b503a7385b81c5dffd9d5aeb7c94c0e40c7))
 
-* Enable gitnexus ([`06d1fd5`](https://github.com/chen-star/net_alpha/commit/06d1fd575036a69b3f58fce09d53ef85bc8cac91))
+* Enable gitnexus ([`f127792`](https://github.com/chen-star/net_alpha/commit/f1277921a8e405b3e5c811c448d541b09f804eb0))
 
-* Add v1 plan ([`c9953f2`](https://github.com/chen-star/net_alpha/commit/c9953f2d4cd0dd5a6b61ca93db2eed44d6d15a01))
+* Add v1 plan ([`2ed4e10`](https://github.com/chen-star/net_alpha/commit/2ed4e10bb1069412bc7a2e7cddb749316c5f15c7))
 
-* Add spec for v1. ([`2075855`](https://github.com/chen-star/net_alpha/commit/20758558510ca5dbb9061a5fc99600db2e1ee8d8))
-
-* Add product &amp; UX design spec for net_alpha v1
-
-Resolves all open questions from PRD v0.2. Covers feature scope,
-command structure, UX flows, confidence label simplification (4→3 tiers),
-and new safe-to-rebuy tracker feature.
-
-Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`dcafcef`](https://github.com/chen-star/net_alpha/commit/dcafcef727b66f8c9e06c6b711457bcc33bf1346))
+* Add spec for v1. ([`255a26c`](https://github.com/chen-star/net_alpha/commit/255a26c660fd00aca9799c67ba396ba9a574f59d))
 
 * init PRD.md ([`9d87db8`](https://github.com/chen-star/net_alpha/commit/9d87db828384b6b034d80650111d1fb9a84e1bb3))
