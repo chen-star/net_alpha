@@ -24,6 +24,10 @@
 [Usage](#-usage) •
 [How it Works](#-how-the-rules-work)
 
+<br>
+
+⭐ **If `wash-alpha` saves you a CPA call this tax season, please [star the repo on GitHub](https://github.com/chen-star/net_alpha).** It's the single best signal for other traders looking for a tool they can trust with their tax data.
+
 </div>
 
 ---

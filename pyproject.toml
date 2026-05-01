@@ -6,8 +6,42 @@ build-backend = "hatchling.build"
 [project]
 name = "wash-alpha"
 version = "0.40.0"
-description = "Cross-account wash sale detection — Schwab CSV, options, ETFs (v2 simplified)"
+description = "Cross-account wash sale detection for stocks, options, and ETFs — local-first, IRS Pub 550 rules, with a tax-harvest planner and pre-trade simulator."
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Alex Chen" }]
+keywords = [
+    "wash-sale",
+    "tax",
+    "tax-loss-harvesting",
+    "trading",
+    "stocks",
+    "options",
+    "etf",
+    "schwab",
+    "irs",
+    "section-1256",
+    "finance",
+    "investing",
+    "broker-csv",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
 dependencies = [
     "pydantic>=2.0",
     "sqlmodel>=0.0.16",
@@ -15,6 +49,13 @@ dependencies = [
     "loguru>=0.7",
     "pyyaml>=6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/chen-star/net_alpha"
+Repository = "https://github.com/chen-star/net_alpha"
+Documentation = "https://github.com/chen-star/net_alpha#readme"
+Issues = "https://github.com/chen-star/net_alpha/issues"
+Changelog = "https://github.com/chen-star/net_alpha/blob/master/CHANGELOG.md"
 
 [project.scripts]
 net-alpha = "net_alpha.cli.app:main"
