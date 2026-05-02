@@ -16,13 +16,19 @@ from fastapi.testclient import TestClient
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.repository import Repository
-from net_alpha.models.domain import ImportRecord, Trade
+from net_alpha.models.domain import CashEvent, ImportRecord, Trade
 from net_alpha.web.app import create_app
 
 
 @pytest.fixture
 def chart_client(tmp_path):
-    """Client with a seeded trade so charts render (non-empty data required)."""
+    """Client with a seeded trade so charts render (non-empty data required).
+
+    The new equity-curve anchors on cumulative contributions, so we also seed
+    a transfer-in cash event — without it, the chart's empty-state branch
+    would render and the chart-options assertion below would never hit
+    actual chart markup.
+    """
     settings = Settings(data_dir=tmp_path)
     engine = get_engine(settings.db_path)
     init_db(engine)
@@ -44,7 +50,19 @@ def chart_client(tmp_path):
         imported_at=datetime(2026, 1, 2, tzinfo=UTC),
         trade_count=1,
     )
-    repo.add_import(account, record, [trade])
+    result = repo.add_import(account, record, [trade])
+    repo.add_cash_events(
+        [
+            CashEvent(
+                account="Schwab/Tax",
+                event_date=date(2026, 1, 1),
+                kind="transfer_in",
+                amount=2000.0,
+                description="Initial deposit",
+            )
+        ],
+        import_id=result.import_id,
+    )
     return TestClient(create_app(settings), raise_server_exceptions=False)
 
 

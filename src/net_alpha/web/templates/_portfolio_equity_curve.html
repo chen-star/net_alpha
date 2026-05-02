@@ -1,42 +1,56 @@
-{# Inputs: points: list[EquityPoint] (one row per realized event + Jan-1 zero seed),
-           year: int #}
+{# Inputs:
+   account_points: list[AccountValuePoint]  -- new dual-line series source
+   benchmark_points: list[BenchmarkPoint]
+   benchmark_symbol: str
+   period_label: str                         -- e.g. "YTD 2025", "2024", "Lifetime"
+#}
 
-{% set unrealized_today = points[-1].unrealized if points else None %}
+{% set has_data = account_points and account_points|length >= 2 %}
+{% set missing_dates_count = account_points|selectattr('account_value', 'none')|list|length if account_points else 0 %}
+
 <div class="panel-head">
   <h4>Equity curve</h4>
-  <span class="meta">
-    Realized {% if unrealized_today is not none %}+ unrealized {% endif %}· {{ year }}
-  </span>
+  <span class="meta">Account value · {{ period_label }}</span>
+  {% if missing_dates_count > 0 %}
+    <span class="chip chip-warn" title="Some held tickers have no historical close on these dates; the line shows a gap.">
+      ⚠ {{ missing_dates_count }} date{{ 's' if missing_dates_count != 1 else '' }} missing prices
+    </span>
+  {% endif %}
 </div>
 
-{% if points|length <= 1 %}
-  <div class="text-label-2 text-[13px] py-4">No realized activity in {{ year }}.</div>
+{% if not has_data %}
+  <div class="text-label-2 text-[13px] py-4">No deposits yet in {{ period_label }}.</div>
 {% else %}
-  <div id="equity-chart-{{ year }}" style="height: 218px;"></div>
+  <div id="equity-chart" style="height: 218px;"></div>
+  <div class="text-label-3 text-[11px] mt-1">
+    Option positions are valued at cost basis on this chart; today's mark-to-market shows on the Holdings panel.
+  </div>
 
   <script>
   (function () {
-    const hasTotal = {{ "true" if unrealized_today is not none else "false" }};
-    const series = [{
-      name: "Realized",
-      type: "area",
-      data: [
-        {% for p in points %}
-          { x: "{{ p.on.isoformat() }}", y: {{ p.cumulative_realized|float }} }{% if not loop.last %},{% endif %}
-        {% endfor %}
-      ],
-    }];
-    if (hasTotal) {
-      series.push({
-        name: "Total (incl. unrealized today)",
-        type: "line",
-        data: [
-          {% for p in points %}
-            { x: "{{ p.on.isoformat() }}", y: {{ (p.total_pl|float) if p.total_pl is not none else 'null' }} }{% if not loop.last %},{% endif %}
-          {% endfor %}
-        ],
-      });
-    }
+    const points = [
+      {% for p in account_points %}
+        {
+          on: "{{ p.on.isoformat() }}",
+          contrib: {{ p.contributions|float }},
+          account: {{ (p.account_value|float) if p.account_value is not none else 'null' }},
+          netPl: {{ (p.net_pl|float) if p.net_pl is not none else 'null' }},
+        }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    const contribSeries = points.map(p => ({ x: p.on, y: p.contrib }));
+    const accountSeries = points.map(p => ({ x: p.on, y: p.account }));
+
+    // Single area for account_value with a sign-aware color and the
+    // contributions line drawn on top. (The "two stacked clipped areas"
+    // approach in the spec turns out to render unevenly across ApexCharts
+    // versions; this fallback was named explicitly in the spec.)
+    const series = [
+      { name: "Contributions", type: "line", data: contribSeries },
+      { name: "Account value", type: "area", data: accountSeries },
+    ];
+
     {% if benchmark_points and benchmark_points|length > 0 %}
       series.push({
         name: "{{ benchmark_symbol|default('SPY') }} (buy & hold)",
@@ -49,29 +63,22 @@
       });
     {% endif %}
 
-    const hasBenchmark = {{ "true" if benchmark_points and benchmark_points|length > 0 else "false" }};
-    const showLegend = hasTotal || hasBenchmark;
-
     function buildOpts() {
-      const colors = [window.netAlphaChartTheme.colors.pos];
-      const widths = [2];
-      const dashArr = [0];
-      const fillTypes = ["gradient"];
-      const fillOps = [1];
-      if (hasTotal) {
+      const colors = [
+        window.netAlphaChartTheme.colors.label3,   // contributions baseline
+        window.netAlphaChartTheme.colors.pos,      // account value (green by default)
+      ];
+      const widths = [2, 2];
+      const dashArr = [4, 0];
+      const fillTypes = ["solid", "gradient"];
+      const fillOps = [1, 1];
+      {% if benchmark_points and benchmark_points|length > 0 %}
         colors.push(window.netAlphaChartTheme.colors.violet);
         widths.push(2);
-        dashArr.push(4);
+        dashArr.push(0);
         fillTypes.push("solid");
         fillOps.push(1);
-      }
-      if (hasBenchmark) {
-        colors.push(window.netAlphaChartTheme.colors.label3);
-        widths.push(2);
-        dashArr.push(6);
-        fillTypes.push("solid");
-        fillOps.push(1);
-      }
+      {% endif %}
       const isLight = document.documentElement.getAttribute("data-theme") === "light";
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
         chart: {
@@ -80,60 +87,63 @@
           zoom: { enabled: true, type: "x", autoScaleYaxis: true },
           toolbar: {
             show: true,
-            tools: {
-              download: false,
-              selection: true,
-              zoom: true,
-              zoomin: true,
-              zoomout: true,
-              pan: true,
-              reset: true,
-            },
+            tools: { download: false, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true },
             autoSelected: "zoom",
           },
         },
         colors: colors,
-        stroke: {
-          width: widths,
-          curve: "smooth",
-          lineCap: "round",
-          dashArray: dashArr,
-        },
+        stroke: { width: widths, curve: "smooth", lineCap: "round", dashArray: dashArr },
         fill: {
           type: fillTypes,
           gradient: { shade: isLight ? "light" : "dark", type: "vertical", opacityFrom: 0.30, opacityTo: 0, stops: [0, 100] },
           opacity: fillOps,
         },
-        legend: { show: showLegend },
-        xaxis: {
-          type: "datetime",
-          labels: {
-            format: "MMM",
-            hideOverlappingLabels: true,
-          },
-          tickAmount: 12,
-        },
+        legend: { show: true },
+        xaxis: { type: "datetime", labels: { format: "MMM", hideOverlappingLabels: true } },
         yaxis: {
           labels: {
             formatter: (v) => {
+              if (v == null) return "—";
               const n = Math.round(v);
-              const sign = n >= 0 ? "+" : "−";
               const abs = Math.abs(n);
+              const sign = n < 0 ? "−" : "";
               if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(0) + "k";
               return sign + "$" + abs;
             },
           },
         },
         tooltip: {
+          shared: true,
           x: { format: "yyyy-MM-dd" },
-          y: { formatter: (v) => v == null ? "—" : "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
+          custom: function ({ dataPointIndex }) {
+            const p = points[dataPointIndex];
+            if (!p) return "";
+            const fmt = (n) => n == null ? "—" : "$" + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            const fmtSigned = (n) => {
+              if (n == null) return "—";
+              const sign = n >= 0 ? "+" : "−";
+              return sign + "$" + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+            };
+            const pct = (n, base) => {
+              if (n == null || !base) return "";
+              return " (" + (n / base * 100).toFixed(1) + "%)";
+            };
+            return `
+              <div class="apex-tt">
+                <div class="apex-tt-date">${p.on}</div>
+                <div class="apex-tt-row"><span>Account value</span><span>${fmt(p.account)}</span></div>
+                <div class="apex-tt-row"><span>Contributions</span><span>${fmt(p.contrib)}</span></div>
+                <div class="apex-tt-row"><span>Net P&amp;L</span><span>${fmtSigned(p.netPl)}${pct(p.netPl, p.contrib)}</span></div>
+              </div>
+            `;
+          },
         },
         series: series,
       });
     }
 
     function render() {
-      const el = document.querySelector("#equity-chart-{{ year }}");
+      const el = document.querySelector("#equity-chart");
       if (!el) return;
       el.innerHTML = "";
       const chart = new ApexCharts(el, buildOpts());

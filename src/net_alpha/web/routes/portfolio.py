@@ -16,6 +16,7 @@ from net_alpha.audit import (
     WashImpactRef,
 )
 from net_alpha.db.repository import Repository
+from net_alpha.portfolio.account_value import build_account_value_series, build_eval_dates
 from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.portfolio.benchmark import build_benchmark_series
 from net_alpha.portfolio.cash_flow import (
@@ -546,28 +547,55 @@ def portfolio_equity_curve(
 ) -> HTMLResponse:
     today = date.today()
     period_tuple, period_label = _parse_period(period, today.year)
-    year = period_tuple[0] if period_tuple else today.year
+
     trades = repo.all_trades()
-    if account:
-        trades = [t for t in trades if t.account == account]
     lots = repo.all_lots()
     if account:
+        trades = [t for t in trades if t.account == account]
         lots = [lot for lot in lots if lot.account == account]
-    symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
-    prices = svc.get_prices(symbols)
-    kpis = compute_kpis(
+
+    cash_events = repo.list_cash_events(account_id=None)
+    if account:
+        cash_events = [e for e in cash_events if e.account == account]
+
+    cash_points = build_cash_balance_series(
+        events=cash_events,
+        trades=trades,
+        account=None,
+        period=period_tuple,
+    )
+
+    event_dates = sorted({t.date for t in trades} | {e.event_date for e in cash_events})
+    eval_dates = build_eval_dates(period=period_tuple, today=today, event_dates=event_dates)
+
+    account_points = build_account_value_series(
         trades=trades,
         lots=lots,
-        prices=prices,
-        period_label=period_label,
-        period=period_tuple,
-        account=None,  # already filtered
+        cash_points=cash_points,
+        eval_dates=eval_dates,
+        get_close=svc.get_historical_close,
     )
-    points = build_equity_curve(trades=trades, year=year, present_unrealized=kpis.period_unrealized)
+
+    benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
+    try:
+        benchmark_points = build_benchmark_series(
+            symbol=benchmark_symbol,
+            eq_dates=[p.on for p in account_points],
+            cash_points=cash_points,
+            get_close=svc.get_historical_close,
+        )
+    except Exception:
+        benchmark_points = []
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_equity_curve.html",
-        {"points": points, "year": year, "benchmark_points": [], "benchmark_symbol": ""},
+        {
+            "account_points": account_points,
+            "benchmark_points": benchmark_points,
+            "benchmark_symbol": benchmark_symbol,
+            "period_label": period_label,
+        },
     )
 
 
@@ -671,12 +699,27 @@ def portfolio_body(
         account=None,
     )
 
+    # Account-value series (the redesigned equity curve). Built off the same
+    # cash_points + an event-anchored eval-date axis. See
+    # docs/superpowers/specs/2026-05-02-equity-curve-redesign-design.md.
+    account_event_dates = sorted({t.date for t in scoped_trades} | {e.event_date for e in cash_events})
+    account_eval_dates = build_eval_dates(
+        period=period_tuple, today=today, event_dates=account_event_dates,
+    )
+    account_points = build_account_value_series(
+        trades=scoped_trades,
+        lots=scoped_lots,
+        cash_points=cash_points,
+        eval_dates=account_eval_dates,
+        get_close=svc.get_historical_close,
+    )
+
     # Benchmark shadow series for the same date axis. Best-effort: a missing
     # benchmark must NOT break the chart, so we wrap the call in try/except
     # and pass empty list on any failure.
     benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
     try:
-        eq_dates = [p.on for p in points]
+        eq_dates = [p.on for p in account_points]
         benchmark_points = build_benchmark_series(
             symbol=benchmark_symbol,
             eq_dates=eq_dates,
@@ -764,5 +807,7 @@ def portfolio_body(
             "top_movers": top_movers,
             "benchmark_points": benchmark_points,
             "benchmark_symbol": benchmark_symbol,
+            "account_points": account_points,
+            "period_label": period_label,
         },
     )
