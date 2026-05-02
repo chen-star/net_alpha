@@ -8,7 +8,7 @@
 <dialog id="profile-picker-modal"
         x-data="{ mode: 'all', profile: 'active' }"
         x-init="setTimeout(() => $el.showModal(), 0)"
-        class="bg-bg text-text rounded p-0 backdrop:bg-black/50">
+        class="bg-bg text-text rounded p-0 backdrop:bg-overlay-medium">
   <div class="p-5 min-w-[440px]">
     <h2 class="text-[16px] font-semibold mb-2">Pick a default profile per account</h2>
     <p class="text-[12px] text-label-2 mb-3">
@@ -71,7 +71,7 @@
           <span class="text-[12px] flex-1 truncate">{{ a.broker }}/{{ a.label }}</span>
           <select name="profile"
                   class="bg-surface text-text rounded px-2 py-1 text-[12px]"
-                  style="border:0.5px solid rgba(255,255,255,0.08);">
+                  style="border:0.5px solid var(--color-hairline);">
             <option value="active" selected>Active</option>
             <option value="conservative">Conservative</option>
             <option value="options">Options</option>

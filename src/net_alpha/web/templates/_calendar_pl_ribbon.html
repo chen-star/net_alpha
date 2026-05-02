@@ -13,7 +13,7 @@
       {% endif %}
       <div class="relative h-full flex items-end justify-center" title="{{ '%02d'|format(m.month) }}: net ${{ '%.2f'|format(m.net_pl) }} · gain ${{ '%.2f'|format(m.gross_gain) }} · loss ${{ '%.2f'|format(m.gross_loss) }} · {{ m.trade_count }} trade(s)">
         <div class="w-full rounded-sm transition-opacity hover:opacity-80"
-             style="height: {{ height_pct }}%; background-color: {% if m.net_pl > 0 %}#30D158{% elif m.net_pl < 0 %}#FF453A{% else %}#2C2C2E{% endif %};">
+             style="height: {{ height_pct }}%; background-color: {% if m.net_pl > 0 %}var(--color-pos){% elif m.net_pl < 0 %}var(--color-neg){% else %}var(--color-surface-2){% endif %};">
         </div>
       </div>
     {% endfor %}

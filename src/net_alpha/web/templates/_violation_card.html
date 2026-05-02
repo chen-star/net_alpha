@@ -1,5 +1,5 @@
 <div class="border-l-4 pl-3"
-     style="border-left-color: {% if violation.confidence=='Confirmed' %}#FF453A{% elif violation.confidence=='Probable' %}#FF9F0A{% else %}#64D2FF{% endif %};">
+     style="border-left-color: {% if violation.confidence=='Confirmed' %}var(--color-neg){% elif violation.confidence=='Probable' %}var(--color-warn){% else %}var(--color-info){% endif %};">
   <div class="text-sm text-text">
     <strong>Loss in</strong> {{ violation.loss_account or "-" }} → <strong>triggered by</strong> {{ violation.buy_account or "-" }} on {{ violation.triggering_buy_date or "-" }}
     {% if violation.source == "schwab_g_l" %}

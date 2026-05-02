@@ -1,0 +1,31 @@
+{# Appearance toggle — Light / Dark / System.
+
+   Mirrors `_density_toggle.html`: one form per button, hx-post /preferences,
+   preserves the other pref fields via hidden inputs. Click handler runs
+   BEFORE the post so the page flips instantly without waiting on the
+   server round-trip; HX-Refresh then re-renders so the FOUC script sees
+   the new server-side value on next nav.
+
+   Inputs:
+     profile: ProfileSettings   — current profile (for .profile/.density/.theme)
+     account_id: int | None     — when set, write is per-account; else all
+#}
+<div class="appearance-toggle inline-flex items-center gap-1 text-[12px]"
+     x-data>
+  <span class="text-label-2 mr-1">Appearance:</span>
+  {% for t in ['light', 'dark', 'system'] %}
+    <form hx-post="/preferences" hx-swap="none" class="inline">
+      {% if account_id is not none %}<input type="hidden" name="account_id" value="{{ account_id }}">{% endif %}
+      <input type="hidden" name="profile" value="{{ profile.profile }}">
+      <input type="hidden" name="density" value="{{ profile.density }}">
+      <input type="hidden" name="theme" value="{{ t }}">
+      <button type="submit"
+              class="px-2 py-0.5 rounded {% if profile.theme == t %}bg-text text-bg{% else %}bg-surface{% endif %}"
+              style="border:0.5px solid var(--color-hairline);"
+              data-theme-choice="{{ t }}" {% if profile.theme == t %}aria-current="true"{% endif %}
+              onclick="window.applyThemeChoice && window.applyThemeChoice('{{ t }}')">
+        {{ {'light':'Light','dark':'Dark','system':'System'}[t] }}
+      </button>
+    </form>
+  {% endfor %}
+</div>

@@ -12,7 +12,7 @@
   {% else %}
     <div class="panel p-4 space-y-4">
       <header class="flex items-baseline justify-between gap-3 pb-3"
-              style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+              style="border-bottom:0.5px solid var(--color-hairline);">
         <h3 class="text-lg font-semibold">{{ trace.metric_label }}</h3>
         <div class="num text-2xl font-bold">${{ "%.2f"|format(trace.total) }}</div>
       </header>

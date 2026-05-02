@@ -14,9 +14,10 @@
       {% if account_id is not none %}<input type="hidden" name="account_id" value="{{ account_id }}">{% endif %}
       <input type="hidden" name="profile" value="{{ profile.profile }}">
       <input type="hidden" name="density" value="{{ d }}">
+      <input type="hidden" name="theme" value="{{ profile.theme }}">
       <button type="submit"
               class="px-2 py-0.5 rounded {% if profile.density == d %}bg-text text-bg{% else %}bg-surface{% endif %}"
-              style="border:0.5px solid rgba(255,255,255,0.08);"
+              style="border:0.5px solid var(--color-hairline);"
               data-density="{{ d }}" {% if profile.density == d %}aria-current="true"{% endif %}
               onclick="window.recordDensityOverride && window.recordDensityOverride('{{ page_key }}', '{{ d }}')">
         {{ {'compact':'Compact','comfortable':'Comfortable','tax':'Tax-view'}[d] }}

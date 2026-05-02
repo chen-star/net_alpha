@@ -32,7 +32,7 @@
            @input="window.__applyPositionsSymbolFilter && window.__applyPositionsSymbolFilter($event.target.value)"
            aria-label="Search positions by symbol"
            class="bg-surface text-text rounded-md px-3 py-1.5 font-mono text-[13px] w-full md:w-72"
-           style="border:0.5px solid rgba(255,255,255,0.08);"/>
+           style="border:0.5px solid var(--color-hairline);"/>
   </div>
 
   {% include "_positions_tabs.html" %}
@@ -80,7 +80,7 @@
               class="text-label-2 hover:text-text"
               @click="open = false"
               aria-label="Close pane">
-        <img src="/static/icons/x.svg?v={{ asset_v }}" class="w-5 h-5 invert opacity-80" alt="">
+        <img src="/static/icons/x.svg?v={{ asset_v }}" class="w-5 h-5 icon-mono" alt="">
       </button>
     </header>
     <div id="positions-pane-body" class="flex-1 overflow-y-auto px-4 py-4">

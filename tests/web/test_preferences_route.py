@@ -79,3 +79,64 @@ def test_post_preferences_all_accounts(tmp_path):
     for a in repo.list_accounts():
         pref = repo.get_user_preference(a.id)
         assert pref.profile == "conservative"
+
+
+def test_post_preferences_writes_theme(tmp_path):
+    """The new `theme` form field is round-tripped to the user_preferences row."""
+    from fastapi.testclient import TestClient
+
+    settings, repo = _bootstrap(tmp_path)
+    app = create_app(settings)
+    client = TestClient(app)
+
+    aid = repo.list_accounts()[0].id
+    resp = client.post(
+        "/preferences",
+        data={
+            "account_id": str(aid),
+            "profile": "active",
+            "density": "comfortable",
+            "theme": "light",
+        },
+    )
+    assert resp.status_code == 204
+    pref = repo.get_user_preference(aid)
+    assert pref.theme == "light"
+
+
+def test_post_preferences_theme_defaults_to_system(tmp_path):
+    """Omitting `theme` writes 'system' so existing density/profile-only callers keep working."""
+    from fastapi.testclient import TestClient
+
+    settings, repo = _bootstrap(tmp_path)
+    app = create_app(settings)
+    client = TestClient(app)
+
+    aid = repo.list_accounts()[0].id
+    resp = client.post(
+        "/preferences",
+        data={"account_id": str(aid), "profile": "active", "density": "comfortable"},
+    )
+    assert resp.status_code == 204
+    pref = repo.get_user_preference(aid)
+    assert pref.theme == "system"
+
+
+def test_post_preferences_rejects_invalid_theme(tmp_path):
+    from fastapi.testclient import TestClient
+
+    settings, repo = _bootstrap(tmp_path)
+    app = create_app(settings)
+    client = TestClient(app)
+
+    aid = repo.list_accounts()[0].id
+    resp = client.post(
+        "/preferences",
+        data={
+            "account_id": str(aid),
+            "profile": "active",
+            "density": "comfortable",
+            "theme": "sepia",
+        },
+    )
+    assert resp.status_code == 422

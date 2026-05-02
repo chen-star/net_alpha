@@ -58,15 +58,15 @@
       {% set is_long = s.side == 'long' %}
       <div class="grid items-center gap-[14px] py-[9px] text-[13px]"
            data-symbol="{{ s.ticker|upper }}"
-           style="grid-template-columns: 60px 90px 110px 1fr 110px 100px; border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+           style="grid-template-columns: 60px 90px 110px 1fr 110px 100px; border-bottom: 0.5px solid var(--color-hairline);">
         <div class="text-[10px] uppercase font-semibold tracking-tightish"
              style="color: {% if is_long %}var(--color-accent){% else %}var(--color-warn){% endif %};">
           {{ 'LONG' if is_long else 'SHORT' }}
         </div>
         <div class="flex items-center gap-2 font-semibold tracking-tightish">
           <span style="width:6px; height:6px; border-radius:50%;
-                       background:{% if s.call_put == 'P' %}#FF9F0A{% else %}#5E5CE6{% endif %};
-                       box-shadow: 0 0 6px {% if s.call_put == 'P' %}#FF9F0A{% else %}#5E5CE6{% endif %};"></span>
+                       background:{% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-indigo){% endif %};
+                       box-shadow: 0 0 6px {% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-indigo){% endif %};"></span>
           <a href="/ticker/{{ s.ticker }}" class="no-underline text-text">{{ s.ticker }}</a>
         </div>
         <div class="text-[12px] font-mono text-label-1">
@@ -77,9 +77,9 @@
           <span class="text-[11px] text-label-2 num min-w-[88px]">
             {% if s.opened_at %}opened {{ (today - s.opened_at).days }}d ago{% else %}— {% endif %}
           </span>
-          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: rgba(255,255,255,0.06);">
+          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: var(--color-hairline);">
             <div style="width: {{ fill_pct }}%; height: 100%;
-                        background: linear-gradient(90deg, #30D158 0%, #FF9F0A 70%, #FF453A 100%);
+                        background: linear-gradient(90deg, var(--color-pos) 0%, var(--color-warn) 70%, var(--color-neg) 100%);
                         border-radius: 999px;"></div>
           </div>
         </div>

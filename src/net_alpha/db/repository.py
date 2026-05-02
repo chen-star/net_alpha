@@ -93,6 +93,7 @@ class Repository:
                 account_id=row.account_id,
                 profile=row.profile,  # type: ignore[arg-type]
                 density=row.density,  # type: ignore[arg-type]
+                theme=row.theme,  # type: ignore[arg-type]
                 updated_at=row.updated_at,
             )
 
@@ -104,6 +105,7 @@ class Repository:
                     account_id=r.account_id,
                     profile=r.profile,  # type: ignore[arg-type]
                     density=r.density,  # type: ignore[arg-type]
+                    theme=r.theme,  # type: ignore[arg-type]
                     updated_at=r.updated_at,
                 )
                 for r in rows
@@ -117,12 +119,14 @@ class Repository:
                     account_id=pref.account_id,
                     profile=pref.profile,
                     density=pref.density,
+                    theme=pref.theme,
                     updated_at=pref.updated_at,
                 )
                 s.add(row)
             else:
                 row.profile = pref.profile
                 row.density = pref.density
+                row.theme = pref.theme
                 row.updated_at = pref.updated_at
             s.commit()
 

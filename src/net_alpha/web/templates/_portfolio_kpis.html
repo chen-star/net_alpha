@@ -20,14 +20,14 @@
     </div>
     {% if _csp > 0 and cash_kpis %}
       {% set _pledged_pct = (_csp / _cash * 100) if _cash > 0 else 0 %}
-      <div class="mt-2 h-[5px] rounded-full overflow-hidden flex" style="background: rgba(255,255,255,0.06);"
+      <div class="mt-2 h-[5px] rounded-full overflow-hidden flex" style="background: var(--color-hairline);"
            title="Free vs pledged">
-        <div style="width: {{ (100 - _pledged_pct)|round(0,'floor')|int }}%; background: #30D158; height: 100%;"></div>
-        <div style="width: {{ _pledged_pct|round(0,'ceil')|int }}%; background: #FF9F0A; height: 100%;"></div>
+        <div style="width: {{ (100 - _pledged_pct)|round(0,'floor')|int }}%; background: var(--color-pos); height: 100%;"></div>
+        <div style="width: {{ _pledged_pct|round(0,'ceil')|int }}%; background: var(--color-warn); height: 100%;"></div>
       </div>
       <div class="flex items-center justify-between mt-1 text-[11px]">
         <span class="text-label-2"><span class="num text-label-1">${{ "{:,.0f}".format(_free) }}</span> free</span>
-        <span class="text-label-2"><span class="num" style="color:#FF9F0A;">${{ "{:,.0f}".format(_csp) }}</span> pledged · {{ _csp_n }} CSP{% if _csp_n != 1 %}s{% endif %}</span>
+        <span class="text-label-2"><span class="num" style="color:var(--color-warn);">${{ "{:,.0f}".format(_csp) }}</span> pledged · {{ _csp_n }} CSP{% if _csp_n != 1 %}s{% endif %}</span>
       </div>
     {% else %}
       <div class="text-[11px] text-label-2 mt-1">

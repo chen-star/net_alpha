@@ -71,4 +71,4 @@ def test_fresh_db_stamps_section_1256_meta_keys():
         hash_row = session.exec(text("SELECT value FROM meta WHERE key='section_1256_universe_hash'")).first()
         version_row = session.exec(text("SELECT value FROM meta WHERE key='wash_sale_engine_version'")).first()
         assert hash_row is not None and hash_row[0]
-        assert version_row is not None and version_row[0] == "12"
+        assert version_row is not None and version_row[0] == "13"

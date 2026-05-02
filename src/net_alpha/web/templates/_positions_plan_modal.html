@@ -1,7 +1,7 @@
 {# Add/edit target modal. Driven by HTMX. Pass `_target` for edit mode,
    `error` (string) for inline validation feedback. #}
 <div id="plan-modal-backdrop"
-     class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+     class="fixed inset-0 bg-overlay-strong z-50 flex items-center justify-center p-4"
      onclick="if (event.target === this) this.remove();">
   <div class="bg-surface rounded-lg shadow-xl w-full max-w-md p-5"
        style="border:0.5px solid var(--color-hairline);">

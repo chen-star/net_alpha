@@ -11,7 +11,7 @@ import logging
 
 from pydantic import BaseModel
 
-from net_alpha.models.preferences import AccountPreference, Density, Profile
+from net_alpha.models.preferences import AccountPreference, Density, Profile, Theme
 
 log = logging.getLogger(__name__)
 
@@ -73,6 +73,7 @@ class ProfileSettings(BaseModel):
 
     profile: Profile = "active"
     density: Density = "comfortable"
+    theme: Theme = "system"
 
     def shows(self, surface: str) -> bool:
         """Default visibility for a named surface.
@@ -132,13 +133,15 @@ def resolve_effective_profile(
         match = next((p for p in prefs if p.account_id == filter_account_id), None)
         if match is None:
             return DEFAULT_PROFILE_SETTINGS
-        return ProfileSettings(profile=match.profile, density=match.density)
+        return ProfileSettings(profile=match.profile, density=match.density, theme=match.theme)
 
     if not prefs:
         return DEFAULT_PROFILE_SETTINGS
 
     profile_set = {p.profile for p in prefs}
     density_set = {p.density for p in prefs}
+    theme_set = {p.theme for p in prefs}
     profile = next(iter(profile_set)) if len(profile_set) == 1 else "active"
     density = next(iter(density_set)) if len(density_set) == 1 else "comfortable"
-    return ProfileSettings(profile=profile, density=density)
+    theme = next(iter(theme_set)) if len(theme_set) == 1 else "system"
+    return ProfileSettings(profile=profile, density=density, theme=theme)

@@ -1,5 +1,5 @@
 <div class="relative border-2 border-dashed rounded-lg p-8 text-center bg-surface"
-     style="border-color: rgba(255,255,255,0.14);"
+     style="border-color: var(--color-hairline-strong);"
      id="drop-zone"
      hx-post="/imports/preview"
      hx-encoding="multipart/form-data"
@@ -25,7 +25,7 @@
        class="hidden absolute inset-x-0 bottom-2 text-center text-[12px] text-label-2 pointer-events-none"></div>
 </div>
 
-<div id="import-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
+<div id="import-modal" class="hidden fixed inset-0 bg-overlay-strong z-50 flex items-center justify-center"
      onclick="this.classList.add('hidden')">
   <div id="import-modal-content"></div>
 </div>

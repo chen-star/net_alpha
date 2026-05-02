@@ -39,7 +39,7 @@
   --font-sans: -apple-system, "SF Pro Display", "Inter", system-ui, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
 
-  /* Canvas */
+  /* Canvas — dark defaults; [data-theme="light"] block below overrides */
   --color-bg:        #000000;
   --color-surface:   #1C1C1E;
   --color-surface-2: #2C2C2E;
@@ -89,6 +89,22 @@
   --color-accent:    #BF5AF2;
   --color-ink:       #FFFFFF;
 
+  /* Theme-flexible tokens (overridden under [data-theme="light"]) */
+  --color-overlay-strong: rgba(0,0,0,0.60);   /* dialog backdrop, dim modal bg/60 */
+  --color-overlay-medium: rgba(0,0,0,0.40);   /* drawer backdrop, modal bg/40 */
+  --color-overlay-soft:   rgba(0,0,0,0.20);
+  --color-row-hover:      rgba(255,255,255,0.02);
+  --color-topbar-bg:      rgba(0,0,0,0.60);
+  --color-brand-glow:     rgba(94,92,230,0.35);
+  --color-cash:           rgba(142,142,147,0.60);
+  --color-pos-tint:       rgba(48,209,88,0.10);
+  --color-neg-tint:       rgba(255,69,58,0.14);
+  --color-warn-tint:      rgba(255,159,10,0.16);
+  --color-info-tint:      rgba(100,210,255,0.14);
+  --color-indigo-tint:    rgba(94,92,230,0.16);
+  --color-violet-tint:    rgba(191,90,242,0.10);
+  --color-indigo-edge:    rgba(94,92,230,0.22);
+
   /* Border radius */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -113,8 +129,144 @@
   --ring-focus: 0 0 0 2px rgba(94,92,230,0.6);
 }
 
+/* Explicit dark block — declared so the FOUC script can set
+   data-theme="dark" without depending on :root defaults, and so any future
+   theme-only overrides have a symmetric place to live. Values mirror @theme. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg:        #000000;
+  --color-surface:   #1C1C1E;
+  --color-surface-2: #2C2C2E;
+  --color-surface-3: #3A3A3C;
+
+  --color-hairline:        rgba(255,255,255,0.08);
+  --color-hairline-strong: rgba(255,255,255,0.14);
+
+  --color-text:    #FFFFFF;
+  --color-label-1: rgba(235,235,245,0.92);
+  --color-label-2: rgba(235,235,245,0.60);
+  --color-label-3: rgba(235,235,245,0.35);
+
+  --color-indigo: #5E5CE6;
+  --color-violet: #BF5AF2;
+  --color-pos:    #30D158;
+  --color-neg:    #FF453A;
+  --color-warn:   #FF9F0A;
+  --color-info:   #64D2FF;
+
+  --color-rank-1:    #0A84FF;
+  --color-rank-2:    #FFD60A;
+  --color-rank-3:    #30D158;
+  --color-rank-4:    #FF375F;
+  --color-rank-5:    #5E5CE6;
+  --color-rank-6:    #64D2FF;
+  --color-rank-7:    #5AC8FA;
+  --color-rank-8:    #BF5AF2;
+  --color-rank-9:    rgba(181,181,255,0.65);
+  --color-rank-10:   rgba(255,255,255,0.40);
+  --color-rank-rest: rgba(255,255,255,0.14);
+
+  --color-confirmed: #FF453A;
+  --color-probable:  #FF9F0A;
+  --color-unclear:   #64D2FF;
+  --color-primary:   #0A84FF;
+  --color-secondary: #5E5CE6;
+  --color-accent:    #BF5AF2;
+  --color-ink:       #FFFFFF;
+
+  --color-overlay-strong: rgba(0,0,0,0.60);
+  --color-overlay-medium: rgba(0,0,0,0.40);
+  --color-overlay-soft:   rgba(0,0,0,0.20);
+  --color-row-hover:      rgba(255,255,255,0.02);
+  --color-topbar-bg:      rgba(0,0,0,0.60);
+  --color-brand-glow:     rgba(94,92,230,0.35);
+  --color-cash:           rgba(142,142,147,0.60);
+  --color-pos-tint:       rgba(48,209,88,0.10);
+  --color-neg-tint:       rgba(255,69,58,0.14);
+  --color-warn-tint:      rgba(255,159,10,0.16);
+  --color-info-tint:      rgba(100,210,255,0.14);
+  --color-indigo-tint:    rgba(94,92,230,0.16);
+  --color-violet-tint:    rgba(191,90,242,0.10);
+  --color-indigo-edge:    rgba(94,92,230,0.22);
+
+  --color-skeleton: rgba(255,255,255,0.04);
+  --color-skeleton-shimmer: rgba(255,255,255,0.08);
+  --shadow-drawer: 0 0 0 1px var(--color-hairline), -24px 0 48px rgba(0,0,0,0.4);
+  --shadow-pane:   0 0 0 0.5px var(--color-hairline), 0 12px 32px rgba(0,0,0,0.3);
+}
+
+/* Light theme — Apple HIG light-mode equivalents.
+   Semantic colors are darker variants (systemRed.light, systemGreen.light,
+   etc.) for adequate contrast on a white surface. */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-bg:        #F5F5F7;          /* iOS systemGroupedBackground.light */
+  --color-surface:   #FFFFFF;          /* secondarySystemGroupedBackground.light */
+  --color-surface-2: #F2F2F7;          /* tertiarySystemFill.light */
+  --color-surface-3: #E5E5EA;          /* quaternarySystemFill.light */
+
+  --color-hairline:        rgba(60,60,67,0.12);
+  --color-hairline-strong: rgba(60,60,67,0.22);
+
+  --color-text:    #1D1D1F;
+  --color-label-1: rgba(60,60,67,0.85);
+  --color-label-2: rgba(60,60,67,0.60);
+  --color-label-3: rgba(60,60,67,0.30);
+
+  --color-indigo: #3634A3;
+  --color-violet: #8944AB;
+
+  --color-pos:  #248A3D;
+  --color-neg:  #D70015;
+  --color-warn: #B25000;
+  --color-info: #0071A4;
+
+  --color-rank-1:    #007AFF;
+  --color-rank-2:    #B25000;
+  --color-rank-3:    #248A3D;
+  --color-rank-4:    #D70015;
+  --color-rank-5:    #3634A3;
+  --color-rank-6:    #0071A4;
+  --color-rank-7:    #0071A4;
+  --color-rank-8:    #8944AB;
+  --color-rank-9:    rgba(99,99,102,0.65);
+  --color-rank-10:   rgba(60,60,67,0.40);
+  --color-rank-rest: rgba(60,60,67,0.14);
+
+  --color-confirmed: #D70015;
+  --color-probable:  #B25000;
+  --color-unclear:   #0071A4;
+  --color-primary:   #007AFF;
+  --color-secondary: #3634A3;
+  --color-accent:    #8944AB;
+  --color-ink:       #1D1D1F;
+
+  --color-overlay-strong: rgba(0,0,0,0.55);
+  --color-overlay-medium: rgba(0,0,0,0.35);
+  --color-overlay-soft:   rgba(0,0,0,0.20);
+  --color-row-hover:      rgba(60,60,67,0.04);
+  --color-topbar-bg:      rgba(255,255,255,0.72);
+  --color-brand-glow:     rgba(94,92,230,0.18);
+  --color-cash:           rgba(142,142,147,0.55);
+  --color-pos-tint:       rgba(36,138,61,0.12);
+  --color-neg-tint:       rgba(215,0,21,0.10);
+  --color-warn-tint:      rgba(178,80,0,0.12);
+  --color-info-tint:      rgba(0,113,164,0.10);
+  --color-indigo-tint:    rgba(54,52,163,0.10);
+  --color-violet-tint:    rgba(137,68,171,0.08);
+  --color-indigo-edge:    rgba(54,52,163,0.22);
+
+  --color-skeleton: rgba(60,60,67,0.06);
+  --color-skeleton-shimmer: rgba(60,60,67,0.10);
+  --shadow-drawer: 0 0 0 1px var(--color-hairline), -24px 0 48px rgba(0,0,0,0.10);
+  --shadow-pane:   0 0 0 0.5px var(--color-hairline), 0 12px 32px rgba(0,0,0,0.08);
+}
+
 @layer base {
-  html { color-scheme: dark; }
+  /* color-scheme is set per-theme block above so native form widgets,
+     scrollbars, and the dialog backdrop follow. */
   body {
     @apply bg-bg font-sans;
     color: var(--color-text);
@@ -164,10 +316,10 @@
   }
   .kpi-hero {
     background:
-      radial-gradient(120% 90% at 0% 0%,    rgba(94,92,230,0.16) 0%, transparent 55%),
-      radial-gradient(140% 100% at 100% 100%, rgba(191,90,242,0.10) 0%, transparent 55%),
-      #1C1C1E;
-    border-color: rgba(94,92,230,0.22);
+      radial-gradient(120% 90% at 0% 0%,    var(--color-indigo-tint) 0%, transparent 55%),
+      radial-gradient(140% 100% at 100% 100%, var(--color-violet-tint) 0%, transparent 55%),
+      var(--color-surface);
+    border-color: var(--color-indigo-edge);
   }
 
   /* Segmented control */
@@ -184,7 +336,7 @@
   .seg a:hover:not(.seg-active) { color: var(--color-text); }
   .seg-active {
     background: linear-gradient(180deg, rgba(94,92,230,0.42) 0%, rgba(94,92,230,0.30) 100%);
-    color: var(--color-text);
+    color: #FFFFFF;
     box-shadow:
       inset 0 0 0 0.5px rgba(255,255,255,0.18),
       0 1px 2px rgba(0,0,0,0.5);
@@ -200,7 +352,7 @@
   /* Topbar with vibrancy */
   .topbar {
     @apply sticky top-0 z-10 flex items-center justify-between px-5 py-3;
-    background: rgba(0,0,0,0.6);
+    background: var(--color-topbar-bg);
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
     border-bottom: 1px solid var(--color-hairline);
@@ -237,20 +389,20 @@
     align-items: center;
     padding: 2px 8px;
     border-radius: 4px;
-    background: var(--color-surface-1, rgba(255,255,255,0.06));
-    border: 0.5px solid var(--color-hairline, rgba(255,255,255,0.08));
+    background: var(--color-surface-2);
+    border: 0.5px solid var(--color-hairline);
     color: var(--color-text);
     font-size: 11px;
     line-height: 16px;
   }
   .chip:hover {
-    background: var(--color-surface-2, rgba(255,255,255,0.10));
+    background: var(--color-surface-3);
   }
 
   /* Status chips */
-  .chip-confirm  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-neg);  background: rgba(255,69,58,0.14); }
-  .chip-probable { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-warn); background: rgba(255,159,10,0.16); }
-  .chip-unclear  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-info); background: rgba(100,210,255,0.14); }
+  .chip-confirm  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-neg);  background: var(--color-neg-tint); }
+  .chip-probable { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-warn); background: var(--color-warn-tint); }
+  .chip-unclear  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-info); background: var(--color-info-tint); }
 
   /* Table — snug density */
   .net-table { @apply w-full text-[12px] border-collapse; }
@@ -267,7 +419,7 @@
     border-bottom: 0.5px solid var(--color-hairline);
   }
   .net-table tbody tr:last-child { border-bottom: 0; }
-  .net-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .net-table tbody tr:hover { background: var(--color-row-hover); }
   .net-table tbody td { @apply px-3 py-2; }
   .net-table tbody td.r { @apply text-right; }
 
@@ -275,7 +427,7 @@
   .brand-mark {
     @apply w-6 h-6 rounded-md grid place-items-center text-white text-[12px] font-bold;
     background: linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%);
-    box-shadow: 0 0 14px rgba(94,92,230,0.35), inset 0 0 0 0.5px rgba(255,255,255,0.2);
+    box-shadow: 0 0 14px var(--color-brand-glow), inset 0 0 0 0.5px rgba(255,255,255,0.2);
   }
 
   /* Row action menu — hover-revealed `⋯` button per spec §3.4. */
@@ -286,6 +438,18 @@
   tr:hover .row-actions,
   tr:focus-within .row-actions {
     opacity: 1;
+  }
+
+  /* Mono-icon helper. Icons are stored as black SVG; on dark we invert to
+     white at 80% opacity, on light we leave them black at 70% opacity. Use
+     this in place of the ad-hoc `invert opacity-80` pattern. */
+  .icon-mono {
+    filter: invert(1);
+    opacity: 0.8;
+  }
+  [data-theme="light"] .icon-mono {
+    filter: none;
+    opacity: 0.7;
   }
 
   /* Back-compat: keep existing classes alive until templates are restyled */
@@ -301,10 +465,10 @@
   }
   .btn-ghost:hover { @apply bg-surface-2; }
   .kpi-card { @apply bg-surface rounded-lg px-4 py-3 relative overflow-hidden; border: 0.5px solid var(--color-hairline); }
-  .row-hover:hover { background: rgba(255,255,255,0.02); }
-  .badge-confirmed { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-neg);  background: rgba(255,69,58,0.14); }
-  .badge-probable  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-warn); background: rgba(255,159,10,0.16); }
-  .badge-unclear   { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-info); background: rgba(100,210,255,0.14); }
+  .row-hover:hover { background: var(--color-row-hover); }
+  .badge-confirmed { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-neg);  background: var(--color-neg-tint); }
+  .badge-probable  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-warn); background: var(--color-warn-tint); }
+  .badge-unclear   { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-info); background: var(--color-info-tint); }
 
   /* Generic badge primitive — used by the Ticker vs-broker badge (Tk3) and
      other compact status chips. Variants below pair foreground/background per
@@ -320,10 +484,10 @@
     line-height: 14px;
     border: 0.5px solid var(--color-hairline);
   }
-  .badge-success { color: var(--color-pos);  background: rgba(48,209,88,0.10);  border-color: rgba(48,209,88,0.30); }
-  .badge-info    { color: var(--color-info); background: rgba(100,210,255,0.10); border-color: rgba(100,210,255,0.30); }
-  .badge-warn    { color: var(--color-warn); background: rgba(255,159,10,0.10); border-color: rgba(255,159,10,0.30); }
-  .badge-muted   { color: var(--color-label-2); background: rgba(255,255,255,0.04); }
+  .badge-success { color: var(--color-pos);  background: var(--color-pos-tint); border-color: var(--color-hairline); }
+  .badge-info    { color: var(--color-info); background: var(--color-info-tint); border-color: var(--color-hairline); }
+  .badge-warn    { color: var(--color-warn); background: var(--color-warn-tint); border-color: var(--color-hairline); }
+  .badge-muted   { color: var(--color-label-2); background: var(--color-skeleton); }
 
   /* Phase 3: aliases that templates have been using inconsistently. Map to the
      semantic tokens so existing markup colors correctly. */
@@ -359,7 +523,7 @@
     font-family: var(--font-mono);
     font-size: 11px;
     line-height: 14px;
-    background: var(--color-surface-2, rgba(255,255,255,0.08));
+    background: var(--color-surface-2);
     border: 0.5px solid var(--color-hairline);
     border-radius: 3px;
   }

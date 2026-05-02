@@ -28,10 +28,11 @@
               class="flex items-center gap-2 mb-2">
           <input type="hidden" name="account_id" value="{{ a.id }}">
           <input type="hidden" name="density" value="{{ _psd.profile.density }}">
+          <input type="hidden" name="theme" value="{{ _psd.profile.theme }}">
           <span class="text-[12px] flex-1 truncate">{{ a.broker }}/{{ a.label }}</span>
           <select name="profile" onchange="this.form.submit()"
                   class="bg-bg text-text rounded px-1.5 py-0.5 text-[12px]"
-                  style="border:0.5px solid rgba(255,255,255,0.08);">
+                  style="border:0.5px solid var(--color-hairline);">
             <option value="conservative"{% if current == "conservative" %} selected{% endif %}>Conservative</option>
             <option value="active"{% if current == "active" %} selected{% endif %}>Active</option>
             <option value="options"{% if current == "options" %} selected{% endif %}>Options</option>

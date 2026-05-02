@@ -1,5 +1,5 @@
 <div class="bg-surface rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6"
-     style="border:0.5px solid rgba(255,255,255,0.08);"
+     style="border:0.5px solid var(--color-hairline);"
      onclick="event.stopPropagation()">
   <div class="flex justify-between items-center mb-4">
     <h2 class="text-xl">Import {{ detections|length }} file{{ "s" if detections|length != 1 else "" }}</h2>
@@ -10,19 +10,19 @@
   <div class="space-y-2 mb-4">
     {% for d in detections %}
       {% if d.parser_name == "schwab" %}
-        <div class="rounded p-2 text-sm" style="border:0.5px solid rgba(255,255,255,0.08); background: rgba(48,209,88,0.08);">
+        <div class="rounded p-2 text-sm" style="border:0.5px solid var(--color-hairline); background: var(--color-pos-tint);">
           <span class="font-medium text-pos">&#10003; Transaction History</span>
           <span class="text-label-2"> &mdash; {{ d.row_count }} rows</span>
           <div class="text-xs text-label-2 mt-1">{{ d.filename }}</div>
         </div>
       {% elif d.parser_name == "schwab_realized_gl" %}
-        <div class="rounded p-2 text-sm" style="border:0.5px solid rgba(255,255,255,0.08); background: rgba(48,209,88,0.08);">
+        <div class="rounded p-2 text-sm" style="border:0.5px solid var(--color-hairline); background: var(--color-pos-tint);">
           <span class="font-medium text-pos">&#10003; Realized G/L (Schwab)</span>
           <span class="text-label-2"> &mdash; {{ d.row_count }} lot rows</span>
           <div class="text-xs text-label-2 mt-1">{{ d.filename }}</div>
         </div>
       {% else %}
-        <div class="rounded p-2 text-sm" style="border:0.5px solid rgba(255,255,255,0.08); background: rgba(255,159,10,0.08);">
+        <div class="rounded p-2 text-sm" style="border:0.5px solid var(--color-hairline); background: var(--color-warn-tint);">
           <span class="font-medium text-warn">&#9888; Unrecognized format</span>
           <div class="text-xs text-label-2 mt-1">{{ d.filename }} &mdash; no parser matched headers</div>
         </div>
@@ -36,7 +36,7 @@
         <label class="block label-uc mb-1">Account label</label>
         <input type="text" name="account" required list="modal-account-list"
                class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
-               style="border:0.5px solid rgba(255,255,255,0.08);"
+               style="border:0.5px solid var(--color-hairline);"
                placeholder="e.g. personal, joint, ira"/>
         <datalist id="modal-account-list">
           {% for a in accounts %}
@@ -54,7 +54,7 @@
       </div>
     </form>
   {% else %}
-    <div class="rounded p-3 text-sm text-neg" style="border:0.5px solid rgba(255,255,255,0.08); background: rgba(255,69,58,0.10);">
+    <div class="rounded p-3 text-sm text-neg" style="border:0.5px solid var(--color-hairline); background: var(--color-neg-tint);">
       None of the uploaded files matched a known broker format. Please drop a Schwab Transaction History or Realized G/L CSV.
     </div>
     <div class="flex justify-end mt-4">

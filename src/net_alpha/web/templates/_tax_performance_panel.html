@@ -56,11 +56,11 @@
         <div class="flex h-4 rounded overflow-hidden bg-surface-2">
           <div class="bg-warn" style="width: {{ '{:.1f}'.format(st_pct) }}%" title="Short-term {{ '{:.0f}'.format(st_pct) }}%"></div>
           <div class="bg-pos" style="width: {{ '{:.1f}'.format(lt_pct) }}%" title="Long-term {{ '{:.0f}'.format(lt_pct) }}%"></div>
-          <div style="background: var(--color-info, #64D2FF); width: {{ '{:.1f}'.format(s1256_pct) }}%" title="§1256 {{ '{:.0f}'.format(s1256_pct) }}%"></div>
+          <div style="background: var(--color-info, var(--color-info)); width: {{ '{:.1f}'.format(s1256_pct) }}%" title="§1256 {{ '{:.0f}'.format(s1256_pct) }}%"></div>
         </div>
         <div class="flex flex-wrap justify-between text-[11px] text-label-2 mt-2 gap-2">
           <span>
-            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--color-warn,#FF9F0A);margin-right:3px;vertical-align:middle;"></span>
+            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--color-warn,var(--color-warn));margin-right:3px;vertical-align:middle;"></span>
             ST
             <span class="num {% if breakdown.short_term_pnl < 0 %}text-neg{% elif breakdown.short_term_pnl > 0 %}text-pos{% endif %}">
               {% if breakdown.short_term_pnl < 0 %}−{% elif breakdown.short_term_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.short_term_pnl|float|abs) }}
@@ -68,7 +68,7 @@
             ({{ '{:.0f}'.format(st_pct) }}%)
           </span>
           <span>
-            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--color-pos,#30D158);margin-right:3px;vertical-align:middle;"></span>
+            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--color-pos,var(--color-pos));margin-right:3px;vertical-align:middle;"></span>
             LT
             <span class="num {% if breakdown.long_term_pnl < 0 %}text-neg{% elif breakdown.long_term_pnl > 0 %}text-pos{% endif %}">
               {% if breakdown.long_term_pnl < 0 %}−{% elif breakdown.long_term_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.long_term_pnl|float|abs) }}
@@ -76,7 +76,7 @@
             ({{ '{:.0f}'.format(lt_pct) }}%)
           </span>
           <span>
-            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#64D2FF;margin-right:3px;vertical-align:middle;"></span>
+            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--color-info);margin-right:3px;vertical-align:middle;"></span>
             §1256
             <span class="num {% if breakdown.section_1256_pnl < 0 %}text-neg{% elif breakdown.section_1256_pnl > 0 %}text-pos{% endif %}">
               {% if breakdown.section_1256_pnl < 0 %}−{% elif breakdown.section_1256_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.section_1256_pnl|float|abs) }}

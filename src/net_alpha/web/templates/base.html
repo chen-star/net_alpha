@@ -4,6 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}net-alpha{% endblock %}</title>
+  {# FOUC-prevention: resolve theme preference and apply data-theme to <html>
+     before any stylesheet loads. Reads localStorage first (client cache),
+     then falls back to the server-rendered ProfileSettings.theme, then to
+     'system'. The matchMedia listener re-applies when the OS preference
+     flips while the page is open AND the user has 'system' selected.
+
+     `_ps_global` is reused by the topbar `_ps` set below so the route only
+     hits the DB once per render. #}
+  {% set _ps_global = profile_switcher_data() %}
+  {% set _resolved_theme = _ps_global.profile.theme if _ps_global.show_switcher else 'system' %}
+  <script>
+    (function () {
+      var serverPref = "{{ _resolved_theme }}";
+      var stored = null;
+      try { stored = localStorage.getItem("theme"); } catch (e) {}
+      var pref = stored || serverPref || "system";
+      function resolve(p) {
+        if (p === "system") {
+          return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        return p;
+      }
+      var resolved = resolve(pref);
+      document.documentElement.setAttribute("data-theme", resolved);
+      document.documentElement.dataset.themePref = pref;
+      if (window.matchMedia) {
+        try {
+          window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function (e) {
+            if (document.documentElement.dataset.themePref === "system") {
+              var next = e.matches ? "light" : "dark";
+              document.documentElement.setAttribute("data-theme", next);
+              window.dispatchEvent(new CustomEvent("theme:change", { detail: { theme: next } }));
+            }
+          });
+        } catch (e) { /* Safari < 14 lacks addEventListener on MQL */ }
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="/static/app.css?v={{ asset_v }}">
   <link rel="stylesheet" href="/static/vendor/apexcharts/apexcharts.min.css?v={{ asset_v }}">
   <script src="/static/htmx.min.js?v={{ asset_v }}" defer></script>
@@ -13,6 +51,7 @@
   <script src="/static/vendor/apexcharts/apexcharts.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/charts.js?v={{ asset_v }}" defer></script>
   <script src="/static/density.js?v={{ asset_v }}" defer></script>
+  <script src="/static/theme.js?v={{ asset_v }}" defer></script>
   <script src="/static/drop_zone.js?v={{ asset_v }}" defer></script>
   <script src="/static/keyboard.js?v={{ asset_v }}" defer></script>
 </head>
@@ -33,7 +72,7 @@
       </nav>
     </div>
     <div class="flex gap-2 items-center">
-      {% set _ps = profile_switcher_data() %}
+      {% set _ps = _ps_global %}
       {% if _ps.show_switcher %}
         {% with accounts=_ps.accounts, account_profiles=_ps.account_profiles, profile=_ps.profile %}
           {% include "_profile_switcher.html" %}
@@ -47,7 +86,7 @@
         @click="$dispatch('open-settings-drawer', { tab: 'imports' })"
         aria-label="Settings"
         aria-keyshortcuts=",">
-        <img src="/static/icons/settings.svg?v={{ asset_v }}" class="w-5 h-5 invert opacity-80" alt="" aria-hidden="true">
+        <img src="/static/icons/settings.svg?v={{ asset_v }}" class="w-5 h-5 icon-mono" alt="" aria-hidden="true">
         {% set _badge = imports_badge_count() %}
         {% if _badge > 0 %}
           <span data-testid="settings-gear-dot"
@@ -67,7 +106,7 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="py-3 border-t" style="border-color: rgba(255,255,255,0.06);">
+  <footer class="py-3 border-t border-hairline">
     <div class="max-w-screen-2xl mx-auto px-5 text-[11px] text-label-2">
       {{ disclaimer }}
     </div>
@@ -76,7 +115,7 @@
     {% endif %}
   </footer>
   <dialog id="provenance-dialog"
-          class="provenance-dialog backdrop:bg-black/40 bg-bg text-text rounded p-0">
+          class="provenance-dialog backdrop:bg-overlay-medium bg-bg text-text rounded p-0">
     <form method="dialog" class="flex justify-end px-3 py-2">
       <button class="text-label-3 hover:text-text">close ✕</button>
     </form>

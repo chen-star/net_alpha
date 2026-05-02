@@ -24,17 +24,17 @@
       {% else %}{% set cd_class = 'text-pos' %}{% endif %}
       {% set fill_pct = (r.days_since / window * 100)|round(0, 'common') %}
       <div class="grid items-center gap-[14px] py-[9px] text-[13px]"
-           style="grid-template-columns: 90px 90px 1fr 110px; border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+           style="grid-template-columns: 90px 90px 1fr 110px; border-bottom: 0.5px solid var(--color-hairline);">
         <div class="flex items-center gap-2 font-semibold tracking-tightish">
-          <span style="width:6px; height:6px; border-radius:50%; background:#FF453A; box-shadow: 0 0 6px #FF453A;"></span>
+          <span style="width:6px; height:6px; border-radius:50%; background:var(--color-neg); box-shadow: 0 0 6px var(--color-neg);"></span>
           {{ r.symbol }}
         </div>
         <div class="num text-neg text-[12px] font-medium">−${{ "%.2f"|format(r.loss_amount|float) }}</div>
         <div class="flex items-center gap-[10px]">
           <span class="text-[11px] text-label-2 num min-w-[80px]">closed {{ r.days_since }}d ago</span>
-          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: rgba(255,255,255,0.06);">
+          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: var(--color-hairline);">
             <div style="width: {{ fill_pct }}%; height: 100%;
-                        background: linear-gradient(90deg, #FF453A 0%, #FF9F0A 70%, #30D158 100%);
+                        background: linear-gradient(90deg, var(--color-neg) 0%, var(--color-warn) 70%, var(--color-pos) 100%);
                         border-radius: 999px;"></div>
           </div>
         </div>

@@ -15,7 +15,7 @@
           hx-target="#focus-strip"
           hx-swap="innerHTML"
           class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full hover:scale-150 transition-transform duration-200 cursor-pointer"
-          style="left: {{ m.left_pct }}%; background-color: {% if m.confidence=='Confirmed' %}#FF453A{% elif m.confidence=='Probable' %}#FF9F0A{% else %}#64D2FF{% endif %}; box-shadow: 0 0 0 2.5px #2C2C2E, 0 0 12px currentColor;"
+          style="left: {{ m.left_pct }}%; background-color: {% if m.confidence=='Confirmed' %}var(--color-neg){% elif m.confidence=='Probable' %}var(--color-warn){% else %}var(--color-info){% endif %}; box-shadow: 0 0 0 2.5px var(--color-surface-2), 0 0 12px currentColor;"
           title="{{ m.ticker }} · {{ m.loss_account }} · {{ m.date }} · ${{ '%.2f'|format(m.disallowed) }}">
           <span class="sr-only">{{ m.ticker }} {{ m.date }}</span>
         </button>

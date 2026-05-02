@@ -16,7 +16,7 @@
       {% if top_movers.winners %}
         {% for r in top_movers.winners %}
           <div class="flex items-baseline justify-between py-[5px]"
-               style="border-bottom: 0.5px solid rgba(255,255,255,0.06);">
+               style="border-bottom: 0.5px solid var(--color-hairline);">
             <span class="font-semibold text-[13px]">{{ r.symbol }}</span>
             <span class="num text-pos text-[13px]">
               +${{ "%.2f"|format(r.unrealized_dollar|float) }}{% if r.unrealized_pct is not none %}
@@ -34,7 +34,7 @@
       {% if top_movers.losers %}
         {% for r in top_movers.losers %}
           <div class="flex items-baseline justify-between py-[5px]"
-               style="border-bottom: 0.5px solid rgba(255,255,255,0.06);">
+               style="border-bottom: 0.5px solid var(--color-hairline);">
             <span class="font-semibold text-[13px]">{{ r.symbol }}</span>
             <span class="num text-neg text-[13px]">
               −${{ "%.2f"|format(r.unrealized_dollar|float|abs) }}{% if r.unrealized_pct is not none %}

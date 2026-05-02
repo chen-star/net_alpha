@@ -18,6 +18,9 @@ Schema versions:
   v11 — Adds §1256 awareness: trades.is_section_1256 column,
         exempt_matches table, section_1256_classifications table,
         and stamps the universe-hash + engine-version meta rows.
+  v12 — Adds position_targets and historical_price_cache tables.
+  v13 — Adds user_preferences.theme column ('system' | 'light' | 'dark',
+        default 'system') for the light/dark mode toggle.
 """
 
 from __future__ import annotations
@@ -25,7 +28,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 12
+CURRENT_SCHEMA_VERSION = 13
 
 
 def get_schema_version(session: Session) -> int:
@@ -384,6 +387,17 @@ def _migrate_v11_to_v12(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v12_to_v13(session: Session) -> None:
+    """Add user_preferences.theme column. Idempotent.
+
+    Existing rows get 'system' (follow OS preference) so behavior is unchanged
+    for users upgrading without explicitly picking a theme.
+    """
+    if _table_exists(session, "user_preferences") and not _column_exists(session, "user_preferences", "theme"):
+        session.exec(text("ALTER TABLE user_preferences ADD COLUMN theme TEXT NOT NULL DEFAULT 'system'"))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -443,6 +457,10 @@ def migrate(session: Session) -> None:
     if current < 12:
         _migrate_v11_to_v12(session)
         set_schema_version(session, 12)
+        current = 12
+    if current < 13:
+        _migrate_v12_to_v13(session)
+        set_schema_version(session, 13)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(

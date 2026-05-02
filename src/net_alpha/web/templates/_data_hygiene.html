@@ -8,14 +8,14 @@
 
 {% if missing_basis_rows %}
   <section class="panel mb-4" data-testid="data-hygiene-basis">
-    <div class="px-4 py-3" style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+    <div class="px-4 py-3" style="border-bottom:0.5px solid var(--color-hairline);">
       <h2 class="text-lg">Missing cost basis</h2>
     </div>
     {# I1: single explanation card — appears once regardless of row count #}
     <div data-testid="hygiene-explanation"
          class="px-4 py-3 flex gap-3 items-start"
-         style="border-bottom:0.5px solid rgba(255,255,255,0.06);">
-      <img src="/static/icons/triangle-alert.svg?v={{ asset_v }}" class="w-4 h-4 invert opacity-70 mt-0.5 flex-shrink-0" alt="">
+         style="border-bottom:0.5px solid var(--color-hairline);">
+      <img src="/static/icons/triangle-alert.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono mt-0.5 flex-shrink-0" alt="">
       <div class="text-[12px] text-label-2">
         <strong class="text-text">{{ missing_basis_rows|length }} item{% if missing_basis_rows|length != 1 %}s{% endif %} need attention</strong>
         &mdash;
@@ -24,7 +24,7 @@
       </div>
     </div>
     {# I2: per-row inline forms #}
-    <ul class="divide-y" style="border-color: rgba(255,255,255,0.06);">
+    <ul class="divide-y" style="border-color: var(--color-hairline);">
       {% for row in missing_basis_rows %}
         {% include "_data_hygiene_row.html" %}
       {% endfor %}
@@ -34,7 +34,7 @@
 
 {% if other_issues %}
   <section class="panel mb-4" data-testid="data-hygiene">
-    <div class="px-4 py-3" style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+    <div class="px-4 py-3" style="border-bottom:0.5px solid var(--color-hairline);">
       <h2 class="text-lg">Data quality</h2>
       <p class="text-xs text-label-2 mt-1">
         {{ other_issues|length }} item{{ "s" if other_issues|length != 1 else "" }} need attention from your imports.
@@ -54,7 +54,7 @@
               <span class="font-medium text-text">{{ group|length }}</span>
               <span class="text-label-2">{{ label }}</span>
             </summary>
-            <ul class="mt-2 divide-y" style="border-color: rgba(255,255,255,0.06);">
+            <ul class="mt-2 divide-y" style="border-color: var(--color-hairline);">
               {% for issue in group %}
                 <li class="py-3 flex items-start gap-3" data-category="{{ issue.category }}">
                   <span class="badge badge-{{ issue.severity }}">{{ issue.severity }}</span>

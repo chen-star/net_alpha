@@ -49,7 +49,7 @@
      x-on:keydown.window.escape="open = false"
      x-cloak>
   {# Backdrop #}
-  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+  <div class="absolute inset-0 bg-overlay-medium backdrop-blur-sm"
        @click="open = false"
        aria-hidden="true"></div>
 
@@ -81,7 +81,7 @@
               class="text-label-2 hover:text-text"
               @click="open = false"
               aria-label="Close">
-        <img src="/static/icons/x.svg?v={{ asset_v }}" class="w-5 h-5 invert opacity-80" alt="">
+        <img src="/static/icons/x.svg?v={{ asset_v }}" class="w-5 h-5 icon-mono" alt="">
       </button>
     </header>
 

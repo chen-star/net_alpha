@@ -7,7 +7,7 @@
   <div id="sim-suggestions" hx-get="/sim/suggestions" hx-trigger="load" hx-swap="outerHTML"></div>
 
   {% if harvest_mode and ticker and qty %}
-  <div class="panel mb-4 px-4 py-3" style="border-left: 3px solid #FFD60A;">
+  <div class="panel mb-4 px-4 py-3" style="border-left: 3px solid var(--color-warn);">
     <div class="text-[12px] label-uc text-warn">Harvest mode</div>
     <div class="text-[13px] text-label-1 mt-1 leading-[1.5]">
       Pre-filled to sell <span class="num font-semibold">{{ qty }}</span>
@@ -59,7 +59,7 @@
         <label class="block label-uc mb-1 h-[14px] leading-[14px]">Ticker</label>
         <input type="text" name="ticker" value="{{ ticker }}" list="ticker-list" required
                class="bg-surface text-text rounded-md px-2 font-mono text-[13px] w-full h-[30px]"
-               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+               style="border:0.5px solid var(--color-hairline);"/>
         <datalist id="ticker-list">
           {% for t in tickers %}<option value="{{ t }}">{% endfor %}
         </datalist>
@@ -69,14 +69,14 @@
         <label class="block label-uc mb-1 h-[14px] leading-[14px]">Quantity</label>
         <input type="number" name="qty" step="0.01" value="{{ qty or '' }}" required
                class="bg-surface text-text rounded-md px-2 font-mono text-[13px] w-full h-[30px]"
-               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+               style="border:0.5px solid var(--color-hairline);"/>
         <p class="text-[11px] text-label-2 mt-1">Shares for stock; contracts for options.</p>
       </div>
       <div class="flex flex-col">
         <label class="block label-uc mb-1 h-[14px] leading-[14px]">Price{% if price_hint %} <span class="text-label-2 text-[10px]">(quote ${{ price_hint }})</span>{% endif %}</label>
         <input type="number" name="price" step="0.01" value="{{ price_hint }}" required
                class="bg-surface text-text rounded-md px-2 font-mono text-[13px] w-full h-[30px]"
-               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+               style="border:0.5px solid var(--color-hairline);"/>
         {% if not price_hint and ticker %}
           <p class="text-[11px] text-warn mt-1">No quote available — enter manually.</p>
         {% endif %}
@@ -86,7 +86,7 @@
           Account <span class="text-label-2" x-text="action === 'sell' ? '(required)' : '(optional)'"></span>
         </label>
         <select name="account" class="bg-surface text-text rounded-md px-2 text-[13px] w-full h-[30px]"
-                style="border:0.5px solid rgba(255,255,255,0.08);">
+                style="border:0.5px solid var(--color-hairline);">
           <option value="">All</option>
           {% for a in accounts %}<option value="{{ a }}" {% if account_pref == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
         </select>
@@ -97,7 +97,7 @@
         <label class="block label-uc mb-1 h-[14px] leading-[14px]">Date</label>
         <input type="date" name="trade_date" value="{{ today_iso }}" required
                class="bg-surface text-text rounded-md px-2 font-mono text-[13px] w-full h-[30px]"
-               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+               style="border:0.5px solid var(--color-hairline);"/>
         <p class="text-[11px] text-label-2 mt-1">When the trade would settle.</p>
       </div>
     </div>

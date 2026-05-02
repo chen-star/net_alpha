@@ -244,6 +244,7 @@ class UserPreferenceRow(SQLModel, table=True):
     account_id: int = Field(primary_key=True, foreign_key="accounts.id")
     profile: str = Field(default="active")  # 'conservative' | 'active' | 'options'
     density: str = Field(default="comfortable")  # 'compact' | 'comfortable' | 'tax'
+    theme: str = Field(default="system", sa_column_kwargs={"server_default": "system"})  # 'system' | 'light' | 'dark'
     updated_at: datetime
 
 

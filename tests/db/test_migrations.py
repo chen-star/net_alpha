@@ -31,4 +31,4 @@ def test_v7_to_v8_creates_cash_events_table_and_new_columns():
 
 
 def test_current_schema_version_is_12():
-    assert CURRENT_SCHEMA_VERSION == 12
+    assert CURRENT_SCHEMA_VERSION == 13

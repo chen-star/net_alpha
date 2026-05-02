@@ -102,14 +102,14 @@
                 {% if not prev_disabled %}hx-get="/portfolio/positions?{{ qs_full }}&page={{ page - 1 }}"
                 hx-target="#holdings-positions" hx-swap="innerHTML"{% endif %}
                 class="px-2 py-1 text-[11px] rounded-md {% if prev_disabled %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
-                style="border:0.5px solid rgba(255,255,255,0.08); background: var(--color-surface);"
+                style="border:0.5px solid var(--color-hairline); background: var(--color-surface);"
                 {% if prev_disabled %}disabled{% endif %}>← Prev</button>
         <span class="text-[11px] text-label-2 px-2">page {{ page }} / {{ total_pages }}</span>
         <button type="button"
                 {% if not next_disabled %}hx-get="/portfolio/positions?{{ qs_full }}&page={{ page + 1 }}"
                 hx-target="#holdings-positions" hx-swap="innerHTML"{% endif %}
                 class="px-2 py-1 text-[11px] rounded-md {% if next_disabled %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
-                style="border:0.5px solid rgba(255,255,255,0.08); background: var(--color-surface);"
+                style="border:0.5px solid var(--color-hairline); background: var(--color-surface);"
                 {% if next_disabled %}disabled{% endif %}>Next →</button>
       </div>
     {% endif %}
@@ -240,7 +240,7 @@
                     {% set _color = 'var(--color-info)' if _pct == 0 else ('var(--color-warn)' if _pct < 95 else ('var(--color-pos)' if _pct <= 105 else 'var(--color-neg)')) %}
                     <div class="flex items-center gap-2">
                       <span class="num text-[11px]">{{ _curr }} / <strong>{{ _native }}</strong></span>
-                      <div class="flex rounded-full overflow-hidden" style="width:50px; height:4px; background:rgba(255,255,255,0.06);">
+                      <div class="flex rounded-full overflow-hidden" style="width:50px; height:4px; background:var(--color-hairline);">
                         {% if _pct > 100 %}
                           <div style="width:{{ (100 / _pct * 100) }}%; height:100%; background:var(--color-pos);"></div>
                           <div style="width:{{ ((_pct - 100) / _pct * 100) }}%; height:100%; background:var(--color-neg);"></div>

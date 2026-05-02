@@ -5,7 +5,7 @@
    vs sitting in cash (and within cash, how much is pledged as CSP collateral
    and therefore not freely deployable). #}
 
-{% set positions_color = '#0A84FF' %}
+{% set positions_color = 'var(--color-rank-1)' %}
 {% set cash_color = 'rgba(142,142,147,0.6)' %}
 {% set cash_pledged_color = 'rgba(255,159,10,0.65)' %}
 
@@ -47,7 +47,7 @@
 
   {# Stacked horizontal bar — Positions | Cash·free | Cash·pledged #}
   <div class="flex h-3 rounded-full overflow-hidden mb-3"
-       style="background: rgba(255,255,255,0.05);"
+       style="background: var(--color-skeleton);"
        title="Positions {{ '%.1f'|format(positions_pct) }}% · Cash·free {{ '%.1f'|format(free_pct) }}% · Cash·pledged {{ '%.1f'|format(pledged_pct) }}%">
     {% if positions_pct > 0 %}
       <div style="background: {{ positions_color }}; width: {{ '%.2f'|format(positions_pct) }}%; box-shadow: 0 0 6px rgba(10,132,255,0.35);"></div>
@@ -98,7 +98,7 @@
 
   {# Summary: total cash share so the user can read the inverse at a glance #}
   <div class="mt-3 pt-3 text-[11px] text-label-3"
-       style="border-top: 0.5px solid rgba(255,255,255,0.08);">
+       style="border-top: 0.5px solid var(--color-hairline);">
     Total cash: ${{ "%.1f"|format((ns.free_cash + ns.pledged_cash) / 1000) }}k · {{ "%.1f"|format(cash_pct) }}%
     {% if ns.pledged_cash > 0 %}
       · pledged share of cash: {{ "%.0f"|format(ns.pledged_cash / (ns.free_cash + ns.pledged_cash) * 100) }}%

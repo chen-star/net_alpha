@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 Profile = Literal["conservative", "active", "options"]
 Density = Literal["compact", "comfortable", "tax"]
+Theme = Literal["system", "light", "dark"]
 
 
 class AccountPreference(BaseModel):
@@ -17,4 +18,5 @@ class AccountPreference(BaseModel):
     account_id: int
     profile: Profile = "active"
     density: Density = "comfortable"
+    theme: Theme = "system"
     updated_at: datetime

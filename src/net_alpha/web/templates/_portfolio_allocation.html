@@ -1,11 +1,15 @@
 {# Inputs: allocation: AllocationView from portfolio.allocation.build_allocation() #}
+{# All slot colors flow through CSS vars so the donut + leaderboard pick up
+   the active theme palette automatically. #}
 {% set rank_palette = [
-  '#0A84FF', '#FFD60A', '#30D158', '#FF375F', '#5E5CE6',
-  '#64D2FF', '#5AC8FA', '#BF5AF2', 'rgba(181,181,255,0.65)', 'rgba(255,255,255,0.40)'
+  'var(--color-rank-1)', 'var(--color-rank-2)', 'var(--color-rank-3)',
+  'var(--color-rank-4)', 'var(--color-rank-5)', 'var(--color-rank-6)',
+  'var(--color-rank-7)', 'var(--color-rank-8)', 'var(--color-rank-9)',
+  'var(--color-rank-10)'
 ] %}
-{% set rest_color = 'rgba(255,255,255,0.14)' %}
-{% set cash_color = 'rgba(142,142,147,0.6)' %}  {# neutral gray; matches Apple's systemGray — free cash #}
-{% set cash_pledged_color = 'rgba(255,159,10,0.65)' %}  {# orange (matches Cash KPI's pledged bar) — distinct from free cash + rest #}
+{% set rest_color = 'var(--color-rank-rest)' %}
+{% set cash_color = 'var(--color-cash)' %}  {# neutral gray; matches Apple's systemGray — free cash #}
+{% set cash_pledged_color = 'var(--color-warn)' %}  {# orange — distinct from free cash + rest #}
 
 {% if allocation.symbol_count == 0 %}
   <div class="text-label-2 text-[12px] py-4 text-center">
@@ -20,7 +24,7 @@
             onclick="document.getElementById('allocation-details-modal').classList.remove('hidden')">
       <svg viewBox="0 0 100 100" width="148" height="148"
            style="filter: drop-shadow(0 0 18px rgba(10,132,255,0.14));">
-        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="11"/>
+        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--color-skeleton)" stroke-width="11"/>
         {% set ns = namespace(offset=0) %}
         {% set circumference = 251.327 %}
         {% for s in allocation.slices %}
@@ -52,17 +56,17 @@
 
     {# Concentration stats #}
     <div class="flex-1 flex flex-col">
-      <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+      <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid var(--color-hairline);">
         <span class="text-label-2">Top holding</span>
         <span class="text-text num font-medium">
           {% set top = allocation.slices[0] %}{{ top.symbol }} · {{ "%.1f"|format(top.pct|float) }}%
         </span>
       </div>
-      <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+      <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid var(--color-hairline);">
         <span class="text-label-2">Top 3 share</span>
         <span class="text-text num font-medium">{{ "%.1f"|format(allocation.top3_pct|float) }}%</span>
       </div>
-      <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid rgba(255,255,255,0.08);">
+      <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid var(--color-hairline);">
         <span class="text-label-2">Top 5 share</span>
         <span class="text-text num font-medium">{{ "%.1f"|format(allocation.top5_pct|float) }}%</span>
       </div>
@@ -89,7 +93,7 @@
           {% set _label = 'Cash · pledged' if s.is_pledged_cash else 'Cash · free' %}
           {% set _title = 'Cash currently securing open short puts (CSP collateral). Cannot be deployed elsewhere until the puts close, expire, or are bought back.' if s.is_pledged_cash else 'Cash not pledged to any open option position.' %}
           <span class="inline-flex items-center gap-[7px] py-[4px] pl-2 pr-[10px] rounded-full text-[11px]"
-                style="background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.08);"
+                style="background: var(--color-skeleton); border: 0.5px solid var(--color-hairline);"
                 title="{{ _title }}">
             <span style="width:6px; height:6px; border-radius:50%; background:{{ _color }};"></span>
             <span class="font-semibold tracking-tightish text-text">{{ _label }}</span>
@@ -100,7 +104,7 @@
           {% set color = rank_palette[s.rank - 1] %}
           {% set glow = s.rank <= 6 %}
           <span class="inline-flex items-center gap-[7px] py-[4px] pl-2 pr-[10px] rounded-full text-[11px]"
-                style="background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.08);">
+                style="background: var(--color-skeleton); border: 0.5px solid var(--color-hairline);">
             <span style="width:6px; height:6px; border-radius:50%; background:{{ color }};{% if glow %} box-shadow: 0 0 5px {{ color }};{% endif %}"></span>
             <span class="font-semibold tracking-tightish text-text">{{ s.symbol }}</span>
             <span class="num text-label-2">${{ "%.1f"|format(s.market_value|float / 1000) }}k</span>
@@ -119,12 +123,12 @@
      compact row density so the user can find a symbol in two seconds. #}
   <div id="allocation-details-modal"
        x-data="{ q: '' }"
-       class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+       class="hidden fixed inset-0 bg-overlay-strong z-50 flex items-center justify-center p-4"
        onclick="if (event.target === this) { this.classList.add('hidden'); }">
     <div class="bg-surface rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col"
-         style="border:0.5px solid rgba(255,255,255,0.08);">
+         style="border:0.5px solid var(--color-hairline);">
       <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3"
-           style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+           style="border-bottom:0.5px solid var(--color-hairline);">
         <div class="min-w-0">
           <h2 class="text-lg font-semibold tracking-tightish">Allocation breakdown</h2>
           <div class="text-[11px] text-label-2 mt-1">
@@ -137,7 +141,7 @@
                  x-model="q"
                  placeholder="Filter symbol…"
                  class="bg-surface text-text rounded-md px-2 py-1 text-[12px] font-mono w-36"
-                 style="border:0.5px solid rgba(255,255,255,0.12);"/>
+                 style="border:0.5px solid var(--color-hairline-strong);"/>
           <button type="button"
                   onclick="document.getElementById('allocation-details-modal').classList.add('hidden')"
                   class="text-label-2 hover:text-text text-2xl leading-none px-1">&times;</button>
@@ -146,7 +150,7 @@
       <div class="overflow-y-auto flex-1">
         <table class="net-table w-full" style="font-size:12px;">
           <thead class="sticky top-0 z-10" style="background:var(--surface, #0b0d10);">
-            <tr style="border-bottom:0.5px solid rgba(255,255,255,0.08);">
+            <tr style="border-bottom:0.5px solid var(--color-hairline);">
               <th class="r" style="width:42px; padding:6px 8px;">#</th>
               <th style="padding:6px 8px;">Symbol</th>
               <th style="padding:6px 8px;">Type</th>
@@ -163,12 +167,12 @@
                 {% set _color = cash_color %}
                 {% set _type = 'Cash · free' %}
               {% else %}
-                {% set _color = rank_palette[s.rank - 1] if s.rank <= rank_palette|length else 'rgba(255,255,255,0.4)' %}
+                {% set _color = rank_palette[s.rank - 1] if s.rank <= rank_palette|length else 'var(--color-rank-rest)' %}
                 {% set _type = 'Equity' %}
               {% endif %}
               <tr data-symbol="{{ s.symbol|lower }}"
                   x-show="q === '' || '{{ s.symbol|lower }}'.includes(q.toLowerCase())"
-                  style="border-bottom:0.5px solid rgba(255,255,255,0.04);">
+                  style="border-bottom:0.5px solid var(--color-skeleton);">
                 <td class="r num text-label-3" style="padding:4px 8px;">{{ s.rank if s.rank > 0 else '—' }}</td>
                 <td style="padding:4px 8px;">
                   <div class="flex items-center gap-2">
@@ -185,7 +189,7 @@
         </table>
       </div>
       <div class="px-4 py-2 text-[11px] text-label-3 flex items-center justify-between"
-           style="border-top:0.5px solid rgba(255,255,255,0.08);">
+           style="border-top:0.5px solid var(--color-hairline);">
         <span>Type to filter · click outside or × to close.</span>
         <span x-show="q !== ''" x-cloak>
           <button type="button" @click="q = ''" class="underline hover:text-text">clear filter</button>

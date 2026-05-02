@@ -50,99 +50,104 @@
     {% endif %}
 
     const hasBenchmark = {{ "true" if benchmark_points and benchmark_points|length > 0 else "false" }};
-
-    const colors = [window.netAlphaChartTheme.colors.pos];
-    const widths = [2];
-    const dashArr = [0];
-    const fillTypes = ["gradient"];
-    const fillOps = [1];
-    if (hasTotal) {
-      colors.push(window.netAlphaChartTheme.colors.violet);
-      widths.push(2);
-      dashArr.push(4);
-      fillTypes.push("solid");
-      fillOps.push(1);
-    }
-    if (hasBenchmark) {
-      colors.push(window.netAlphaChartTheme.colors.label3 || "#9aa1a8");
-      widths.push(2);
-      dashArr.push(6);
-      fillTypes.push("solid");
-      fillOps.push(1);
-    }
     const showLegend = hasTotal || hasBenchmark;
 
-    const opts = window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
-      chart: {
-        type: "line",
-        height: 218,
-        zoom: { enabled: true, type: "x", autoScaleYaxis: true },
-        toolbar: {
-          show: true,
-          tools: {
-            download: false,
-            selection: true,
-            zoom: true,
-            zoomin: true,
-            zoomout: true,
-            pan: true,
-            reset: true,
-          },
-          autoSelected: "zoom",
-        },
-      },
-      colors: colors,
-      stroke: {
-        width: widths,
-        curve: "smooth",
-        lineCap: "round",
-        dashArray: dashArr,
-      },
-      fill: {
-        type: fillTypes,
-        gradient: { shade: "dark", type: "vertical", opacityFrom: 0.30, opacityTo: 0, stops: [0, 100] },
-        opacity: fillOps,
-      },
-      legend: { show: showLegend },
-      xaxis: {
-        type: "datetime",
-        labels: {
-          format: "MMM",
-          hideOverlappingLabels: true,
-        },
-        tickAmount: 12,
-      },
-      yaxis: {
-        labels: {
-          formatter: (v) => {
-            const n = Math.round(v);
-            const sign = n >= 0 ? "+" : "−";
-            const abs = Math.abs(n);
-            if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(0) + "k";
-            return sign + "$" + abs;
+    function buildOpts() {
+      const colors = [window.netAlphaChartTheme.colors.pos];
+      const widths = [2];
+      const dashArr = [0];
+      const fillTypes = ["gradient"];
+      const fillOps = [1];
+      if (hasTotal) {
+        colors.push(window.netAlphaChartTheme.colors.violet);
+        widths.push(2);
+        dashArr.push(4);
+        fillTypes.push("solid");
+        fillOps.push(1);
+      }
+      if (hasBenchmark) {
+        colors.push(window.netAlphaChartTheme.colors.label3);
+        widths.push(2);
+        dashArr.push(6);
+        fillTypes.push("solid");
+        fillOps.push(1);
+      }
+      const isLight = document.documentElement.getAttribute("data-theme") === "light";
+      return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
+        chart: {
+          type: "line",
+          height: 218,
+          zoom: { enabled: true, type: "x", autoScaleYaxis: true },
+          toolbar: {
+            show: true,
+            tools: {
+              download: false,
+              selection: true,
+              zoom: true,
+              zoomin: true,
+              zoomout: true,
+              pan: true,
+              reset: true,
+            },
+            autoSelected: "zoom",
           },
         },
-      },
-      tooltip: {
-        x: { format: "yyyy-MM-dd" },
-        y: { formatter: (v) => v == null ? "—" : "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
-      },
-      series: series,
-    });
+        colors: colors,
+        stroke: {
+          width: widths,
+          curve: "smooth",
+          lineCap: "round",
+          dashArray: dashArr,
+        },
+        fill: {
+          type: fillTypes,
+          gradient: { shade: isLight ? "light" : "dark", type: "vertical", opacityFrom: 0.30, opacityTo: 0, stops: [0, 100] },
+          opacity: fillOps,
+        },
+        legend: { show: showLegend },
+        xaxis: {
+          type: "datetime",
+          labels: {
+            format: "MMM",
+            hideOverlappingLabels: true,
+          },
+          tickAmount: 12,
+        },
+        yaxis: {
+          labels: {
+            formatter: (v) => {
+              const n = Math.round(v);
+              const sign = n >= 0 ? "+" : "−";
+              const abs = Math.abs(n);
+              if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(0) + "k";
+              return sign + "$" + abs;
+            },
+          },
+        },
+        tooltip: {
+          x: { format: "yyyy-MM-dd" },
+          y: { formatter: (v) => v == null ? "—" : "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
+        },
+        series: series,
+      });
+    }
 
     function render() {
       const el = document.querySelector("#equity-chart-{{ year }}");
       if (!el) return;
       el.innerHTML = "";
-      const chart = new ApexCharts(el, opts);
+      const chart = new ApexCharts(el, buildOpts());
       chart.render();
     }
 
-    if (window.ApexCharts) {
-      render();
+    if (window.ApexCharts && window.netAlphaChartTheme) {
+      window.netAlphaChartTheme.register(render);
     } else {
       const iv = setInterval(() => {
-        if (window.ApexCharts) { clearInterval(iv); render(); }
+        if (window.ApexCharts && window.netAlphaChartTheme) {
+          clearInterval(iv);
+          window.netAlphaChartTheme.register(render);
+        }
       }, 50);
     }
   })();

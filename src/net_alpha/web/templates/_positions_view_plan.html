@@ -66,7 +66,7 @@
                   {% set pct = r.pct_filled|float %}
                   {% set color = 'var(--color-info)' if pct == 0 else ('var(--color-warn)' if pct < 95 else ('var(--color-pos)' if pct <= 105 else 'var(--color-neg)')) %}
                   <div class="flex items-center gap-2">
-                    <div class="flex-1 flex rounded-full overflow-hidden" style="height:6px; background:rgba(255,255,255,0.06); max-width:140px;">
+                    <div class="flex-1 flex rounded-full overflow-hidden" style="height:6px; background:var(--color-hairline); max-width:140px;">
                       {% if pct > 100 %}
                         {# Fully filled bar split into a 'target met' segment + an 'over' segment. The split mark sits at the proportional 100% boundary so the red sliver visually conveys how much past target you are. #}
                         <div style="width:{{ (100 / pct * 100) }}%; height:100%; background:var(--color-pos);"></div>

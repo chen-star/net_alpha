@@ -7,7 +7,7 @@
      symbol          — default ticker for Add
 #}
 <div class="bg-surface rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
-     style="border:0.5px solid rgba(255,255,255,0.08);"
+     style="border:0.5px solid var(--color-hairline);"
      onclick="event.stopPropagation()"
      x-data="{ choice: '{{ trade.basis_source if trade else 'user' }}' === 'transfer_in' ? 'Transfer In'
               : '{{ trade.basis_source if trade else 'user' }}' === 'transfer_out' ? 'Transfer Out'
@@ -22,7 +22,7 @@
       <label class="block label-uc mb-1">Account</label>
       <select name="account" required
               class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
-              style="border:0.5px solid rgba(255,255,255,0.08);">
+              style="border:0.5px solid var(--color-hairline);">
         {% for a in accounts %}
           <option value="{{ a }}" {% if trade and trade.account == a %}selected{% endif %}>{{ a }}</option>
         {% endfor %}
@@ -34,21 +34,21 @@
         <input type="text" name="ticker" required
                value="{{ trade.ticker if trade else (symbol or '') }}"
                class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full font-mono"
-               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+               style="border:0.5px solid var(--color-hairline);"/>
       </div>
       <div>
         <label class="block label-uc mb-1">Date</label>
         <input type="date" name="trade_date" required
                value="{{ trade.date.isoformat() if trade else '' }}"
                class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
-               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+               style="border:0.5px solid var(--color-hairline);"/>
       </div>
     </div>
     <div>
       <label class="block label-uc mb-1">Action</label>
       <select name="action_choice" x-model="choice" required
               class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
-              style="border:0.5px solid rgba(255,255,255,0.08);">
+              style="border:0.5px solid var(--color-hairline);">
         <option>Buy</option>
         <option>Sell</option>
         <option>Transfer In</option>
@@ -61,7 +61,7 @@
         <input type="number" name="quantity" step="any" required min="0.0001"
                value="{{ trade.quantity if trade else '' }}"
                class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full font-mono"
-               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+               style="border:0.5px solid var(--color-hairline);"/>
       </div>
       <div>
         <label class="block label-uc mb-1">
@@ -71,7 +71,7 @@
         <input type="number" name="basis_or_proceeds" step="any" required min="0"
                value="{{ (trade.cost_basis if trade and trade.cost_basis is not none else trade.proceeds) if trade else '' }}"
                class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full font-mono"
-               style="border:0.5px solid rgba(255,255,255,0.08);"/>
+               style="border:0.5px solid var(--color-hairline);"/>
       </div>
     </div>
     <p class="text-xs text-label-3">&#9888; This is informational only. Consult a tax professional before filing.</p>

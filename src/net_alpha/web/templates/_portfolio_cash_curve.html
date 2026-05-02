@@ -40,75 +40,80 @@
       },
     ];
 
-    const opts = window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
-      chart: {
-        type: "line",
-        height: 218,
-        zoom: { enabled: true, type: "x", autoScaleYaxis: true },
-        toolbar: {
-          show: true,
-          tools: {
-            download: false,
-            selection: true,
-            zoom: true,
-            zoomin: true,
-            zoomout: true,
-            pan: true,
-            reset: true,
-          },
-          autoSelected: "zoom",
-        },
-      },
-      colors: [
-        window.netAlphaChartTheme.colors.info,
-        window.netAlphaChartTheme.colors.warn,
-      ],
-      stroke: {
-        width: [2, 2],
-        curve: "smooth",
-        lineCap: "round",
-        dashArray: [0, 5],
-      },
-      fill: {
-        type: "solid",
-        opacity: 1,
-      },
-      legend: { show: true },
-      xaxis: {
-        type: "datetime",
-        labels: { format: "MMM" },
-      },
-      yaxis: {
-        labels: {
-          formatter: (v) => {
-            const n = Math.round(v);
-            const sign = n >= 0 ? "+" : "−";
-            const abs = Math.abs(n);
-            if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(0) + "k";
-            return sign + "$" + abs;
+    function buildOpts() {
+      return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
+        chart: {
+          type: "line",
+          height: 218,
+          zoom: { enabled: true, type: "x", autoScaleYaxis: true },
+          toolbar: {
+            show: true,
+            tools: {
+              download: false,
+              selection: true,
+              zoom: true,
+              zoomin: true,
+              zoomout: true,
+              pan: true,
+              reset: true,
+            },
+            autoSelected: "zoom",
           },
         },
-      },
-      tooltip: {
-        x: { format: "yyyy-MM-dd" },
-        y: { formatter: (v) => v == null ? "—" : "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
-      },
-      series: series,
-    });
+        colors: [
+          window.netAlphaChartTheme.colors.info,
+          window.netAlphaChartTheme.colors.warn,
+        ],
+        stroke: {
+          width: [2, 2],
+          curve: "smooth",
+          lineCap: "round",
+          dashArray: [0, 5],
+        },
+        fill: {
+          type: "solid",
+          opacity: 1,
+        },
+        legend: { show: true },
+        xaxis: {
+          type: "datetime",
+          labels: { format: "MMM" },
+        },
+        yaxis: {
+          labels: {
+            formatter: (v) => {
+              const n = Math.round(v);
+              const sign = n >= 0 ? "+" : "−";
+              const abs = Math.abs(n);
+              if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(0) + "k";
+              return sign + "$" + abs;
+            },
+          },
+        },
+        tooltip: {
+          x: { format: "yyyy-MM-dd" },
+          y: { formatter: (v) => v == null ? "—" : "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
+        },
+        series: series,
+      });
+    }
 
     function render() {
       const el = document.querySelector("#cash-chart-{{ year }}");
       if (!el) return;
       el.innerHTML = "";
-      const chart = new ApexCharts(el, opts);
+      const chart = new ApexCharts(el, buildOpts());
       chart.render();
     }
 
-    if (window.ApexCharts) {
-      render();
+    if (window.ApexCharts && window.netAlphaChartTheme) {
+      window.netAlphaChartTheme.register(render);
     } else {
       const iv = setInterval(() => {
-        if (window.ApexCharts) { clearInterval(iv); render(); }
+        if (window.ApexCharts && window.netAlphaChartTheme) {
+          clearInterval(iv);
+          window.netAlphaChartTheme.register(render);
+        }
       }, 50);
     }
   })();

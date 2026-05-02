@@ -3,7 +3,7 @@
     <label class="label-uc">Period:</label>
     <select name="period" onchange="this.form.submit()"
             class="bg-surface text-text rounded-md px-2 py-1 text-[12px]"
-            style="border:0.5px solid rgba(255,255,255,0.08);">
+            style="border:0.5px solid var(--color-hairline);">
       <option value="ytd" {% if selected_period == 'ytd' %}selected{% endif %}>YTD ({{ current_year }})</option>
       {% for y in available_years %}
         {% if y != current_year %}
@@ -17,7 +17,7 @@
     <label class="label-uc">Account:</label>
     <select name="account" onchange="this.form.submit()"
             class="bg-surface text-text rounded-md px-2 py-1 text-[12px]"
-            style="border:0.5px solid rgba(255,255,255,0.08);">
+            style="border:0.5px solid var(--color-hairline);">
       <option value="" {% if not selected_account %}selected{% endif %}>All accounts</option>
       {% for a in accounts %}
         <option value="{{ a }}" {% if selected_account == a %}selected{% endif %}>{{ a }}</option>
