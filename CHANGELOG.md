@@ -2,6 +2,86 @@
 
 
 
+## v0.42.0 (2026-05-02)
+
+### Chore
+
+* chore: consolidate test imports + ruff format
+
+Imports were scattered through the file as each task added them at the
+bottom of its own block. Ruff flagged E402 (mid-file imports), I001
+(unsorted), and F811 (duplicate AccountValuePoint). Consolidates all
+imports at the top and reformats per ruff defaults.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`bced4bb`](https://github.com/chen-star/net_alpha/commit/bced4bbfceec36bcec4e9349021a8d5d467c4466))
+
+### Feature
+
+* feat(web): wire account-value equity curve into /portfolio/equity-curve
+
+Replaces the realized-P&amp;L-anchored equity curve with the redesigned
+account-value series (cumulative contributions baseline, account_value
+area, optional benchmark overlay). Both the dedicated /portfolio/equity-curve
+fragment route and the bundled /portfolio/body fragment now feed
+account_points + period_label into the rewritten template.
+
+Updates the test_phase3_charts fixture to seed a deposit cash event so
+the chart actually renders (the new curve anchors on contributions, not
+trades alone).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`59f7e37`](https://github.com/chen-star/net_alpha/commit/59f7e378d44bc8941ccfb7287631df8e2d32cb5b))
+
+* feat(portfolio): orchestrate build_account_value_series
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f169ab7`](https://github.com/chen-star/net_alpha/commit/f169ab776ce1924e94adcf1e96e11f5a8f854a60))
+
+* feat(portfolio): add holdings_value_at helper with forward-fill
+
+Implements marked-to-market valuation of open lots as of an arbitrary
+historical date D: equities priced at rem_qty × close with 7-day back-fill,
+option lots carried at adjusted_basis, returns (None, missing_tickers) when
+any equity close is unresolvable.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`08f2d6c`](https://github.com/chen-star/net_alpha/commit/08f2d6c9ce9a6476f2965b4d6c7f871b457adc3f))
+
+* feat(portfolio): add eval_dates sampler for equity curve
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`404398a`](https://github.com/chen-star/net_alpha/commit/404398ad3bfd01900b30e324a940f21e7f0391c5))
+
+* feat(portfolio): add AccountValuePoint view model
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f5e1bfd`](https://github.com/chen-star/net_alpha/commit/f5e1bfd77379fa5b928f4f838004e6d0596aa218))
+
+### Unknown
+
+* Merge remote-tracking branch &#39;origin/master&#39; ([`7f578ae`](https://github.com/chen-star/net_alpha/commit/7f578ae74ff7e602d9f0e93bf29fcb0e681a0aae))
+
+* Merge feat/equity-curve-redesign: account-value chart
+
+# Conflicts:
+#	src/net_alpha/web/routes/portfolio.py ([`9838109`](https://github.com/chen-star/net_alpha/commit/98381097febc835366512fc11a76c25888e86477))
+
+* wip: positions search pagination, ticker pagination, P&amp;L economic split
+
+Bundles in-progress work across three themes that had been accumulating
+on master:
+
+* Positions: free-form search now hits the server (`q=` param on
+  /portfolio/positions) so matches on later pages surface, not just
+  client-side DOM rows. Static JS debounces a server refresh in addition
+  to the existing client filter.
+* Ticker drilldown: paginated lots + timeline views (PAGE_SIZE=25 default)
+  with a new `_ticker_pagination.html` partial.
+* Realized P&amp;L: separate &#34;economic&#34; (cash-netted) vs &#34;recognized&#34;
+  (Schwab/Form-8949) numbers on KpiSet, surfaced on the Realized tile.
+  Pairing logic learns Schwab&#39;s T+1/T+4 settlement offsets via a new
+  `_GL_PAIR_DAY_TOLERANCE = 4` constant.
+* Misc: gl_lots threading through compute_kpis/positions for a more
+  faithful KPI baseline, AGENTS.md and CLAUDE.md tweaks.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9dcff8e`](https://github.com/chen-star/net_alpha/commit/9dcff8ee509f6a53f05bcfe56bc5b9f2c893c093))
+
+
 ## v0.41.2 (2026-05-02)
 
 ### Chore
