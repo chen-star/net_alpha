@@ -172,9 +172,7 @@ def _index_gl_close_dates(
     for gl in gl_lots:
         if gl.option_strike is not None:
             try:
-                expiry_d: _date | None = (
-                    _date.fromisoformat(gl.option_expiry) if gl.option_expiry else None
-                )
+                expiry_d: _date | None = _date.fromisoformat(gl.option_expiry) if gl.option_expiry else None
             except ValueError:
                 expiry_d = None
             if expiry_d is None:

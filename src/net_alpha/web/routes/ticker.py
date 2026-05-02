@@ -194,9 +194,7 @@ def ticker_drilldown(
         gl_lots.extend(repo.get_gl_lots_for_ticker(account.id, symbol))
 
     today = date.today()
-    realized_ytd = float(
-        realized_pl_from_trades(trades, period=(today.year, today.year + 1), gl_lots=gl_lots)
-    )
+    realized_ytd = float(realized_pl_from_trades(trades, period=(today.year, today.year + 1), gl_lots=gl_lots))
     realized_lifetime = float(realized_pl_from_trades(trades, period=None, gl_lots=gl_lots))
     disallowed_ytd = sum(
         (v.disallowed_loss for v in violations if v.loss_sale_date and v.loss_sale_date.year == today.year),
