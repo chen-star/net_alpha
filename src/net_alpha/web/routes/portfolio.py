@@ -704,7 +704,9 @@ def portfolio_body(
     # docs/superpowers/specs/2026-05-02-equity-curve-redesign-design.md.
     account_event_dates = sorted({t.date for t in scoped_trades} | {e.event_date for e in cash_events})
     account_eval_dates = build_eval_dates(
-        period=period_tuple, today=today, event_dates=account_event_dates,
+        period=period_tuple,
+        today=today,
+        event_dates=account_event_dates,
     )
     account_points = build_account_value_series(
         trades=scoped_trades,

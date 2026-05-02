@@ -1,8 +1,14 @@
+import datetime as dt
 from datetime import date
 from decimal import Decimal
 
-from net_alpha.portfolio.models import AccountValuePoint
-from net_alpha.portfolio.account_value import build_eval_dates
+from net_alpha.models.domain import Lot, Trade
+from net_alpha.portfolio.account_value import (
+    build_account_value_series,
+    build_eval_dates,
+    holdings_value_at,
+)
+from net_alpha.portfolio.models import AccountValuePoint, CashBalancePoint
 
 
 def test_account_value_point_constructs_with_all_fields():
@@ -80,24 +86,27 @@ def test_eval_dates_completed_year_ends_at_dec_31():
     assert max(dates) == date(2025, 12, 31)
 
 
-import datetime as dt
-
-from net_alpha.models.domain import Lot, Trade
-from net_alpha.portfolio.account_value import holdings_value_at
-
-
-def _trade(*, ticker: str, action: str, qty: float, basis: float | None,
-           proceeds: float | None, on: dt.date) -> Trade:
+def _trade(*, ticker: str, action: str, qty: float, basis: float | None, proceeds: float | None, on: dt.date) -> Trade:
     return Trade(
-        account="A1", date=on, ticker=ticker, action=action, quantity=qty,
-        cost_basis=basis, proceeds=proceeds,
+        account="A1",
+        date=on,
+        ticker=ticker,
+        action=action,
+        quantity=qty,
+        cost_basis=basis,
+        proceeds=proceeds,
     )
 
 
 def _lot(*, ticker: str, qty: float, basis: float, on: dt.date) -> Lot:
     return Lot(
-        trade_id="t1", account="A1", date=on, ticker=ticker,
-        quantity=qty, cost_basis=basis, adjusted_basis=basis,
+        trade_id="t1",
+        account="A1",
+        date=on,
+        ticker=ticker,
+        quantity=qty,
+        cost_basis=basis,
+        adjusted_basis=basis,
     )
 
 
@@ -107,7 +116,8 @@ def test_holdings_value_pure_equity_marked_to_market():
     closes = {(("AAPL"), dt.date(2025, 6, 1)): Decimal("180")}
     val, missing = holdings_value_at(
         on=dt.date(2025, 6, 1),
-        trades=trades, lots=lots,
+        trades=trades,
+        lots=lots,
         get_close=lambda sym, d: closes.get((sym, d)),
     )
     assert val == Decimal("1800.00")  # 10 × $180
@@ -125,7 +135,8 @@ def test_holdings_value_excludes_lots_acquired_after_D():
     ]
     val, _ = holdings_value_at(
         on=dt.date(2025, 6, 1),
-        trades=trades, lots=lots,
+        trades=trades,
+        lots=lots,
         get_close=lambda sym, d: Decimal("180"),
     )
     assert val == Decimal("1800.00")  # only the Jan-5 lot held on Jun-1
@@ -139,7 +150,8 @@ def test_holdings_value_excludes_sold_quantity_as_of_D():
     lots = [_lot(ticker="AAPL", qty=10, basis=1500, on=dt.date(2025, 1, 5))]
     val, _ = holdings_value_at(
         on=dt.date(2025, 6, 1),
-        trades=trades, lots=lots,
+        trades=trades,
+        lots=lots,
         get_close=lambda sym, d: Decimal("180"),
     )
     assert val == Decimal("1080.00")  # 6 × $180 (10 bought, 4 sold by Jun-1)
@@ -152,7 +164,8 @@ def test_holdings_value_forward_fills_within_7_days():
     quotes = {dt.date(2025, 5, 30): Decimal("175")}
     val, missing = holdings_value_at(
         on=dt.date(2025, 6, 1),
-        trades=trades, lots=lots,
+        trades=trades,
+        lots=lots,
         get_close=lambda sym, d: quotes.get(d),
     )
     assert val == Decimal("1750.00")
@@ -164,7 +177,8 @@ def test_holdings_value_returns_none_when_forward_fill_exhausted():
     lots = [_lot(ticker="AAPL", qty=10, basis=1500, on=dt.date(2025, 1, 5))]
     val, missing = holdings_value_at(
         on=dt.date(2025, 6, 1),
-        trades=trades, lots=lots,
+        trades=trades,
+        lots=lots,
         get_close=lambda sym, d: None,  # no quotes anywhere
     )
     assert val is None
@@ -173,18 +187,32 @@ def test_holdings_value_returns_none_when_forward_fill_exhausted():
 
 def test_holdings_value_options_carry_at_adjusted_basis():
     from net_alpha.models.domain import OptionDetails
+
     opt = OptionDetails(strike=200, expiry=dt.date(2025, 12, 19), call_put="C")
     t = Trade(
-        account="A1", date=dt.date(2025, 3, 1), ticker="NVDA", action="Buy",
-        quantity=2, cost_basis=400, proceeds=None, option_details=opt,
+        account="A1",
+        date=dt.date(2025, 3, 1),
+        ticker="NVDA",
+        action="Buy",
+        quantity=2,
+        cost_basis=400,
+        proceeds=None,
+        option_details=opt,
     )
     lot = Lot(
-        trade_id="t1", account="A1", date=dt.date(2025, 3, 1), ticker="NVDA",
-        quantity=2, cost_basis=400, adjusted_basis=400, option_details=opt,
+        trade_id="t1",
+        account="A1",
+        date=dt.date(2025, 3, 1),
+        ticker="NVDA",
+        quantity=2,
+        cost_basis=400,
+        adjusted_basis=400,
+        option_details=opt,
     )
     val, missing = holdings_value_at(
         on=dt.date(2025, 6, 1),
-        trades=[t], lots=[lot],
+        trades=[t],
+        lots=[lot],
         get_close=lambda sym, d: None,  # never called for options
     )
     assert val == Decimal("400")
@@ -194,27 +222,25 @@ def test_holdings_value_options_carry_at_adjusted_basis():
 def test_holdings_value_empty_portfolio():
     val, missing = holdings_value_at(
         on=dt.date(2025, 6, 1),
-        trades=[], lots=[],
+        trades=[],
+        lots=[],
         get_close=lambda sym, d: Decimal("100"),
     )
     assert val == Decimal("0")
     assert missing == ()
 
 
-from net_alpha.portfolio.account_value import build_account_value_series
-from net_alpha.portfolio.models import AccountValuePoint, CashBalancePoint
-
-
 def test_account_value_series_deposit_only_no_trades():
     """$10k deposited Jan 5; no trades. Account value == cash == contributions
     on every date; net P&L is zero throughout."""
     cash_points = [
-        CashBalancePoint(on=dt.date(2025, 1, 5),
-                         cash_balance=Decimal("10000"),
-                         cumulative_contributions=Decimal("10000")),
+        CashBalancePoint(
+            on=dt.date(2025, 1, 5), cash_balance=Decimal("10000"), cumulative_contributions=Decimal("10000")
+        ),
     ]
     series = build_account_value_series(
-        trades=[], lots=[],
+        trades=[],
+        lots=[],
         cash_points=cash_points,
         eval_dates=[dt.date(2025, 1, 5), dt.date(2025, 6, 1)],
         get_close=lambda s, d: Decimal("100"),
@@ -232,19 +258,21 @@ def test_account_value_series_buy_then_market_moves():
     """Jan 5: deposit $10k. Jan 10: buy 50 sh AAPL @ $100 = $5k, $5k cash left.
     Jun 1: AAPL @ $130 → holdings $6500, account $11500, P&L +$1500."""
     cash_points = [
-        CashBalancePoint(on=dt.date(2025, 1, 5),
-                         cash_balance=Decimal("10000"),
-                         cumulative_contributions=Decimal("10000")),
-        CashBalancePoint(on=dt.date(2025, 1, 10),
-                         cash_balance=Decimal("5000"),
-                         cumulative_contributions=Decimal("10000")),
+        CashBalancePoint(
+            on=dt.date(2025, 1, 5), cash_balance=Decimal("10000"), cumulative_contributions=Decimal("10000")
+        ),
+        CashBalancePoint(
+            on=dt.date(2025, 1, 10), cash_balance=Decimal("5000"), cumulative_contributions=Decimal("10000")
+        ),
     ]
     trades = [_trade(ticker="AAPL", action="Buy", qty=50, basis=5000, proceeds=None, on=dt.date(2025, 1, 10))]
     lots = [_lot(ticker="AAPL", qty=50, basis=5000, on=dt.date(2025, 1, 10))]
     quotes = {dt.date(2025, 6, 1): Decimal("130"), dt.date(2025, 1, 10): Decimal("100")}
 
     series = build_account_value_series(
-        trades=trades, lots=lots, cash_points=cash_points,
+        trades=trades,
+        lots=lots,
+        cash_points=cash_points,
         eval_dates=[dt.date(2025, 1, 10), dt.date(2025, 6, 1)],
         get_close=lambda s, d: quotes.get(d),
     )
@@ -258,15 +286,17 @@ def test_account_value_series_buy_then_market_moves():
 
 def test_account_value_series_missing_close_propagates_none():
     cash_points = [
-        CashBalancePoint(on=dt.date(2025, 1, 5),
-                         cash_balance=Decimal("5000"),
-                         cumulative_contributions=Decimal("10000")),
+        CashBalancePoint(
+            on=dt.date(2025, 1, 5), cash_balance=Decimal("5000"), cumulative_contributions=Decimal("10000")
+        ),
     ]
     trades = [_trade(ticker="AAPL", action="Buy", qty=50, basis=5000, proceeds=None, on=dt.date(2025, 1, 5))]
     lots = [_lot(ticker="AAPL", qty=50, basis=5000, on=dt.date(2025, 1, 5))]
 
     series = build_account_value_series(
-        trades=trades, lots=lots, cash_points=cash_points,
+        trades=trades,
+        lots=lots,
+        cash_points=cash_points,
         eval_dates=[dt.date(2025, 6, 1)],
         get_close=lambda s, d: None,  # no prices
     )
@@ -280,7 +310,9 @@ def test_account_value_series_missing_close_propagates_none():
 
 def test_account_value_series_no_cash_points_returns_empty():
     series = build_account_value_series(
-        trades=[], lots=[], cash_points=[],
+        trades=[],
+        lots=[],
+        cash_points=[],
         eval_dates=[dt.date(2025, 6, 1)],
         get_close=lambda s, d: Decimal("100"),
     )
@@ -290,15 +322,17 @@ def test_account_value_series_no_cash_points_returns_empty():
 def test_account_value_series_cash_balance_steps_with_deposits():
     """Two deposits before the eval date — the latest one wins."""
     cash_points = [
-        CashBalancePoint(on=dt.date(2025, 1, 5),
-                         cash_balance=Decimal("5000"),
-                         cumulative_contributions=Decimal("5000")),
-        CashBalancePoint(on=dt.date(2025, 3, 1),
-                         cash_balance=Decimal("8000"),
-                         cumulative_contributions=Decimal("8000")),
+        CashBalancePoint(
+            on=dt.date(2025, 1, 5), cash_balance=Decimal("5000"), cumulative_contributions=Decimal("5000")
+        ),
+        CashBalancePoint(
+            on=dt.date(2025, 3, 1), cash_balance=Decimal("8000"), cumulative_contributions=Decimal("8000")
+        ),
     ]
     series = build_account_value_series(
-        trades=[], lots=[], cash_points=cash_points,
+        trades=[],
+        lots=[],
+        cash_points=cash_points,
         eval_dates=[dt.date(2025, 1, 5), dt.date(2025, 2, 15), dt.date(2025, 3, 1)],
         get_close=lambda s, d: Decimal("100"),
     )

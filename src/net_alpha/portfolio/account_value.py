@@ -167,7 +167,10 @@ def build_account_value_series(
             contrib = cp.cumulative_contributions
 
         holdings, _missing = holdings_value_at(
-            on=d, trades=trades, lots=lots, get_close=get_close,
+            on=d,
+            trades=trades,
+            lots=lots,
+            get_close=get_close,
         )
         if holdings is None:
             account_value = None
