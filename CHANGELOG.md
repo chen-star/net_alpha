@@ -2,6 +2,48 @@
 
 
 
+## v0.41.2 (2026-05-02)
+
+### Chore
+
+* chore: regen lock for 0.41.1 ([`1946708`](https://github.com/chen-star/net_alpha/commit/19467089ec156e0372fa5d7ce1fde0e5e8c6cdde))
+
+### Fix
+
+* fix(portfolio): correct realized P&amp;L pairing, transfer basis, and account chips
+
+Three independent fixes plus pre-existing transfer-basis editor work:
+
+1. realized_pl_from_trades now distributes STO premium across multiple
+   BTCs by contract quantity. Previously each BTC subtracted its cost
+   from the *full* STO premium for the (account, ticker, strike, expiry,
+   cp) key, so a 2-contract STO closed by two 1-contract BTCs credited
+   the entire premium twice — inflating lifetime realized P&amp;L. Verified
+   against Schwab&#39;s Realized G/L: TSLA lifetime drops from $3,841.11 to
+   $2,142.44 to match.
+
+2. compute_open_positions splits accounts into open vs all-trade maps so
+   the position-row chip on the Open tab reflects only currently-held
+   accounts, not historical churn. NVDA YTD only in `lt` no longer
+   surfaces `lt+st`.
+
+3. update_trade_basis preserves basis_source for transfer rows
+   (transfer_in / transfer_out) and flips transfer_basis_user_set=True
+   instead of clobbering basis_source to &#34;user_set&#34;. The clobber was
+   making compute_open_positions count user-set transfer basis as cash
+   buys, inflating Cash invested / sh.
+
+4. Schema migration v14 retroactively restores basis_source on existing
+   transfer rows where transfer_date is set but basis_source had been
+   clobbered to user_set by the old single-lot save path.
+
+5. Imports page and positions-pane set-basis multi-lot editor refinements
+   that were already in flight, included for cohesion since they share
+   the transfer-basis editing surface.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9001a08`](https://github.com/chen-star/net_alpha/commit/9001a08d372f6ba151be7dee10cc2ac79753dced))
+
+
 ## v0.41.1 (2026-05-02)
 
 ### Fix
