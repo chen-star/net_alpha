@@ -2,6 +2,46 @@
 
 
 
+## v0.41.0 (2026-05-02)
+
+### Feature
+
+* feat(web): add light mode with Light/Dark/System toggle
+
+Adds a full light theme alongside the existing Apple HIG dark theme.
+Users pick Light, Dark, or System (follow OS preference) from the new
+Appearance section in the settings drawer&#39;s Density tab.
+
+Theme tokens are CSS custom properties under [data-theme=&#34;light&#34;] /
+[data-theme=&#34;dark&#34;] selectors; Tailwind utilities resolve via var() so
+the entire UI flips at runtime. Light palette uses Apple&#39;s documented
+HIG light-mode equivalents (systemRed.light, systemGreen.light, etc.)
+that meet WCAG AA on a white surface.
+
+The preference persists per-account via the existing user_preferences
+pipeline (new theme column, v12 → v13 migration). A localStorage shadow
+plus an inline FOUC-prevention script in &lt;head&gt; resolves and applies
+data-theme before stylesheets load, so first paint is always correct.
+A matchMedia listener re-applies on OS-pref flips when System is
+selected.
+
+ApexCharts re-renders on theme change: charts.js now reads colors live
+from CSS vars via getComputedStyle and exposes a render-function
+registry that refresh()es on the theme:change window event the toggle
+dispatches.
+
+Sweep replaces ~150 hardcoded literal colors across 30+ templates with
+the matching tokens (rgba hairlines → --color-hairline; bg-black/X
+backdrops → --color-overlay-*; inline semantic hex → var(--color-pos)
+etc.; 6 .invert opacity-XX icons → new .icon-mono utility).
+
+11 new tests cover: v13 migration (column add, default, idempotent,
+schema bump) and the /preferences route (theme write, default, invalid
+rejection). Existing schema-version assertions bumped from 12 to 13.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`894be54`](https://github.com/chen-star/net_alpha/commit/894be542083205e75e243c2675e8e23b6591472b))
+
+
 ## v0.40.1 (2026-05-01)
 
 ### Chore
