@@ -113,6 +113,36 @@ def remove_import(
     )
 
 
+@router.post("/imports/bulk-delete", response_class=HTMLResponse)
+def bulk_remove_imports(
+    request: Request,
+    ids: list[int] = Form([]),
+    repo: Repository = Depends(get_repository),
+    etf_pairs: dict = Depends(get_etf_pairs),
+) -> HTMLResponse:
+    affected_account_ids: set[int] = set()
+    needs_recompute = False
+    for import_id in ids:
+        existing = repo.get_import(import_id)
+        if existing is None:
+            continue
+        result = repo.remove_import(import_id)
+        if result.recompute_window is not None:
+            affected_account_ids.add(existing.account_id)
+            needs_recompute = True
+    # Re-stitch each affected account once, then a single global recompute —
+    # cheaper than per-import work when the user clears many at once.
+    for acct_id in affected_account_ids:
+        stitch_account(repo, acct_id)
+    if needs_recompute:
+        recompute_all_violations(repo, etf_pairs)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_imports_table.html",
+        {"imports": repo.list_imports()},
+    )
+
+
 @router.get("/imports/{import_id}/detail", response_class=HTMLResponse)
 def import_detail(
     import_id: int,

@@ -4,12 +4,19 @@
 
    `intersect once` fires when the drawer's Imports panel becomes visible
    (Alpine's x-show toggles display: none ↔ block). `hx-select="main > *"`
-   strips the legacy page chrome and grabs only the body content. #}
+   strips the legacy page chrome and grabs only the body content.
+
+   `hx-disinherit="hx-select"` is critical: child elements (drop-zone,
+   delete buttons, set-basis forms) make HTMX requests whose responses
+   are bare HTML fragments without a <main> wrapper. Without this,
+   children inherit `main > *` and end up swapping empty content,
+   blanking out the import modal and the imports table. #}
 
 <div hx-get="/imports/_legacy_page"
      hx-trigger="intersect once"
      hx-swap="innerHTML"
      hx-select="main > *"
+     hx-disinherit="hx-select"
      class="text-label-2 text-[13px]">
   Loading imports…
 </div>
