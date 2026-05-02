@@ -143,6 +143,25 @@ class BenchmarkPoint:
 
 
 @dataclass(frozen=True)
+class AccountValuePoint:
+    """One point in the account-value time series.
+
+    Anchors the redesigned equity curve. ``contributions`` is the bottom
+    baseline (cumulative net deposits). ``account_value`` is the top line
+    (cash + marked-to-market holdings). ``net_pl`` is the colored gap
+    between them. Any of the priced fields can be None when historical
+    closes are missing for one or more held tickers on this date.
+    """
+
+    on: date
+    contributions: Decimal
+    holdings_value: Decimal | None
+    cash_balance: Decimal
+    account_value: Decimal | None
+    net_pl: Decimal | None
+
+
+@dataclass(frozen=True)
 class WashImpact:
     period_label: str
     disallowed_total: Decimal

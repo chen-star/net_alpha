@@ -130,3 +130,16 @@ def test_positions_no_q_param(tmp_path):
     assert 'name="q"' not in r.text
     # And the route should not interpolate {{ search_q }} anywhere.
     assert "search_q" not in r.text.lower()
+
+
+def test_equity_curve_fragment_template_uses_new_series(tmp_path):
+    """Empty-state path still renders the panel; old series name is removed
+    from the codebase. The data-driven 'series defined' assertion lives in
+    the browser smoke test (Task 8) since seeding a fully-priced portfolio
+    via raw SQL here would be brittle."""
+    client = _client(tmp_path)
+    r = client.get("/portfolio/equity-curve?period=ytd")
+    assert r.status_code == 200
+    assert "Equity curve" in r.text
+    # The old broken series name from _portfolio_equity_curve.html must be gone.
+    assert "Total (incl. unrealized)" not in r.text
