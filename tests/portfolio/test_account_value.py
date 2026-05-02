@@ -199,3 +199,109 @@ def test_holdings_value_empty_portfolio():
     )
     assert val == Decimal("0")
     assert missing == ()
+
+
+from net_alpha.portfolio.account_value import build_account_value_series
+from net_alpha.portfolio.models import AccountValuePoint, CashBalancePoint
+
+
+def test_account_value_series_deposit_only_no_trades():
+    """$10k deposited Jan 5; no trades. Account value == cash == contributions
+    on every date; net P&L is zero throughout."""
+    cash_points = [
+        CashBalancePoint(on=dt.date(2025, 1, 5),
+                         cash_balance=Decimal("10000"),
+                         cumulative_contributions=Decimal("10000")),
+    ]
+    series = build_account_value_series(
+        trades=[], lots=[],
+        cash_points=cash_points,
+        eval_dates=[dt.date(2025, 1, 5), dt.date(2025, 6, 1)],
+        get_close=lambda s, d: Decimal("100"),
+    )
+    assert len(series) == 2
+    for p in series:
+        assert p.cash_balance == Decimal("10000")
+        assert p.holdings_value == Decimal("0")
+        assert p.account_value == Decimal("10000")
+        assert p.contributions == Decimal("10000")
+        assert p.net_pl == Decimal("0")
+
+
+def test_account_value_series_buy_then_market_moves():
+    """Jan 5: deposit $10k. Jan 10: buy 50 sh AAPL @ $100 = $5k, $5k cash left.
+    Jun 1: AAPL @ $130 → holdings $6500, account $11500, P&L +$1500."""
+    cash_points = [
+        CashBalancePoint(on=dt.date(2025, 1, 5),
+                         cash_balance=Decimal("10000"),
+                         cumulative_contributions=Decimal("10000")),
+        CashBalancePoint(on=dt.date(2025, 1, 10),
+                         cash_balance=Decimal("5000"),
+                         cumulative_contributions=Decimal("10000")),
+    ]
+    trades = [_trade(ticker="AAPL", action="Buy", qty=50, basis=5000, proceeds=None, on=dt.date(2025, 1, 10))]
+    lots = [_lot(ticker="AAPL", qty=50, basis=5000, on=dt.date(2025, 1, 10))]
+    quotes = {dt.date(2025, 6, 1): Decimal("130"), dt.date(2025, 1, 10): Decimal("100")}
+
+    series = build_account_value_series(
+        trades=trades, lots=lots, cash_points=cash_points,
+        eval_dates=[dt.date(2025, 1, 10), dt.date(2025, 6, 1)],
+        get_close=lambda s, d: quotes.get(d),
+    )
+    jun = series[1]
+    assert jun.cash_balance == Decimal("5000")
+    assert jun.holdings_value == Decimal("6500.00")
+    assert jun.account_value == Decimal("11500.00")
+    assert jun.contributions == Decimal("10000")
+    assert jun.net_pl == Decimal("1500.00")
+
+
+def test_account_value_series_missing_close_propagates_none():
+    cash_points = [
+        CashBalancePoint(on=dt.date(2025, 1, 5),
+                         cash_balance=Decimal("5000"),
+                         cumulative_contributions=Decimal("10000")),
+    ]
+    trades = [_trade(ticker="AAPL", action="Buy", qty=50, basis=5000, proceeds=None, on=dt.date(2025, 1, 5))]
+    lots = [_lot(ticker="AAPL", qty=50, basis=5000, on=dt.date(2025, 1, 5))]
+
+    series = build_account_value_series(
+        trades=trades, lots=lots, cash_points=cash_points,
+        eval_dates=[dt.date(2025, 6, 1)],
+        get_close=lambda s, d: None,  # no prices
+    )
+    p = series[0]
+    assert p.holdings_value is None
+    assert p.account_value is None
+    assert p.net_pl is None
+    assert p.cash_balance == Decimal("5000")
+    assert p.contributions == Decimal("10000")
+
+
+def test_account_value_series_no_cash_points_returns_empty():
+    series = build_account_value_series(
+        trades=[], lots=[], cash_points=[],
+        eval_dates=[dt.date(2025, 6, 1)],
+        get_close=lambda s, d: Decimal("100"),
+    )
+    assert series == []
+
+
+def test_account_value_series_cash_balance_steps_with_deposits():
+    """Two deposits before the eval date — the latest one wins."""
+    cash_points = [
+        CashBalancePoint(on=dt.date(2025, 1, 5),
+                         cash_balance=Decimal("5000"),
+                         cumulative_contributions=Decimal("5000")),
+        CashBalancePoint(on=dt.date(2025, 3, 1),
+                         cash_balance=Decimal("8000"),
+                         cumulative_contributions=Decimal("8000")),
+    ]
+    series = build_account_value_series(
+        trades=[], lots=[], cash_points=cash_points,
+        eval_dates=[dt.date(2025, 1, 5), dt.date(2025, 2, 15), dt.date(2025, 3, 1)],
+        get_close=lambda s, d: Decimal("100"),
+    )
+    assert series[0].cash_balance == Decimal("5000")
+    assert series[1].cash_balance == Decimal("5000")  # walks forward to last <= D
+    assert series[2].cash_balance == Decimal("8000")

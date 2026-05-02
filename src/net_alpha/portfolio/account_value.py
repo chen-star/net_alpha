@@ -15,7 +15,7 @@ from collections.abc import Callable, Iterable  # noqa: F401
 from decimal import Decimal
 
 from net_alpha.models.domain import Lot, Trade
-from net_alpha.portfolio.models import CashBalancePoint  # noqa: F401  (used in later tasks)
+from net_alpha.portfolio.models import AccountValuePoint, CashBalancePoint
 from net_alpha.portfolio.positions import consume_lots_fifo
 
 
@@ -136,3 +136,55 @@ def holdings_value_at(
     if any_missing:
         return None, tuple(missing)
     return total, ()
+
+
+def build_account_value_series(
+    *,
+    trades: list[Trade],
+    lots: list[Lot],
+    cash_points: list[CashBalancePoint],
+    eval_dates: list[dt.date],
+    get_close: Callable[[str, dt.date], Decimal | None],
+) -> list[AccountValuePoint]:
+    """Return one AccountValuePoint per date in ``eval_dates``.
+
+    Returns [] when there are no cash_points (no account history).
+    """
+    if not cash_points:
+        return []
+
+    sorted_cash = sorted(cash_points, key=lambda p: p.on)
+    series: list[AccountValuePoint] = []
+
+    for d in sorted(eval_dates):
+        # Walk cash_points forward to the most recent point <= d.
+        cash_bal = Decimal("0")
+        contrib = Decimal("0")
+        for cp in sorted_cash:
+            if cp.on > d:
+                break
+            cash_bal = cp.cash_balance
+            contrib = cp.cumulative_contributions
+
+        holdings, _missing = holdings_value_at(
+            on=d, trades=trades, lots=lots, get_close=get_close,
+        )
+        if holdings is None:
+            account_value = None
+            net_pl = None
+        else:
+            account_value = (cash_bal + holdings).quantize(Decimal("0.01"))
+            net_pl = (account_value - contrib).quantize(Decimal("0.01"))
+
+        series.append(
+            AccountValuePoint(
+                on=d,
+                contributions=contrib,
+                holdings_value=holdings,
+                cash_balance=cash_bal,
+                account_value=account_value,
+                net_pl=net_pl,
+            )
+        )
+
+    return series
