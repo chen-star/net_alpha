@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Callable, Iterable  # noqa: F401
+from decimal import Decimal
 
+from net_alpha.models.domain import Lot, Trade
 from net_alpha.portfolio.models import CashBalancePoint  # noqa: F401  (used in later tasks)
+from net_alpha.portfolio.positions import consume_lots_fifo
 
 
 def build_eval_dates(
@@ -73,3 +76,63 @@ def build_eval_dates(
                 out.add(ed)
 
     return sorted(out)
+
+
+_FORWARD_FILL_DAYS = 7
+
+
+def _close_with_forward_fill(
+    *,
+    ticker: str,
+    on: dt.date,
+    get_close: Callable[[str, dt.date], Decimal | None],
+) -> Decimal | None:
+    """Try ``on`` first, then walk back up to 7 calendar days for a known close."""
+    for offset in range(_FORWARD_FILL_DAYS + 1):
+        d = on - dt.timedelta(days=offset)
+        c = get_close(ticker, d)
+        if c is not None:
+            return c
+    return None
+
+
+def holdings_value_at(
+    *,
+    on: dt.date,
+    trades: list[Trade],
+    lots: list[Lot],
+    get_close: Callable[[str, dt.date], Decimal | None],
+) -> tuple[Decimal | None, tuple[str, ...]]:
+    """Compute marked-to-market value of currently-open lots as of ``on``.
+
+    Returns ``(value, missing_tickers)``.
+    - Equity lots: rem_qty × close(ticker, on), with up-to-7-day forward fill.
+    - Option lots: rem_basis (carry at basis — see spec rationale).
+    - If any equity lot's close is missing after forward-fill, ``value`` is None
+      and the offending ticker is included in ``missing_tickers``.
+    - Lots not yet acquired (lot.date > on) and trades after ``on`` are ignored.
+    """
+    trades_asof = [t for t in trades if t.date <= on]
+    lots_asof = [lt for lt in lots if lt.date <= on]
+    consumed = consume_lots_fifo(lots=lots_asof, trades=trades_asof)
+
+    total = Decimal("0")
+    missing: list[str] = []
+    any_missing = False
+    for lot, rem_qty, rem_basis in consumed:
+        if rem_qty <= 0:
+            continue
+        if lot.option_details is not None:
+            total += rem_basis
+            continue
+        close = _close_with_forward_fill(ticker=lot.ticker, on=on, get_close=get_close)
+        if close is None:
+            any_missing = True
+            if lot.ticker not in missing:
+                missing.append(lot.ticker)
+            continue
+        total += (rem_qty * close).quantize(Decimal("0.01"))
+
+    if any_missing:
+        return None, tuple(missing)
+    return total, ()

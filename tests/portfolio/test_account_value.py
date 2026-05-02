@@ -78,3 +78,124 @@ def test_eval_dates_completed_year_ends_at_dec_31():
     today = date(2026, 5, 2)
     dates = build_eval_dates(period=(2025, 2026), today=today, event_dates=[])
     assert max(dates) == date(2025, 12, 31)
+
+
+import datetime as dt
+
+from net_alpha.models.domain import Lot, Trade
+from net_alpha.portfolio.account_value import holdings_value_at
+
+
+def _trade(*, ticker: str, action: str, qty: float, basis: float | None,
+           proceeds: float | None, on: dt.date) -> Trade:
+    return Trade(
+        account="A1", date=on, ticker=ticker, action=action, quantity=qty,
+        cost_basis=basis, proceeds=proceeds,
+    )
+
+
+def _lot(*, ticker: str, qty: float, basis: float, on: dt.date) -> Lot:
+    return Lot(
+        trade_id="t1", account="A1", date=on, ticker=ticker,
+        quantity=qty, cost_basis=basis, adjusted_basis=basis,
+    )
+
+
+def test_holdings_value_pure_equity_marked_to_market():
+    trades = [_trade(ticker="AAPL", action="Buy", qty=10, basis=1500, proceeds=None, on=dt.date(2025, 1, 5))]
+    lots = [_lot(ticker="AAPL", qty=10, basis=1500, on=dt.date(2025, 1, 5))]
+    closes = {(("AAPL"), dt.date(2025, 6, 1)): Decimal("180")}
+    val, missing = holdings_value_at(
+        on=dt.date(2025, 6, 1),
+        trades=trades, lots=lots,
+        get_close=lambda sym, d: closes.get((sym, d)),
+    )
+    assert val == Decimal("1800.00")  # 10 × $180
+    assert missing == ()
+
+
+def test_holdings_value_excludes_lots_acquired_after_D():
+    trades = [
+        _trade(ticker="AAPL", action="Buy", qty=10, basis=1500, proceeds=None, on=dt.date(2025, 1, 5)),
+        _trade(ticker="AAPL", action="Buy", qty=5, basis=900, proceeds=None, on=dt.date(2025, 7, 1)),
+    ]
+    lots = [
+        _lot(ticker="AAPL", qty=10, basis=1500, on=dt.date(2025, 1, 5)),
+        _lot(ticker="AAPL", qty=5, basis=900, on=dt.date(2025, 7, 1)),
+    ]
+    val, _ = holdings_value_at(
+        on=dt.date(2025, 6, 1),
+        trades=trades, lots=lots,
+        get_close=lambda sym, d: Decimal("180"),
+    )
+    assert val == Decimal("1800.00")  # only the Jan-5 lot held on Jun-1
+
+
+def test_holdings_value_excludes_sold_quantity_as_of_D():
+    trades = [
+        _trade(ticker="AAPL", action="Buy", qty=10, basis=1500, proceeds=None, on=dt.date(2025, 1, 5)),
+        _trade(ticker="AAPL", action="Sell", qty=4, basis=600, proceeds=720, on=dt.date(2025, 4, 1)),
+    ]
+    lots = [_lot(ticker="AAPL", qty=10, basis=1500, on=dt.date(2025, 1, 5))]
+    val, _ = holdings_value_at(
+        on=dt.date(2025, 6, 1),
+        trades=trades, lots=lots,
+        get_close=lambda sym, d: Decimal("180"),
+    )
+    assert val == Decimal("1080.00")  # 6 × $180 (10 bought, 4 sold by Jun-1)
+
+
+def test_holdings_value_forward_fills_within_7_days():
+    trades = [_trade(ticker="AAPL", action="Buy", qty=10, basis=1500, proceeds=None, on=dt.date(2025, 1, 5))]
+    lots = [_lot(ticker="AAPL", qty=10, basis=1500, on=dt.date(2025, 1, 5))]
+    # Jun 1 missing, Jun 3 (2 days earlier) available
+    quotes = {dt.date(2025, 5, 30): Decimal("175")}
+    val, missing = holdings_value_at(
+        on=dt.date(2025, 6, 1),
+        trades=trades, lots=lots,
+        get_close=lambda sym, d: quotes.get(d),
+    )
+    assert val == Decimal("1750.00")
+    assert missing == ()
+
+
+def test_holdings_value_returns_none_when_forward_fill_exhausted():
+    trades = [_trade(ticker="AAPL", action="Buy", qty=10, basis=1500, proceeds=None, on=dt.date(2025, 1, 5))]
+    lots = [_lot(ticker="AAPL", qty=10, basis=1500, on=dt.date(2025, 1, 5))]
+    val, missing = holdings_value_at(
+        on=dt.date(2025, 6, 1),
+        trades=trades, lots=lots,
+        get_close=lambda sym, d: None,  # no quotes anywhere
+    )
+    assert val is None
+    assert missing == ("AAPL",)
+
+
+def test_holdings_value_options_carry_at_adjusted_basis():
+    from net_alpha.models.domain import OptionDetails
+    opt = OptionDetails(strike=200, expiry=dt.date(2025, 12, 19), call_put="C")
+    t = Trade(
+        account="A1", date=dt.date(2025, 3, 1), ticker="NVDA", action="Buy",
+        quantity=2, cost_basis=400, proceeds=None, option_details=opt,
+    )
+    lot = Lot(
+        trade_id="t1", account="A1", date=dt.date(2025, 3, 1), ticker="NVDA",
+        quantity=2, cost_basis=400, adjusted_basis=400, option_details=opt,
+    )
+    val, missing = holdings_value_at(
+        on=dt.date(2025, 6, 1),
+        trades=[t], lots=[lot],
+        get_close=lambda sym, d: None,  # never called for options
+    )
+    assert val == Decimal("400")
+    assert missing == ()
+
+
+def test_holdings_value_empty_portfolio():
+    val, missing = holdings_value_at(
+        on=dt.date(2025, 6, 1),
+        trades=[], lots=[],
+        get_close=lambda sym, d: Decimal("100"),
+    )
+    assert val == Decimal("0")
+    assert missing == ()
