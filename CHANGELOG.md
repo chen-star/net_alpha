@@ -2,6 +2,33 @@
 
 
 
+## v0.41.1 (2026-05-02)
+
+### Fix
+
+* fix(web): unbreak imports drop-zone and delete; add bulk delete
+
+The settings drawer&#39;s Imports tab loader uses hx-select=&#34;main &gt; *&#34;
+to strip page chrome from the lazy-loaded /imports/_legacy_page.
+HTMX inherits hx-* attributes to descendants, so the drop-zone&#39;s
+preview POST and the per-row delete DELETE inherited that selector
+too. Their responses are bare HTML fragments without a &lt;main&gt;
+wrapper, so the inherited selector matched nothing and HTMX
+silently swapped empty content into the target — blanking the
+import modal (broken file import) and the imports table (delete
+appeared to wipe the page). Adding hx-disinherit=&#34;hx-select&#34; on
+the loader keeps children using their own targets verbatim.
+
+While in there, added a POST /imports/bulk-delete endpoint plus
+per-row checkboxes and a &#34;Delete N selected&#34; submit button so
+users can clear multiple imports without N confirms. The bulk
+endpoint batches the wash-sale recompute (one re-stitch per
+affected account, one global recompute) instead of doing it per
+removed import.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`104d70b`](https://github.com/chen-star/net_alpha/commit/104d70b9dd5809270cfcb40797376e52296db3ce))
+
+
 ## v0.41.0 (2026-05-02)
 
 ### Feature
