@@ -1,8 +1,7 @@
 """Pure functions for cash-balance, contributions, and cash-share computations.
 
-No DB access; takes lists of events/trades, returns models. Mirrors the
-shape of `equity_curve.py` (sort by date, fold over events, emit one point
-per event date).
+No DB access; takes lists of events/trades, returns models. Sorts inputs by
+date, folds over events, emits one point per event date.
 """
 
 from __future__ import annotations

@@ -27,7 +27,7 @@ def build_benchmark_series(
     Args:
         symbol: benchmark symbol (e.g. "SPY")
         eq_dates: dates at which to evaluate the shadow value (typically the
-                  EquityPoint date axis)
+                  AccountValuePoint date axis)
         cash_points: cumulative contribution series (must be sorted by date asc;
                      CashBalancePoint.cumulative_contributions is the basis)
         get_close: callable returning the close on a given date or None

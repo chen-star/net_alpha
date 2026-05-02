@@ -24,7 +24,6 @@ from net_alpha.portfolio.cash_flow import (
     cash_allocation_slice,
     compute_cash_kpis,
 )
-from net_alpha.portfolio.equity_curve import build_equity_curve
 from net_alpha.portfolio.freshness import compute_price_freshness
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import (
@@ -644,7 +643,6 @@ def portfolio_body(
     """
     today = date.today()
     period_tuple, period_label = _parse_period(period, today.year)
-    year = period_tuple[0] if period_tuple else today.year
 
     all_trades = repo.all_trades()
     all_lots = repo.all_lots()
@@ -669,7 +667,6 @@ def portfolio_body(
         account=None,  # already filtered above
         gl_lots=gl_lots_scoped,
     )
-    points = build_equity_curve(trades=scoped_trades, year=year, present_unrealized=kpis.period_unrealized)
     # Hoist gl_option_closures so we don't re-scan the table for both
     # compute_open_positions and compute_open_short_option_positions.
     gl_option_closures = repo.get_option_gl_closures()
@@ -800,8 +797,6 @@ def portfolio_body(
         {
             "kpis": kpis,
             "snapshot": snap,
-            "points": points,
-            "year": year,
             "allocation": allocation,
             "open_shorts": open_shorts,
             "cash_secured_total": cash_secured_total,

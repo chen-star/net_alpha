@@ -122,21 +122,10 @@ class KpiSet:
 
 
 @dataclass(frozen=True)
-class EquityPoint:
-    on: date
-    cumulative_realized: Decimal
-    unrealized: Decimal | None  # only on the present-day point
-    # Total P&L (realized + present unrealized). Plotted on the equity curve as
-    # a parallel "total" series so the gap between the two lines visualizes the
-    # unrealized component. None when no price data is available.
-    total_pl: Decimal | None = None
-
-
-@dataclass(frozen=True)
 class BenchmarkPoint:
     """One point in the benchmark shadow-account series. Same date-axis as
-    the EquityPoint series; the value is the dollar value of a hypothetical
-    'buy SPY with the same cash flows' account on that date."""
+    the AccountValuePoint series; the value is the dollar value of a
+    hypothetical 'buy SPY with the same cash flows' account on that date."""
 
     on: date
     value: Decimal | None  # None when the close on that date is unavailable
