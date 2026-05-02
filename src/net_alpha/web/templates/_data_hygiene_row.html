@@ -13,7 +13,8 @@
     <span class="font-semibold w-14 inline-block tabular-nums">{{ row.symbol }}</span>
     <span class="text-label-2 w-16 inline-block tabular-nums">{{ fmt_quantity(row.qty) }}</span>
     <span class="text-label-2 text-[11px] tabular-nums">{{ fmt_date(row.acquired_date) }}</span>
-    <input type="number" name="cost_basis" required step="0.0001" placeholder="cost basis / share"
+    <input type="number" name="cost_basis" required step="0.01" placeholder="total cost basis ($)"
+           title="Total $ paid for the entire lot (× quantity), not per share"
            class="flex-1 min-w-[120px] px-2 py-1 bg-bg border rounded text-[12px] font-mono"
            style="border-color: var(--color-hairline);">
     <button type="submit" class="btn text-[12px] py-1 px-2">Save</button>

@@ -40,8 +40,12 @@ def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | N
        the position closes. STOs contribute zero on their own row.
 
     3. **Short-option BTC** (``option_short_close`` / ``..._expiry``): paired
-       with all matching STO(s) on (account, ticker, strike, expiry, call_put).
-       Realized = sum_STO_premium - BTC_cost_basis, attributed to the BTC date.
+       with the matching STO(s) on (account, ticker, strike, expiry, call_put).
+       Premium is **distributed by contract quantity** across the BTCs that
+       close it: ``premium_share = total_STO_premium × btc_qty / total_STO_qty``.
+       Realized at the BTC = ``premium_share − btc.cost_basis``. Without the
+       quantity scaling, two 1-contract BTCs closing a 2-contract STO would
+       each credit the full premium and double-count it.
 
     The previous implementation summed ``proceeds - cost_basis`` for every
     Sell, which counted the STO premium as realized at open and silently
@@ -53,6 +57,7 @@ def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | N
     total = Decimal("0")
 
     sto_premium: dict[tuple, Decimal] = defaultdict(lambda: Decimal("0"))
+    sto_qty: dict[tuple, Decimal] = defaultdict(lambda: Decimal("0"))
     for t in trades:
         if not t.is_sell():
             continue
@@ -63,6 +68,7 @@ def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | N
         opt = t.option_details
         key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
         sto_premium[key] += Decimal(str(t.proceeds or 0))
+        sto_qty[key] += Decimal(str(t.quantity))
 
     for t in trades:
         if t.is_sell():
@@ -83,7 +89,13 @@ def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | N
             key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
             if period is not None and not (period[0] <= t.date.year < period[1]):
                 continue
-            total += sto_premium.get(key, Decimal("0")) - Decimal(str(t.cost_basis or 0))
+            total_sto_qty = sto_qty.get(key, Decimal("0"))
+            btc_qty = Decimal(str(t.quantity))
+            if total_sto_qty > 0:
+                premium_share = sto_premium.get(key, Decimal("0")) * btc_qty / total_sto_qty
+            else:
+                premium_share = Decimal("0")
+            total += premium_share - Decimal(str(t.cost_basis or 0))
 
     return total
 

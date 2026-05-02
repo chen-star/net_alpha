@@ -5,7 +5,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.audit.hygiene import collect_issues, collect_missing_basis_rows
@@ -26,9 +26,28 @@ from net_alpha.web.dependencies import get_etf_pairs, get_repository
 router = APIRouter()
 
 
+_IMPORTS_PAGE_SIZE = 25
+
+
+def _paginate_imports(records: list, page: int, page_size: int) -> dict:
+    total = len(records)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * page_size
+    end = start + page_size
+    return {
+        "imports": records[start:end],
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "total_count": total,
+    }
+
+
 @router.get("/imports/_legacy_page", response_class=HTMLResponse, include_in_schema=False)
 def imports_page(
     request: Request,
+    page: int = Query(1, ge=1),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     """Render the legacy imports page body.
@@ -40,6 +59,7 @@ def imports_page(
     ``/settings/imports`` (Phase 1 IA migration).
     """
     records = repo.list_imports()
+    pagination = _paginate_imports(records, page=page, page_size=_IMPORTS_PAGE_SIZE)
     issues = collect_issues(repo)
     missing_basis_rows = collect_missing_basis_rows(repo)
     prefs = repo.list_user_preferences()
@@ -76,7 +96,11 @@ def imports_page(
         request,
         "imports.html",
         {
-            "imports": records,
+            "imports": pagination["imports"],
+            "page": pagination["page"],
+            "page_size": pagination["page_size"],
+            "total_pages": pagination["total_pages"],
+            "total_count": pagination["total_count"],
             "issues": issues,
             "missing_basis_rows": missing_basis_rows,
             "dq_groups": dq_groups,
@@ -93,6 +117,7 @@ def imports_page(
 def remove_import(
     import_id: int,
     request: Request,
+    page: int = Query(1, ge=1),
     repo: Repository = Depends(get_repository),
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
@@ -106,10 +131,17 @@ def remove_import(
         # are demoted to FIFO/unknown before detection runs.
         stitch_account(repo, account_id)
         recompute_all_violations(repo, etf_pairs)
+    pagination = _paginate_imports(repo.list_imports(), page=page, page_size=_IMPORTS_PAGE_SIZE)
     return request.app.state.templates.TemplateResponse(
         request,
         "_imports_table.html",
-        {"imports": repo.list_imports()},
+        {
+            "imports": pagination["imports"],
+            "page": pagination["page"],
+            "page_size": pagination["page_size"],
+            "total_pages": pagination["total_pages"],
+            "total_count": pagination["total_count"],
+        },
     )
 
 
@@ -117,6 +149,7 @@ def remove_import(
 def bulk_remove_imports(
     request: Request,
     ids: list[int] = Form([]),
+    page: int = Query(1, ge=1),
     repo: Repository = Depends(get_repository),
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
@@ -136,10 +169,17 @@ def bulk_remove_imports(
         stitch_account(repo, acct_id)
     if needs_recompute:
         recompute_all_violations(repo, etf_pairs)
+    pagination = _paginate_imports(repo.list_imports(), page=page, page_size=_IMPORTS_PAGE_SIZE)
     return request.app.state.templates.TemplateResponse(
         request,
         "_imports_table.html",
-        {"imports": repo.list_imports()},
+        {
+            "imports": pagination["imports"],
+            "page": pagination["page"],
+            "page_size": pagination["page_size"],
+            "total_pages": pagination["total_pages"],
+            "total_count": pagination["total_count"],
+        },
     )
 
 

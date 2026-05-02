@@ -2,7 +2,7 @@
   <div class="panel text-label-2 text-sm">No imports yet.</div>
 {% else %}
   <form id="bulk-imports-form"
-        hx-post="/imports/bulk-delete"
+        hx-post="/imports/bulk-delete?page={{ page or 1 }}"
         hx-target="#imports-table"
         hx-swap="innerHTML"
         hx-confirm="Remove the selected imports? Wash sales will be recomputed."
@@ -94,7 +94,7 @@
               </td>
               <td class="px-3 py-2">
                 <button class="btn-ghost text-confirmed border-confirmed/30"
-                        hx-delete="/imports/{{ imp.id }}"
+                        hx-delete="/imports/{{ imp.id }}?page={{ page or 1 }}"
                         hx-confirm="Remove import #{{ imp.id }} ({{ imp.trade_count }} trades, {{ imp.gl_lot_count }} G/L lots, {{ imp.cash_event_count or 0 }} cash events)? Wash sales will be recomputed."
                         hx-target="#imports-table"
                         hx-swap="innerHTML">
@@ -109,5 +109,36 @@
         </tbody>
       </table>
     </div>
+    {% if total_pages and total_pages > 1 %}
+      {% set start_idx = (page - 1) * page_size + 1 %}
+      {% set end_idx = start_idx + (imports|length) - 1 %}
+      <div class="flex items-center justify-between mt-2 text-xs text-label-2">
+        <span>
+          Showing <span class="font-mono">{{ start_idx }}–{{ end_idx }}</span>
+          of <span class="font-mono">{{ total_count }}</span>
+        </span>
+        <div class="flex items-center gap-1">
+          <button type="button"
+                  class="btn-ghost text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                  {% if page <= 1 %}disabled{% endif %}
+                  hx-get="/imports/_legacy_page?page={{ page - 1 }}"
+                  hx-target="#imports-table"
+                  hx-swap="innerHTML"
+                  hx-select="#imports-table > *">
+            ← Prev
+          </button>
+          <span class="px-2 font-mono">Page {{ page }} / {{ total_pages }}</span>
+          <button type="button"
+                  class="btn-ghost text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                  {% if page >= total_pages %}disabled{% endif %}
+                  hx-get="/imports/_legacy_page?page={{ page + 1 }}"
+                  hx-target="#imports-table"
+                  hx-swap="innerHTML"
+                  hx-select="#imports-table > *">
+            Next →
+          </button>
+        </div>
+      </div>
+    {% endif %}
   </form>
 {% endif %}

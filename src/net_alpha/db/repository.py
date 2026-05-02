@@ -914,13 +914,22 @@ class Repository:
         too — used by the inline "set basis & date" form on the positions pane
         so transfer-in lots get a real acquisition date instead of the
         broker-statement receipt date.
+
+        Transfer rows (basis_source already in {transfer_in, transfer_out})
+        keep their original basis_source — overwriting it with "user_set"
+        would erase the transfer semantic and let downstream logic count the
+        user-set basis as cash invested. Instead we flip
+        ``transfer_basis_user_set=True`` to record the edit.
         """
         with Session(self.engine) as s:
             row = s.exec(select(TradeRow).where(TradeRow.id == int(trade_id))).first()
             if row is None:
                 raise LookupError(f"Trade id {trade_id} not found")
             row.cost_basis = cost_basis
-            row.basis_source = basis_source
+            if row.basis_source in ("transfer_in", "transfer_out"):
+                row.transfer_basis_user_set = True
+            else:
+                row.basis_source = basis_source
             if cost_basis is not None:
                 row.basis_unknown = False
             if trade_date is not None:
@@ -1082,14 +1091,29 @@ class Repository:
             if row.basis_source not in ("transfer_in", "transfer_out"):
                 raise ValueError(f"split_imported_transfer requires a transfer row; basis_source={row.basis_source!r}")
 
+            # Reuse existing group id if the row was already split before.
+            # When re-splitting, the constraint is the ORIGINAL transfer total
+            # (parent + existing siblings), not the parent's current segment
+            # quantity — otherwise users get locked into the first split.
+            group_id = row.transfer_group_id or uuid4().hex
+            existing_siblings_qty = 0.0
+            if row.transfer_group_id is not None:
+                sibling_rows = s.exec(
+                    select(TradeRow).where(
+                        TradeRow.transfer_group_id == row.transfer_group_id,
+                        TradeRow.id != row.id,
+                    )
+                ).all()
+                existing_siblings_qty = sum(sr.quantity for sr in sibling_rows)
+            expected_total_qty = row.quantity + existing_siblings_qty
+
             total_qty = sum(q for _, q, _ in segments)
             # Float-safe equality with a small tolerance — the user types
             # decimal quantities and rounding can drift by 1e-9.
-            if abs(total_qty - row.quantity) > 1e-6:
-                raise ValueError(f"segment quantities sum to {total_qty} but parent qty is {row.quantity}")
-
-            # Reuse existing group id if the row was already split before.
-            group_id = row.transfer_group_id or uuid4().hex
+            if abs(total_qty - expected_total_qty) > 1e-6:
+                raise ValueError(
+                    f"segment quantities sum to {total_qty} but original transfer qty is {expected_total_qty}"
+                )
 
             # Original transfer_date is the broker-statement date — preserve.
             xfer_date = row.transfer_date or row.trade_date

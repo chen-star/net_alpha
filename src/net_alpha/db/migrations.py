@@ -21,6 +21,13 @@ Schema versions:
   v12 — Adds position_targets and historical_price_cache tables.
   v13 — Adds user_preferences.theme column ('system' | 'light' | 'dark',
         default 'system') for the light/dark mode toggle.
+  v14 — Restores basis_source on previously-edited transfer rows. The
+        single-lot "Set basis & date" save was overwriting basis_source with
+        'user_set', which made compute_open_positions count the user-set
+        basis as cash invested. The migration finds rows where transfer_date
+        is set but basis_source is no longer transfer_in/transfer_out, and
+        restores it from the row's action (Buy → transfer_in,
+        Sell → transfer_out) while flipping transfer_basis_user_set=1.
 """
 
 from __future__ import annotations
@@ -28,7 +35,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 13
+CURRENT_SCHEMA_VERSION = 14
 
 
 def get_schema_version(session: Session) -> int:
@@ -398,6 +405,36 @@ def _migrate_v12_to_v13(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v13_to_v14(session: Session) -> None:
+    """Restore basis_source on transfer rows whose single-lot edit overwrote it.
+
+    `transfer_date` is only populated by the import path for transfer rows
+    (and propagated through split_imported_transfer / update_imported_transfer
+    edits). If we see a row where transfer_date is set but basis_source has
+    been changed away from transfer_in/transfer_out, that row was edited via
+    the buggy single-lot save which clobbered basis_source. Restore it from
+    the row's action and mark transfer_basis_user_set so the edit is preserved.
+    """
+    if not _table_exists(session, "trades"):
+        session.commit()
+        return
+    session.exec(
+        text(
+            """
+            UPDATE trades
+               SET basis_source = CASE
+                       WHEN LOWER(action) = 'buy' THEN 'transfer_in'
+                       ELSE 'transfer_out'
+                   END,
+                   transfer_basis_user_set = 1
+             WHERE transfer_date IS NOT NULL
+               AND basis_source NOT IN ('transfer_in', 'transfer_out')
+            """
+        )
+    )
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -461,6 +498,10 @@ def migrate(session: Session) -> None:
     if current < 13:
         _migrate_v12_to_v13(session)
         set_schema_version(session, 13)
+        current = 13
+    if current < 14:
+        _migrate_v13_to_v14(session)
+        set_schema_version(session, 14)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(

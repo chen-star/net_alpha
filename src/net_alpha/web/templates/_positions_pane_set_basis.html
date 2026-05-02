@@ -10,7 +10,8 @@
     <form hx-post="/audit/set-basis/single?caller=pane"
           hx-target="closest .panel"
           hx-swap="outerHTML"
-          class="space-y-2">
+          class="space-y-2"
+          x-data='{ basis: 0, qty: {{ transfer_qty|float }} }'>
       <input type="hidden" name="trade_id" value="{{ trade_id }}">
       <label class="block text-[12px] text-label-2">
         Acquisition date
@@ -20,10 +21,19 @@
                style="border-color: var(--color-hairline);">
       </label>
       <label class="block text-[12px] text-label-2">
-        Cost basis ($)
+        Total cost basis ($)
         <input type="number" name="cost_basis" step="0.01" min="0" required
-               class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded"
+               x-model.number="basis"
+               title="Total $ paid for the entire lot (× quantity), not per share"
+               class="w-full mt-1 px-2 py-1 text-[13px] bg-bg border rounded font-mono"
                style="border-color: var(--color-hairline);">
+        <span class="block mt-1 text-[10px] text-label-3" x-show="basis > 0 && qty > 0">
+          ≈ <span class="font-mono" x-text="(basis / qty).toFixed(4)"></span> / share
+          across <span class="font-mono" x-text="qty"></span> shares
+        </span>
+        <span class="block mt-1 text-[10px] text-label-3" x-show="!(basis > 0)">
+          Enter the total $ for all {{ transfer_qty }} shares (multiply per-share basis by quantity).
+        </span>
       </label>
       <button type="submit"
               class="btn w-full text-[13px] py-1.5">

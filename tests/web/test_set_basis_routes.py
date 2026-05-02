@@ -21,7 +21,10 @@ def test_post_set_basis_single_persists_date_and_basis(client: TestClient, repo,
     assert resp.status_code == 200, resp.text
     refreshed = repo.get_trade_by_id(int(trade_id))
     assert refreshed.cost_basis == 1500.00
-    assert refreshed.basis_source == "user_set"
+    # basis_source must stay "transfer_in" so downstream cash-flow logic still
+    # treats this row as a transfer (zero cash invested) rather than a buy.
+    assert refreshed.basis_source == "transfer_in"
+    assert refreshed.transfer_basis_user_set is True
     assert refreshed.date == dt.date(2024, 3, 12)
 
 
@@ -183,6 +186,76 @@ def test_post_set_basis_multi_rejects_qty_sum_mismatch(client: TestClient, seed_
     )
     assert resp.status_code == 400
     assert "sum" in resp.text.lower()
+
+
+def test_multi_fragment_after_split_shows_full_group_qty_with_prefilled_rows(
+    client: TestClient, repo, seed_transfer_in
+) -> None:
+    """After a transfer is split, re-opening the multi-lot form must show the
+    ORIGINAL group quantity (not the parent's current segment qty) and pre-
+    fill one row per existing sibling so the user can edit basis in place."""
+    sym, _, trade_id, qty, xfer_date = seed_transfer_in
+    # Initial split: 100 shares → 60 + 40.
+    client.post(
+        "/audit/set-basis/multi",
+        params={"caller": "pane"},
+        data={
+            "trade_id": trade_id,
+            "dates": ["2024-03-12", "2024-09-04"],
+            "quantities": ["60", "40"],
+            "basises": ["6000", "4000"],
+        },
+    )
+    parent = repo.get_trade_by_id(int(trade_id))
+    # Parent's current quantity is the first segment (60), but the form
+    # should still target the original 100 across pre-filled rows.
+    assert parent.quantity == 60.0
+
+    resp = client.get(f"/audit/set-basis/multi/{trade_id}")
+    assert resp.status_code == 200
+    html = resp.text
+    # Header reflects the original 100 (sum of all siblings), not parent's 60.
+    assert "100.0" in html
+    assert "targetQty: 100" in html
+    # Both segments are pre-filled — qty inputs of 60 and 40 are present.
+    assert 'value="60.0"' in html
+    assert 'value="40.0"' in html
+    # And basis inputs of 6000 / 4000.
+    assert 'value="6000.0"' in html
+    assert 'value="4000.0"' in html
+
+
+def test_post_set_basis_multi_re_edit_uses_full_group_qty(client: TestClient, repo, seed_transfer_in) -> None:
+    """After a split, posting segments that sum to the ORIGINAL group qty
+    (not the parent's current qty) must succeed."""
+    sym, _, trade_id, qty, xfer_date = seed_transfer_in
+    # First split: 100 → 60 + 40.
+    client.post(
+        "/audit/set-basis/multi",
+        params={"caller": "pane"},
+        data={
+            "trade_id": trade_id,
+            "dates": ["2024-03-12", "2024-09-04"],
+            "quantities": ["60", "40"],
+            "basises": ["6000", "4000"],
+        },
+    )
+    # Re-edit: same parent, but now resplit into 70 + 30 (still summing to 100).
+    resp = client.post(
+        "/audit/set-basis/multi",
+        params={"caller": "pane"},
+        data={
+            "trade_id": trade_id,
+            "dates": ["2024-03-12", "2024-10-01"],
+            "quantities": ["70", "30"],
+            "basises": ["7700", "3300"],
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    parent = repo.get_trade_by_id(int(trade_id))
+    siblings = repo.get_trades_in_transfer_group(parent.transfer_group_id)
+    qtys = sorted(s.quantity for s in siblings)
+    assert qtys == [30.0, 70.0]
 
 
 def test_post_set_basis_multi_rejects_date_after_transfer(client: TestClient, seed_transfer_in) -> None:

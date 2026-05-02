@@ -162,7 +162,40 @@ def test_imports_table_renders_bulk_delete_form(client, repo, builders):
     assert resp.status_code == 200
     body = resp.text
     assert 'id="bulk-imports-form"' in body
-    assert 'hx-post="/imports/bulk-delete"' in body
+    assert 'hx-post="/imports/bulk-delete?page=' in body
     # One checkbox per row, posted as `ids`.
     assert 'name="ids"' in body
     assert "Delete selected" in body
+
+
+def test_imports_page_paginates_when_many_imports(client, repo, builders, monkeypatch):
+    # Use a tiny page_size so we don't have to seed dozens of imports.
+    from net_alpha.web.routes import imports as imports_module
+
+    monkeypatch.setattr(imports_module, "_IMPORTS_PAGE_SIZE", 2)
+
+    for i in range(5):
+        builders.seed_import(
+            repo,
+            "schwab",
+            "personal",
+            [builders.make_buy("schwab/personal", "AAPL", date(2024, 5, i + 1))],
+            csv_filename=f"file{i}.csv",
+        )
+
+    page1 = client.get("/imports/_legacy_page?page=1").text
+    assert "Page 1 / 3" in page1
+    assert "Showing" in page1
+    # Page 1 should contain the most recent two filenames (descending by imported_at).
+    assert page1.count('class="net-table"') == 1
+    # Pagination controls reference page 2.
+    assert 'hx-get="/imports/_legacy_page?page=2"' in page1
+
+    page3 = client.get("/imports/_legacy_page?page=3").text
+    assert "Page 3 / 3" in page3
+    # Last page must NOT have a "Next" link enabled (button rendered with disabled).
+    assert "Next →" in page3
+
+    # Out-of-range page clamps to last page rather than 404ing.
+    clamped = client.get("/imports/_legacy_page?page=99").text
+    assert "Page 3 / 3" in clamped

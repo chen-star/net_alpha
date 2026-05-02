@@ -2,7 +2,7 @@ from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 
 import net_alpha.db.tables as _tables  # noqa: F401 — registers all SQLModel table classes
-from net_alpha.db.migrations import migrate
+from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION, migrate
 
 
 def _v10_engine():
@@ -71,4 +71,4 @@ def test_fresh_db_stamps_section_1256_meta_keys():
         hash_row = session.exec(text("SELECT value FROM meta WHERE key='section_1256_universe_hash'")).first()
         version_row = session.exec(text("SELECT value FROM meta WHERE key='wash_sale_engine_version'")).first()
         assert hash_row is not None and hash_row[0]
-        assert version_row is not None and version_row[0] == "13"
+        assert version_row is not None and version_row[0] == str(CURRENT_SCHEMA_VERSION)

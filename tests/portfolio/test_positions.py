@@ -171,6 +171,67 @@ def test_accounts_field_lists_all_holders():
     assert set(r.accounts) == {"Schwab Tax", "Schwab IRA"}
 
 
+def test_transfer_in_user_set_basis_counts_toward_cash_sunk():
+    # "Cash invested / sh" represents what the user spent acquiring the
+    # shares, regardless of which brokerage they paid at. A transfer-in row
+    # whose user-set cost basis is on the trade contributes to the buys
+    # aggregation so the column matches Avg basis / sh instead of dropping
+    # to $0 — that was the original VOO/NVDA complaint.
+    trades = [
+        _trade(
+            id="t_xfer",
+            quantity=100.0,
+            cost_basis=40_000.0,
+            basis_source="transfer_in",
+            date=dt.date(2024, 5, 1),
+        ),
+    ]
+    lots = [_lot(id="l_xfer", quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
+    rows = compute_open_positions(
+        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None, account=None
+    )
+    assert len(rows) == 1
+    assert rows[0].cash_sunk_per_share == Decimal("400")  # 40000 / 100
+    assert rows[0].open_cost == Decimal("40000")
+
+
+def test_accounts_chip_excludes_fully_closed_account_history():
+    # Schwab Tax has historical buy+sell that fully closes the position there;
+    # Schwab IRA has an open lot. The open-position chip should reflect only
+    # the account that currently holds shares — not the historical Tax churn.
+    trades = [
+        _trade(id="t_tax_buy", account="Schwab Tax", quantity=50.0, cost_basis=20_000.0, date=dt.date(2024, 5, 1)),
+        _trade(
+            id="t_tax_sell",
+            account="Schwab Tax",
+            action="Sell",
+            quantity=50.0,
+            proceeds=22_000.0,
+            cost_basis=20_000.0,
+            date=dt.date(2024, 11, 1),
+        ),
+        _trade(id="t_ira_buy", account="Schwab IRA", quantity=10.0, cost_basis=4_000.0, date=dt.date(2026, 1, 10)),
+    ]
+    lots = [
+        _lot(id="l_tax", account="Schwab Tax", quantity=50.0, cost_basis=20_000.0, adjusted_basis=20_000.0),
+        _lot(
+            id="l_ira",
+            account="Schwab IRA",
+            trade_id="t_ira_buy",
+            quantity=10.0,
+            cost_basis=4_000.0,
+            adjusted_basis=4_000.0,
+            date=dt.date(2026, 1, 10),
+        ),
+    ]
+    rows = compute_open_positions(
+        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None, account=None
+    )
+    assert len(rows) == 1
+    assert set(rows[0].accounts) == {"Schwab IRA"}
+    assert rows[0].account_chip == "Schwab IRA"
+
+
 def test_period_filter_scopes_realized_pl():
     trades = [
         _trade(id="t1", quantity=100.0, cost_basis=40_000.0),  # buy 2025-01-15
@@ -435,3 +496,34 @@ def test_open_lots_view_handles_corporate_action_ticker_change():
     )
     out = open_lots_view(lots=[lot], trades=[bto, stc])
     assert out == []
+
+
+def test_transfer_in_basis_feeds_cash_invested():
+    """User-set cost basis on a transfer-in lot represents money the user
+    spent acquiring the shares (just at another brokerage). Cash invested /
+    sh treats it as a buy so the column matches Avg basis / sh instead of
+    sitting at $0."""
+    transfer = _trade(
+        id="t-xfer",
+        action="Buy",
+        quantity=11.0,
+        cost_basis=4855.65,  # user-set total for the lot
+        basis_source="transfer_in",
+        date=dt.date(2025, 4, 14),
+    )
+    lot = _lot(
+        id="l-xfer",
+        trade_id="t-xfer",
+        ticker="SPY",
+        quantity=11.0,
+        cost_basis=4855.65,
+        adjusted_basis=4855.65,
+        date=dt.date(2025, 4, 14),
+    )
+    rows = compute_open_positions(
+        trades=[transfer], lots=[lot], prices={"SPY": _quote("SPY", 500)}, period=None, account=None
+    )
+    assert len(rows) == 1
+    r = rows[0]
+    assert abs(r.avg_basis - Decimal("441.42")) < Decimal("0.01")
+    assert abs(r.cash_sunk_per_share - Decimal("441.42")) < Decimal("0.01")

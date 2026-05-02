@@ -240,22 +240,29 @@ def positions_pane(
                 market_value = qty * Decimal(str(last_price))
                 loss = market_value - open_basis  # positive = gain, negative = loss
 
-            # For the set-basis form: pick the single open transfer_in lot if
-            # one exists and its basis has not yet been set by the user.
-            # `Lot` doesn't carry basis_source, so look up the parent Trade
-            # by trade_id to filter. We exclude rows where
-            # transfer_basis_user_set=True so that after a multi-lot split
-            # the "Set basis & date" panel no longer renders.
-            transfer_lots = []
+            # For the set-basis form: pick any open transfer_in lot (set or
+            # unset) so the user can RE-EDIT a previously-saved basis without
+            # reimporting. `Lot` doesn't carry basis_source, so look up the
+            # parent Trade by trade_id. Unset lots come first so the form
+            # defaults to addressing them. When the parent belongs to a
+            # transfer group (already split), surface the original transfer
+            # quantity and broker-statement date so the multi-lot variant can
+            # validate against the full group.
+            transfer_lots: list[tuple] = []
             for lot in equity_open:
                 parent = repo.get_trade_by_id(int(lot.trade_id))
-                if parent is not None and parent.basis_source == "transfer_in" and not parent.transfer_basis_user_set:
-                    transfer_lots.append((lot, parent))
+                if parent is not None and parent.basis_source == "transfer_in":
+                    transfer_lots.append((lot, parent, parent.transfer_basis_user_set))
+            transfer_lots.sort(key=lambda triple: triple[2])  # unset (False) first
             if transfer_lots:
-                primary_lot, primary_trade = transfer_lots[0]
+                primary_lot, primary_trade, _ = transfer_lots[0]
                 trade_id = primary_lot.trade_id
+                # Pass the segment's own quantity so the single-lot form's
+                # per-share preview is correct. The "+ Split into multiple
+                # lots" link reloads the multi-lot fragment, which queries
+                # the full group total on its own.
                 transfer_qty = primary_trade.quantity
-                transfer_date = primary_trade.date
+                transfer_date = primary_trade.transfer_date or primary_trade.date
             elif len(equity_open) == 1:
                 trade_id = equity_open[0].trade_id
     except Exception as exc:  # noqa: BLE001 — never block the pane render

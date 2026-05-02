@@ -32,26 +32,58 @@
     <input type="hidden" name="trade_id" value="{{ trade_id }}">
 
     <div class="grid grid-cols-[1fr_auto_1fr_auto] gap-1 text-[11px] text-label-2">
-      <span>Date</span><span>Qty</span><span>Cost basis ($)</span><span></span>
+      <span>Date</span><span>Qty</span>
+      <span title="Total $ paid for the row's shares — not per share">Total cost basis ($)</span>
+      <span></span>
+    </div>
+    <div class="text-[10px] text-label-3 -mt-1 mb-1">
+      Enter the total $ for each lot (qty × per-share). Per-share preview shown below each row.
     </div>
 
-    <div data-lot-row class="grid grid-cols-[1fr_auto_1fr_auto] gap-1 items-center">
-      <input type="date" name="dates" required
-             max="{{ transfer_date.isoformat() }}"
-             class="px-2 py-1 text-[12px] bg-bg border rounded"
-             style="border-color: var(--color-hairline);">
-      <input type="number" name="quantities" step="0.0001" min="0.0001" required
-             value="{{ transfer_qty }}"
-             class="w-20 px-2 py-1 text-[12px] bg-bg border rounded font-mono"
-             style="border-color: var(--color-hairline);">
-      <input type="number" name="basises" step="0.01" min="0" required
-             class="px-2 py-1 text-[12px] bg-bg border rounded font-mono"
-             style="border-color: var(--color-hairline);">
-      <button type="button"
-              class="text-label-3 text-[14px] px-1"
-              disabled
-              title="Need at least one row">×</button>
-    </div>
+    {% if existing_segments %}
+      {% for seg in existing_segments %}
+        <div data-lot-row class="grid grid-cols-[1fr_auto_1fr_auto] gap-1 items-center">
+          <input type="date" name="dates" required
+                 value="{{ seg.date }}"
+                 max="{{ transfer_date.isoformat() }}"
+                 class="px-2 py-1 text-[12px] bg-bg border rounded"
+                 style="border-color: var(--color-hairline);">
+          <input type="number" name="quantities" step="0.0001" min="0.0001" required
+                 value="{{ seg.quantity }}"
+                 class="w-20 px-2 py-1 text-[12px] bg-bg border rounded font-mono"
+                 style="border-color: var(--color-hairline);">
+          <input type="number" name="basises" step="0.01" min="0" required
+                 value="{{ seg.basis }}"
+                 title="Total $ paid for this row's shares (× quantity), not per share"
+                 class="px-2 py-1 text-[12px] bg-bg border rounded font-mono"
+                 style="border-color: var(--color-hairline);">
+          <button type="button"
+                  class="text-label-3 text-[14px] px-1"
+                  {% if loop.length == 1 %}disabled title="Need at least one row"
+                  {% else %}title="Remove this lot"
+                  @click="$el.closest('[data-lot-row]').remove(); update();"{% endif %}>×</button>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div data-lot-row class="grid grid-cols-[1fr_auto_1fr_auto] gap-1 items-center">
+        <input type="date" name="dates" required
+               max="{{ transfer_date.isoformat() }}"
+               class="px-2 py-1 text-[12px] bg-bg border rounded"
+               style="border-color: var(--color-hairline);">
+        <input type="number" name="quantities" step="0.0001" min="0.0001" required
+               value="{{ transfer_qty }}"
+               class="w-20 px-2 py-1 text-[12px] bg-bg border rounded font-mono"
+               style="border-color: var(--color-hairline);">
+        <input type="number" name="basises" step="0.01" min="0" required
+               title="Total $ paid for this row's shares (× quantity), not per share"
+               class="px-2 py-1 text-[12px] bg-bg border rounded font-mono"
+               style="border-color: var(--color-hairline);">
+        <button type="button"
+                class="text-label-3 text-[14px] px-1"
+                disabled
+                title="Need at least one row">×</button>
+      </div>
+    {% endif %}
 
     <button type="button"
             class="text-accent text-[12px] hover:underline"

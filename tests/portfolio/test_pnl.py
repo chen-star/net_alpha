@@ -1,8 +1,8 @@
 import datetime as dt
 from decimal import Decimal
 
-from net_alpha.models.domain import Lot, Trade, WashSaleViolation
-from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
+from net_alpha.models.domain import Lot, OptionDetails, Trade, WashSaleViolation
+from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact, realized_pl_from_trades
 from net_alpha.pricing.provider import Quote
 
 
@@ -152,6 +152,93 @@ def test_wash_impact_account_filter_matches_either_side():
     out = compute_wash_impact(violations=[v1, v2, v3], period_label="YTD", period=(2026, 2027), account="Tax")
     # v2 (both Tax) and v3 (Tax on buy side) match; v1 (both IRA) does not
     assert out.violation_count == 2
+
+
+def test_realized_pl_distributes_sto_premium_across_partial_btcs():
+    # STO 2 contracts for $1698.67 premium, then close as two separate
+    # 1-contract BTCs ($236.66 + $101.66). The premium must be split per
+    # contract (not credited in full to each BTC), otherwise lifetime P&L
+    # is inflated by the entire STO premium — exactly the TSLA divergence
+    # users hit when net-alpha showed $3841.11 vs Schwab's $2142.44.
+    opt = OptionDetails(strike=455.0, expiry=dt.date(2025, 10, 24), call_put="C")
+    trades = [
+        _trade(
+            id="t_sto",
+            ticker="TSLA",
+            action="Sell",
+            quantity=2.0,
+            proceeds=1698.67,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2025, 10, 22),
+        ),
+        _trade(
+            id="t_btc1",
+            ticker="TSLA",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=236.66,
+            basis_source="option_short_close",
+            option_details=opt,
+            date=dt.date(2025, 10, 23),
+        ),
+        _trade(
+            id="t_btc2",
+            ticker="TSLA",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=101.66,
+            basis_source="option_short_close",
+            option_details=opt,
+            date=dt.date(2025, 10, 23),
+        ),
+    ]
+    realized = realized_pl_from_trades(trades, period=None)
+    # Correct: 1698.67 - 236.66 - 101.66 = 1360.35
+    assert abs(realized - Decimal("1360.35")) < Decimal("0.01")
+
+
+def test_realized_pl_unequal_btc_quantities_split_premium_proportionally():
+    # STO 4 contracts for $400 total premium. Close 3 + 1.
+    opt = OptionDetails(strike=100.0, expiry=dt.date(2025, 12, 19), call_put="P")
+    trades = [
+        _trade(
+            id="t_sto",
+            action="Sell",
+            quantity=4.0,
+            proceeds=400.0,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2025, 6, 1),
+        ),
+        _trade(
+            id="t_btc1",
+            action="Buy",
+            quantity=3.0,
+            proceeds=None,
+            cost_basis=120.0,
+            basis_source="option_short_close",
+            option_details=opt,
+            date=dt.date(2025, 7, 1),
+        ),
+        _trade(
+            id="t_btc2",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=30.0,
+            basis_source="option_short_close",
+            option_details=opt,
+            date=dt.date(2025, 7, 15),
+        ),
+    ]
+    realized = realized_pl_from_trades(trades, period=None)
+    # 400 (premium) - 120 - 30 = 250
+    assert abs(realized - Decimal("250")) < Decimal("0.01")
 
 
 def test_wash_impact_lifetime_when_period_is_none():

@@ -19,10 +19,12 @@
         class="absolute z-30 mt-1 right-0 panel px-3 py-2 flex flex-col gap-2 min-w-[220px]"
         style="box-shadow: var(--shadow-pane);">
     <input type="hidden" name="trade_id" value="{{ trade_id }}">
-    <label class="text-[11px] label-uc">Cost basis / share</label>
-    <input type="number" name="cost_basis" step="0.0001" required
+    <label class="text-[11px] label-uc">Total cost basis ($)</label>
+    <input type="number" name="cost_basis" step="0.01" required
+           title="Total $ paid for the entire lot (× quantity), not per share"
            class="px-2 py-1 bg-bg border rounded text-[12px] font-mono"
            style="border-color: var(--color-hairline);">
+    <span class="text-[10px] text-label-3">Total $ for the lot — multiply by your share count.</span>
     <div class="flex gap-2 justify-end">
       <button type="button" @click="open = false" class="btn-ghost text-[11px]">Cancel</button>
       <button type="submit" class="btn text-[11px] py-1 px-2">Save</button>

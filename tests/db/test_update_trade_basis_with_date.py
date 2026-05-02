@@ -50,7 +50,10 @@ def test_update_trade_basis_persists_optional_trade_date(repo: Repository) -> No
     )
     refreshed = repo.get_trade_by_id(int(trade_id))
     assert refreshed.cost_basis == 1500.00
-    assert refreshed.basis_source == "user_set"
+    # Transfer rows preserve basis_source so downstream cash-flow logic still
+    # recognises them as transfers; the user-edit signal is `transfer_basis_user_set`.
+    assert refreshed.basis_source == "transfer_in"
+    assert refreshed.transfer_basis_user_set is True
     assert refreshed.date == dt.date(2024, 3, 12)
 
 

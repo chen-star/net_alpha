@@ -499,9 +499,17 @@ def compute_open_positions(
     open_options_by_sym = compute_open_option_contracts(trades, gl_option_closures=option_closures_by_key)
 
     # Aggregate equity-only quantities and basis from FIFO-reduced lots.
+    # Two account maps:
+    #   `open_accounts_by_sym` — accounts that currently hold equity OR
+    #   options for the symbol. Drives the chip on open rows so a position
+    #   that's only open in one account today doesn't show historical
+    #   accounts that closed out before this period.
+    #   `all_accounts_by_sym` — accounts with any trade activity ever for
+    #   the symbol. Only used to populate the chip on closed-only rows.
     qty_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     open_cost_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
-    accounts_by_sym: dict[str, set[str]] = defaultdict(set)
+    open_accounts_by_sym: dict[str, set[str]] = defaultdict(set)
+    all_accounts_by_sym: dict[str, set[str]] = defaultdict(set)
     basis_known_by_sym: dict[str, bool] = defaultdict(bool)
     for lot, rem_qty, rem_basis in consumed:
         if lot.option_details is not None:
@@ -510,11 +518,18 @@ def compute_open_positions(
             continue
         qty_by_sym[lot.ticker] += rem_qty
         open_cost_by_sym[lot.ticker] += rem_basis
-        accounts_by_sym[lot.ticker].add(lot.account)
+        open_accounts_by_sym[lot.ticker].add(lot.account)
         # Provably-known basis: any open lot has a non-null, non-zero cost_basis.
         # Transferred-in lots default to None/0 until the user fills them in.
         if lot.cost_basis is not None and lot.cost_basis != 0:
             basis_known_by_sym[lot.ticker] = True
+    # Long option lots with remaining qty contribute their account to the
+    # symbol-level open-accounts map (they may live alongside equity rows
+    # or stand alone on options-only rows).
+    for lot, rem_qty, _ in consumed:
+        if lot.option_details is None or rem_qty <= 0:
+            continue
+        open_accounts_by_sym[_opt_ticker_base(lot.ticker)].add(lot.account)
 
     # Phase 3 density extras: oldest-lot age and LT/ST split.
     LT_DAYS = 365
@@ -535,6 +550,10 @@ def compute_open_positions(
             st_qty_by_sym[sym] += rem_qty
 
     # Cash flows include ALL trades on the underlying ticker (equity AND options).
+    # Transfer rows are counted using their user-set cost_basis / proceeds —
+    # "Cash invested / sh" reflects what the user spent acquiring the shares,
+    # regardless of which brokerage they paid at, so the column matches the
+    # avg-basis side instead of dropping to $0 after a transfer-in.
     # Exception: assigned-put STO/synthetic-close pairs — the premium has
     # already been folded into the underlying stock's cost basis. Counting it
     # again here would inflate proceeds and double-credit realized P/L.
@@ -543,10 +562,24 @@ def compute_open_positions(
     sells_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     premium_by_sym: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     trades_by_sym: dict[str, list[Trade]] = defaultdict(list)
+    # Per-account, per-(ticker_base, strike, expiry, cp) net option qty.
+    # Drives `open_accounts_by_sym` for short option positions, which don't
+    # live in `consumed` (no Lot row for STO).
+    OptAcctKey = tuple[str, str, float, object, str]
+    opt_net_by_acct: dict[OptAcctKey, Decimal] = defaultdict(lambda: Decimal("0"))
     for t in trades:
         sym = t.ticker
-        accounts_by_sym[sym].add(t.account)  # ensure account is captured even if no open lot
+        all_accounts_by_sym[sym].add(t.account)
         trades_by_sym[sym].append(t)
+        # Per-account net option qty for short-position discovery.
+        if t.option_details is not None:
+            opt = t.option_details
+            okey: OptAcctKey = (t.account, _opt_ticker_base(t.ticker), opt.strike, opt.expiry, opt.call_put)
+            delta = Decimal(str(t.quantity))
+            if t.action.lower() == "buy":
+                opt_net_by_acct[okey] += delta
+            else:
+                opt_net_by_acct[okey] -= delta
         if t.basis_source in _SKIP_AGG_SOURCES:
             # Same skip applies to premium_received: assigned-put STO/synthetic-close
             # premium is already folded into the underlying basis. Counting it here
@@ -562,6 +595,22 @@ def compute_open_positions(
             buys_by_sym[sym] += Decimal(str(t.cost_basis or 0))
         elif t.action.lower() == "sell":
             sells_by_sym[sym] += Decimal(str(t.proceeds or 0))
+
+    # Apply per-account GL closures so net option qty reflects expirations,
+    # assignments, and unimported BTC trades. Mirrors the aggregate logic in
+    # `compute_open_option_contracts`.
+    for (acct, ticker_base, strike, expiry, cp), gl_qty in normalised_opt_closures.items():
+        if gl_qty <= 0:
+            continue
+        nkey: OptAcctKey = (acct, _opt_ticker_base(ticker_base), strike, expiry, cp)
+        n = opt_net_by_acct.get(nkey, Decimal("0"))
+        if n > 0:
+            opt_net_by_acct[nkey] = max(n - Decimal(str(gl_qty)), Decimal("0"))
+        elif n < 0:
+            opt_net_by_acct[nkey] = min(n + Decimal(str(gl_qty)), Decimal("0"))
+    for (acct, ticker_base, _strike, _expiry, _cp), qty in opt_net_by_acct.items():
+        if qty != 0:
+            open_accounts_by_sym[ticker_base].add(acct)
 
     # Realized P/L per symbol uses the canonical helper that pairs short-option
     # STO/BTC events instead of treating every Sell as a realization. See
@@ -590,7 +639,7 @@ def compute_open_positions(
         unrealized = (market_value - open_cost) if market_value is not None else None
         oldest = oldest_open_by_sym.get(sym)
         days_held = (today - oldest).days if oldest is not None else None
-        accounts_tuple = tuple(sorted(accounts_by_sym[sym]))
+        accounts_tuple = tuple(sorted(open_accounts_by_sym[sym]))
         rows.append(
             PositionRow(
                 symbol=sym,
@@ -614,14 +663,14 @@ def compute_open_positions(
         )
     # Tickers with only open option exposure (no equity lot): emit a qty=0 row
     # so the user can still drill in. Skipped when account-scoped emits no
-    # accounts_by_sym entry, since the option trade itself populates that map.
+    # open-accounts entry, since the option trade itself populates that map.
     seen_open = {r.symbol for r in rows}
     for sym, opt_contracts in open_options_by_sym.items():
         if sym in seen_open or opt_contracts == 0:
             continue
         if qty_by_sym.get(sym, Decimal("0")) != 0:
             continue
-        accounts_tuple = tuple(sorted(accounts_by_sym[sym]))
+        accounts_tuple = tuple(sorted(open_accounts_by_sym[sym]))
         rows.append(
             PositionRow(
                 symbol=sym,
@@ -641,13 +690,15 @@ def compute_open_positions(
     if include_closed:
         seen = {r.symbol for r in rows}
         # Closed symbols: had Sell activity (period-scoped if a period is set)
-        # but no remaining open quantity.
+        # but no remaining open quantity. Use the all-trade-accounts map here
+        # so a fully-closed symbol still surfaces every account it ever traded
+        # in — that's the historical chip semantic for the closed view.
         for sym, realized in realized_by_sym.items():
             if sym in seen:
                 continue
             if qty_by_sym.get(sym, Decimal("0")) != 0:
                 continue
-            accounts_tuple = tuple(sorted(accounts_by_sym[sym]))
+            accounts_tuple = tuple(sorted(all_accounts_by_sym[sym]))
             rows.append(
                 PositionRow(
                     symbol=sym,

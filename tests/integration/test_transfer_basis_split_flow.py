@@ -51,9 +51,11 @@ def test_multi_lot_split_flow_clears_basis_warning(client: TestClient, repo, see
     # Parent row's basis_unknown should be cleared too (hygiene-checker correctness).
     assert parent.basis_unknown is False
 
-    # 5. Re-render the pane: the basis-missing warning is gone.
+    # 5. Re-render the pane: the form stays available so the user can RE-EDIT
+    #    the split lots (e.g. correct a typo in one segment's basis) without
+    #    re-importing. The "+ Split into multiple lots" link must still point
+    #    at the multi-lot fragment, which now pre-fills with the saved
+    #    siblings and accepts segments summing to the original group qty.
     resp = client.get("/positions/pane", params={"sym": sym, "account_id": account_id})
     assert resp.status_code == 200
-    # The "Set basis" panel should not render when no transfer-in lot lacks basis.
-    # (compute_positions sets basis_known=True once any lot has cost_basis != 0.)
-    assert "Set basis &amp; date" not in resp.text and "Set basis & date" not in resp.text
+    assert f"/audit/set-basis/multi/{trade_id}" in resp.text

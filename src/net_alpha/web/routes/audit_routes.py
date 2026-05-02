@@ -206,7 +206,14 @@ def set_basis_multi_fragment(
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     """HTMX swap target: render the multi-lot row-table fragment for one
-    transfer-in trade."""
+    transfer-in trade.
+
+    When the trade is part of an existing transfer_group (i.e. the user has
+    already split it once), the fragment shows the FULL original group
+    quantity and pre-fills one row per existing sibling so the user can edit
+    each lot's basis in place instead of being locked into the parent's
+    current segment quantity.
+    """
     try:
         parsed_id = int(trade_id)
     except ValueError:
@@ -220,14 +227,31 @@ def set_basis_multi_fragment(
             '<div class="text-neg text-[12px]">Not a transfer-in trade.</div>',
             status_code=400,
         )
+
+    siblings = repo.get_trades_in_transfer_group(trade.transfer_group_id) if trade.transfer_group_id else []
+    if siblings:
+        transfer_qty = sum(s.quantity for s in siblings)
+        existing_segments = [
+            {
+                "date": s.date.isoformat(),
+                "quantity": s.quantity,
+                "basis": s.cost_basis if s.cost_basis is not None else "",
+            }
+            for s in siblings
+        ]
+    else:
+        transfer_qty = trade.quantity
+        existing_segments = []
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_positions_pane_set_basis_multi.html",
         {
             "trade_id": trade_id,
             "sym": trade.ticker,
-            "transfer_qty": trade.quantity,
-            "transfer_date": trade.date,
+            "transfer_qty": transfer_qty,
+            "transfer_date": trade.transfer_date or trade.date,
+            "existing_segments": existing_segments,
         },
     )
 
@@ -303,6 +327,15 @@ def set_basis_multi(
             status_code=400,
         )
 
+    # The constraint upper bound for acquisition dates and the qty-sum target
+    # is the ORIGINAL transfer (preserved on transfer_date and across all
+    # siblings), not whatever the parent row currently holds after a prior
+    # split. Falling back to trade.date covers transfers that pre-date the
+    # transfer_date column.
+    xfer_date = trade.transfer_date or trade.date
+    siblings = repo.get_trades_in_transfer_group(trade.transfer_group_id) if trade.transfer_group_id else []
+    expected_total_qty = sum(s.quantity for s in siblings) if siblings else trade.quantity
+
     today = _date.today()
     parsed: list[tuple[_date, float, float]] = []
     for d_str, q, b in zip(dates, quantities, basises, strict=False):
@@ -318,10 +351,10 @@ def set_basis_multi(
                 '<div class="text-neg text-[12px]">Acquisition dates cannot be in the future.</div>',
                 status_code=400,
             )
-        if d > trade.date:
+        if d > xfer_date:
             msg = (
                 f'<div class="text-neg text-[12px]">Acquisition date {d.isoformat()}'
-                f" is after transfer date {trade.date.isoformat()}.</div>"
+                f" is after transfer date {xfer_date.isoformat()}.</div>"
             )
             return HTMLResponse(msg, status_code=400)
         if q <= 0:
@@ -337,10 +370,10 @@ def set_basis_multi(
         parsed.append((d, q, b))
 
     qty_sum = sum(q for _, q, _ in parsed)
-    if abs(qty_sum - trade.quantity) > 1e-4:
+    if abs(qty_sum - expected_total_qty) > 1e-4:
         msg = (
             f'<div class="text-neg text-[12px]">Quantities sum to {qty_sum}'
-            f" but transferred quantity is {trade.quantity}.</div>"
+            f" but transferred quantity is {expected_total_qty}.</div>"
         )
         return HTMLResponse(msg, status_code=400)
 

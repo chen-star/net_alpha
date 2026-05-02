@@ -80,4 +80,5 @@ def test_v13_bumps_schema_version():
         migrate(s)
         v = s.exec(text("SELECT value FROM meta WHERE key='schema_version'")).first()
         assert v is not None
-        assert v[0] == "13"
+        # migrate() carries past v13; the only requirement here is that v13 ran.
+        assert int(v[0]) >= 13
