@@ -1,5 +1,12 @@
 {% if lots %}
   {% include "_lots_table.html" %}
+  {% with paginated_view='lots',
+          page=lots_page,
+          total_pages=lots_total_pages,
+          total_count=lots_total_count,
+          rows_on_page=lots|length %}
+    {% include "_ticker_pagination.html" %}
+  {% endwith %}
 {% elif open_shorts %}
   <div class="panel mb-6 px-4 py-3 text-[13px] text-label-2">
     No long lots on {{ symbol }} &mdash; see <strong class="text-text">Open short options</strong> below.

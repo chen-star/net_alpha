@@ -1,0 +1,54 @@
+{# Pagination footer for ticker Timeline and Open-lots tables.
+   Caller provides:
+     - paginated_view: "timeline" | "lots" (drives URL view= param)
+     - page: current page (1-based)
+     - total_pages: int >= 1
+     - total_count: int (total rows across all pages)
+     - rows_on_page: int (rows shown on this page)
+     - page_size, page_size_options: from route
+#}
+{% if total_count and total_count > 0 %}
+  {% set start_idx = (page - 1) * page_size + 1 %}
+  {% set end_idx = start_idx + (rows_on_page - 1) %}
+  <div class="flex items-center justify-between flex-wrap gap-2 mt-2 text-xs text-label-2">
+    <span>
+      Showing <span class="font-mono">{{ start_idx }}–{{ end_idx }}</span>
+      of <span class="font-mono">{{ total_count }}</span>
+    </span>
+    <div class="flex items-center gap-2 flex-wrap">
+      <label class="flex items-center gap-1 text-[11px] text-label-2">
+        <span>Per page:</span>
+        <select name="page_size"
+                hx-get="/ticker/{{ symbol }}?view={{ paginated_view }}&page=1"
+                hx-trigger="change"
+                hx-target="#ticker-tab-content"
+                hx-swap="innerHTML"
+                hx-include="this"
+                class="text-[11px] px-1 py-[2px] rounded-md"
+                style="background: var(--color-surface); color: var(--color-text); border: 0.5px solid var(--color-hairline);">
+          {% for n in page_size_options %}
+            <option value="{{ n }}" {% if n == page_size %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% if total_pages > 1 %}
+        {% set qs %}view={{ paginated_view }}&page_size={{ page_size }}{% endset %}
+        <div class="flex items-center gap-1">
+          <button type="button"
+                  {% if page > 1 %}hx-get="/ticker/{{ symbol }}?{{ qs }}&page={{ page - 1 }}"
+                  hx-target="#ticker-tab-content" hx-swap="innerHTML"{% endif %}
+                  class="px-2 py-1 text-[11px] rounded-md {% if page <= 1 %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
+                  style="border:0.5px solid var(--color-hairline); background: var(--color-surface);"
+                  {% if page <= 1 %}disabled{% endif %}>← Prev</button>
+          <span class="text-[11px] text-label-2 px-2 font-mono">page {{ page }} / {{ total_pages }}</span>
+          <button type="button"
+                  {% if page < total_pages %}hx-get="/ticker/{{ symbol }}?{{ qs }}&page={{ page + 1 }}"
+                  hx-target="#ticker-tab-content" hx-swap="innerHTML"{% endif %}
+                  class="px-2 py-1 text-[11px] rounded-md {% if page >= total_pages %}text-label-3 cursor-not-allowed{% else %}text-text hover:bg-surface-2{% endif %}"
+                  style="border:0.5px solid var(--color-hairline); background: var(--color-surface);"
+                  {% if page >= total_pages %}disabled{% endif %}>Next →</button>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}

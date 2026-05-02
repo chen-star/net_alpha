@@ -322,6 +322,7 @@ def _build_plan_view_for_request(
         include_closed=False,
         gl_closures=gl_closures,
         gl_option_closures=gl_option_closures,
+        gl_lots=repo.list_all_gl_lots(),
     )
     pos_by_sym = {r.symbol: r for r in pos_rows}
     quotes_by_sym = {sym: q.price for sym, q in prices.items()}

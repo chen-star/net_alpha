@@ -2,6 +2,7 @@ import datetime as dt
 from decimal import Decimal
 
 from net_alpha.models.domain import Lot, OptionDetails, Trade, WashSaleViolation
+from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact, realized_pl_from_trades
 from net_alpha.pricing.provider import Quote
 
@@ -239,6 +240,351 @@ def test_realized_pl_unequal_btc_quantities_split_premium_proportionally():
     realized = realized_pl_from_trades(trades, period=None)
     # 400 (premium) - 120 - 30 = 250
     assert abs(realized - Decimal("250")) < Decimal("0.01")
+
+
+def _gl_lot(**kw):
+    defaults = dict(
+        account_display="Tax",
+        symbol_raw="OSCR 01/16/2026 25.00 C",
+        ticker="OSCR",
+        closed_date=dt.date(2026, 1, 16),
+        opened_date=dt.date(2025, 10, 10),
+        quantity=1.0,
+        proceeds=0.0,
+        cost_basis=258.66,
+        unadjusted_cost_basis=258.66,
+        wash_sale=False,
+        disallowed_loss=0.0,
+        term="Short Term",
+        option_strike=25.0,
+        option_expiry="2026-01-16",
+        option_call_put="C",
+    )
+    defaults.update(kw)
+    return RealizedGLLot(**defaults)
+
+
+def test_realized_pl_synthesizes_long_option_expiry_from_gl():
+    # Schwab "Transactions" CSV records "Expired" rows that the parser drops,
+    # leaving the trades table without a Sell-to-Close counterpart for long
+    # options that expired worthless. Without GL data, those losses are
+    # silently missed by realized_pl_from_trades. The Realized G/L CSV
+    # records the closure (proceeds=0, cost=N), so we reconcile from there.
+    #
+    # Real-world OSCR repro: 25C 01/16/2026 (qty 1, basis 258.66) and 30C
+    # 01/16/2026 (qty 2, basis 160.66 each) all expired on 2026-01-16.
+    # Trade table has only the BTOs. Schwab GL has the closures. Net-alpha
+    # must include them in YTD/lifetime realized P&L.
+    opt_25c = OptionDetails(strike=25.0, expiry=dt.date(2026, 1, 16), call_put="C")
+    opt_30c = OptionDetails(strike=30.0, expiry=dt.date(2026, 1, 16), call_put="C")
+    trades = [
+        # BTO of long 25C on 2025-10-10 (cost 258.66) — no STC counterpart
+        _trade(
+            id="bto_25c",
+            ticker="OSCR",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=258.66,
+            basis_source="unknown",
+            option_details=opt_25c,
+            date=dt.date(2025, 10, 10),
+        ),
+        # BTO of long 30C #1 on 2025-10-10
+        _trade(
+            id="bto_30c_a",
+            ticker="OSCR",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=160.66,
+            basis_source="unknown",
+            option_details=opt_30c,
+            date=dt.date(2025, 10, 10),
+        ),
+        # BTO of long 30C #2 on 2025-10-20
+        _trade(
+            id="bto_30c_b",
+            ticker="OSCR",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=160.66,
+            basis_source="unknown",
+            option_details=opt_30c,
+            date=dt.date(2025, 10, 20),
+        ),
+    ]
+    gl_lots = [
+        _gl_lot(option_strike=25.0, cost_basis=258.66, opened_date=dt.date(2025, 10, 10)),
+        _gl_lot(
+            option_strike=30.0,
+            symbol_raw="OSCR 01/16/2026 30.00 C",
+            cost_basis=160.66,
+            opened_date=dt.date(2025, 10, 10),
+        ),
+        _gl_lot(
+            option_strike=30.0,
+            symbol_raw="OSCR 01/16/2026 30.00 C",
+            cost_basis=160.66,
+            opened_date=dt.date(2025, 10, 20),
+        ),
+    ]
+    # YTD 2026 realized: -258.66 -160.66 -160.66 = -579.98
+    realized_ytd = realized_pl_from_trades(trades, period=(2026, 2027), gl_lots=gl_lots)
+    assert abs(realized_ytd - Decimal("-579.98")) < Decimal("0.01")
+    # Lifetime same: no other realizations
+    realized_life = realized_pl_from_trades(trades, period=None, gl_lots=gl_lots)
+    assert abs(realized_life - Decimal("-579.98")) < Decimal("0.01")
+
+
+def test_realized_pl_does_not_double_count_when_gl_pairs_with_trade_close():
+    # The Schwab GL CSV records the same close events as the trade-side STCs
+    # and BTCs already in the trades table. We must NOT double-count: when a
+    # GL lot has a matching close trade (STC or BTC) on the same / adjacent
+    # date for the same option key, the trade-side already accounted for it.
+    opt = OptionDetails(strike=25.0, expiry=dt.date(2026, 1, 16), call_put="C")
+    trades = [
+        _trade(
+            id="bto",
+            ticker="OSCR",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=185.66,
+            basis_source="unknown",
+            option_details=opt,
+            date=dt.date(2025, 10, 1),
+        ),
+        # STC on 2025-10-03 with cost_basis from g_l → realized P&L = +98.68
+        _trade(
+            id="stc",
+            ticker="OSCR",
+            action="Sell",
+            quantity=1.0,
+            proceeds=284.34,
+            cost_basis=185.66,
+            basis_source="g_l",
+            option_details=opt,
+            date=dt.date(2025, 10, 3),
+        ),
+    ]
+    # Schwab GL row for the same close (closed_date matches trade date)
+    gl_lots = [
+        _gl_lot(
+            closed_date=dt.date(2025, 10, 3),
+            opened_date=dt.date(2025, 10, 1),
+            proceeds=284.34,
+            cost_basis=185.66,
+        ),
+    ]
+    realized = realized_pl_from_trades(trades, period=None, gl_lots=gl_lots)
+    # Only count it once: 284.34 - 185.66 = 98.68 (NOT 197.36)
+    assert abs(realized - Decimal("98.68")) < Decimal("0.01")
+
+
+def test_realized_pl_pairs_btc_with_gl_at_settlement_offset():
+    # Schwab GL `closed_date` is settle date (T+1) while the BTC trade row
+    # carries the actual trade date. Pairing must tolerate a ±1 day gap so
+    # the BTC's premium-share P&L isn't doubled by a "synthetic" GL close.
+    opt = OptionDetails(strike=17.0, expiry=dt.date(2025, 8, 15), call_put="P")
+    trades = [
+        # STO premium received
+        _trade(
+            id="sto",
+            ticker="OSCR",
+            action="Sell",
+            quantity=1.0,
+            proceeds=269.34,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2025, 7, 2),
+        ),
+        # BTC on 2025-08-07 closes the short (paired premium realized)
+        _trade(
+            id="btc",
+            ticker="OSCR",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=212.66,
+            basis_source="option_short_close",
+            option_details=opt,
+            date=dt.date(2025, 8, 7),
+        ),
+    ]
+    # Schwab GL records closed_date as T+1 settlement
+    gl_lots = [
+        _gl_lot(
+            symbol_raw="OSCR 08/15/2025 17.00 P",
+            ticker="OSCR",
+            closed_date=dt.date(2025, 8, 8),
+            opened_date=dt.date(2025, 7, 2),
+            proceeds=269.34,
+            cost_basis=212.66,
+            option_strike=17.0,
+            option_expiry="2025-08-15",
+            option_call_put="P",
+        ),
+    ]
+    realized = realized_pl_from_trades(trades, period=None, gl_lots=gl_lots)
+    # Pair-counted once: 269.34 - 212.66 = 56.68. Without ±1-day pairing
+    # the GL would synthesize a duplicate +56.68.
+    assert abs(realized - Decimal("56.68")) < Decimal("0.01")
+
+
+def test_compute_kpis_emits_economic_realized_alongside_recognized():
+    # KpiSet exposes both views: tax-recognized (the main number, matches
+    # Schwab UI) and economic (the actual cash netted, recognized minus the
+    # wash-sale add-back). The Realized P/L tile renders both.
+    gl_lots = [
+        _gl_lot(
+            symbol_raw="PANW",
+            ticker="PANW",
+            closed_date=dt.date(2025, 8, 12),
+            opened_date=dt.date(2025, 8, 5),
+            proceeds=199.34,
+            cost_basis=255.66,
+            unadjusted_cost_basis=255.66,
+            wash_sale=True,
+            disallowed_loss=56.32,
+            option_strike=None,
+            option_expiry=None,
+            option_call_put=None,
+        ),
+    ]
+    k = compute_kpis(
+        trades=[],
+        lots=[],
+        prices={},
+        period_label="2025",
+        period=(2025, 2026),
+        account=None,
+        gl_lots=gl_lots,
+    )
+    # Recognized = (proc - cb) + disallowed = -56.32 + 56.32 = 0
+    assert abs(k.period_realized - Decimal("0")) < Decimal("0.01")
+    # Economic = (proc - cb) = -56.32 (actual cash loss before wash adjustment)
+    assert abs(k.period_realized_economic - Decimal("-56.32")) < Decimal("0.01")
+
+
+def test_realized_pl_adds_back_wash_sale_disallowed_loss():
+    # Real-world PANW repro: 2 closes — one with a $56.32 loss fully disallowed
+    # by §1091, one with a $102.36 gain. Schwab's UI and Form 8949 add the
+    # disallowed loss back to the lot's realized P&L (the loss shifts to the
+    # replacement lot's basis), so the recognized period total is +$102.36, not
+    # the economic +$46.04.
+    gl_lots = [
+        _gl_lot(
+            symbol_raw="PANW",
+            ticker="PANW",
+            closed_date=dt.date(2025, 8, 12),
+            opened_date=dt.date(2025, 8, 5),
+            proceeds=199.34,
+            cost_basis=255.66,
+            unadjusted_cost_basis=255.66,
+            wash_sale=True,
+            disallowed_loss=56.32,
+            option_strike=None,
+            option_expiry=None,
+            option_call_put=None,
+        ),
+        _gl_lot(
+            symbol_raw="PANW",
+            ticker="PANW",
+            closed_date=dt.date(2025, 8, 13),
+            opened_date=dt.date(2025, 8, 6),
+            proceeds=299.34,
+            cost_basis=196.98,
+            unadjusted_cost_basis=196.98,
+            wash_sale=False,
+            disallowed_loss=0.0,
+            option_strike=None,
+            option_expiry=None,
+            option_call_put=None,
+        ),
+    ]
+    realized = realized_pl_from_trades([], period=(2025, 2026), gl_lots=gl_lots)
+    # 102.36 (gain) + 0 (loss recognized as zero, $56.32 shifted to replacement)
+    assert abs(realized - Decimal("102.36")) < Decimal("0.01")
+
+
+def test_realized_pl_pairs_btc_across_weekend_settlement():
+    # Real-world UUUU repro: a BTC traded on a Friday settles Monday — a
+    # 3-calendar-day gap. With a 2-day tolerance the GL synth path counted
+    # the closure a second time, inflating YTD realized by the full premium
+    # delta. Tolerance must cover Fri→Mon (3 days) and Fri→Tue across a
+    # Monday holiday (4 days).
+    opt = OptionDetails(strike=20.0, expiry=dt.date(2026, 1, 16), call_put="P")
+    trades = [
+        _trade(
+            id="sto",
+            ticker="UUUU",
+            action="Sell",
+            quantity=1.0,
+            proceeds=486.34,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2025, 12, 11),
+        ),
+        # BTC on Fri 2026-01-09; Schwab settles it Mon 2026-01-12 (3-day gap).
+        _trade(
+            id="btc",
+            ticker="UUUU",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=140.66,
+            basis_source="option_short_close",
+            option_details=opt,
+            date=dt.date(2026, 1, 9),
+        ),
+    ]
+    gl_lots = [
+        _gl_lot(
+            symbol_raw="UUUU 01/16/2026 20.00 P",
+            ticker="UUUU",
+            closed_date=dt.date(2026, 1, 12),  # Monday settlement after Friday trade
+            opened_date=dt.date(2025, 12, 12),
+            proceeds=486.34,
+            cost_basis=140.66,
+            option_strike=20.0,
+            option_expiry="2026-01-16",
+            option_call_put="P",
+        ),
+    ]
+    realized = realized_pl_from_trades(trades, period=(2026, 2027), gl_lots=gl_lots)
+    # Counted once: 486.34 - 140.66 = 345.68. With the old 2-day tolerance
+    # the GL would have added a duplicate 345.68 → 691.36.
+    assert abs(realized - Decimal("345.68")) < Decimal("0.01")
+
+
+def test_realized_pl_period_filter_uses_gl_closed_date():
+    # GL-synthesized closures must respect the period filter using the GL's
+    # closed_date, not the trade's BTO date. An OSCR call bought in 2025 that
+    # expired in 2026 belongs to YTD 2026, not YTD 2025.
+    opt = OptionDetails(strike=25.0, expiry=dt.date(2026, 1, 16), call_put="C")
+    trades = [
+        _trade(
+            id="bto",
+            ticker="OSCR",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=258.66,
+            basis_source="unknown",
+            option_details=opt,
+            date=dt.date(2025, 10, 10),
+        ),
+    ]
+    gl_lots = [_gl_lot(opened_date=dt.date(2025, 10, 10))]
+    # YTD 2025 should NOT include the 2026 expiry
+    assert realized_pl_from_trades(trades, period=(2025, 2026), gl_lots=gl_lots) == Decimal("0")
+    # YTD 2026 should
+    realized = realized_pl_from_trades(trades, period=(2026, 2027), gl_lots=gl_lots)
+    assert abs(realized - Decimal("-258.66")) < Decimal("0.01")
 
 
 def test_wash_impact_lifetime_when_period_is_none():

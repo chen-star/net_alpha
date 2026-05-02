@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable
+from datetime import date as _date
 from decimal import Decimal
 
 from net_alpha.models.domain import Lot, Trade, WashSaleViolation
+from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.portfolio.models import KpiSet, WashImpact
 from net_alpha.portfolio.positions import compute_today_change
 from net_alpha.pricing.provider import Quote
@@ -27,14 +29,27 @@ _BTC_REALIZE_SOURCES = frozenset({"option_short_close", "option_short_close_expi
 # trade-pair realization.
 _STO_PAIRABLE_SOURCES = frozenset({"option_short_open"})
 
+# Settlement offset between Schwab's GL `closed_date` and the matching trade
+# row's `date`. T+1 settlement means a BTC traded on the 18th can show up as
+# closed_date=19th in GL — but a Friday trade settles Monday (3 calendar
+# days) and a Friday trade before a Monday market holiday settles Tuesday
+# (4 days). 4 days covers both without paying for a holiday calendar.
+_GL_PAIR_DAY_TOLERANCE = 4
 
-def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | None) -> Decimal:
+
+def realized_pl_from_trades(
+    trades: Iterable[Trade],
+    period: tuple[int, int] | None,
+    *,
+    gl_lots: Iterable[RealizedGLLot] | None = None,
+    include_disallowed_loss: bool = True,
+) -> Decimal:
     """Sum realized P&L across a list of trades.
 
-    Three flows are handled:
+    Four flows are handled:
 
     1. **Long-lot Sells** (equity sales, STC of long options): realized on the
-       Sell date as ``proceeds - cost_basis``. Matches the legacy behavior.
+       Sell date as ``proceeds - cost_basis``.
 
     2. **Short-option STO**: an open event — premium is *not* realized until
        the position closes. STOs contribute zero on their own row.
@@ -47,11 +62,18 @@ def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | N
        quantity scaling, two 1-contract BTCs closing a 2-contract STO would
        each credit the full premium and double-count it.
 
-    The previous implementation summed ``proceeds - cost_basis`` for every
-    Sell, which counted the STO premium as realized at open and silently
-    dropped the BTC close (which is a Buy). This led to inflated and
-    direction-wrong YTD/lifetime realized values for any account that wrote
-    options.
+    4. **GL as canonical when present** (when ``gl_lots`` is provided): the
+       Schwab Realized G/L CSV is the broker's authoritative per-lot record —
+       it captures expirations the Transactions CSV silently drops AND the
+       wash-sale-unadjusted basis used for tax reporting. When a trade close
+       has any GL row for the same ``(account, ticker, option_key)`` within
+       ``_GL_PAIR_DAY_TOLERANCE`` of the trade date, the GL row is taken as
+       the source of truth and the trade-side P&L for that close is dropped —
+       Schwab consolidates multi-lot trades into a single Transaction row but
+       splits them per-opened-lot in GL, so 1-trade-claims-1-GL-lot pairing
+       drifts whenever the row counts disagree. Trade closes with no matching
+       GL coverage (e.g., closures from before the user's GL CSV starts) keep
+       contributing trade-side P&L.
     """
     trades = list(trades)
     total = Decimal("0")
@@ -70,6 +92,21 @@ def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | N
         sto_premium[key] += Decimal(str(t.proceeds or 0))
         sto_qty[key] += Decimal(str(t.quantity))
 
+    gl_close_dates_by_key = _index_gl_close_dates(gl_lots) if gl_lots is not None else None
+
+    def _gl_covers(t: Trade) -> bool:
+        if gl_close_dates_by_key is None:
+            return False
+        if t.option_details is not None:
+            opt = t.option_details
+            key: tuple = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
+        else:
+            key = (t.account, t.ticker, None, None, None)
+        for cd in gl_close_dates_by_key.get(key, ()):
+            if abs((t.date - cd).days) <= _GL_PAIR_DAY_TOLERANCE:
+                return True
+        return False
+
     for t in trades:
         if t.is_sell():
             # STOs and the assigned-STO variant are *not* realized at open —
@@ -79,16 +116,20 @@ def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | N
                 continue
             if period is not None and not (period[0] <= t.date.year < period[1]):
                 continue
+            if _gl_covers(t):
+                continue
             total += Decimal(str((t.proceeds or 0) - (t.cost_basis or 0)))
         elif t.is_buy():
             if t.basis_source not in _BTC_REALIZE_SOURCES:
                 continue
             if t.option_details is None:
                 continue
-            opt = t.option_details
-            key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
             if period is not None and not (period[0] <= t.date.year < period[1]):
                 continue
+            if _gl_covers(t):
+                continue
+            opt = t.option_details
+            key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
             total_sto_qty = sto_qty.get(key, Decimal("0"))
             btc_qty = Decimal(str(t.quantity))
             if total_sto_qty > 0:
@@ -97,7 +138,58 @@ def realized_pl_from_trades(trades: Iterable[Trade], period: tuple[int, int] | N
                 premium_share = Decimal("0")
             total += premium_share - Decimal(str(t.cost_basis or 0))
 
+    if gl_lots is not None:
+        for gl in gl_lots:
+            if period is not None and not (period[0] <= gl.closed_date.year < period[1]):
+                continue
+            # Tax-recognized realized P&L: a wash-sale-disallowed loss is added
+            # to the replacement lot's basis instead of reducing this lot's P&L,
+            # so the period total is ``proceeds - cost_basis + disallowed_loss``.
+            # Schwab's UI and Form 8949 show this recognized figure. Pass
+            # ``include_disallowed_loss=False`` to get the *economic* P&L
+            # instead — the actual cash netted, ignoring the basis shift.
+            lot_pl = Decimal(str(gl.proceeds)) - Decimal(str(gl.cost_basis))
+            if include_disallowed_loss:
+                lot_pl += Decimal(str(gl.disallowed_loss))
+            total += lot_pl
+
     return total
+
+
+def _index_gl_close_dates(
+    gl_lots: Iterable[RealizedGLLot],
+) -> dict[tuple, list[_date]]:
+    """Group GL close dates by ``(account, ticker, option_key)``.
+
+    Used to decide whether a trade close has any GL coverage for that key
+    within the settlement-day tolerance window. Coverage is a *set* check
+    (does any GL lot exist for this key near this date?) rather than a 1:1
+    pairing — Schwab consolidates multiple opened lots into a single trade
+    row but emits one GL row per opened lot, so a 1-trade-claims-1-GL-lot
+    walk over-counts whenever those row counts disagree.
+    """
+    out: dict[tuple, list[_date]] = defaultdict(list)
+    for gl in gl_lots:
+        if gl.option_strike is not None:
+            try:
+                expiry_d: _date | None = (
+                    _date.fromisoformat(gl.option_expiry) if gl.option_expiry else None
+                )
+            except ValueError:
+                expiry_d = None
+            if expiry_d is None:
+                continue
+            key: tuple = (
+                gl.account_display,
+                gl.ticker,
+                float(gl.option_strike),
+                expiry_d,
+                gl.option_call_put,
+            )
+        else:
+            key = (gl.account_display, gl.ticker, None, None, None)
+        out[key].append(gl.closed_date)
+    return out
 
 
 # Backwards-compat alias: older callers in this module reference _realized_in.
@@ -143,15 +235,21 @@ def compute_kpis(
     period_label: str,
     period: tuple[int, int] | None,
     account: str | None,
+    gl_lots: Iterable[RealizedGLLot] | None = None,
 ) -> KpiSet:
     trades = list(trades)
     lots = list(lots)
+    gl_list = list(gl_lots) if gl_lots is not None else None
     if account:
         trades = [t for t in trades if t.account == account]
         lots = [lot for lot in lots if lot.account == account]
+        if gl_list is not None:
+            gl_list = [g for g in gl_list if g.account_display == account]
 
-    period_realized = _realized_in(trades, period)
-    lifetime_realized = _realized_in(trades, None)
+    period_realized = _realized_in(trades, period, gl_lots=gl_list)
+    lifetime_realized = _realized_in(trades, None, gl_lots=gl_list)
+    period_realized_economic = _realized_in(trades, period, gl_lots=gl_list, include_disallowed_loss=False)
+    lifetime_realized_economic = _realized_in(trades, None, gl_lots=gl_list, include_disallowed_loss=False)
 
     market, basis, missing = _open_market_and_basis(lots, prices)
     has_equity_lots = any(lot.option_details is None for lot in lots)
@@ -189,6 +287,8 @@ def compute_kpis(
         missing_symbols=missing,
         today_change=today_change,
         today_pct=today_pct,
+        period_realized_economic=period_realized_economic,
+        lifetime_realized_economic=lifetime_realized_economic,
     )
 
 

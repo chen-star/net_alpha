@@ -18,6 +18,9 @@ from net_alpha.web.format import display_action
 
 router = APIRouter()
 
+PAGE_SIZE = 25
+PAGE_SIZE_OPTIONS = (10, 25, 50, 100)
+
 
 @dataclass(frozen=True)
 class TimelineRow:
@@ -156,11 +159,15 @@ def ticker_drilldown(
     symbol: str,
     request: Request,
     view: str = Query("timeline"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(PAGE_SIZE),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     symbol = symbol.upper()
     if view not in {"timeline", "lots", "recon"}:
         view = "timeline"
+    if page_size not in PAGE_SIZE_OPTIONS:
+        page_size = PAGE_SIZE
     trades = repo.get_trades_for_ticker(symbol)
     raw_lots = repo.get_lots_for_ticker(symbol)
     # Filter to lots that are still open after consuming sells / GL closures.
@@ -179,9 +186,18 @@ def ticker_drilldown(
     )
     violations = repo.get_violations_for_ticker(symbol)
 
+    # Load G/L lots for this ticker across all accounts. Used both to feed
+    # realized P&L (so long-option expirations dropped by the parser still
+    # land in YTD/lifetime) and to synthesize Closed-by-Expiry timeline rows.
+    gl_lots: list[RealizedGLLot] = []
+    for account in repo.list_accounts():
+        gl_lots.extend(repo.get_gl_lots_for_ticker(account.id, symbol))
+
     today = date.today()
-    realized_ytd = float(realized_pl_from_trades(trades, period=(today.year, today.year + 1)))
-    realized_lifetime = float(realized_pl_from_trades(trades, period=None))
+    realized_ytd = float(
+        realized_pl_from_trades(trades, period=(today.year, today.year + 1), gl_lots=gl_lots)
+    )
+    realized_lifetime = float(realized_pl_from_trades(trades, period=None, gl_lots=gl_lots))
     disallowed_ytd = sum(
         (v.disallowed_loss for v in violations if v.loss_sale_date and v.loss_sale_date.year == today.year),
         start=0.0,
@@ -205,12 +221,40 @@ def ticker_drilldown(
             account_ids.append(a.id)
     account_ids.sort()
 
-    # Load G/L lots for this ticker across all accounts that have any
-    gl_lots: list[RealizedGLLot] = []
-    for account in repo.list_accounts():
-        gl_lots.extend(repo.get_gl_lots_for_ticker(account.id, symbol))
-
     timeline_rows = _build_timeline_rows(list(trades), gl_lots)
+
+    # Independent pagination for the Timeline and Open-lots tabs. Each tab
+    # uses a single shared `page` query param; switching tabs (full <a> nav
+    # without ?page=) implicitly resets to page 1.
+    if view == "timeline":
+        timeline_total = len(timeline_rows)
+        timeline_total_pages = max(1, (timeline_total + page_size - 1) // page_size)
+        timeline_page = max(1, min(page, timeline_total_pages))
+        t_start = (timeline_page - 1) * page_size
+        timeline_rows_page = timeline_rows[t_start : t_start + page_size]
+        lots_page = lots
+        lots_total = len(lots)
+        lots_total_pages = max(1, (lots_total + page_size - 1) // page_size)
+        lots_page_num = 1
+    elif view == "lots":
+        lots_total = len(lots)
+        lots_total_pages = max(1, (lots_total + page_size - 1) // page_size)
+        lots_page_num = max(1, min(page, lots_total_pages))
+        l_start = (lots_page_num - 1) * page_size
+        lots_page = lots[l_start : l_start + page_size]
+        timeline_rows_page = timeline_rows
+        timeline_total = len(timeline_rows)
+        timeline_total_pages = max(1, (timeline_total + page_size - 1) // page_size)
+        timeline_page = 1
+    else:
+        timeline_rows_page = timeline_rows
+        lots_page = lots
+        timeline_total = len(timeline_rows)
+        lots_total = len(lots)
+        timeline_total_pages = max(1, (timeline_total + page_size - 1) // page_size)
+        lots_total_pages = max(1, (lots_total + page_size - 1) // page_size)
+        timeline_page = 1
+        lots_page_num = 1
 
     realized_ref = RealizedPLRef(
         kind="realized_pl",
@@ -232,9 +276,17 @@ def ticker_drilldown(
     ctx = {
         "symbol": symbol,
         "trades": trades,
-        "timeline_rows": timeline_rows,
-        "lots": lots,
+        "timeline_rows": timeline_rows_page,
+        "lots": lots_page,
         "open_shorts": open_shorts,
+        "timeline_page": timeline_page,
+        "timeline_total_pages": timeline_total_pages,
+        "timeline_total_count": timeline_total,
+        "lots_page": lots_page_num,
+        "lots_total_pages": lots_total_pages,
+        "lots_total_count": lots_total,
+        "page_size": page_size,
+        "page_size_options": PAGE_SIZE_OPTIONS,
         "kpi_today": today,
         "violations": violations,
         "gl_lots": gl_lots,

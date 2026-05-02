@@ -115,6 +115,45 @@ def test_symbol_filter_universe_excludes_closed_when_show_open(client, builders,
     assert "GPRO" in res_all.text
 
 
+def test_holdings_substring_q_filter_matches_partial_symbols(client, builders, repo):
+    """`?q=achr` must match ACHR even when it sits beyond the first paginated page.
+
+    Reproduces the bug where the page-level search box (which only filters
+    rendered DOM rows) couldn't find symbols paginated off-screen. The server
+    now accepts a substring `q` param that filters across all rows.
+    """
+    from datetime import date
+
+    from net_alpha.engine.recompute import recompute_all_violations
+    from net_alpha.engine.stitch import stitch_account
+
+    # Seed a few symbols so the result set spans several rows, with ACHR
+    # buried among them.
+    account, _ = builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [
+            builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5)),
+            builders.make_buy("schwab/lt", "ACHR", date(2026, 1, 5)),
+            builders.make_buy("schwab/lt", "MSFT", date(2026, 1, 5)),
+        ],
+    )
+    stitch_account(repo, account.id)
+    recompute_all_violations(repo, {})
+
+    # Lowercase query exercises the case-insensitive match.
+    r = client.get("/portfolio/positions?period=ytd&q=achr")
+    assert r.status_code == 200
+    html = r.text
+    # ACHR row should render and the others should be filtered out. Rows carry
+    # `data-symbol="<TICKER>"` (uppercased), which is the cleanest invariant to
+    # assert against because raw symbol text shows up in the picker JSON too.
+    assert 'data-symbol="ACHR"' in html
+    assert 'data-symbol="AAPL"' not in html
+    assert 'data-symbol="MSFT"' not in html
+
+
 def test_holdings_table_targets_holdings_positions_wrapper(tmp_path):
     """Show/Pagesize/Pagination buttons must swap into #holdings-positions, not the legacy #portfolio-positions."""
     client = _client(tmp_path)

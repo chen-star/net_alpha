@@ -230,6 +230,7 @@ def portfolio_kpis(
         period_label=period_label,
         period=period_tuple,
         account=account or None,
+        gl_lots=repo.list_all_gl_lots(),
     )
     wi = compute_wash_impact(
         violations=repo.all_violations(),
@@ -357,6 +358,7 @@ def portfolio_positions(
     page: int = 1,
     page_size: int = PAGE_SIZE,
     symbols: str | None = None,
+    q: str | None = None,
     sort: str | None = None,
     dir: str | None = None,
     repo: Repository = Depends(get_repository),
@@ -380,6 +382,7 @@ def portfolio_positions(
         include_closed=include_closed,
         gl_closures=gl_closures,
         gl_option_closures=gl_option_closures,
+        gl_lots=repo.list_all_gl_lots(),
     )
     selected_symbols: set[str] = set()
     if symbols:
@@ -394,6 +397,12 @@ def portfolio_positions(
         rows = [r for r in all_rows if r.symbol.upper() in selected_symbols]
     else:
         rows = list(all_rows)
+    # Free-form substring filter on the underlying symbol — driven by the
+    # page-level search input on /positions. Lets matches on later pages
+    # surface (the client-side DOM filter only sees the current page).
+    q_clean = (q or "").strip().upper()
+    if q_clean:
+        rows = [r for r in rows if q_clean in r.symbol.upper()]
     rows = _sort_rows(rows, sort, dir)
     if page_size not in PAGE_SIZE_OPTIONS:
         page_size = PAGE_SIZE
@@ -466,6 +475,7 @@ def portfolio_allocation_fragment(
         account=account or None,
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=repo.get_option_gl_closures(),
+        gl_lots=repo.list_all_gl_lots(),
     )
     allocation = build_allocation(positions=positions, top_n=10)
     return request.app.state.templates.TemplateResponse(
@@ -555,6 +565,9 @@ def portfolio_equity_curve(
         lots = [lot for lot in lots if lot.account == account]
     symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(symbols)
+    gl_lots_for_kpi = repo.list_all_gl_lots()
+    if account:
+        gl_lots_for_kpi = [g for g in gl_lots_for_kpi if g.account_display == account]
     kpis = compute_kpis(
         trades=trades,
         lots=lots,
@@ -562,6 +575,7 @@ def portfolio_equity_curve(
         period_label=period_label,
         period=period_tuple,
         account=None,  # already filtered
+        gl_lots=gl_lots_for_kpi,
     )
     points = build_equity_curve(trades=trades, year=year, present_unrealized=kpis.period_unrealized)
     return request.app.state.templates.TemplateResponse(
@@ -620,6 +634,8 @@ def portfolio_body(
     prices = svc.get_prices(symbols)
     snap = svc.last_snapshot()
 
+    gl_lots_all = repo.list_all_gl_lots()
+    gl_lots_scoped = [g for g in gl_lots_all if g.account_display == account] if account else gl_lots_all
     kpis = compute_kpis(
         trades=scoped_trades,
         lots=scoped_lots,
@@ -627,6 +643,7 @@ def portfolio_body(
         period_label=period_label,
         period=period_tuple,
         account=None,  # already filtered above
+        gl_lots=gl_lots_scoped,
     )
     points = build_equity_curve(trades=scoped_trades, year=year, present_unrealized=kpis.period_unrealized)
     # Hoist gl_option_closures so we don't re-scan the table for both
@@ -640,6 +657,7 @@ def portfolio_body(
         account=None,
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=gl_option_closures,
+        gl_lots=gl_lots_scoped,
     )
 
     top_movers = build_top_movers(positions_for_alloc)

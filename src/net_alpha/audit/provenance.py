@@ -204,7 +204,14 @@ def _realized_pl(metric: RealizedPLRef, repo: Repository) -> ProvenanceTrace:
     period_tuple = (metric.period.start.year, metric.period.end.year + 1)
     if metric.period.end.year - metric.period.start.year > 50:
         period_tuple = None  # treat very-wide windows ("Lifetime") as no filter
-    total = float(realized_pl_from_trades(scoped, period=period_tuple))
+    # Pull GL lots for the same scope so synthesized expirations land in the
+    # provenance total (matches what the user sees on the Portfolio/Ticker pages).
+    gl_lots_scoped = repo.list_all_gl_lots()
+    if metric.symbol is not None:
+        gl_lots_scoped = [g for g in gl_lots_scoped if g.ticker == metric.symbol]
+    if target_display is not None:
+        gl_lots_scoped = [g for g in gl_lots_scoped if g.account_display == target_display]
+    total = float(realized_pl_from_trades(scoped, period=period_tuple, gl_lots=gl_lots_scoped))
 
     label_bits = [metric.period.label, "Realized P/L"]
     if metric.symbol:

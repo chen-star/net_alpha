@@ -450,6 +450,7 @@ def compute_open_positions(
     include_closed: bool = False,
     gl_closures: dict[tuple[str, str], float] | None = None,
     gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
+    gl_lots: Iterable[RealizedGLLot] | None = None,
     as_of: date | None = None,
 ) -> list[PositionRow]:
     """Return positions sorted by market value desc (None last).
@@ -464,6 +465,7 @@ def compute_open_positions(
     """
     trades = list(trades)
     lots = list(lots)
+    gl_lots_list = list(gl_lots) if gl_lots is not None else None
 
     # Account scope
     if account:
@@ -473,6 +475,8 @@ def compute_open_positions(
         gl_option_closures = (
             {k: v for k, v in (gl_option_closures or {}).items() if k[0] == account} if gl_option_closures else None
         )
+        if gl_lots_list is not None:
+            gl_lots_list = [g for g in gl_lots_list if g.account_display == account]
 
     # Normalise GL option closures: the repo returns expiry as an ISO string,
     # but Trade.option_details.expiry is a date object — coerce so keys match.
@@ -617,8 +621,19 @@ def compute_open_positions(
     # net_alpha.portfolio.pnl.realized_pl_from_trades for the full rationale.
     from net_alpha.portfolio.pnl import realized_pl_from_trades
 
+    # Bucket GL lots by ticker so per-symbol P&L only sees its own closures.
+    gl_by_sym: dict[str, list[RealizedGLLot]] = defaultdict(list)
+    if gl_lots_list is not None:
+        for g in gl_lots_list:
+            gl_by_sym[g.ticker].append(g)
+
     realized_by_sym: dict[str, Decimal] = {
-        sym: realized_pl_from_trades(ts, period=period) for sym, ts in trades_by_sym.items()
+        sym: realized_pl_from_trades(
+            ts,
+            period=period,
+            gl_lots=gl_by_sym.get(sym) if gl_lots_list is not None else None,
+        )
+        for sym, ts in trades_by_sym.items()
     }
 
     def _account_chip(displays: tuple[str, ...]) -> str:

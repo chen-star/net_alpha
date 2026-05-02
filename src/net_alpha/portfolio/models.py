@@ -101,6 +101,9 @@ class OpenShortOptionRow:
 @dataclass(frozen=True)
 class KpiSet:
     period_label: str
+    # Tax-recognized realized P&L: matches Schwab UI / Form 8949 — wash-sale
+    # disallowed losses are added back to this lot's P&L (they shift to the
+    # replacement lot's basis instead).
     period_realized: Decimal
     period_unrealized: Decimal | None
     lifetime_realized: Decimal
@@ -110,6 +113,12 @@ class KpiSet:
     missing_symbols: tuple[str, ...] = ()  # tickers without a quote — affected KPIs are partial sums
     today_change: Decimal | None = None  # $ change vs previous close (Today tile)
     today_pct: Decimal | None = None  # % change vs previous close (Today tile)
+    # Economic realized P&L: actual cash netted, *excluding* the wash-sale
+    # add-back. Equals ``period_realized - disallowed_loss_in_period``. Shown
+    # alongside the recognized number on the Realized P/L tile so the user
+    # sees both views without switching pages.
+    period_realized_economic: Decimal = Decimal("0")
+    lifetime_realized_economic: Decimal = Decimal("0")
 
 
 @dataclass(frozen=True)

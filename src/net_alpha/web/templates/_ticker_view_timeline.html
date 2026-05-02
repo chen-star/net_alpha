@@ -91,3 +91,10 @@
     </tbody>
   </table>
 </div>
+{% with paginated_view='timeline',
+        page=timeline_page,
+        total_pages=timeline_total_pages,
+        total_count=timeline_total_count,
+        rows_on_page=timeline_rows|length %}
+  {% include "_ticker_pagination.html" %}
+{% endwith %}

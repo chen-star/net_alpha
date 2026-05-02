@@ -91,12 +91,17 @@
 
   {# Realized P/L #}
   <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="realized"
-       title="Net realized profit/loss from closed trades in the selected period. Includes equities, options, and §1256 contracts. Excludes wash-sale-disallowed losses (those roll into replacement-lot basis).">
+       title="Tax-recognized realized P/L for the selected period — matches Schwab UI and Form 8949. Includes wash-sale-disallowed losses added back to basis. The economic figure shown below is the actual cash netted (recognized − disallowed).">
     <div class="label-uc">Realized P/L</div>
     <div class="num text-[22px] font-bold mt-2 {% if kpis.period_realized < 0 %}text-neg{% else %}text-pos{% endif %}">
       {% if kpis.period_realized < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized|float|abs) }}{% if metric_refs is defined and metric_refs.realized_period is defined %}{{ provenance_link(metric_refs.realized_period) }}{% endif %}
     </div>
-    <div class="text-[11px] text-label-2 mt-1">{{ kpis.period_label }}</div>
+    <div class="text-[11px] text-label-2 mt-1">
+      {{ kpis.period_label }}
+      {% if kpis.period_realized_economic != kpis.period_realized %}
+        · economic {% if kpis.period_realized_economic < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized_economic|float|abs) }}
+      {% endif %}
+    </div>
   </div>
 
   {# Unrealized P/L #}
