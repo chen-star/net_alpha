@@ -265,3 +265,10 @@ class PositionTargetRow(SQLModel, table=True):
     target_unit: str  # 'usd' | 'shares'
     created_at: str  # ISO datetime
     updated_at: str  # ISO datetime
+
+
+class DismissedInboxItemRow(SQLModel, table=True):
+    __tablename__ = "dismissed_inbox_items"
+
+    dismiss_key: str = Field(primary_key=True)
+    dismissed_at: str  # ISO 8601 timestamp
