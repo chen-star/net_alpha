@@ -2,6 +2,134 @@
 
 
 
+## v0.43.0 (2026-05-03)
+
+### Feature
+
+* feat(web): add Action Inbox panel to portfolio dashboard
+
+Replace the stub _portfolio_inbox.html with the full production template
+(severity sections, Alpine toggle, dismiss buttons, deep links, dollar
+impact). Wire up the lazy-load wrapper in _portfolio_body.html above the
+KPIs row, and pass `account` into the portfolio_body route context so
+the inbox fragment honours the active account filter.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6cf7a62`](https://github.com/chen-star/net_alpha/commit/6cf7a62f58784bab41630d4a0d2d0ceaaff5b26e))
+
+* feat(web): add /portfolio/inbox GET and dismiss endpoints
+
+Registers two new routes on the portfolio router: GET /portfolio/inbox
+renders an HTMX fragment via a minimal stub template (_portfolio_inbox.html),
+and POST /portfolio/inbox/dismiss/{dismiss_key:path} toggles dismissal state
+then re-renders the panel. Adds load_tax_config integration to derive ST/LT
+rates for gather_inbox, and three passing route tests.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9e57253`](https://github.com/chen-star/net_alpha/commit/9e572534009e62ae46953f49c33f1b6907b3b57f))
+
+* feat(inbox): add aggregator with severity-then-distance-then-dollars sort
+
+Implements gather_inbox() — the single entry point the web layer calls to
+collect all inbox signals, sweep orphaned dismissals, filter dismissed
+items, and return a sorted list (URGENT → WATCH → INFO, then |days_until|
+ascending, then |dollar_impact| descending). Five tests green.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`015e81b`](https://github.com/chen-star/net_alpha/commit/015e81bc0d085387ee6798b90ae5ae1348d2f74c))
+
+* feat(inbox): add InboxConfig loader with safe defaults
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5813ae8`](https://github.com/chen-star/net_alpha/commit/5813ae8275ee3073586d3ece76d38fc010755786))
+
+* feat(inbox): add dismissals module with toggle and orphan sweep
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0aee7cf`](https://github.com/chen-star/net_alpha/commit/0aee7cf6f8c758a70e6f0fac801cca3706d9806c))
+
+* feat(inbox): add option expiry + assignment risk signals
+
+Implements O2 (OPTION_EXPIRY) and O4 (ASSIGNMENT_RISK) signal computers
+in a single module. Short ITM lots within the 7-day assignment window
+emit both items with independent dismiss keys; long lots never produce
+assignment-risk items. Also adds a default for make_lot&#39;s `acquired`
+parameter in the shared test conftest.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`afe3ac5`](https://github.com/chen-star/net_alpha/commit/afe3ac59c91171743b98f934ef973d397cf30480))
+
+* feat(inbox): add LT eligibility countdown signal
+
+Implements the H3 signal: walks open equity lots, emits an InboxItem for
+any lot whose 1-year LT threshold falls within the lookahead window and
+has positive unrealized gain, with dollar_impact = gain × (ST − LT rate).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`afaaf57`](https://github.com/chen-star/net_alpha/commit/afaaf576481475a52fecaac17f2c32c23fdefcff))
+
+* feat(inbox): add wash safe-to-rebuy signal
+
+Implement compute_wash_rebuy (H2 signal) as a pure function over
+repo.all_violations(). Emits an InboxItem on day 31 after the loss sale
+date and keeps it visible for DEFAULT_VISIBLE_DAYS (14) afterward.
+Also adds the shared tests/inbox/conftest.py fixture helpers for Tasks 4–5.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8322fcd`](https://github.com/chen-star/net_alpha/commit/8322fcdaf70c257cfcdc08eb0a5eda14f7ba851f))
+
+* feat(inbox): add InboxItem, SignalType, Severity view models
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7699f69`](https://github.com/chen-star/net_alpha/commit/7699f69b10cd79200e3ab6858685bf1294a983be))
+
+* feat(db): add DismissedInboxItemRow SQLModel for fresh-DB support
+
+Adds DismissedInboxItemRow to tables.py so SQLModel.metadata.create_all()
+creates dismissed_inbox_items on fresh installs (the current==0 path in
+migrate()). Adds test_v15_table_exists_on_fresh_db to verify this path.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1f3c1e3`](https://github.com/chen-star/net_alpha/commit/1f3c1e30060d54467d2a04ca6a9729d060ab4ed3))
+
+* feat(db): add v15 migration for dismissed_inbox_items
+
+Adds the dismissed_inbox_items table (dismiss_key PK + dismissed_at
+ISO timestamp) needed by the Action Inbox panel to persist per-item
+dismissals across requests. Bumps CURRENT_SCHEMA_VERSION to 15 and
+updates the two version-literal assertions in the existing test suite.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`77275a9`](https://github.com/chen-star/net_alpha/commit/77275a946a25fda82292a1b66e819d442324a046))
+
+### Fix
+
+* fix(web): drop unused repo arg; add account-filter route test
+
+Remove the unused `repo` parameter from `_resolve_inbox_rates` (it reads
+from disk only) and update the single call site in `portfolio_inbox`.
+Add `test_account_filter_query_param_scopes_signals` to verify that
+`?account=X` correctly narrows inbox signals to the requested account.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`aca525a`](https://github.com/chen-star/net_alpha/commit/aca525afd06f350811dd9fd24022a1a7ee51875b))
+
+* fix(inbox): fall back to defaults when config values violate constraints
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5ee8860`](https://github.com/chen-star/net_alpha/commit/5ee8860f2d1d27f7fe6c7ae63b77ef92459343c1))
+
+### Test
+
+* test(inbox): cover boundary + account-filter cases; tighten quote check
+
+- Drop getattr guard on quote.price in lt_eligibility and option_expiry;
+  Quote always has .price — match the pattern used elsewhere in the codebase.
+- Tighten wash_rebuy account filter to `account is not None` to match the
+  `account is None or ...` pattern used in the other two signal modules.
+- Add comment on OPTION_EXPIRY extras payload noting template dependency.
+- Add 7 new tests: 366-day boundary and account-filter for lt_eligibility;
+  14d/1d severity boundaries and account-filter for option_expiry;
+  account-filter (exclude + cross-account buy) for wash_rebuy.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3ea5bcf`](https://github.com/chen-star/net_alpha/commit/3ea5bcf0cf270e886b441f2e5d4468b165db4f20))
+
+* test(db): rename misleading v14 test; comment UTC on dismissed_at
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`aa6172f`](https://github.com/chen-star/net_alpha/commit/aa6172fe35b0a0c30dde891daf96fdc0ac515a6e))
+
+### Unknown
+
+* Merge branch &#39;feat/action-inbox&#39;: Action Inbox panel (4 time-aware signals) ([`5ced4af`](https://github.com/chen-star/net_alpha/commit/5ced4af0f9a95e602474fdbae8019a9c8b54ab83))
+
+
 ## v0.42.1 (2026-05-03)
 
 ### Fix
