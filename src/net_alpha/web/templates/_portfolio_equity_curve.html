@@ -51,18 +51,6 @@
       { name: "Account value", type: "area", data: accountSeries },
     ];
 
-    {% if benchmark_points and benchmark_points|length > 0 %}
-      series.push({
-        name: "{{ benchmark_symbol|default('SPY') }} (buy & hold)",
-        type: "line",
-        data: [
-          {% for p in benchmark_points %}
-            { x: "{{ p.on.isoformat() }}", y: {{ (p.value|float) if p.value is not none else 'null' }} }{% if not loop.last %},{% endif %}
-          {% endfor %}
-        ],
-      });
-    {% endif %}
-
     function buildOpts() {
       const colors = [
         window.netAlphaChartTheme.colors.label3,   // contributions baseline
@@ -72,13 +60,6 @@
       const dashArr = [4, 0];
       const fillTypes = ["solid", "gradient"];
       const fillOps = [1, 1];
-      {% if benchmark_points and benchmark_points|length > 0 %}
-        colors.push(window.netAlphaChartTheme.colors.violet);
-        widths.push(2);
-        dashArr.push(0);
-        fillTypes.push("solid");
-        fillOps.push(1);
-      {% endif %}
       const isLight = document.documentElement.getAttribute("data-theme") === "light";
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
         chart: {
