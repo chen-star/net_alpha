@@ -14,8 +14,15 @@ from net_alpha.models.domain import CashEvent, Trade
 from net_alpha.portfolio.models import CashBalancePoint, CashFlowKPIs
 
 # Sign rules — positive amount means cash inflow.
-_INFLOW_KINDS = {"transfer_in", "dividend", "interest", "sweep_in"}
-_OUTFLOW_KINDS = {"transfer_out", "fee", "sweep_out"}
+#
+# `sweep_in` / `sweep_out` are intentionally absent: those events move money
+# between Schwab1 brokerage cash and the Schwab Futures sub-account, but both
+# sub-accounts are part of the same Schwab account total. Treating them as
+# real cash flows would make our combined cash balance drift from Schwab's
+# combined account value as cash sloshes between the two buckets. They are
+# cash-neutral here; the per-sub-account split is not surfaced.
+_INFLOW_KINDS = {"transfer_in", "dividend", "interest"}
+_OUTFLOW_KINDS = {"transfer_out", "fee"}
 _CONTRIB_INFLOW = {"transfer_in"}
 _CONTRIB_OUTFLOW = {"transfer_out"}
 

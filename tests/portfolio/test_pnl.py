@@ -147,6 +147,55 @@ def test_kpis_open_value_excludes_already_sold_lots():
     assert k.lifetime_unrealized == Decimal("1000")
 
 
+def test_kpis_open_value_carries_unexpired_options_at_basis():
+    """No live option-quote provider exists, so unexpired option lots are
+    carried at basis: contribute equally to market AND basis (so unrealized
+    stays $0). Expired option lots contribute nothing — Schwab logs the
+    expiration only in Realized G/L."""
+    from net_alpha.models.domain import OptionDetails
+
+    opt_open = OptionDetails(strike=200, expiry=dt.date(2027, 1, 15), call_put="C")
+    opt_expired = OptionDetails(strike=180, expiry=dt.date(2025, 1, 17), call_put="P")
+    lots = [
+        _lot(id="leq", quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0),
+        _lot(
+            id="lopt-open", date=dt.date(2025, 6, 1), ticker="NVDA",
+            quantity=2.0, cost_basis=400.0, adjusted_basis=400.0, option_details=opt_open,
+        ),
+        _lot(
+            id="lopt-exp", date=dt.date(2024, 11, 1), ticker="SPY",
+            quantity=1.0, cost_basis=300.0, adjusted_basis=300.0, option_details=opt_expired,
+        ),
+    ]
+    trades = [
+        _trade(id="tb-eq", action="Buy", quantity=100, cost_basis=40_000),
+        _trade(
+            id="tb-opt-open", action="Buy", date=dt.date(2025, 6, 1), ticker="NVDA",
+            quantity=2, cost_basis=400, option_details=opt_open,
+        ),
+        _trade(
+            id="tb-opt-exp", action="Buy", date=dt.date(2024, 11, 1), ticker="SPY",
+            quantity=1, cost_basis=300, option_details=opt_expired,
+        ),
+    ]
+    k = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices={"SPY": _quote("SPY", 460)},
+        period_label="YTD",
+        period=(2026, 2027),
+        account=None,
+        as_of=dt.date(2026, 5, 3),
+    )
+    # Equity 100 × 460 = 46000, plus unexpired option basis-carry 400 = 46400.
+    # Expired option lot contributes nothing.
+    assert k.open_position_value == Decimal("46400")
+    # Unrealized is equity-only (6000) — the option's basis-carry exactly
+    # cancels in the market/basis subtraction.
+    assert k.period_unrealized == Decimal("6000")
+    assert k.lifetime_unrealized == Decimal("6000")
+
+
 def test_kpis_open_value_honors_gl_closures():
     """When a Realized G/L CSV reports a closure that has no matching trade
     row (Schwab logs option expirations / corporate actions only in GL),

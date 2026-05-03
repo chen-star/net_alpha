@@ -269,10 +269,16 @@ def _unrealized_pl(metric: UnrealizedPLRef, repo: Repository) -> ProvenanceTrace
 
 
 _TRANSFER_KINDS = frozenset({"transfer_in", "transfer_out"})
+# Sweeps move money between Schwab1 brokerage and the Schwab Futures
+# sub-account; they're cash-neutral at the combined-account level (see
+# portfolio/cash_flow.py) and so are excluded from cash provenance too —
+# otherwise the per-event totals would not reconcile to the displayed
+# cash balance.
+_SWEEP_KINDS = frozenset({"sweep_in", "sweep_out"})
 
 
 def _to_contributing_cash(ev) -> ContributingCashEvent:
-    sign = -1.0 if ev.kind in {"transfer_out", "fee", "sweep_out"} else 1.0
+    sign = -1.0 if ev.kind in {"transfer_out", "fee"} else 1.0
     return ContributingCashEvent(
         event_id=ev.id,
         event_date=ev.event_date,
@@ -287,6 +293,8 @@ def _cash(metric: CashRef, repo: Repository) -> ProvenanceTrace:
     events = []
     total = 0.0
     for ev in repo.list_cash_events(account_id=metric.account_id):
+        if ev.kind in _SWEEP_KINDS:
+            continue
         contrib = _to_contributing_cash(ev)
         events.append(contrib)
         total += contrib.amount

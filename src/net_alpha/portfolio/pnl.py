@@ -218,15 +218,23 @@ def _gl_closures_from_lots(
 def _open_market_and_basis(
     consumed: Iterable[tuple[Lot, Decimal, Decimal]],
     prices: dict[str, Quote],
+    *,
+    as_of: _date,
 ) -> tuple[Decimal, Decimal, tuple[str, ...]]:
     """Return (priced_market, priced_basis, missing_symbols).
 
     Input is the output of ``consume_lots_fifo`` — ``(lot, rem_qty, rem_basis)``
-    triples. Fully-closed lots (rem_qty == 0) and option lots are skipped.
+    triples. Fully-closed lots (rem_qty == 0) are skipped.
 
-    priced_market = Σ(rem_qty × price) over open equity lots that have a quote.
-    priced_basis  = Σ(rem_basis) over the SAME priced lots.
-    missing_symbols = sorted unique tickers we couldn't price.
+    Equity lots: market = rem_qty × quote.price, basis = rem_basis.
+    Option lots: there is no live option-quote provider, so unexpired lots
+    are carried at ``rem_basis`` (contributing equally to market AND basis,
+    which means unrealized stays at $0 for the option subset — the only
+    honest answer without true marks). Lots whose expiry has passed
+    contribute nothing; Schwab logs the expiration only in Realized G/L,
+    so a user without the GL CSV would otherwise carry premium forever.
+
+    missing_symbols = sorted unique equity tickers we couldn't price.
 
     Computing both market AND basis from the same priced subset means
     ``priced_market - priced_basis`` is a correct unrealized P/L for that
@@ -241,7 +249,11 @@ def _open_market_and_basis(
         if rem_qty <= 0:
             continue
         if lot.option_details is not None:
-            continue  # equity-only for KPI market value
+            if lot.option_details.expiry < as_of:
+                continue
+            total_value += rem_basis
+            priced_basis += rem_basis
+            continue
         quote = prices.get(lot.ticker)
         if quote is None:
             missing.add(lot.ticker)
@@ -260,7 +272,9 @@ def compute_kpis(
     period: tuple[int, int] | None,
     account: str | None,
     gl_lots: Iterable[RealizedGLLot] | None = None,
+    as_of: _date | None = None,
 ) -> KpiSet:
+    as_of = as_of or _date.today()
     trades = list(trades)
     lots = list(lots)
     gl_list = list(gl_lots) if gl_lots is not None else None
@@ -287,7 +301,7 @@ def compute_kpis(
         gl_option_closures=opt_closures,
     )
 
-    market, basis, missing = _open_market_and_basis(consumed, prices)
+    market, basis, missing = _open_market_and_basis(consumed, prices, as_of=as_of)
     has_equity_lots = any(lot.option_details is None for lot in lots)
     # "All unpriced" = we have equity lots but couldn't price a single one.
     # Keep showing — in that case so users see "no data" rather than a misleading $0.

@@ -49,14 +49,18 @@ def test_buy_decreases_balance_but_not_contributions():
     assert pts[-1].cumulative_contributions == Decimal("300")
 
 
-def test_sweep_out_then_in_dips_and_recovers():
+def test_sweep_in_and_sweep_out_are_cash_neutral():
+    """Sweep events move cash between Schwab1 brokerage and the Schwab Futures
+    sub-account — both are part of the same total account value, so they must
+    not move our combined cash balance. Otherwise the headline drifts from
+    Schwab's combined account total as cash sloshes between sub-accounts."""
     events = [
         _ev(dt.date(2026, 4, 22), "sweep_out", 4460.97, description="Sweep to Futures"),
         _ev(dt.date(2026, 4, 24), "sweep_in", 307.00, description="Sweep from Futures"),
     ]
     pts = build_cash_balance_series(events=events, trades=[], account=None, period=None)
-    assert pts[0].cash_balance == Decimal("-4460.97")
-    assert pts[1].cash_balance == Decimal("-4153.97")
+    assert pts[0].cash_balance == Decimal("0")
+    assert pts[1].cash_balance == Decimal("0")
 
 
 def test_dividend_does_not_change_contributions():
