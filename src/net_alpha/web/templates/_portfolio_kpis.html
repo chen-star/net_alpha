@@ -63,7 +63,7 @@
 
   {# ── Total Return — promoted from bottom row, renamed from Growth ──── #}
   <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="total_return"
-       title="Account value minus everything you've contributed (deposits − withdrawals). What your account has earned beyond what you put in.">
+       title="Account value at the end of the period minus the value at the start, minus contributions during the period. The actual gain (or loss) inside this window.">
     <div class="label-uc">Total Return</div>
     <div class="num text-[22px] font-bold mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
       {% if cash_kpis is defined and cash_kpis %}
@@ -74,7 +74,7 @@
     </div>
     <div class="text-[11px] text-label-2 mt-1">
       {% if cash_kpis is defined and cash_kpis and cash_kpis.growth_pct is not none %}
-        {% if cash_kpis.growth_pct < 0 %}−{% else %}+{% endif %}{{ "%.1f"|format((cash_kpis.growth_pct|float|abs) * 100) }}% vs contributed
+        {% if cash_kpis.growth_pct < 0 %}−{% else %}+{% endif %}{{ "%.1f"|format((cash_kpis.growth_pct|float|abs) * 100) }}% vs starting + contributed
       {% else %}
         no contributions
       {% endif %}
