@@ -245,3 +245,77 @@ def test_security_transfer_out_contributes_zero_cash_delta():
     )
     pts = build_cash_balance_series(events=[], trades=[transfer_trade], account=None, period=None)
     assert pts == [] or pts[-1].cash_balance == Decimal("0")
+
+
+def test_total_return_uses_period_starting_value():
+    """YTD Total Return must subtract the account value at period start.
+
+    Sketch: $50K deposited 2025-01-15 (before YTD window), $5K deposited
+    2026-03-01 (inside window). Holdings worth $51,020.18 today; cash is
+    just the $55K of cumulative contributions (no trades). Period start
+    value = $50,000.
+
+    ending_value      = cash 55,000 + holdings 51,020.18 = 106,020.18
+    starting_value    = 50,000
+    period contribs   = 5,000
+    Total Return YTD  = 106,020.18 − 50,000 − 5,000 = 51,020.18
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import CashEvent
+    from net_alpha.portfolio.cash_flow import compute_cash_kpis
+
+    events = [
+        CashEvent(
+            account="Schwab/Tax",
+            event_date=dt.date(2025, 1, 15),
+            kind="transfer_in",
+            amount=50000,
+        ),
+        CashEvent(
+            account="Schwab/Tax",
+            event_date=dt.date(2026, 3, 1),
+            kind="transfer_in",
+            amount=5000,
+        ),
+    ]
+    kpis = compute_cash_kpis(
+        events=events,
+        trades=[],
+        holdings_value=Decimal("51020.18"),
+        account=None,
+        period=(2026, 2027),
+        period_starting_value=Decimal("50000"),
+    )
+    assert kpis.growth == Decimal("51020.18")
+    assert kpis.period_starting_value == Decimal("50000")
+
+
+def test_total_return_lifetime_unchanged_when_starting_value_zero():
+    """Lifetime mode (starting_value = 0) yields the legacy formula."""
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import CashEvent
+    from net_alpha.portfolio.cash_flow import compute_cash_kpis
+
+    events = [
+        CashEvent(
+            account="Schwab/Tax",
+            event_date=dt.date(2025, 1, 15),
+            kind="transfer_in",
+            amount=50000,
+        ),
+    ]
+    kpis = compute_cash_kpis(
+        events=events,
+        trades=[],
+        holdings_value=Decimal("60000"),
+        account=None,
+        period=None,
+        period_starting_value=Decimal("0"),
+    )
+    # ending = 50000 + 60000 = 110000; starting = 0; contributions = 50000
+    # Total Return = 110000 − 0 − 50000 = 60000
+    assert kpis.growth == Decimal("60000")
