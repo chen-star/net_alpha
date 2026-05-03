@@ -263,6 +263,57 @@ def _open_market_and_basis(
     return total_value, priced_basis, tuple(sorted(missing))
 
 
+def _short_option_unrealized_adjustment(
+    *,
+    trades: list[Trade],
+    prices: dict[str, Quote],
+    as_of: _date,
+) -> Decimal:
+    """Estimated unrealized P/L on open short option positions.
+
+    Premium received hits cash at STO; the open position is a *liability*
+    whose true cost-to-close requires a live option quote (we don't have
+    one). We approximate cost-to-close with:
+
+        est_value_to_close = max(intrinsic, decayed_time_value)
+
+    where intrinsic uses the underlying spot price and decayed_time_value
+    is straight-line decay of the original premium between open and expiry.
+
+    Returns the sum across all currently-open short option contracts.
+    Contracts whose underlying is unpriced contribute 0 (no estimate
+    possible). Long options are unaffected (handled by the lot-side path).
+    """
+    from net_alpha.portfolio.positions import compute_open_short_option_positions
+
+    rows = compute_open_short_option_positions(trades)
+    total_adj = Decimal("0")
+    for row in rows:
+        if row.opened_at is None:
+            continue
+        quote = prices.get(row.ticker)
+        if quote is None or quote.price is None:
+            continue  # no underlying quote → contributes 0
+        spot = Decimal(str(quote.price))
+        strike = Decimal(str(row.strike))
+        if row.call_put == "P":
+            intrinsic_per_share = max(Decimal("0"), strike - spot)
+        else:  # "C"
+            intrinsic_per_share = max(Decimal("0"), spot - strike)
+
+        days_total = max(1, (row.expiry - row.opened_at).days)
+        days_remaining = max(0, (row.expiry - as_of).days)
+        contracts = row.qty_short
+        multiplier = Decimal(str(row.contract_multiplier))
+        # premium_received is total net dollars across all contracts on this chain
+        premium_per_share = (row.premium_received / contracts / multiplier) if contracts > 0 else Decimal("0")
+        time_value_per_share = premium_per_share * (Decimal(days_remaining) / Decimal(days_total))
+        est_value_per_share = max(intrinsic_per_share, time_value_per_share)
+        est_liability = (est_value_per_share * contracts * multiplier).quantize(Decimal("0.01"))
+        total_adj += row.premium_received - est_liability
+    return total_adj.quantize(Decimal("0.01"))
+
+
 def compute_kpis(
     *,
     trades: Iterable[Trade],
@@ -312,7 +363,11 @@ def compute_kpis(
         open_value = None
         lifetime_net_pl = None
     else:
-        unrealized = market - basis  # correctly scoped to priced subset
+        long_unrealized = market - basis  # long stock + long options (carried at basis)
+        short_opt_adj = _short_option_unrealized_adjustment(
+            trades=trades, prices=prices, as_of=as_of,
+        )
+        unrealized = long_unrealized + short_opt_adj
         period_unrealized = unrealized  # unrealized is "now"; period only relabels the card
         lifetime_unrealized = unrealized
         open_value = market
