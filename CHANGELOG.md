@@ -2,6 +2,47 @@
 
 
 
+## v0.46.0 (2026-05-03)
+
+### Chore
+
+* chore: sync uv.lock to v0.45.0
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`661c4d8`](https://github.com/chen-star/net_alpha/commit/661c4d80b0dcfd7f6cadee735fa021588c56dc63))
+
+### Feature
+
+* feat(ui): paginate plan view
+
+Add server-side pagination to /positions?view=plan following the same
+pattern as the closed and options views; _render_plan_body also computes
+pagination so POST/DELETE re-renders are consistent.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`982ca3b`](https://github.com/chen-star/net_alpha/commit/982ca3bf4cbddb8b4a63b3f4571620ce103faed8))
+
+### Fix
+
+* fix(ui): explainer panel close button, account filter, always-show pagination
+
+Three user-reported issues:
+
+1. Explainer panels had no close button — added × button that swaps in
+   an empty fragment via a new GET /portfolio/explain/dismiss route.
+
+2. Total Return / Unrealized P/L explainer showed all-account numbers
+   even when a specific account was selected. portfolio_kpis and
+   portfolio_body routes were not passing selected_period /
+   selected_account to the KPI template, so the ? button URL fell
+   through to the empty default. Now passing both.
+
+3. Pagination footer was hidden when total_pages == 1, so users with
+   ≤25 rows couldn&#39;t see the per-page selector. Switched the visibility
+   gate from total_pages &gt; 1 to total_rows &gt; 0 across closed positions,
+   open options, and harvest plan templates.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7cacab3`](https://github.com/chen-star/net_alpha/commit/7cacab3e84ccf4d03e30fc05623d045eb7a6dcb5))
+
+
 ## v0.45.0 (2026-05-03)
 
 ### Chore
