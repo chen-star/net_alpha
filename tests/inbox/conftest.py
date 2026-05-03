@@ -49,7 +49,7 @@ def make_lot(
     trade_id: str = "t1",
     ticker: str = "AAPL",
     account: str = "Schwab/Tax",
-    acquired: date,
+    acquired: date = date(2024, 1, 1),
     quantity: float = 100.0,
     cost_basis: float = 1000.0,
     adjusted_basis: float | None = None,
