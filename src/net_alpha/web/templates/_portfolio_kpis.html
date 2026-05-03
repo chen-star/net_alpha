@@ -106,7 +106,7 @@
 
   {# Unrealized P/L #}
   <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="unrealized"
-       title="Mark-to-market gain/loss on open positions vs. their cost basis. Live with the latest available quotes.">
+       title="Mark-to-market on open positions. Long stock and options use the latest quote. Short options (sold puts and covered calls) are estimated using intrinsic value plus straight-line time decay — confirm cost-to-close with your broker before acting.">
     <div class="label-uc">Unrealized P/L</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if kpis.period_unrealized is none %}<span class="text-label-3">—</span>
