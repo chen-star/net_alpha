@@ -64,7 +64,14 @@
   {# ── Total Return — promoted from bottom row, renamed from Growth ──── #}
   <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="total_return"
        title="Account value at the end of the period minus the value at the start, minus contributions during the period. The actual gain (or loss) inside this window.">
-    <div class="label-uc">Total Return</div>
+    <div class="label-uc">Total Return
+      <button type="button"
+              class="ml-1 text-label-3 hover:text-label-1 cursor-pointer text-[12px]"
+              hx-get="/portfolio/explain/total-return?period={{ selected_period|default('ytd') }}&account={{ selected_account|default('') }}"
+              hx-target="#explain-total-return"
+              hx-swap="innerHTML"
+              title="Show how this is calculated">?</button>
+    </div>
     <div class="num text-[22px] font-bold mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
       {% if cash_kpis is defined and cash_kpis %}
         {% if cash_kpis.growth < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(cash_kpis.growth|float|abs) }}
@@ -79,6 +86,7 @@
         no contributions
       {% endif %}
     </div>
+    <div id="explain-total-return"></div>
   </div>
 
   {# ── Cash — single canonical emit ──────────────────────────────────────── #}
@@ -107,7 +115,14 @@
   {# Unrealized P/L #}
   <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="unrealized"
        title="Mark-to-market on open positions. Long stock and options use the latest quote. Short options (sold puts and covered calls) are estimated using intrinsic value plus straight-line time decay — confirm cost-to-close with your broker before acting.">
-    <div class="label-uc">Unrealized P/L</div>
+    <div class="label-uc">Unrealized P/L
+      <button type="button"
+              class="ml-1 text-label-3 hover:text-label-1 cursor-pointer text-[12px]"
+              hx-get="/portfolio/explain/unrealized?account={{ selected_account|default('') }}"
+              hx-target="#explain-unrealized"
+              hx-swap="innerHTML"
+              title="Show how this is calculated">?</button>
+    </div>
     <div class="num text-[22px] font-bold mt-2">
       {% if kpis.period_unrealized is none %}<span class="text-label-3">—</span>
       {% elif kpis.period_unrealized < 0 %}<span class="text-neg">−${{ "%.2f"|format(kpis.period_unrealized|float|abs) }}</span>
@@ -115,6 +130,7 @@
       {% endif %}
     </div>
     <div class="text-[11px] text-label-2 mt-1">{{ kpis.period_label }}</div>
+    <div id="explain-unrealized"></div>
   </div>
 
   {# Net Contributed #}
