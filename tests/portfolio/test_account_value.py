@@ -438,3 +438,132 @@ def test_account_value_at_uses_most_recent_cash_point_before_date():
     )
     # Most recent cash_point on/before 2025-12-31 is 2025-12-01 with $12,000
     assert val == Decimal("12000.00")
+
+
+def test_account_value_at_prices_equity_lot_via_get_close():
+    """An equity lot with a known close contributes qty × close to the value."""
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import Lot
+    from net_alpha.portfolio.account_value import account_value_at
+    from net_alpha.portfolio.models import CashBalancePoint
+
+    cash_points = [
+        CashBalancePoint(
+            on=dt.date(2025, 12, 1),
+            cash_balance=Decimal("5000"),
+            cumulative_contributions=Decimal("5000"),
+        ),
+    ]
+    lots = [
+        Lot(
+            account="X",
+            date=dt.date(2025, 6, 1),
+            ticker="AAPL",
+            quantity=10,
+            adjusted_basis=1500.0,
+            cost_basis=1500.0,
+            trade_id="t1",
+        ),
+    ]
+
+    val = account_value_at(
+        on=dt.date(2025, 12, 31),
+        trades=[],
+        lots=lots,
+        cash_points=cash_points,
+        get_close=lambda t, d: Decimal("180.00") if t == "AAPL" else None,
+    )
+    # cash 5000 + holdings 10 × 180 = 1800 → total 6800.00
+    assert val == Decimal("6800.00")
+
+
+def test_account_value_at_silently_skips_unpriced_equity_lots():
+    """When `get_close` returns None for a ticker, the lot contributes 0
+    rather than poisoning the whole computation (unlike `holdings_value_at`,
+    which returns None on any missing quote).
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import Lot
+    from net_alpha.portfolio.account_value import account_value_at
+    from net_alpha.portfolio.models import CashBalancePoint
+
+    cash_points = [
+        CashBalancePoint(
+            on=dt.date(2025, 12, 1),
+            cash_balance=Decimal("5000"),
+            cumulative_contributions=Decimal("5000"),
+        ),
+    ]
+    lots = [
+        Lot(
+            account="X",
+            date=dt.date(2025, 6, 1),
+            ticker="AAPL",
+            quantity=10,
+            adjusted_basis=1500.0,
+            cost_basis=1500.0,
+            trade_id="t1",
+        ),
+        Lot(
+            account="X",
+            date=dt.date(2025, 6, 1),
+            ticker="WXYZ",
+            quantity=20,
+            adjusted_basis=400.0,
+            cost_basis=400.0,
+            trade_id="t2",
+        ),
+    ]
+
+    # AAPL priced; WXYZ unknown → returns None
+    val = account_value_at(
+        on=dt.date(2025, 12, 31),
+        trades=[],
+        lots=lots,
+        cash_points=cash_points,
+        get_close=lambda t, d: Decimal("180.00") if t == "AAPL" else None,
+    )
+    # cash 5000 + AAPL 1800; WXYZ skipped → 6800 (NOT None)
+    assert val == Decimal("6800.00")
+
+
+def test_account_value_at_skips_expired_option_lots():
+    """An option lot whose expiry is before ``on`` contributes nothing."""
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import Lot, OptionDetails
+    from net_alpha.portfolio.account_value import account_value_at
+    from net_alpha.portfolio.models import CashBalancePoint
+
+    cash_points = [
+        CashBalancePoint(
+            on=dt.date(2025, 12, 1),
+            cash_balance=Decimal("1000"),
+            cumulative_contributions=Decimal("1000"),
+        ),
+    ]
+    expired_lot = Lot(
+        account="X",
+        date=dt.date(2025, 6, 1),
+        ticker="SPY",
+        quantity=-1,
+        adjusted_basis=-500.0,
+        cost_basis=-500.0,
+        trade_id="t1",
+        option_details=OptionDetails(strike=500.0, expiry=dt.date(2025, 9, 1), call_put="P"),
+    )
+
+    val = account_value_at(
+        on=dt.date(2025, 12, 31),  # well after option expiry
+        trades=[],
+        lots=[expired_lot],
+        cash_points=cash_points,
+        get_close=lambda t, d: None,
+    )
+    # cash 1000 + expired option (skipped) → 1000.00
+    assert val == Decimal("1000.00")
