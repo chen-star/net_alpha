@@ -734,3 +734,138 @@ def test_wash_impact_lifetime_when_period_is_none():
     assert out.violation_count == 2
     assert out.unclear_count == 1
     assert out.probable_count == 1
+
+
+def test_short_put_otm_uses_time_decay():
+    """Sold OTM put: intrinsic = 0, decay shrinks the liability over time.
+
+    Setup: sold 1 SPY 500P at $5.00 premium ($500 total) on 2026-04-03,
+    expires 2026-07-02 (90 days total). Today 2026-05-03 (60 days left).
+    Spot $520 → put intrinsic = 0.
+
+    time_value_per_share = 5.00 * (60/90) = 3.333…
+    est_value_to_close   = max(0, 3.333) = 3.333 → liability $333.33
+    unrealized           = $500 - $333.33 = +$166.67
+    """
+    today = dt.date(2026, 5, 3)
+    expiry = dt.date(2026, 7, 2)
+    open_date = dt.date(2026, 4, 3)
+
+    trade = Trade(
+        account="X", date=open_date, ticker="SPY", action="Sell",
+        quantity=1.0, cost_basis=None, proceeds=500.0,
+        gross_cash_impact=500.0,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=500.0, expiry=expiry, call_put="P"),
+    )
+    prices = {
+        "SPY": Quote(
+            symbol="SPY", price=Decimal("520.00"), previous_close=Decimal("519"),
+            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.timezone.utc), source="yahoo",
+        )
+    }
+
+    kpis = compute_kpis(
+        trades=[trade], lots=[], prices=prices,
+        period_label="YTD 2026", period=(2026, 2027), account=None, as_of=today,
+    )
+    assert kpis.period_unrealized is not None
+    assert abs(kpis.period_unrealized - Decimal("166.67")) < Decimal("0.50")
+
+
+def test_short_put_itm_uses_intrinsic_floor():
+    """Sold ITM put: spot $480 < strike $500 → intrinsic $20/sh × 100 = $2000 liability.
+
+    time_value = $500 * (60/90) = $333.33
+    est_value_to_close = max(2000, 333.33) = $2000
+    unrealized = $500 - $2000 = -$1500
+    """
+    today = dt.date(2026, 5, 3)
+    expiry = dt.date(2026, 7, 2)
+    open_date = dt.date(2026, 4, 3)
+
+    trade = Trade(
+        account="X", date=open_date, ticker="SPY", action="Sell",
+        quantity=1.0, cost_basis=None, proceeds=500.0,
+        gross_cash_impact=500.0,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=500.0, expiry=expiry, call_put="P"),
+    )
+    prices = {
+        "SPY": Quote(
+            symbol="SPY", price=Decimal("480.00"), previous_close=Decimal("481"),
+            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.timezone.utc), source="yahoo",
+        )
+    }
+
+    kpis = compute_kpis(
+        trades=[trade], lots=[], prices=prices,
+        period_label="YTD 2026", period=(2026, 2027), account=None, as_of=today,
+    )
+    assert kpis.period_unrealized is not None
+    assert abs(kpis.period_unrealized - Decimal("-1500.00")) < Decimal("1.00")
+
+
+def test_short_covered_call_itm_uses_call_intrinsic():
+    """Sold 2 NVDA 850C for $1200 premium total on 2026-03-31 (60 days
+    total). Today 2026-05-03 (27 days left to 2026-05-30 expiry). Spot $872.
+
+    intrinsic_per_share = max(0, 872 - 850) = 22
+    intrinsic_total     = 22 * 2 contracts * 100 = $4400 liability
+    premium_per_share   = 1200 / 2 / 100 = 6.00
+    time_value_per_share= 6.00 * 27/60 = 2.70
+    est_value_per_share = max(22, 2.70) = 22
+    est_liability       = 22 * 2 * 100 = 4400
+    unrealized          = 1200 - 4400 = -3200
+    """
+    today = dt.date(2026, 5, 3)
+    expiry = dt.date(2026, 5, 30)
+    open_date = dt.date(2026, 3, 31)
+
+    trade = Trade(
+        account="X", date=open_date, ticker="NVDA", action="Sell",
+        quantity=2.0, cost_basis=None, proceeds=1200.0,
+        gross_cash_impact=1200.0,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=850.0, expiry=expiry, call_put="C"),
+    )
+    prices = {
+        "NVDA": Quote(
+            symbol="NVDA", price=Decimal("872.00"), previous_close=Decimal("870"),
+            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.timezone.utc), source="yahoo",
+        )
+    }
+
+    kpis = compute_kpis(
+        trades=[trade], lots=[], prices=prices,
+        period_label="YTD 2026", period=(2026, 2027), account=None, as_of=today,
+    )
+    assert kpis.period_unrealized is not None
+    assert abs(kpis.period_unrealized - Decimal("-3200.00")) < Decimal("1.00")
+
+
+def test_short_option_no_underlying_quote_falls_back_to_zero():
+    """If we don't have an underlying quote, the short option contributes
+    0 unrealized (rather than crashing or making something up)."""
+    today = dt.date(2026, 5, 3)
+    expiry = dt.date(2026, 7, 2)
+    open_date = dt.date(2026, 4, 3)
+
+    trade = Trade(
+        account="X", date=open_date, ticker="WXYZ", action="Sell",
+        quantity=1.0, cost_basis=None, proceeds=500.0,
+        gross_cash_impact=500.0,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=500.0, expiry=expiry, call_put="P"),
+    )
+
+    # No quote for WXYZ. Also no equity lots, so no other unrealized to worry about.
+    kpis = compute_kpis(
+        trades=[trade], lots=[], prices={},
+        period_label="YTD 2026", period=(2026, 2027), account=None, as_of=today,
+    )
+    # The short option contributes 0 because we can't price the underlying.
+    # period_unrealized will be 0 (or possibly None if "all_unpriced" logic kicks
+    # in — but there are no equity lots, so all_unpriced stays False, and
+    # period_unrealized is the sum, which is 0).
+    assert kpis.period_unrealized == Decimal("0")
