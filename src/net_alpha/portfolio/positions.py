@@ -43,29 +43,6 @@ def _opt_ticker_base(ticker: str) -> str:
     return _OPT_CORP_ACTION_SUFFIX.sub("", ticker)
 
 
-def compute_today_change(
-    lots: list[tuple[str, Decimal]],
-    quotes: dict[str, tuple[Decimal, Decimal | None]],
-) -> tuple[Decimal, Decimal]:
-    """Sum today's $ change and yesterday's $ value across open lots.
-
-    Lots without a known ``previous_close`` are excluded from BOTH numbers
-    (the conservative path — yields a percent representative of priced lots).
-    """
-    delta = Decimal("0")
-    prev_value = Decimal("0")
-    for symbol, qty in lots:
-        quote = quotes.get(symbol)
-        if quote is None:
-            continue
-        price, prev_close = quote
-        if prev_close is None:
-            continue
-        delta += (price - prev_close) * qty
-        prev_value += prev_close * qty
-    return delta, prev_value
-
-
 def consume_lots_fifo(
     *,
     lots: Iterable[Lot],

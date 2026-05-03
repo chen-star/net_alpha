@@ -14,7 +14,7 @@ from decimal import Decimal
 from net_alpha.models.domain import Lot, Trade, WashSaleViolation
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.portfolio.models import KpiSet, WashImpact
-from net_alpha.portfolio.positions import compute_today_change, consume_lots_fifo
+from net_alpha.portfolio.positions import consume_lots_fifo
 from net_alpha.pricing.provider import Quote
 
 # BTC basis_source values whose realization pairs with a matching STO. Excludes
@@ -377,16 +377,6 @@ def compute_kpis(
         open_value = market
         lifetime_net_pl = lifetime_realized + unrealized
 
-    # Today tile: per-lot (price - prev_close) * remaining_qty, skipping lots
-    # with no prev close. Uses the FIFO-consumed quantities so a closed lot
-    # doesn't keep contributing to today's $ change.
-    quotes_with_prev = {sym: (q.price, q.previous_close) for sym, q in prices.items()}
-    open_lots_by_sym: list[tuple[str, Decimal]] = [
-        (lot.ticker, rem_qty) for lot, rem_qty, _ in consumed if rem_qty > 0 and lot.option_details is None
-    ]
-    today_change, prev_value = compute_today_change(open_lots_by_sym, quotes_with_prev)
-    today_pct: Decimal | None = (today_change / prev_value) if prev_value else None
-
     return KpiSet(
         period_label=period_label,
         period_realized=period_realized,
@@ -396,8 +386,6 @@ def compute_kpis(
         open_position_value=open_value,
         lifetime_net_pl=lifetime_net_pl,
         missing_symbols=missing,
-        today_change=today_change,
-        today_pct=today_pct,
         period_realized_economic=period_realized_economic,
         lifetime_realized_economic=lifetime_realized_economic,
     )
