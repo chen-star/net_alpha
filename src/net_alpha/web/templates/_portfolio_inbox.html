@@ -1,16 +1,70 @@
-{# STUB: replaced by Task 10 with the full panel. Keeps the route working
-   and lets Task 9 tests assert basic content presence. #}
-<div id="inbox-panel" class="panel mb-4">
-  {% if items %}
-    <ul>
-      {% for it in items %}
-        <li data-key="{{ it.dismiss_key }}">
-          <span>{{ it.title }}</span>
-          <span>{{ it.subtitle }}</span>
-        </li>
+{# Action Inbox — time-aware actionable signals.
+   Lazy-loaded fragment served from /portfolio/inbox. Re-rendered after
+   each dismissal POST. Items already arrive in display order. #}
+
+{% set urgent_count = items | selectattr('severity.value', 'equalto', 'urgent') | list | length %}
+{% set total = items | length %}
+
+<div id="inbox-panel" class="panel mb-4"
+     x-data="{ open: {{ 'true' if urgent_count > 0 else 'false' }} }"
+     {% if account %}data-account="{{ account }}"{% endif %}>
+  <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
+    <div class="flex items-center gap-2">
+      <span class="font-semibold">Action Inbox</span>
+      {% if total > 0 %}
+        <span class="text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-100">{{ total }}</span>
+      {% endif %}
+      {% if urgent_count > 0 %}
+        <span class="text-xs px-2 py-0.5 rounded-full bg-red-600/20 text-red-400">{{ urgent_count }} urgent</span>
+      {% endif %}
+    </div>
+    <span x-text="open ? '▾' : '▸'" class="text-zinc-400"></span>
+  </div>
+
+  <div x-show="open" x-transition class="mt-3">
+    {% if total == 0 %}
+      <p class="text-sm text-zinc-500">Nothing to act on right now.</p>
+    {% else %}
+      {% set sections = [
+        ('urgent', 'Urgent'),
+        ('watch', 'Watch'),
+        ('info', 'Info'),
+      ] %}
+      {% for sev, label in sections %}
+        {% set rows = items | selectattr('severity.value', 'equalto', sev) | list %}
+        {% if rows %}
+          <div class="mt-2">
+            <div class="text-xs uppercase tracking-wide text-zinc-500 mb-1">{{ label }}</div>
+            <ul class="divide-y divide-zinc-800">
+              {% for it in rows %}
+                <li class="py-2 flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-2 min-w-0">
+                    <span class="mt-1 inline-block w-2 h-2 rounded-full
+                      {% if sev == 'urgent' %}bg-red-500
+                      {% elif sev == 'watch' %}bg-amber-500
+                      {% else %}bg-blue-500{% endif %}"></span>
+                    <div class="min-w-0">
+                      <a href="{{ it.deep_link }}" class="font-medium hover:underline truncate block">{{ it.title }}</a>
+                      <div class="text-xs text-zinc-400 truncate">{{ it.subtitle }}</div>
+                      <div class="text-xs text-zinc-500">
+                        {{ it.event_date.isoformat() }}
+                        {% if it.dollar_impact is not none %}
+                          · ${{ '{:,.0f}'.format(it.dollar_impact) }}
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                  <button class="text-zinc-500 hover:text-zinc-200 px-2"
+                          hx-post="/portfolio/inbox/dismiss/{{ it.dismiss_key }}{% if account %}?account={{ account }}{% endif %}"
+                          hx-target="#inbox-panel"
+                          hx-swap="outerHTML"
+                          aria-label="Dismiss">×</button>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
       {% endfor %}
-    </ul>
-  {% else %}
-    <p>Nothing to act on right now.</p>
-  {% endif %}
+    {% endif %}
+  </div>
 </div>

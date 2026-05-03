@@ -868,6 +868,7 @@ def portfolio_body(
             "benchmark_symbol": benchmark_symbol,
             "account_points": account_points,
             "period_label": period_label,
+            "account": account,  # used by the inbox lazy-load wrapper
         },
     )
 
