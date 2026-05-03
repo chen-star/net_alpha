@@ -159,23 +159,43 @@ def test_kpis_open_value_carries_unexpired_options_at_basis():
     lots = [
         _lot(id="leq", quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0),
         _lot(
-            id="lopt-open", date=dt.date(2025, 6, 1), ticker="NVDA",
-            quantity=2.0, cost_basis=400.0, adjusted_basis=400.0, option_details=opt_open,
+            id="lopt-open",
+            date=dt.date(2025, 6, 1),
+            ticker="NVDA",
+            quantity=2.0,
+            cost_basis=400.0,
+            adjusted_basis=400.0,
+            option_details=opt_open,
         ),
         _lot(
-            id="lopt-exp", date=dt.date(2024, 11, 1), ticker="SPY",
-            quantity=1.0, cost_basis=300.0, adjusted_basis=300.0, option_details=opt_expired,
+            id="lopt-exp",
+            date=dt.date(2024, 11, 1),
+            ticker="SPY",
+            quantity=1.0,
+            cost_basis=300.0,
+            adjusted_basis=300.0,
+            option_details=opt_expired,
         ),
     ]
     trades = [
         _trade(id="tb-eq", action="Buy", quantity=100, cost_basis=40_000),
         _trade(
-            id="tb-opt-open", action="Buy", date=dt.date(2025, 6, 1), ticker="NVDA",
-            quantity=2, cost_basis=400, option_details=opt_open,
+            id="tb-opt-open",
+            action="Buy",
+            date=dt.date(2025, 6, 1),
+            ticker="NVDA",
+            quantity=2,
+            cost_basis=400,
+            option_details=opt_open,
         ),
         _trade(
-            id="tb-opt-exp", action="Buy", date=dt.date(2024, 11, 1), ticker="SPY",
-            quantity=1, cost_basis=300, option_details=opt_expired,
+            id="tb-opt-exp",
+            action="Buy",
+            date=dt.date(2024, 11, 1),
+            ticker="SPY",
+            quantity=1,
+            cost_basis=300,
+            option_details=opt_expired,
         ),
     ]
     k = compute_kpis(
