@@ -547,6 +547,8 @@ def portfolio_allocation_fragment(
 def holdings_options(
     request: Request,
     account: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     """All open option positions (long + short) panel — rendered on /holdings.
@@ -580,16 +582,34 @@ def holdings_options(
         "net_premium": premium_received_total - long_cost_total,
         "avg_dte": avg_dte,
     }
+    page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
+    page_norm = max(1, page)
+    total_rows = len(open_options)
+    total_pages = max(1, (total_rows + page_size_norm - 1) // page_size_norm)
+    page_norm = min(page_norm, total_pages)
+    start_idx = (page_norm - 1) * page_size_norm
+    end_idx = start_idx + page_size_norm
+    open_options_page = open_options[start_idx:end_idx]
+    pagination = {
+        "page": page_norm,
+        "page_size": page_size_norm,
+        "total_pages": total_pages,
+        "total_rows": total_rows,
+        "page_size_options": (10, 25, 50, 100),
+    }
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_open_options.html",
         {
-            "open_options": open_options,
+            "open_options": open_options_page,
             "cash_secured_total": cash_secured_total,
             "premium_received_total": premium_received_total,
             "long_cost_total": long_cost_total,
             "options_summary": options_summary,
             "today": today,
+            "selected_account": account or "",
+            "pagination": pagination,
         },
     )
 
