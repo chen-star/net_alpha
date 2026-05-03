@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 
 class InboxConfig(BaseModel):
@@ -28,4 +28,7 @@ def load_inbox_config(path: Path) -> InboxConfig:
     section = data.get("inbox") if isinstance(data, dict) else None
     if not isinstance(section, dict):
         return InboxConfig()
-    return InboxConfig(**section)
+    try:
+        return InboxConfig(**section)
+    except (ValidationError, TypeError):
+        return InboxConfig()

@@ -48,3 +48,12 @@ def test_full_override(tmp_path: Path):
     assert cfg.lt_lookahead_days == 90
     assert cfg.option_expiry_lookahead_days == 21
     assert cfg.assignment_risk_window_days == 3
+
+
+def test_invalid_value_returns_defaults(tmp_path: Path):
+    """Constraint-violating values (e.g. negative days) must fall back to
+    defaults rather than crashing the page."""
+    p = tmp_path / "config.yaml"
+    p.write_text(yaml.safe_dump({"inbox": {"lt_lookahead_days": -1}}))
+    cfg = load_inbox_config(p)
+    assert cfg == InboxConfig()
