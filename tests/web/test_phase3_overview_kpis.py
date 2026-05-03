@@ -106,26 +106,35 @@ def test_overview_has_total_return_tile(seeded_client):
     assert 'data-kpi-slot="today"' not in resp.text
 
 
-def test_overview_kpi_grid_has_three_large_and_three_small_slots(seeded_client):
-    """Top row: hero + total_return + cash (3). Bottom row: realized, unrealized,
-    contributed (3). Total 6 KPI slots. Growth tile moved to top row as Total
-    Return; TODAY tile removed."""
+def test_overview_kpi_grid_is_hero_plus_promoted_plus_three_small(seeded_client):
+    """Top row: hero (col-span-8) + total_return (col-span-4).
+    Bottom row: realized + unrealized + cash (col-span-4 each)."""
     resp = seeded_client.get("/portfolio/kpis")
     html = resp.text
     slots = (
         ("hero", 1),
         ("total_return", 1),
-        ("cash", 1),
         ("realized", 1),
         ("unrealized", 1),
-        ("contributed", 1),
+        ("cash", 1),
     )
     for slot, expected in slots:
         actual = html.count(f'data-kpi-slot="{slot}"')
         assert actual == expected, f"slot={slot} appears {actual}× (expected {expected})"
-    # Removed slots must not appear
-    for removed in ("today", "growth"):
+    # Removed slots must not appear (today/growth dropped earlier; contributed
+    # folded into the Cash subtitle).
+    for removed in ("today", "growth", "contributed"):
         assert f'data-kpi-slot="{removed}"' not in html, f"removed slot={removed} still present"
+
+
+def test_cash_kpi_tile_includes_net_contributed_subtitle(seeded_client):
+    """Net Contributed is no longer its own tile — it lives as a subtitle on
+    the Cash tile so users still see the figure but the KPI grid hierarchy
+    isn't diluted by an operational-only metric."""
+    html = seeded_client.get("/portfolio/kpis").text
+    # Locate the Cash tile span and assert the subtitle copy.
+    assert 'data-kpi-slot="cash"' in html
+    assert "contributed" in html.lower()  # subtitle text on the Cash tile
 
 
 def test_fmt_currency_prepends_minus_for_negatives():

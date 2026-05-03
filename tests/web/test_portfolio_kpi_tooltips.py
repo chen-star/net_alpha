@@ -16,7 +16,7 @@ def test_all_four_target_kpis_have_title():
         with TestClient(app) as c:
             r = c.get("/portfolio/kpis")
     html = r.text
-    for slot in ("hero", "realized", "unrealized", "contributed"):
+    for slot in ("hero", "total_return", "realized", "unrealized", "cash"):
         anchor = f'data-kpi-slot="{slot}"'
         assert anchor in html, f"missing slot {slot}"
         # Locate the opening tag that contains data-kpi-slot=.

@@ -66,16 +66,17 @@ def test_phase3_smoke(tmp_path):
     assert 'data-col="days_held"' in holdings_tax
     assert 'data-col="days_to_ltcg"' not in holdings_tax
 
-    # 6. KPI grid — Phase 3 C3 fixed layout (profile no longer changes slot order).
+    # 6. KPI grid — hierarchy redesign: 1 hero + 1 promoted + 3 small.
     kpis = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     import re
 
     order = re.findall(r'data-kpi-slot="([^"]+)"', kpis)
-    # Phase 3 C3: fixed 3-large + 3-small layout (TODAY removed, Growth → Total Return in top row).
-    assert order[:3] == ["hero", "total_return", "cash"]
-    assert order[3:] == ["realized", "unrealized", "contributed"]
+    # Top row: hero + total_return. Bottom row: realized + unrealized + cash.
+    # Net Contributed folded into Cash subtitle (no longer its own slot).
+    assert order == ["hero", "total_return", "realized", "unrealized", "cash"]
     # wash_impact removed from Portfolio KPI grid entirely (lives on /tax).
     assert "wash_impact" not in order
+    assert "contributed" not in order
 
     # 7. Topbar switcher form posts to /preferences with account_id.
     home = client.get("/").text
@@ -90,5 +91,4 @@ def test_phase3_smoke(tmp_path):
     # Re-render /portfolio/kpis for Tax -> conservative; fixed layout unchanged.
     kpis2 = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order2 = re.findall(r'data-kpi-slot="([^"]+)"', kpis2)
-    assert order2[:3] == ["hero", "total_return", "cash"]
-    assert order2[3:] == ["realized", "unrealized", "contributed"]
+    assert order2 == ["hero", "total_return", "realized", "unrealized", "cash"]

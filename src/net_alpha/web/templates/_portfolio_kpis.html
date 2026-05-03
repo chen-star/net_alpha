@@ -1,68 +1,68 @@
 {% from "_provenance_macros.html" import provenance_link %}
 {% set _profile = profile if profile is defined else None %}
 
-{# ── slot_cash macro ──────────────────────────────────────────────────────── #}
-{% macro slot_cash(cash_kpis, cash_secured_total, csp_count) %}
-  {% set _csp = (cash_secured_total|float) if cash_secured_total is defined and cash_secured_total else 0 %}
-  {% set _csp_n = csp_count if csp_count is defined and csp_count else 0 %}
+{# ── Cash subtitle helper (free / pledged share + net contributed) ──────── #}
+{% macro cash_breakdown_subtitle(cash_kpis, csp_total, csp_n) %}
+  {% set _csp = (csp_total|float) if csp_total is defined and csp_total else 0 %}
   {% set _cash = (cash_kpis.cash_balance|float) if cash_kpis else 0 %}
   {% set _free = _cash - _csp %}
-  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="cash">
-    <div class="label-uc"
-         title="{% if _csp > 0 %}Total liquid cash. {{ "{:,.0f}".format(_csp) }} is pledged as collateral for {{ _csp_n }} cash-secured put{% if _csp_n != 1 %}s{% endif %} — your free cash is what's left.{% else %}Total liquid cash in this scope. No CSP collateral pledged.{% endif %}">
-      Cash {% if _csp > 0 %}<span class="text-label-2 normal-case">(free / pledged)</span>{% endif %}
+  {% if _csp > 0 and cash_kpis %}
+    {% set _pledged_pct = (_csp / _cash * 100) if _cash > 0 else 0 %}
+    <div class="mt-2 h-[5px] rounded-full overflow-hidden flex" style="background: var(--color-hairline);"
+         title="Free vs pledged">
+      <div style="width: {{ (100 - _pledged_pct)|round(0,'floor')|int }}%; background: var(--color-pos); height: 100%;"></div>
+      <div style="width: {{ _pledged_pct|round(0,'ceil')|int }}%; background: var(--color-warn); height: 100%;"></div>
     </div>
-    <div class="num text-[22px] font-bold mt-2">
-      {% if cash_kpis is defined and cash_kpis %}
-        {% if _cash < 0 %}<span class="text-neg">−${{ "%.2f"|format(_cash|abs) }}</span>
-        {% else %}${{ "%.2f"|format(_cash) }}{% endif %}
-      {% else %}<span class="text-label-3">—</span>{% endif %}
+    <div class="flex items-center justify-between mt-1 text-[11px]">
+      <span class="text-label-2"><span class="num text-label-1">${{ "{:,.0f}".format(_free) }}</span> free</span>
+      <span class="text-label-2"><span class="num" style="color:var(--color-warn);">${{ "{:,.0f}".format(_csp) }}</span> pledged · {{ csp_n }} CSP{% if csp_n != 1 %}s{% endif %}</span>
     </div>
-    {% if _csp > 0 and cash_kpis %}
-      {% set _pledged_pct = (_csp / _cash * 100) if _cash > 0 else 0 %}
-      <div class="mt-2 h-[5px] rounded-full overflow-hidden flex" style="background: var(--color-hairline);"
-           title="Free vs pledged">
-        <div style="width: {{ (100 - _pledged_pct)|round(0,'floor')|int }}%; background: var(--color-pos); height: 100%;"></div>
-        <div style="width: {{ _pledged_pct|round(0,'ceil')|int }}%; background: var(--color-warn); height: 100%;"></div>
-      </div>
-      <div class="flex items-center justify-between mt-1 text-[11px]">
-        <span class="text-label-2"><span class="num text-label-1">${{ "{:,.0f}".format(_free) }}</span> free</span>
-        <span class="text-label-2"><span class="num" style="color:var(--color-warn);">${{ "{:,.0f}".format(_csp) }}</span> pledged · {{ _csp_n }} CSP{% if _csp_n != 1 %}s{% endif %}</span>
-      </div>
-    {% else %}
-      <div class="text-[11px] text-label-2 mt-1">
-        {% if cash_kpis is defined and cash_kpis %}{{ "%.0f"|format((cash_kpis.cash_share_pct|float) * 100) }}% of account{% endif %}
-      </div>
-    {% endif %}
-  </div>
+  {% else %}
+    <div class="text-[11px] text-label-2 mt-1">
+      {% if cash_kpis %}{{ "%.0f"|format((cash_kpis.cash_share_pct|float) * 100) }}% of account{% endif %}
+    </div>
+  {% endif %}
+  {# Net Contributed subtitle row — folded in from the old standalone tile. #}
+  {% if cash_kpis is defined and cash_kpis %}
+    <div class="text-[11px] text-label-2 mt-1"
+         title="Cash you've moved into the account: deposits minus withdrawals, in the selected period.">
+      {% if cash_kpis.period_net_contributions < 0 %}
+        <span class="text-neg">−${{ "%.2f"|format(cash_kpis.period_net_contributions|float|abs) }}</span>
+      {% else %}
+        ${{ "%.2f"|format(cash_kpis.period_net_contributions|float) }}
+      {% endif %}
+      contributed{% if metric_refs is defined and metric_refs.net_contributed_period is defined %}{{ provenance_link(metric_refs.net_contributed_period) }}{% endif %}
+    </div>
+  {% endif %}
 {% endmacro %}
-
-{# ── KPI grid — Phase 3 restructure (§4.1, §5.6) ────────────────────────── #}
-{# Top row: hero + total_return + cash (large, col-span-4 each in a 12-col grid). #}
-{# Bottom row: 3 small numerics (col-span-4 each).                             #}
 
 <div class="grid grid-cols-12 gap-[10px]" data-profile="{{ _profile.profile if _profile else 'active' }}">
 
-  {# ── Hero: Total Account Value ─────────────────────────────────────────── #}
-  <div class="kpi kpi-hero col-span-12 lg:col-span-4" data-kpi-slot="hero"
+  {# ── Row 1: Hero (col-span-8) + Total Return (col-span-4) ─────────────── #}
+  <div class="kpi kpi-hero col-span-12 lg:col-span-8" data-kpi-slot="hero"
        title="Sum of cash + open position market value across all in-scope accounts. Updates as quotes refresh.">
     <div class="label-uc">TOTAL ACCOUNT VALUE</div>
-    <div class="num text-[22px] font-bold mt-2">
+    <div class="num num-hero mt-2">
       {% if total_account_value is defined and total_account_value is not none %}
         ${{ "%.2f"|format(total_account_value|float) }}
       {% else %}
         <span class="text-label-3">—</span>
       {% endif %}
     </div>
-    <div class="text-[11px] text-label-2 mt-1">
+    <div class="text-[12px] text-label-2 mt-2 flex flex-wrap items-baseline gap-x-3">
+      {% if vs_contributed_delta is defined and vs_contributed_delta is not none %}
+        <span class="{% if vs_contributed_delta < 0 %}text-neg{% else %}text-pos{% endif %} num font-medium">
+          {% if vs_contributed_delta < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(vs_contributed_delta|float|abs) }}
+        </span>
+        <span>vs contributed</span>
+      {% endif %}
       {% if snapshot is defined and snapshot.fetched_at %}
-        As of {{ snapshot.fetched_at.strftime("%b %-d") }} quotes
+        <span class="text-label-3">· as of {{ snapshot.fetched_at.strftime("%b %-d") }} quotes</span>
       {% endif %}
     </div>
   </div>
 
-  {# ── Total Return — promoted from bottom row, renamed from Growth ──── #}
-  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="total_return"
+  <div class="kpi kpi-promoted col-span-12 lg:col-span-4" data-kpi-slot="total_return"
        title="Account value at the end of the period minus the value at the start, minus contributions during the period. The actual gain (or loss) inside this window.">
     <div class="label-uc">Total Return
       <button type="button"
@@ -72,7 +72,7 @@
               hx-swap="innerHTML"
               title="Show how this is calculated">?</button>
     </div>
-    <div class="num text-[22px] font-bold mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
+    <div class="num num-promoted mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
       {% if cash_kpis is defined and cash_kpis %}
         {% if cash_kpis.growth < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(cash_kpis.growth|float|abs) }}
       {% else %}
@@ -89,15 +89,11 @@
     <div id="explain-total-return"></div>
   </div>
 
-  {# ── Cash — single canonical emit ──────────────────────────────────────── #}
-  {{ slot_cash(cash_kpis if cash_kpis is defined else None, cash_secured_total if cash_secured_total is defined else 0, csp_count if csp_count is defined else 0) }}
-
 </div>
 
-{# ── Bottom row: 3 small KPIs ─────────────────────────────────────────────── #}
+{# ── Row 2: 3 small KPIs — col-span-4 each ────────────────────────────────── #}
 <div class="grid grid-cols-12 gap-[10px] mt-[10px]">
 
-  {# Realized P/L #}
   <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="realized"
        title="Tax-recognized realized P/L for the selected period — matches Schwab UI and Form 8949. Includes wash-sale-disallowed losses added back to basis. The economic figure shown below is the actual cash netted (recognized − disallowed).">
     <div class="label-uc">Realized P/L</div>
@@ -112,7 +108,6 @@
     </div>
   </div>
 
-  {# Unrealized P/L #}
   <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="unrealized"
        title="Mark-to-market on open positions. Long stock and options use the latest quote. Short options (sold puts and covered calls) are estimated using intrinsic value plus straight-line time decay — confirm cost-to-close with your broker before acting.">
     <div class="label-uc">Unrealized P/L
@@ -133,28 +128,22 @@
     <div id="explain-unrealized"></div>
   </div>
 
-  {# Net Contributed #}
-  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="contributed"
-       title="Cash you've moved into the account: deposits minus withdrawals, in the selected period.">
-    <div class="label-uc">Net contributed</div>
+  {% set _csp_n = csp_count if csp_count is defined and csp_count else 0 %}
+  {% set _cash_val = (cash_kpis.cash_balance|float) if cash_kpis else 0 %}
+  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="cash"
+       title="{% if cash_secured_total is defined and cash_secured_total > 0 %}Total liquid cash. {{ '{:,.0f}'.format(cash_secured_total|float) }} is pledged as collateral for {{ _csp_n }} cash-secured put{% if _csp_n != 1 %}s{% endif %} — your free cash is what's left.{% else %}Total liquid cash in this scope. No CSP collateral pledged.{% endif %}">
+    <div class="label-uc">Cash {% if cash_secured_total is defined and cash_secured_total > 0 %}<span class="text-label-2 normal-case">(free / pledged)</span>{% endif %}</div>
     <div class="num text-[22px] font-bold mt-2">
       {% if cash_kpis is defined and cash_kpis %}
-        {% if cash_kpis.period_net_contributions < 0 %}
-          <span class="text-neg">−${{ "%.2f"|format(cash_kpis.period_net_contributions|float|abs) }}</span>
-        {% else %}
-          ${{ "%.2f"|format(cash_kpis.period_net_contributions|float) }}
-        {% endif %}{% if metric_refs is defined and metric_refs.net_contributed_period is defined %}{{ provenance_link(metric_refs.net_contributed_period) }}{% endif %}
-      {% else %}
-        <span class="text-label-3">—</span>
-      {% endif %}
+        {% if _cash_val < 0 %}<span class="text-neg">−${{ "%.2f"|format(_cash_val|abs) }}</span>
+        {% else %}${{ "%.2f"|format(_cash_val) }}{% endif %}
+      {% else %}<span class="text-label-3">—</span>{% endif %}
     </div>
-    <div class="text-[11px] text-label-2 mt-1">deposits − withdrawals</div>
+    {{ cash_breakdown_subtitle(cash_kpis if cash_kpis is defined else None, cash_secured_total if cash_secured_total is defined else 0, _csp_n) }}
   </div>
 
 </div>
 
-{# Global price freshness is shown in the toolbar freshness chip (§5.11 / P5).
-   Only tile-specific data-quality warnings (e.g. partial sum) remain here. #}
 {% if snapshot is defined and snapshot.degraded %}
   <div class="text-[11px] text-warn mt-2">Quote provider unavailable — some prices may be missing.</div>
 {% endif %}

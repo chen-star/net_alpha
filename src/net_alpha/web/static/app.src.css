@@ -320,6 +320,15 @@
       radial-gradient(140% 100% at 100% 100%, var(--color-violet-tint) 0%, transparent 55%),
       var(--color-surface);
     border-color: var(--color-indigo-edge);
+    @apply px-5 py-4;
+  }
+  .kpi-hero .num.num-hero {
+    @apply text-[38px] font-bold tracking-tight;
+    line-height: 1.1;
+  }
+  .kpi-promoted .num.num-promoted {
+    @apply text-[28px] font-bold tracking-tight;
+    line-height: 1.15;
   }
 
   /* Segmented control */
