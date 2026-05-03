@@ -2,6 +2,50 @@
 
 
 
+## v0.46.2 (2026-05-03)
+
+### Fix
+
+* fix(ui): rebuild CSS, drop closed lots from inbox, refresh inbox styling
+
+Three issues from the user, each with its own root cause:
+
+1. Explainer × buttons unclickable. Last edit added `top-2 right-3
+   text-[18px] grid-cols-[1fr_auto] gap-x-4 gap-y-1 items-baseline pr-6
+   mb-3 hover:text-text` to the templates without rebuilding app.css.
+   Without those positioning utilities the absolutely-positioned ×
+   collapsed under the panel title — invisible and unreachable. The same
+   missing utilities also broke the equation grid layout, which is why
+   the numbers and labels weren&#39;t aligned. Re-ran `make build-css` so
+   Tailwind picks up the new arbitrary-value classes.
+
+2. Action Inbox kept showing positions the user had closed (e.g. WULF
+   23C). The detector only ever creates Lot rows from buy trades, so the
+   original BTO lot stays in the DB at its original quantity even after
+   STC. `option_expiry` and `lt_eligibility` were filtering on raw
+   `lot.quantity`, so they never saw the close. Now both signals run
+   `open_lots_view` (FIFO consumption) before filtering. Negative-qty
+   short option lots are merged back in since FIFO drops them and
+   shorts aren&#39;t netted in this codebase.
+
+3. Inbox panel itself was visually inconsistent with the rest of the
+   dashboard — raw `bg-zinc-700`, `bg-red-600/20`, `divide-zinc-800`
+   instead of the design tokens used everywhere else. Rewrote the
+   template using the same idiom as `_portfolio_open_options.html`:
+   `panel`, `text-label-*`, `--color-pos/neg/warn/info(+tint)`,
+   hairline borders, glow dots scaled to severity, dollar impact
+   right-aligned in severity color, urgent/watch counts as pill chips
+   in the header.
+
+Tests: 1281 passed (+ 3 new failing-then-passing for the inbox
+filter); ruff format/check clean; smoke-tested against live DB —
+inbox went from 15 stale items to 5 actually-open items, WULF/PL/MU
+ghosts gone; explainer × button now lives at top-right and dismisses
+the panel via `/portfolio/explain/dismiss`.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7f23a6e`](https://github.com/chen-star/net_alpha/commit/7f23a6e58258b5a45faea6b2368fb68df66f36ea))
+
+
 ## v0.46.1 (2026-05-03)
 
 ### Chore
