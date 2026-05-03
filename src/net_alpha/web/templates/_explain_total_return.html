@@ -1,0 +1,52 @@
+{# Math explainer fragment for the Total Return KPI tile.
+   Receives `b: TotalReturnBreakdown`. Loaded via HTMX from
+   /portfolio/explain/total-return and swapped into a div under the tile. #}
+<div class="panel p-4 mt-2 text-[13px]" data-explain="total-return">
+  <div class="font-semibold mb-3">Total Return — {{ b.period_label }}</div>
+
+  <table class="w-full">
+    <tbody>
+      <tr>
+        <td class="text-label-2">Ending value</td>
+        <td class="r num">${{ "{:,.2f}".format(b.ending_value|float) }}</td>
+      </tr>
+      <tr>
+        <td class="text-label-2">− Starting value</td>
+        <td class="r num">−${{ "{:,.2f}".format(b.starting_value|float) }}{% if not b.is_lifetime %} <span class="text-label-3">(account value at period start)</span>{% endif %}</td>
+      </tr>
+      <tr>
+        <td class="text-label-2">− Contributions</td>
+        <td class="r num">−${{ "{:,.2f}".format(b.contributions|float) }} <span class="text-label-3">(deposits − withdrawals this period)</span></td>
+      </tr>
+      <tr class="border-t border-hairline">
+        <td class="font-semibold pt-2">= Total Return</td>
+        <td class="r num font-semibold pt-2 {% if b.total_return < 0 %}text-neg{% else %}text-pos{% endif %}">
+          {% if b.total_return < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.total_return|float|abs) }}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="mt-4 font-semibold text-label-1">Decomposition:</div>
+  <table class="w-full mt-1">
+    <tbody>
+      <tr>
+        <td class="text-label-2">Realized P/L (period)</td>
+        <td class="r num">{% if b.realized_in_period < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.realized_in_period|float|abs) }}</td>
+      </tr>
+      <tr>
+        <td class="text-label-2">Δ Unrealized (period)</td>
+        <td class="r num">{% if b.delta_unrealized_residual < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.delta_unrealized_residual|float|abs) }}</td>
+      </tr>
+      <tr class="border-t border-hairline">
+        <td class="pt-2"></td>
+        <td class="r num pt-2">{% if b.total_return < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.total_return|float|abs) }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="mt-3 text-label-3 text-[11px]">
+    Δ Unrealized is computed as a residual (Total Return − Realized) — it differs from the standalone Unrealized P/L tile, which always shows current open unrealized regardless of period.
+  </div>
+  <div class="mt-2 text-label-3 text-[11px]">⚠ This is informational only. Consult a tax professional before filing.</div>
+</div>

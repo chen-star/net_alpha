@@ -1,0 +1,66 @@
+{# Math explainer fragment for the Unrealized P/L KPI tile.
+   Receives `b: UnrealizedBreakdown`. #}
+<div class="panel p-4 mt-2 text-[13px]" data-explain="unrealized">
+  <div class="font-semibold mb-3">Unrealized P/L — open positions</div>
+
+  {% if b.long_lines %}
+    <div class="font-semibold text-label-1 mb-1">Long stock &amp; options</div>
+    <table class="w-full mb-3">
+      <tbody>
+        {% for line in b.long_lines %}
+          <tr>
+            <td class="text-label-2">{{ line.symbol }}</td>
+            <td class="text-label-3 num text-right pr-2">{{ "{:,.2f}".format(line.qty|float) }} × ${{ "{:,.2f}".format(line.last_price|float) }} − basis ${{ "{:,.2f}".format(line.cost_basis|float) }}</td>
+            <td class="r num {% if line.unrealized < 0 %}text-neg{% elif line.unrealized > 0 %}text-pos{% endif %}">
+              {% if line.unrealized < 0 %}−{% elif line.unrealized > 0 %}+{% endif %}${{ "{:,.2f}".format(line.unrealized|float|abs) }}
+            </td>
+          </tr>
+        {% endfor %}
+        <tr class="border-t border-hairline">
+          <td colspan="2" class="font-semibold pt-2">Subtotal</td>
+          <td class="r num font-semibold pt-2 {% if b.long_subtotal < 0 %}text-neg{% else %}text-pos{% endif %}">
+            {% if b.long_subtotal < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.long_subtotal|float|abs) }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  {% endif %}
+
+  {% if b.short_option_lines %}
+    <div class="font-semibold text-label-1 mb-1">Short options <span class="text-label-3 font-normal">(estimate — intrinsic + time decay)</span></div>
+    {% for line in b.short_option_lines %}
+      <div class="mb-2 pl-2 border-l-2 border-hairline">
+        <div class="font-semibold">{{ line.symbol_display }} ×{{ line.contracts }}{% if line.is_covered %} <span class="text-label-3">(covered)</span>{% endif %}</div>
+        <div class="text-label-2 pl-3">
+          premium received: ${{ "{:,.2f}".format(line.premium_received|float) }}<br>
+          spot ${{ "{:,.2f}".format(line.spot|float) }} → intrinsic ${{ "{:,.2f}".format(line.intrinsic_per_share|float) }}/sh<br>
+          {{ line.days_remaining }} of {{ line.days_total }} days remaining<br>
+          time value: ${{ "{:,.2f}".format(line.time_value_per_share|float) }}/sh<br>
+          est. value to close: ${{ "{:,.2f}".format(line.est_value_to_close|float) }}<br>
+          <span class="font-semibold">unrealized = ${{ "{:,.2f}".format(line.premium_received|float) }} − ${{ "{:,.2f}".format(line.est_value_to_close|float) }} = </span>
+          <span class="num font-semibold {% if line.unrealized < 0 %}text-neg{% else %}text-pos{% endif %}">{% if line.unrealized < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(line.unrealized|float|abs) }}</span>
+        </div>
+      </div>
+    {% endfor %}
+    <div class="border-t border-hairline pt-2 flex justify-between">
+      <span class="font-semibold">Subtotal</span>
+      <span class="r num font-semibold {% if b.short_subtotal < 0 %}text-neg{% else %}text-pos{% endif %}">
+        {% if b.short_subtotal < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.short_subtotal|float|abs) }}
+      </span>
+    </div>
+  {% endif %}
+
+  <div class="border-t border-hairline mt-3 pt-2 flex justify-between text-[14px]">
+    <span class="font-semibold">Total Unrealized P/L</span>
+    <span class="r num font-semibold {% if b.total_unrealized < 0 %}text-neg{% else %}text-pos{% endif %}">
+      {% if b.total_unrealized < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.total_unrealized|float|abs) }}
+    </span>
+  </div>
+
+  {% if b.excluded_count > 0 %}
+    <div class="mt-3 text-label-3 text-[11px]">
+      {{ b.excluded_count }} lot{% if b.excluded_count != 1 %}s{% endif %} excluded from the estimate (no quote available; carried at basis).
+    </div>
+  {% endif %}
+  <div class="mt-2 text-label-3 text-[11px]">⚠ This is informational only. Consult a tax professional before filing.</div>
+</div>
