@@ -145,3 +145,39 @@ class PricingService:
         fetched = self._provider.get_historical_close(symbol, on)
         self._cache.historical_put(symbol, on, fetched)
         return fetched
+
+    def warm_historical_range(self, symbols: list[str], start: dt.date, end: dt.date) -> None:
+        """Bulk-prefetch historical closes so the per-(symbol,date) loop in
+        equity-curve / benchmark builders hits the cache for every call.
+
+        Without this, Lifetime view triggered O(eval_dates × tickers × 7)
+        sequential yfinance calls — Yahoo rate-limited them and the request
+        never returned. One bulk call per symbol over the full range collapses
+        that into O(tickers).
+
+        Failure semantics: if the provider signals failure (None return),
+        we skip the symbol — no negative caching — so the user can recover
+        once the rate-limit lifts.
+        """
+        if not self._enabled or not symbols or start > end:
+            return
+        all_dates = {start + dt.timedelta(days=i) for i in range((end - start).days + 1)}
+        for sym in symbols:
+            cached_dates = self._cache.historical_dates_in_range(sym, start, end)
+            missing = all_dates - cached_dates
+            if not missing:
+                continue
+            fetch_start = min(missing)
+            fetch_end = max(missing)
+            result = self._provider.get_historical_closes(sym, fetch_start, fetch_end)
+            if result is None:
+                # Provider failed — leave cache untouched so a retry can recover.
+                logger.debug("pricing: bulk historical warm failed for {}", sym)
+                continue
+            rows: list[tuple[str, dt.date, Decimal | None]] = []
+            d = fetch_start
+            while d <= fetch_end:
+                if d not in cached_dates:
+                    rows.append((sym, d, result.get(d)))
+                d += dt.timedelta(days=1)
+            self._cache.historical_put_many(rows)

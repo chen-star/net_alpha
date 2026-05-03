@@ -128,3 +128,40 @@ class PriceCache:
                     "f": dt.datetime.now(dt.UTC).isoformat(),
                 },
             )
+
+    def historical_dates_in_range(self, symbol: str, start: dt.date, end: dt.date) -> set[dt.date]:
+        """Return the set of cached dates for `symbol` within [start, end]
+        inclusive (used by the warm path to skip already-populated ranges)."""
+        with self._engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT on_date FROM historical_price_cache "
+                    "WHERE symbol = :s AND on_date >= :start AND on_date <= :end"
+                ),
+                {"s": symbol, "start": start.isoformat(), "end": end.isoformat()},
+            ).all()
+        return {dt.date.fromisoformat(r[0]) for r in rows}
+
+    def historical_put_many(self, rows: list[tuple[str, dt.date, Decimal | None]]) -> None:
+        """Bulk upsert closes. None close means negative cache."""
+        if not rows:
+            return
+        now_iso = dt.datetime.now(dt.UTC).isoformat()
+        with self._engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO historical_price_cache(symbol, on_date, close_price, fetched_at) "
+                    "VALUES (:s, :d, :c, :f) "
+                    "ON CONFLICT(symbol, on_date) DO UPDATE SET "
+                    "close_price = excluded.close_price, fetched_at = excluded.fetched_at"
+                ),
+                [
+                    {
+                        "s": symbol,
+                        "d": d.isoformat(),
+                        "c": str(close) if close is not None else None,
+                        "f": now_iso,
+                    }
+                    for symbol, d, close in rows
+                ],
+            )

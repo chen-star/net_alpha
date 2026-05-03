@@ -5,10 +5,9 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel
 
 from net_alpha.config import Settings
-from net_alpha.db.connection import get_engine
+from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.repository import Repository
 from net_alpha.models.domain import Account, ImportRecord, Trade
 from net_alpha.web.app import create_app
@@ -22,9 +21,11 @@ def settings(tmp_path: Path) -> Settings:
 
 @pytest.fixture
 def engine(settings: Settings):
-    """Engine bound to the temp DB; creates all tables once."""
+    """Engine bound to the temp DB. Uses init_db so the schema matches
+    production (includes hand-written migration tables like
+    historical_price_cache that aren't in SQLModel.metadata)."""
     eng = get_engine(settings.db_path)
-    SQLModel.metadata.create_all(eng)
+    init_db(eng)
     return eng
 
 

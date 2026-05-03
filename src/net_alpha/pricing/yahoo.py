@@ -70,6 +70,34 @@ class YahooPriceProvider(PriceProvider):
             logger.debug("yahoo: historical close fetch error for {} on {}: {}", symbol, on, exc)
             return None
 
+    def get_historical_closes(self, symbol: str, start: _date, end: _date) -> dict[_date, Decimal] | None:
+        """Bulk-fetch closes for `symbol` over [start, end] inclusive in one
+        yfinance call. Returns {date: Decimal} for trading days the provider
+        had data for, or None on fetch failure (so callers can avoid poisoning
+        the cache with negatives during a rate-limit episode)."""
+        import datetime as _dt
+
+        end_excl = end + _dt.timedelta(days=1)
+        try:
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(start=start.isoformat(), end=end_excl.isoformat(), auto_adjust=False)
+        except Exception as exc:
+            logger.debug("yahoo: bulk historical fetch error for {} [{}..{}]: {}", symbol, start, end, exc)
+            return None
+        if hist is None:
+            return None
+        if hist.empty:
+            return {}
+        try:
+            out: dict[_date, Decimal] = {}
+            for ts, close in hist["Close"].items():
+                d = ts.date() if hasattr(ts, "date") else _date.fromisoformat(str(ts)[:10])
+                out[d] = Decimal(str(round(float(close), 4)))
+            return out
+        except Exception as exc:
+            logger.debug("yahoo: bulk historical parse error for {}: {}", symbol, exc)
+            return None
+
     def fetch_splits(self, symbol: str) -> list[SplitEvent]:
         """Fetch all known splits for a symbol from yfinance. Returns [] on any error."""
         try:

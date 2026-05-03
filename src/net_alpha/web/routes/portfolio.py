@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from datetime import date as _date
 from decimal import Decimal
 
@@ -44,6 +44,35 @@ from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 
 router = APIRouter()
+
+# Forward-fill window mirrored from account_value._FORWARD_FILL_DAYS so the
+# warm range covers the dates the per-(ticker,date) loop will actually probe.
+_CURVE_WARM_PADDING_DAYS = 7
+
+
+def _warm_historical_for_curve(
+    *,
+    svc: PricingService,
+    eval_dates: list[date],
+    equity_lots: list,
+    benchmark_symbol: str | None,
+) -> None:
+    """Bulk-prefetch closes for every (equity ticker + benchmark, date) the
+    curve builder will probe. Without this, Lifetime view fan-outs to ~12K
+    sequential Yahoo calls and Yahoo rate-limits us into a hung request."""
+    if not eval_dates:
+        return
+    equity_tickers = sorted({lot.ticker for lot in equity_lots if lot.option_details is None})
+    # Skip when there's no portfolio history — the curve is trivially empty
+    # and warming the benchmark alone produces no useful chart.
+    if not equity_tickers:
+        return
+    tickers = list(equity_tickers)
+    if benchmark_symbol:
+        tickers.append(benchmark_symbol)
+    warm_start = min(eval_dates) - timedelta(days=_CURVE_WARM_PADDING_DAYS)
+    warm_end = max(eval_dates)
+    svc.warm_historical_range(tickers, warm_start, warm_end)
 
 
 def _resolve_profile(repo: Repository, account: str | None):
@@ -577,6 +606,14 @@ def portfolio_equity_curve(
     event_dates = sorted({t.date for t in trades} | {e.event_date for e in cash_events})
     eval_dates = build_eval_dates(period=period_tuple, today=today, event_dates=event_dates)
 
+    benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
+    _warm_historical_for_curve(
+        svc=svc,
+        eval_dates=eval_dates,
+        equity_lots=lots,
+        benchmark_symbol=benchmark_symbol,
+    )
+
     account_points = build_account_value_series(
         trades=trades,
         lots=lots,
@@ -585,7 +622,6 @@ def portfolio_equity_curve(
         get_close=svc.get_historical_close,
     )
 
-    benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
     try:
         benchmark_points = build_benchmark_series(
             symbol=benchmark_symbol,
@@ -719,6 +755,13 @@ def portfolio_body(
         today=today,
         event_dates=account_event_dates,
     )
+    benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
+    _warm_historical_for_curve(
+        svc=svc,
+        eval_dates=account_eval_dates,
+        equity_lots=scoped_lots,
+        benchmark_symbol=benchmark_symbol,
+    )
     account_points = build_account_value_series(
         trades=scoped_trades,
         lots=scoped_lots,
@@ -730,7 +773,6 @@ def portfolio_body(
     # Benchmark shadow series for the same date axis. Best-effort: a missing
     # benchmark must NOT break the chart, so we wrap the call in try/except
     # and pass empty list on any failure.
-    benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
     try:
         eq_dates = [p.on for p in account_points]
         benchmark_points = build_benchmark_series(

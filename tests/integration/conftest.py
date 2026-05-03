@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session
 
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
@@ -115,9 +115,11 @@ def settings(tmp_path: Path) -> Settings:
 
 @pytest.fixture
 def engine(settings: Settings):
-    """Engine bound to the temp DB; creates all tables once."""
+    """Engine bound to the temp DB. Uses init_db so the schema matches
+    production (includes hand-written migration tables like
+    historical_price_cache that aren't in SQLModel.metadata)."""
     eng = get_engine(settings.db_path)
-    SQLModel.metadata.create_all(eng)
+    init_db(eng)
     return eng
 
 

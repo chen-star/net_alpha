@@ -196,6 +196,15 @@ class PriceCacheRow(SQLModel, table=True):
     source: str  # e.g. "yahoo"
 
 
+class HistoricalPriceCacheRow(SQLModel, table=True):
+    __tablename__ = "historical_price_cache"
+
+    symbol: str = Field(primary_key=True)
+    on_date: str = Field(primary_key=True)  # YYYY-MM-DD
+    close_price: float | None = None  # NULL = negative cache
+    fetched_at: str  # ISO 8601 UTC timestamp
+
+
 class SplitRow(SQLModel, table=True):
     __tablename__ = "splits"
     __table_args__ = (UniqueConstraint("symbol", "split_date", name="uq_splits_symbol_date"),)

@@ -70,3 +70,15 @@ class PriceProvider(ABC):
         can leave this as a no-op.
         """
         return None
+
+    def get_historical_closes(self, symbol: str, start: _date, end: _date) -> dict[_date, Decimal] | None:
+        """Bulk-fetch closes for `symbol` over [start, end] inclusive.
+
+        Returns a dict keyed only by trading days the provider had data for —
+        callers MUST treat absent dates in the requested range as "no data"
+        and negative-cache them. Returns None to signal a fetch failure
+        (rate-limit, network) — distinct from "{} no rows found", which means
+        the call succeeded but returned no data. Providers without bulk
+        support can leave this as a no-op.
+        """
+        return None
