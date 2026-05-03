@@ -80,7 +80,7 @@ def test_v14_bumps_schema_version():
     with Session(engine) as s:
         migrate(s)
         v = s.exec(text("SELECT value FROM meta WHERE key='schema_version'")).first()
-        assert v[0] == "14"
+        assert v[0] == "15"
 
 
 def test_v14_idempotent():

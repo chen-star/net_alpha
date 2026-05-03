@@ -28,6 +28,8 @@ Schema versions:
         is set but basis_source is no longer transfer_in/transfer_out, and
         restores it from the row's action (Buy → transfer_in,
         Sell → transfer_out) while flipping transfer_basis_user_set=1.
+  v15 — Adds dismissed_inbox_items table for the Action Inbox panel
+        (single-column dismiss_key + ISO timestamp).
 """
 
 from __future__ import annotations
@@ -35,7 +37,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 14
+CURRENT_SCHEMA_VERSION = 15
 
 
 def get_schema_version(session: Session) -> int:
@@ -435,6 +437,19 @@ def _migrate_v13_to_v14(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v14_to_v15(session: Session) -> None:
+    """Create dismissed_inbox_items table for the Action Inbox panel.
+
+    Single PK column (dismiss_key) — keys are namespaced per signal type
+    (e.g. ``wash_rebuy:42``). Idempotent.
+    """
+    if not _table_exists(session, "dismissed_inbox_items"):
+        session.exec(
+            text("CREATE TABLE dismissed_inbox_items (dismiss_key TEXT PRIMARY KEY, dismissed_at TEXT NOT NULL)")
+        )
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -502,6 +517,10 @@ def migrate(session: Session) -> None:
     if current < 14:
         _migrate_v13_to_v14(session)
         set_schema_version(session, 14)
+        current = 14
+    if current < 15:
+        _migrate_v14_to_v15(session)
+        set_schema_version(session, 15)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
