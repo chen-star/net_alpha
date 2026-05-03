@@ -271,4 +271,4 @@ class DismissedInboxItemRow(SQLModel, table=True):
     __tablename__ = "dismissed_inbox_items"
 
     dismiss_key: str = Field(primary_key=True)
-    dismissed_at: str  # ISO 8601 timestamp
+    dismissed_at: str  # ISO 8601 UTC timestamp
