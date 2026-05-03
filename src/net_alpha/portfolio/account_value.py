@@ -247,4 +247,29 @@ def build_account_value_series(
             )
         )
 
+    # Forward-fill account_value through unpriced trailing dates so the chart
+    # line always reaches today's eval_date. Without this, missing recent
+    # closes (Yahoo lag, cold cache) leave a visual gap from the last priced
+    # date to today even though cash and lots haven't moved.
+    last_priced: AccountValuePoint | None = None
+    for i, p in enumerate(series):
+        if p.account_value is not None:
+            last_priced = p
+            continue
+        if last_priced is None:
+            continue  # no prior priced point; can't fill
+        # Replace this point with a forward-filled version (cash_balance and
+        # contributions still come from this point's actual cash_points lookup;
+        # only holdings_value / account_value / net_pl are forward-filled).
+        series[i] = AccountValuePoint(
+            on=p.on,
+            contributions=p.contributions,
+            holdings_value=last_priced.holdings_value,
+            cash_balance=p.cash_balance,
+            account_value=(p.cash_balance + last_priced.holdings_value).quantize(Decimal("0.01"))
+                           if last_priced.holdings_value is not None else None,
+            net_pl=((p.cash_balance + last_priced.holdings_value) - p.contributions).quantize(Decimal("0.01"))
+                   if last_priced.holdings_value is not None else None,
+        )
+
     return series

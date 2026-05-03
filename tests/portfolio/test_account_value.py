@@ -567,3 +567,55 @@ def test_account_value_at_skips_expired_option_lots():
     )
     # cash 1000 + expired option (skipped) → 1000.00
     assert val == Decimal("1000.00")
+
+
+def test_account_value_series_forward_fills_through_today_when_quotes_lag():
+    """When recent closes are unavailable (e.g. Yahoo lag, cold cache),
+    the series must still produce a non-None account_value through today
+    using the most recent priced holdings + current cash."""
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import CashEvent, Lot, Trade
+    from net_alpha.portfolio.account_value import (
+        build_account_value_series,
+        build_eval_dates,
+    )
+    from net_alpha.portfolio.cash_flow import build_cash_balance_series
+
+    today = dt.date(2026, 5, 3)
+    cash_events = [
+        CashEvent(account="X", event_date=dt.date(2026, 1, 5), kind="transfer_in", amount=10000),
+    ]
+    trades = [
+        Trade(
+            account="X", date=dt.date(2026, 4, 6), ticker="AAPL", action="Buy",
+            quantity=10.0, cost_basis=1500.0, proceeds=None,
+            symbol_raw="AAPL", basis_source="trade",
+        ),
+    ]
+    lots = [
+        Lot(
+            account="X", date=dt.date(2026, 4, 6), ticker="AAPL",
+            quantity=10.0, cost_basis=1500.0, adjusted_basis=1500.0, trade_id="t1",
+        ),
+    ]
+    cash_points = build_cash_balance_series(events=cash_events, trades=trades, account=None, period=None)
+    event_dates = sorted({t.date for t in trades} | {e.event_date for e in cash_events})
+    eval_dates = build_eval_dates(period=None, today=today, event_dates=event_dates)
+
+    # Closes available only through 2026-04-13 (one week after the buy).
+    def lagging_get_close(ticker, d):
+        if d <= dt.date(2026, 4, 13):
+            return Decimal("180.00")
+        return None
+
+    series = build_account_value_series(
+        trades=trades, lots=lots, cash_points=cash_points,
+        eval_dates=eval_dates, get_close=lagging_get_close,
+    )
+    assert series, "expected non-empty series"
+    assert series[-1].on == today
+    # Forward-fill: the last point's account_value should be cash + last-priced holdings.
+    # cash = 10000 - 1500 = 8500; holdings = 10 * 180 = 1800 → 10300
+    assert series[-1].account_value == Decimal("10300.00")
