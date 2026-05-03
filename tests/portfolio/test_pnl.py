@@ -117,6 +117,75 @@ def test_kpis_partial_when_some_lots_unpriced():
     assert k.missing_symbols == ("BITF",)
 
 
+def test_kpis_open_value_excludes_already_sold_lots():
+    """Regression: lot.quantity is the original buy size and never decremented
+    when the user sells. compute_kpis must FIFO-consume lots against sell
+    trades, otherwise open_position_value double-counts shares the user has
+    already disposed of."""
+    lots = [
+        _lot(id="l1", quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0),
+        _lot(id="l2", date=dt.date(2025, 3, 1), quantity=50.0, cost_basis=22_000.0, adjusted_basis=22_000.0),
+    ]
+    trades = [
+        _trade(id="tb1", action="Buy", quantity=100, cost_basis=40_000),
+        _trade(id="tb2", action="Buy", date=dt.date(2025, 3, 1), quantity=50, cost_basis=22_000),
+        # Sell 100: should fully consume the first lot via FIFO.
+        _trade(id="ts1", action="Sell", date=dt.date(2025, 6, 1), quantity=100, proceeds=46_000, cost_basis=40_000),
+    ]
+    k = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices={"SPY": _quote("SPY", 460)},
+        period_label="YTD",
+        period=(2026, 2027),
+        account=None,
+    )
+    # Only the second lot (50 shares) remains open after the FIFO sell.
+    assert k.open_position_value == Decimal("23000")  # 50 * 460
+    # Unrealized = market - prorated_basis = 23000 - 22000 = 1000.
+    assert k.period_unrealized == Decimal("1000")
+    assert k.lifetime_unrealized == Decimal("1000")
+
+
+def test_kpis_open_value_honors_gl_closures():
+    """When a Realized G/L CSV reports a closure that has no matching trade
+    row (Schwab logs option expirations / corporate actions only in GL),
+    compute_kpis must still treat the lot as closed."""
+    lots = [_lot(id="l1", quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
+    trades = [_trade(id="tb1", action="Buy", quantity=100, cost_basis=40_000)]
+    gl_lots = [
+        RealizedGLLot(
+            id="g1",
+            account_display="Tax",
+            symbol_raw="SPY",
+            ticker="SPY",
+            opened_date=dt.date(2025, 1, 15),
+            closed_date=dt.date(2025, 6, 1),
+            quantity=100.0,
+            proceeds=46_000.0,
+            cost_basis=40_000.0,
+            unadjusted_cost_basis=40_000.0,
+            wash_sale=False,
+            disallowed_loss=0.0,
+            term="Short",
+        ),
+    ]
+    k = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices={"SPY": _quote("SPY", 460)},
+        period_label="YTD",
+        period=(2026, 2027),
+        account=None,
+        gl_lots=gl_lots,
+    )
+    assert k.open_position_value == Decimal("0")
+    # No open lots are priced, so unrealized collapses too — unrealized for an
+    # empty open subset is just 0 (the all_unpriced guard only fires when there
+    # are equity lots that we couldn't price).
+    assert k.period_unrealized == Decimal("0")
+
+
 def _violation(loss_date, *, disallowed=100.0, confidence="Confirmed", loss_account="Tax", buy_account="Tax"):
     return WashSaleViolation(
         id="v",

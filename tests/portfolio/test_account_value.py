@@ -219,6 +219,52 @@ def test_holdings_value_options_carry_at_adjusted_basis():
     assert missing == ()
 
 
+def test_holdings_value_expired_option_drops_to_zero():
+    """An option whose expiry has passed contributes $0 — Schwab logs the
+    expiration only in Realized G/L, so a user who imported transactions but
+    not GL would otherwise carry the original premium forever and the equity
+    curve would overstate holdings."""
+    from net_alpha.models.domain import OptionDetails
+
+    opt = OptionDetails(strike=200, expiry=dt.date(2025, 4, 18), call_put="P")
+    t = Trade(
+        account="A1",
+        date=dt.date(2025, 3, 1),
+        ticker="SPY",
+        action="Buy",
+        quantity=1,
+        cost_basis=300,
+        proceeds=None,
+        option_details=opt,
+    )
+    lot = Lot(
+        trade_id="t1",
+        account="A1",
+        date=dt.date(2025, 3, 1),
+        ticker="SPY",
+        quantity=1,
+        cost_basis=300,
+        adjusted_basis=300,
+        option_details=opt,
+    )
+    # Before expiry: still carries at basis.
+    val_before, _ = holdings_value_at(
+        on=dt.date(2025, 4, 17),
+        trades=[t],
+        lots=[lot],
+        get_close=lambda sym, d: None,
+    )
+    assert val_before == Decimal("300")
+    # On the day after expiry: contributes nothing.
+    val_after, _ = holdings_value_at(
+        on=dt.date(2025, 4, 19),
+        trades=[t],
+        lots=[lot],
+        get_close=lambda sym, d: None,
+    )
+    assert val_after == Decimal("0")
+
+
 def test_holdings_value_empty_portfolio():
     val, missing = holdings_value_at(
         on=dt.date(2025, 6, 1),

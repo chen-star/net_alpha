@@ -123,6 +123,13 @@ def holdings_value_at(
         if rem_qty <= 0:
             continue
         if lot.option_details is not None:
+            # An option whose expiry has already passed is worth $0 — Schwab
+            # only logs the expiration in Realized G/L, so a user who imported
+            # transactions but not GL would otherwise carry the original
+            # premium forever. Un-expired options keep the basis-carry
+            # convention (see the spec for rationale).
+            if lot.option_details.expiry < on:
+                continue
             total += rem_basis
             continue
         close = _close_with_forward_fill(ticker=lot.ticker, on=on, get_close=get_close)

@@ -14,7 +14,7 @@ from decimal import Decimal
 from net_alpha.models.domain import Lot, Trade, WashSaleViolation
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.portfolio.models import KpiSet, WashImpact
-from net_alpha.portfolio.positions import compute_today_change
+from net_alpha.portfolio.positions import compute_today_change, consume_lots_fifo
 from net_alpha.pricing.provider import Quote
 
 # BTC basis_source values whose realization pairs with a matching STO. Excludes
@@ -194,14 +194,38 @@ def _index_gl_close_dates(
 _realized_in = realized_pl_from_trades
 
 
+def _gl_closures_from_lots(
+    gl_list: Iterable[RealizedGLLot],
+) -> tuple[dict[tuple[str, str], float], dict[tuple[str, str, float, str, str], float]]:
+    """Aggregate Realized G/L rows into the closure dicts that
+    ``consume_lots_fifo`` expects (equity, options).
+
+    Mirrors ``Repository.get_equity_gl_closures`` / ``get_option_gl_closures``
+    but works in-memory off a list, so KPI math doesn't need a Repository.
+    """
+    eq: dict[tuple[str, str], float] = {}
+    opt: dict[tuple[str, str, float, str, str], float] = {}
+    for r in gl_list:
+        if r.option_strike is None:
+            key_eq = (r.account_display, r.ticker)
+            eq[key_eq] = eq.get(key_eq, 0.0) + float(r.quantity)
+        else:
+            key_opt = (r.account_display, r.ticker, r.option_strike, r.option_expiry, r.option_call_put)
+            opt[key_opt] = opt.get(key_opt, 0.0) + float(r.quantity)
+    return eq, opt
+
+
 def _open_market_and_basis(
-    lots: Iterable[Lot],
+    consumed: Iterable[tuple[Lot, Decimal, Decimal]],
     prices: dict[str, Quote],
 ) -> tuple[Decimal, Decimal, tuple[str, ...]]:
     """Return (priced_market, priced_basis, missing_symbols).
 
-    priced_market = Σ(qty × price) over equity lots that have a quote.
-    priced_basis  = Σ(adjusted_basis) over the SAME priced lots.
+    Input is the output of ``consume_lots_fifo`` — ``(lot, rem_qty, rem_basis)``
+    triples. Fully-closed lots (rem_qty == 0) and option lots are skipped.
+
+    priced_market = Σ(rem_qty × price) over open equity lots that have a quote.
+    priced_basis  = Σ(rem_basis) over the SAME priced lots.
     missing_symbols = sorted unique tickers we couldn't price.
 
     Computing both market AND basis from the same priced subset means
@@ -213,15 +237,17 @@ def _open_market_and_basis(
     total_value: Decimal = Decimal("0")
     priced_basis: Decimal = Decimal("0")
     missing: set[str] = set()
-    for lot in lots:
+    for lot, rem_qty, rem_basis in consumed:
+        if rem_qty <= 0:
+            continue
         if lot.option_details is not None:
             continue  # equity-only for KPI market value
         quote = prices.get(lot.ticker)
         if quote is None:
             missing.add(lot.ticker)
             continue
-        total_value += Decimal(str(lot.quantity)) * quote.price
-        priced_basis += Decimal(str(lot.adjusted_basis))  # NOTE: adjusted_basis is total, not per-share
+        total_value += rem_qty * quote.price
+        priced_basis += rem_basis  # already total dollars, prorated by FIFO consumption
     return total_value, priced_basis, tuple(sorted(missing))
 
 
@@ -249,7 +275,19 @@ def compute_kpis(
     period_realized_economic = _realized_in(trades, period, gl_lots=gl_list, include_disallowed_loss=False)
     lifetime_realized_economic = _realized_in(trades, None, gl_lots=gl_list, include_disallowed_loss=False)
 
-    market, basis, missing = _open_market_and_basis(lots, prices)
+    # FIFO-consume buy lots against trade-side sells AND any imported Realized
+    # G/L closures — `lot.quantity` is the original buy size and is never
+    # decremented in storage, so iterating raw lots double-counts every share
+    # the user has already sold. See ``portfolio.positions.consume_lots_fifo``.
+    eq_closures, opt_closures = _gl_closures_from_lots(gl_list or [])
+    consumed = consume_lots_fifo(
+        lots=lots,
+        trades=trades,
+        gl_closures=eq_closures,
+        gl_option_closures=opt_closures,
+    )
+
+    market, basis, missing = _open_market_and_basis(consumed, prices)
     has_equity_lots = any(lot.option_details is None for lot in lots)
     # "All unpriced" = we have equity lots but couldn't price a single one.
     # Keep showing — in that case so users see "no data" rather than a misleading $0.
@@ -266,10 +304,12 @@ def compute_kpis(
         open_value = market
         lifetime_net_pl = lifetime_realized + unrealized
 
-    # Today tile: per-lot (price - prev_close) * qty, skipping lots with no prev close.
+    # Today tile: per-lot (price - prev_close) * remaining_qty, skipping lots
+    # with no prev close. Uses the FIFO-consumed quantities so a closed lot
+    # doesn't keep contributing to today's $ change.
     quotes_with_prev = {sym: (q.price, q.previous_close) for sym, q in prices.items()}
     open_lots_by_sym: list[tuple[str, Decimal]] = [
-        (lot.ticker, Decimal(str(lot.quantity))) for lot in lots if lot.option_details is None
+        (lot.ticker, rem_qty) for lot, rem_qty, _ in consumed if rem_qty > 0 and lot.option_details is None
     ]
     today_change, prev_value = compute_today_change(open_lots_by_sym, quotes_with_prev)
     today_pct: Decimal | None = (today_change / prev_value) if prev_value else None

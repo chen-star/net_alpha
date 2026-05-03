@@ -308,12 +308,15 @@ def portfolio_kpis(
     cash_events = repo.list_cash_events(account_id=None)
     if account:
         cash_events = [e for e in cash_events if e.account == account]
+        scoped_trades_for_cash = [t for t in trades if t.account == account]
+    else:
+        scoped_trades_for_cash = trades
     holdings_value = kpis.open_position_value or Decimal("0")
     cash_kpis = compute_cash_kpis(
         events=cash_events,
-        trades=trades,
+        trades=scoped_trades_for_cash,
         holdings_value=holdings_value,
-        account=None,  # already filtered in compute_kpis
+        account=None,  # events + trades are pre-scoped above
         period=period_tuple,
     )
 
