@@ -75,12 +75,12 @@ def test_v14_leaves_non_transfer_user_set_untouched():
         assert row[0] == "user_set"
 
 
-def test_v14_bumps_schema_version():
+def test_migration_chain_from_v13_reaches_current_version():
     engine = _v13_engine_with_buggy_transfer_rows()
     with Session(engine) as s:
         migrate(s)
         v = s.exec(text("SELECT value FROM meta WHERE key='schema_version'")).first()
-        assert v[0] == "14"
+        assert v[0] == "15"
 
 
 def test_v14_idempotent():

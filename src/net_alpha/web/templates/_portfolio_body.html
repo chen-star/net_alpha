@@ -2,6 +2,14 @@
    Tax planning panels moved to /tax (P1, P9).
    Rendered by /portfolio/body in one shot. #}
 
+{# Action Inbox — lazy-loaded; respects the page's account filter. #}
+<div id="inbox-panel"
+     hx-get="/portfolio/inbox{% if account %}?account={{ account }}{% endif %}"
+     hx-trigger="load"
+     hx-swap="outerHTML"
+     class="mb-4">
+</div>
+
 <div id="portfolio-kpis" class="mb-4">
   {% include "_portfolio_kpis.html" %}
 </div>
