@@ -16,6 +16,61 @@ from net_alpha.web.dependencies import get_pricing_service, get_repository
 router = APIRouter()
 
 
+def _build_sim_positions(
+    *,
+    repo: Repository,
+    pricing: PricingService,
+) -> list:
+    """Return Position objects for the sim suggestions, with FIFO-consumed
+    quantities. Closed positions (fully-sold equities like WOLF) are
+    excluded; partially-closed positions reflect remaining quantity.
+    """
+    from net_alpha.portfolio.positions import compute_open_positions
+    from net_alpha.portfolio.sim_suggestions import Position
+
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    gl_closures = repo.get_equity_gl_closures()
+    gl_option_closures = repo.get_option_gl_closures()
+    gl_lots = repo.list_all_gl_lots()
+
+    symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
+    quotes = pricing.get_prices(symbols) if symbols else {}
+
+    pos_rows = compute_open_positions(
+        trades=trades,
+        lots=lots,
+        prices=quotes,
+        period=None,
+        account=None,
+        include_closed=False,
+        gl_closures=gl_closures,
+        gl_option_closures=gl_option_closures,
+        gl_lots=gl_lots,
+    )
+
+    positions: list = []
+    for r in pos_rows:
+        if r.qty is None or r.qty <= 0:
+            continue
+        if r.market_value is None:
+            continue
+        # last_price = market_value / qty (compute_open_positions doesn't surface it directly)
+        last_price = Decimal(str(r.market_value)) / Decimal(str(r.qty))
+        # Account label: use the first account (or the chip if available).
+        account_label = r.accounts[0] if r.accounts else ""
+        positions.append(
+            Position(
+                symbol=r.symbol,
+                account_label=account_label,
+                qty=Decimal(str(r.qty)),
+                cost_basis=Decimal(str(r.open_cost)),
+                last_price=last_price,
+            )
+        )
+    return positions
+
+
 @router.get("/sim", response_class=HTMLResponse)
 def sim_form(
     request: Request,
@@ -168,41 +223,31 @@ def sim_suggestions(
 
     from net_alpha.portfolio.sim_suggestions import (
         LossClose,
-        Position,
         top_suggestions,
     )
 
     today = date.today()
 
-    # Aggregate open lots by (account, symbol) — equity only.
-    lots = repo.all_lots()
-    by_key: dict[tuple[str, str], list] = {}
-    for lot in lots:
-        if lot.option_details is not None:
-            continue
-        by_key.setdefault((lot.account, lot.ticker), []).append(lot)
+    positions = _build_sim_positions(repo=repo, pricing=pricing)
 
-    symbols = sorted({k[1] for k in by_key.keys()})
-    quotes = pricing.get_prices(symbols) if symbols else {}
-
-    positions: list[Position] = []
-    for (account, symbol), lot_list in by_key.items():
-        qty = sum((Decimal(str(lot.quantity)) for lot in lot_list), Decimal("0"))
-        if qty <= 0:
-            continue
-        basis = sum((Decimal(str(lot.adjusted_basis)) for lot in lot_list), Decimal("0"))
-        q = quotes.get(symbol)
-        if q is None or q.price is None:
-            continue
-        positions.append(
-            Position(
-                symbol=symbol,
-                account_label=account,
-                qty=qty,
-                cost_basis=basis,
-                last_price=Decimal(str(q.price)),
-            )
-        )
+    # Quotes for the loss-closes block below — needs equity tickers from
+    # recent sells (some of which won't appear in `positions` because they're
+    # now fully closed; we still want their last price for the wash-risk chip).
+    sell_tickers = {
+        t.ticker
+        for t in repo.all_trades()
+        if t.action.lower() in {"sell", "sell to close"}
+        and (today - t.date).days <= 30
+        and t.option_details is None
+    }
+    open_tickers = {p.symbol for p in positions}
+    extra = sell_tickers - open_tickers
+    if extra:
+        more_quotes = pricing.get_prices(sorted(extra))
+        open_quotes = pricing.get_prices(sorted(open_tickers)) if open_tickers else {}
+        quotes = {**open_quotes, **more_quotes}
+    else:
+        quotes = pricing.get_prices(sorted(open_tickers)) if open_tickers else {}
 
     # Recent loss closes — last 30 days, equity only.
     losses: list[LossClose] = []
