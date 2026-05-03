@@ -36,6 +36,8 @@ def positions_page(
     account: str | None = None,
     view: str | None = None,
     only_harvestable: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
     repo: Repository = Depends(get_repository),
     pricing: PricingService = Depends(get_pricing_service),
     etf_pairs: dict[str, list[str]] = Depends(get_etf_pairs),
@@ -101,8 +103,26 @@ def positions_page(
             period=period_filter,
             account_display=account_display,
         )
-        ctx["closed_rows"] = closed_rows
+        # Sort by closed_date desc so most recent lots appear on page 1.
+        closed_rows = sorted(closed_rows, key=lambda r: r.closed_date, reverse=True)
+
+        page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
+        page_norm = max(1, page)
+        total_rows = len(closed_rows)
+        total_pages = max(1, (total_rows + page_size_norm - 1) // page_size_norm)
+        page_norm = min(page_norm, total_pages)
+        start_idx = (page_norm - 1) * page_size_norm
+        end_idx = start_idx + page_size_norm
         ctx["closed_total_realized"] = sum((r.realized_pl for r in closed_rows), Decimal("0"))
+        ctx["closed_rows"] = closed_rows[start_idx:end_idx]
+        ctx["pagination"] = {
+            "page": page_norm,
+            "page_size": page_size_norm,
+            "total_pages": total_pages,
+            "total_rows": total_rows,
+            "page_size_options": (10, 25, 50, 100),
+            "view": "closed",
+        }
         if request.headers.get("hx-request"):
             return request.app.state.templates.TemplateResponse(
                 request,
