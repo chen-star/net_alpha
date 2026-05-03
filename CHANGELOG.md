@@ -2,6 +2,48 @@
 
 
 
+## v0.46.1 (2026-05-03)
+
+### Chore
+
+* chore: sync uv.lock to v0.46.0
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7f97e2c`](https://github.com/chen-star/net_alpha/commit/7f97e2c3bb6b86b2d9682c694e36d7d8b1f47227))
+
+### Fix
+
+* fix(ui): explainer readability + pagination shared partial
+
+Four user-reported issues:
+
+1. The × close button on the explainer panels was using text-label-3,
+   which resolves to ~35% alpha white on dark theme — barely visible
+   against the panel surface. Switched to text-label-1 + bold + larger
+   font so it actually renders.
+
+2. The Total Return explainer used a 2-column table where the right
+   cell crammed both the number and a parenthetical description like
+   &#34;(account value at period start)&#34;. Long descriptions expanded the
+   column and pushed labels to wrap mid-word. Restructured to a
+   1fr/auto grid: labels left, right-aligned numbers. Footnotes for
+   variable definitions live in their own block below.
+
+3. The Unrealized P/L explainer listed every position with full math.
+   User wants aggregate formulas only. Replaced per-line breakdown
+   with three sums: long stock &amp; options (Σ market − Σ basis),
+   short options (Σ premium − Σ liability), and a final total. Added
+   long_market_total / long_cost_total / short_premium_total /
+   short_liability_total fields to UnrealizedBreakdown to support this.
+
+4. Pagination footer markup was duplicated four times across closed,
+   options, harvest, and plan templates. Extracted into a shared
+   _pagination_footer.html partial parameterized by base URL, extra
+   query string, target id, and swap mode. All four views now render
+   identical UI by construction.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1655162`](https://github.com/chen-star/net_alpha/commit/16551620f3297e063a518fa2df1505fb918b6307))
+
+
 ## v0.46.0 (2026-05-03)
 
 ### Chore
