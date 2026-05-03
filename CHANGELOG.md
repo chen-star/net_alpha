@@ -2,6 +2,83 @@
 
 
 
+## v0.44.0 (2026-05-03)
+
+### Chore
+
+* chore: sync uv.lock to v0.43.0
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b56dc4b`](https://github.com/chen-star/net_alpha/commit/b56dc4b0932c00de57c84f2fff41c747205058ec))
+
+### Feature
+
+* feat(portfolio): include option basis &amp; treat sweeps as cash-neutral
+
+Two reconciliation gaps closed so the headline Total Account Value
+tracks Schwab&#39;s combined account total:
+
+1. compute_kpis now includes unexpired option lots in
+   open_position_value, carried at basis (no live option-quote provider
+   exists — basis-carry contributes equally to market AND basis so
+   unrealized stays $0, the only honest answer without true marks).
+   Expired option lots still contribute nothing.
+
+2. sweep_in / sweep_out events move money between Schwab1 brokerage
+   cash and the Schwab Futures sub-account; both are part of the same
+   account total. Treating them as real cash flows made our combined
+   cash balance drift from Schwab as cash sloshed between sub-accounts.
+   They&#39;re now cash-neutral in cash_flow.py and excluded from the cash
+   provenance trace.
+
+On a real account with 7 open option lots and ~$4.6k parked in
+futures, this brings net-alpha&#39;s reported total from $33,611 to
+$43,798 versus Schwab&#39;s reported ~$43,000. ([`225ac25`](https://github.com/chen-star/net_alpha/commit/225ac255649de2239631e2abcba596ed7e266ee1))
+
+### Fix
+
+* fix(portfolio): correct account-value reporting on KPI strip &amp; equity curve
+
+Three independent bugs were inflating the headline Total Account Value
+and the equity curve series for users with active trade history:
+
+1. compute_kpis (pnl._open_market_and_basis) iterated raw Lot rows,
+   but lot.quantity is the original buy size and is never decremented
+   when the user sells — only consume_lots_fifo applies that in memory.
+   Wire compute_kpis through consume_lots_fifo (with imported Realized
+   G/L closures) so open_position_value and today_change reflect only
+   the still-open portion.
+
+2. portfolio_kpis (web/routes/portfolio.py) pre-scoped cash_events to
+   the selected account but passed unscoped trades to compute_cash_kpis
+   — leaking every other account&#39;s trade cash impact into the displayed
+   cash balance. Pre-scope trades the same way the body &amp; equity-curve
+   handlers already do.
+
+3. holdings_value_at carried option lots at basis indefinitely, even
+   after expiry. Schwab logs option expirations only in Realized G/L,
+   so users who didn&#39;t import the GL CSV saw the original premium
+   accumulate forever in the equity curve. Treat option lots whose
+   expiry &lt; as_of date as worth $0.
+
+Tests added for each: Buy-then-Sell FIFO, GL-only closure, and
+post-expiry option carry. ([`ae2b683`](https://github.com/chen-star/net_alpha/commit/ae2b683d2276f670ef05c01a89b8c43b262c7d58))
+
+### Refactor
+
+* refactor(web): use cached tax config for inbox; clarify body comment
+
+- _resolve_inbox_rates now takes the TaxConfig from
+  request.app.state.tax_brackets_cfg (loaded once at startup, refreshed
+  by /settings POST) instead of re-reading config.yaml per request.
+  Aligns the inbox with the rest of the dashboard&#39;s tax projections so
+  rate updates surface uniformly.
+- Update _portfolio_body.html comment to acknowledge the Action Inbox
+  alongside the historical wash-watch-moved note.
+- Sync uv.lock with the 0.42.1 version bump that landed upstream.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e86d9e8`](https://github.com/chen-star/net_alpha/commit/e86d9e8cfda0a9e00ac7e8d6a7d5832b32ead498))
+
+
 ## v0.43.0 (2026-05-03)
 
 ### Feature
