@@ -2,6 +2,55 @@
 
 
 
+## v0.42.1 (2026-05-03)
+
+### Fix
+
+* fix(portfolio): bulk-prefetch historical closes so Lifetime view loads
+
+The Lifetime equity-curve / benchmark builders fanned out to
+O(eval_dates × tickers × 7) sequential yfinance calls — ~12K rate-limited
+requests for a multi-year, ~30-ticker portfolio. The HTMX /portfolio/body
+fragment never returned, leaving the Overview page body empty.
+
+Add a bulk get_historical_closes(symbol, start, end) provider API plus
+PricingService.warm_historical_range, called from portfolio_body and
+portfolio_equity_curve before the curve build. Collapses ~12K calls into
+~30 (one per symbol). Provider failure returns None so we don&#39;t poison
+the cache with negatives during a rate-limit episode.
+
+Also: register HistoricalPriceCacheRow as a SQLModel so fresh DBs (test
+fixtures + new prod installs) actually create the table — migrate()
+short-circuits at schema_version=0 instead of running v11→v12. Switch
+test fixtures to init_db() to mirror production schema.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b8abdf1`](https://github.com/chen-star/net_alpha/commit/b8abdf1df54d866f1acffbf963c98fc2f8edf3ba))
+
+### Refactor
+
+* refactor(portfolio): drop legacy equity_curve module
+
+Removes the realized-only build_equity_curve helper, its EquityPoint view
+model (and orphan total_pl field), the dead points/year wiring in
+portfolio_body, and the test file. The new build_account_value_series
+fully replaced these in the equity-curve redesign.
+
+Also resyncs uv.lock to v0.41.2 and rewords two doc strings that
+referenced the removed types.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cba2df0`](https://github.com/chen-star/net_alpha/commit/cba2df0b018b093c8db69abdad4c2434d9015ca3))
+
+### Style
+
+* style: apply ruff format
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4d2edf0`](https://github.com/chen-star/net_alpha/commit/4d2edf0798bb44b1832bcbe57d942f7f81d0a607))
+
+### Unknown
+
+* Merge remote-tracking branch &#39;origin/master&#39; ([`7e9f310`](https://github.com/chen-star/net_alpha/commit/7e9f31030e419dd3bbd62d226fcde4da8163b9ab))
+
+
 ## v0.42.0 (2026-05-02)
 
 ### Chore
