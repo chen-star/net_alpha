@@ -88,7 +88,7 @@ def compute_option_expiry(
 
         quote = quotes.get(lot.ticker)
         underlying_price: Decimal | None = None
-        if quote is not None and getattr(quote, "price", None) is not None:
+        if quote is not None:
             underlying_price = Decimal(str(quote.price))
 
         # OPTION_EXPIRY (always emitted for in-window lots).
@@ -114,6 +114,8 @@ def compute_option_expiry(
                 dollar_impact=market_value,
                 severity=_expiry_severity(days_until),
                 deep_link=f"/ticker/{lot.ticker}",
+                # extras: read by the panel template (Task 10) for chip styling and
+                # the "long/short" badge — keep keys stable.
                 extras={"is_short": is_short, "strike": float(strike), "call_put": cp},
             )
         )

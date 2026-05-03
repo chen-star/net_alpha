@@ -136,3 +136,61 @@ def test_long_itm_call_no_assignment_risk():
     prices = make_prices_stub({"AAPL": Decimal("210")})
     items = compute_option_expiry(repo=repo, prices=prices, today=today)
     assert all(i.signal_type is not SignalType.ASSIGNMENT_RISK for i in items)
+
+
+def test_long_option_expiring_in_14_days_emitted_as_info():
+    """Boundary: 14d to expiry is the inclusion edge; severity drops to INFO."""
+    today = date(2026, 5, 1)
+    expiry = date(2026, 5, 15)  # 14 days
+    repo = make_repo(lots=[_opt(lid="1", ticker="AAPL", strike=200, expiry=expiry, call_put="C", qty=1)])
+    prices = make_prices_stub({"AAPL": Decimal("210")})
+    items = compute_option_expiry(repo=repo, prices=prices, today=today)
+    expiry_items = [i for i in items if i.signal_type is SignalType.OPTION_EXPIRY]
+    assert len(expiry_items) == 1
+    assert expiry_items[0].severity is Severity.INFO
+
+
+def test_long_option_expiring_in_1_day_is_urgent():
+    """Boundary: days_until == 1 hits the URGENT_DAYS threshold."""
+    today = date(2026, 5, 1)
+    expiry = date(2026, 5, 2)
+    repo = make_repo(lots=[_opt(lid="1", ticker="AAPL", strike=200, expiry=expiry, call_put="C", qty=1)])
+    prices = make_prices_stub({"AAPL": Decimal("210")})
+    items = compute_option_expiry(repo=repo, prices=prices, today=today)
+    expiry_items = [i for i in items if i.signal_type is SignalType.OPTION_EXPIRY]
+    assert len(expiry_items) == 1
+    assert expiry_items[0].severity is Severity.URGENT
+    assert expiry_items[0].days_until == 1
+
+
+def test_account_filter_excludes_other_accounts():
+    today = date(2026, 5, 1)
+    expiry = date(2026, 5, 5)
+    repo = make_repo(
+        lots=[
+            make_lot(
+                lid="A",
+                trade_id="t-A",
+                account="Schwab/A",
+                acquired=date(2024, 1, 1),
+                ticker="AAPL",
+                quantity=1,
+                cost_basis=100,
+                option=OptionDetails(strike=200, expiry=expiry, call_put="C"),
+            ),
+            make_lot(
+                lid="B",
+                trade_id="t-B",
+                account="Schwab/B",
+                acquired=date(2024, 1, 1),
+                ticker="GOOG",
+                quantity=1,
+                cost_basis=100,
+                option=OptionDetails(strike=200, expiry=expiry, call_put="C"),
+            ),
+        ]
+    )
+    prices = make_prices_stub({"AAPL": Decimal("210"), "GOOG": Decimal("210")})
+    items = compute_option_expiry(repo=repo, prices=prices, today=today, account="Schwab/A")
+    tickers = {i.ticker for i in items}
+    assert tickers == {"AAPL"}

@@ -63,3 +63,27 @@ def test_multiple_violations_same_ticker_emit_separate_items():
     )
     items = compute_wash_rebuy(repo=repo, today=today)
     assert {i.dismiss_key for i in items} == {"wash_rebuy:1", "wash_rebuy:2"}
+
+
+def test_account_filter_excludes_other_accounts():
+    today = date(2026, 5, 5)
+    repo = make_repo(
+        violations=[
+            make_violation(vid="1", loss_sale_date=date(2026, 4, 1), loss_account="Schwab/A", buy_account="Schwab/A"),
+            make_violation(vid="2", loss_sale_date=date(2026, 4, 1), loss_account="Schwab/B", buy_account="Schwab/B"),
+        ]
+    )
+    items = compute_wash_rebuy(repo=repo, today=today, account="Schwab/A")
+    assert {i.dismiss_key for i in items} == {"wash_rebuy:1"}
+
+
+def test_account_filter_includes_cross_account_buys():
+    """If filter matches the BUY side, the violation should still surface."""
+    today = date(2026, 5, 5)
+    repo = make_repo(
+        violations=[
+            make_violation(vid="1", loss_sale_date=date(2026, 4, 1), loss_account="Schwab/A", buy_account="Schwab/B"),
+        ]
+    )
+    items = compute_wash_rebuy(repo=repo, today=today, account="Schwab/B")
+    assert {i.dismiss_key for i in items} == {"wash_rebuy:1"}

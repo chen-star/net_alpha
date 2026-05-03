@@ -33,7 +33,7 @@ def compute_wash_rebuy(
     for v in repo.all_violations():
         if v.loss_sale_date is None:
             continue
-        if account and v.loss_account != account and v.buy_account != account:
+        if account is not None and v.loss_account != account and v.buy_account != account:
             continue
         safe_date = v.loss_sale_date + timedelta(days=WASH_WINDOW_DAYS)
         if today < safe_date:

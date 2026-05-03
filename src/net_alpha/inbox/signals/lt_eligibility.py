@@ -63,7 +63,7 @@ def compute_lt_eligibility(
 
         quote = quotes.get(lot.ticker)
         cost_of_st: Decimal | None = None
-        if quote is not None and getattr(quote, "price", None) is not None:
+        if quote is not None:
             current_price = Decimal(str(quote.price))
             unrealized = (current_price * Decimal(str(lot.quantity))) - Decimal(str(lot.adjusted_basis))
             if unrealized <= 0:

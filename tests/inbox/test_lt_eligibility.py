@@ -89,3 +89,35 @@ def test_lookahead_override_respected():
         lookahead_days=90,
     )
     assert len(items) == 1
+
+
+def test_lot_at_exactly_366_days_excluded():
+    """Boundary: a lot acquired exactly 366 days ago has days_until=0,
+    which the > 0 guard correctly excludes (already long-term)."""
+    today = date(2026, 5, 1)
+    acquired = today - timedelta(days=366)
+    repo = make_repo(lots=[make_lot(acquired=acquired, ticker="AAPL", quantity=10, cost_basis=1000)])
+    prices = make_prices_stub({"AAPL": Decimal("200")})
+    items = compute_lt_eligibility(repo=repo, prices=prices, today=today, st_rate=ST_RATE, lt_rate=LT_RATE)
+    assert items == []
+
+
+def test_account_filter_excludes_other_accounts():
+    today = date(2026, 5, 1)
+    acquired = today - timedelta(days=350)
+    repo = make_repo(
+        lots=[
+            make_lot(lid="1", account="Schwab/A", acquired=acquired, ticker="A", quantity=1, cost_basis=10),
+            make_lot(lid="2", account="Schwab/B", acquired=acquired, ticker="B", quantity=1, cost_basis=10),
+        ]
+    )
+    prices = make_prices_stub({"A": Decimal("11"), "B": Decimal("11")})
+    items = compute_lt_eligibility(
+        repo=repo,
+        prices=prices,
+        today=today,
+        st_rate=ST_RATE,
+        lt_rate=LT_RATE,
+        account="Schwab/A",
+    )
+    assert {i.dismiss_key for i in items} == {"lt_eligible:1"}
