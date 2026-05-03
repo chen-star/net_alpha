@@ -7,7 +7,7 @@
 <div id="positions-tab-content">
   <div class="flex items-center justify-between mb-3">
     <div data-testid="closed-summary" class="text-label-2 text-[13px]">
-      <strong class="text-text font-semibold">{{ closed_rows|length }} closed lot{% if closed_rows|length != 1 %}s{% endif %}</strong>
+      <strong class="text-text font-semibold">{{ closed_rows_total|default(closed_rows|length) }} closed lot{% if (closed_rows_total|default(closed_rows|length)) != 1 %}s{% endif %}</strong>
       {% if closed_rows %}
         ·
         {% if closed_total_realized < 0 %}

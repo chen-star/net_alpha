@@ -582,6 +582,19 @@ def holdings_options(
         "net_premium": premium_received_total - long_cost_total,
         "avg_dte": avg_dte,
     }
+    # Compute per-side/per-type counts from the full (pre-slice) list so the
+    # summary header reflects totals even when pagination is active.
+    long_count = sum(1 for o in open_options if o.side == "long")
+    short_count = sum(1 for o in open_options if o.side == "short")
+    put_count = sum(1 for o in open_options if o.call_put == "P")
+    call_count = sum(1 for o in open_options if o.call_put == "C")
+    option_counts = {
+        "long": long_count,
+        "short": short_count,
+        "puts": put_count,
+        "calls": call_count,
+    }
+
     page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
     page_norm = max(1, page)
     total_rows = len(open_options)
@@ -607,6 +620,7 @@ def holdings_options(
             "premium_received_total": premium_received_total,
             "long_cost_total": long_cost_total,
             "options_summary": options_summary,
+            "option_counts": option_counts,
             "today": today,
             "selected_account": account or "",
             "pagination": pagination,
@@ -1079,10 +1093,21 @@ def explain_unrealized(
         trades = [t for t in trades if t.account == account]
         lots = [lt for lt in lots if lt.account == account]
 
-    consumed = consume_lots_fifo(lots=lots, trades=trades)
+    gl_closures = repo.get_equity_gl_closures()
+    gl_option_closures = repo.get_option_gl_closures()
+    if account:
+        gl_closures = {k: v for k, v in gl_closures.items() if k[0] == account}
+        gl_option_closures = {k: v for k, v in gl_option_closures.items() if k[0] == account}
+
+    consumed = consume_lots_fifo(
+        lots=lots,
+        trades=trades,
+        gl_closures=gl_closures,
+        gl_option_closures=gl_option_closures,
+    )
     short_rows = compute_open_short_option_positions(
         trades,
-        gl_option_closures=repo.get_option_gl_closures(),
+        gl_option_closures=gl_option_closures,
     )
     symbols = sorted({lot.ticker for lot in lots} | {row.ticker for row in short_rows})
     prices = svc.get_prices(symbols) if symbols else {}

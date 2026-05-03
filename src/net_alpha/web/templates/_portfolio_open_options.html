@@ -4,19 +4,19 @@
     premium_received_total: Decimal
     long_cost_total: Decimal
     today: date #}
-{% set _expanded = open_options|length > 0 %}
-{% set _puts = open_options | selectattr('call_put', 'equalto', 'P') | list %}
-{% set _calls = open_options | selectattr('call_put', 'equalto', 'C') | list %}
-{% set _longs = open_options | selectattr('side', 'equalto', 'long') | list %}
-{% set _shorts = open_options | selectattr('side', 'equalto', 'short') | list %}
+{% set _expanded = open_options|length > 0 or (option_counts is defined and (option_counts.long > 0 or option_counts.short > 0)) %}
+{# Use option_counts from the route (computed pre-slice) for accurate totals when paginated.
+   Fall back to counting from open_options (the page slice) when option_counts is absent. #}
+{% set _long_count = option_counts.long|default(open_options | selectattr('side', 'equalto', 'long') | list | length) %}
+{% set _short_count = option_counts.short|default(open_options | selectattr('side', 'equalto', 'short') | list | length) %}
 
 <details{% if _expanded %} open{% endif %}>
   <summary class="panel-head cursor-pointer">
     <h4>Open options</h4>
     <span class="meta">
-      {% if _longs %}{{ _longs|length }} long{% endif %}
-      {% if _longs and _shorts %} · {% endif %}
-      {% if _shorts %}{{ _shorts|length }} short{% endif %}
+      {% if _long_count %}{{ _long_count }} long{% endif %}
+      {% if _long_count and _short_count %} · {% endif %}
+      {% if _short_count %}{{ _short_count }} short{% endif %}
       {% if cash_secured_total %} · ${{ "{:,.0f}".format(cash_secured_total) }} secured{% endif %}
       {% if premium_received_total %} · premium <span class="text-pos">+${{ "%.2f"|format(premium_received_total) }}</span>{% endif %}
       {% if long_cost_total %} · long cost <span class="text-label-1">${{ "%.2f"|format(long_cost_total) }}</span>{% endif %}

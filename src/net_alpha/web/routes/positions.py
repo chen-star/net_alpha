@@ -113,6 +113,7 @@ def positions_page(
         page_norm = min(page_norm, total_pages)
         start_idx = (page_norm - 1) * page_size_norm
         end_idx = start_idx + page_size_norm
+        ctx["closed_rows_total"] = len(closed_rows)  # full count for the header
         ctx["closed_total_realized"] = sum((r.realized_pl for r in closed_rows), Decimal("0"))
         ctx["closed_rows"] = closed_rows[start_idx:end_idx]
         ctx["pagination"] = {

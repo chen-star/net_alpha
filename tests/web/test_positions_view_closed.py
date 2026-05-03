@@ -115,3 +115,34 @@ def test_closed_view_period_filter_excludes_other_years(tmp_path):
     r = client.get("/positions?view=closed&period=lifetime")
     assert r.status_code == 200
     assert "AAPL" in r.text
+
+
+def test_closed_positions_header_shows_total_count_not_page_count(tmp_path):
+    """When pagination kicks in (page_size < total rows), the header must
+    show the total row count, not just the number of rows on the current page.
+    """
+    # Seed 3 GL lots but request page_size=2 — header must say "3 closed lots"
+    # not "2 closed lots".
+    gl_lots = [
+        RealizedGLLot(
+            account_display="Schwab/Tax",
+            symbol_raw=sym,
+            ticker=sym,
+            closed_date=date(2025, 3, 1),
+            opened_date=date(2025, 1, 1),
+            quantity=1.0,
+            proceeds=110.0,
+            cost_basis=100.0,
+            unadjusted_cost_basis=100.0,
+            wash_sale=False,
+            disallowed_loss=0.0,
+            term="Short Term",
+        )
+        for sym in ["AAPL", "MSFT", "GOOG"]
+    ]
+    settings = _seed(tmp_path, gl_lots=gl_lots)
+    client = TestClient(create_app(settings))
+    r = client.get("/positions?view=closed&period=lifetime&page=1&page_size=2")
+    assert r.status_code == 200
+    # Header must reflect total (3), not page size (2).
+    assert "3 closed lots" in r.text
