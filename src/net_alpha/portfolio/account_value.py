@@ -267,9 +267,11 @@ def build_account_value_series(
             holdings_value=last_priced.holdings_value,
             cash_balance=p.cash_balance,
             account_value=(p.cash_balance + last_priced.holdings_value).quantize(Decimal("0.01"))
-                           if last_priced.holdings_value is not None else None,
+            if last_priced.holdings_value is not None
+            else None,
             net_pl=((p.cash_balance + last_priced.holdings_value) - p.contributions).quantize(Decimal("0.01"))
-                   if last_priced.holdings_value is not None else None,
+            if last_priced.holdings_value is not None
+            else None,
         )
 
     return series

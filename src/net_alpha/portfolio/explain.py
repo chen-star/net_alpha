@@ -34,9 +34,9 @@ class TotalReturnBreakdown:
 class UnrealizedLongLine:
     """One row in the long stock/option section of the unrealized panel."""
 
-    symbol: str            # e.g. "AAPL" or "AAPL 180C 2026-06-20"
+    symbol: str  # e.g. "AAPL" or "AAPL 180C 2026-06-20"
     qty: Decimal
-    last_price: Decimal    # for long options without a quote, 0 (carried at basis)
+    last_price: Decimal  # for long options without a quote, 0 (carried at basis)
     cost_basis: Decimal
     unrealized: Decimal
 
@@ -46,17 +46,17 @@ class UnrealizedShortOptionLine:
     """One row in the short options section. Includes intermediate values
     so the renderer can show the user how the estimate was built."""
 
-    symbol_display: str          # e.g. "SPY 500P 2026-06-20"
-    contracts: int               # |qty short|
-    premium_received: Decimal    # positive
+    symbol_display: str  # e.g. "SPY 500P 2026-06-20"
+    contracts: int  # |qty short|
+    premium_received: Decimal  # positive
     spot: Decimal
     intrinsic_per_share: Decimal
     days_total: int
     days_remaining: int
     time_value_per_share: Decimal
     est_value_to_close: Decimal  # total liability across all contracts
-    unrealized: Decimal          # premium_received - est_value_to_close
-    is_covered: bool             # True for calls (covered call notation)
+    unrealized: Decimal  # premium_received - est_value_to_close
+    is_covered: bool  # True for calls (covered call notation)
 
 
 @dataclass(frozen=True)
@@ -102,9 +102,9 @@ def build_total_return_breakdown(
 
 def build_unrealized_breakdown(
     *,
-    consumed: list,           # list[(Lot, Decimal rem_qty, Decimal rem_basis)]
+    consumed: list,  # list[(Lot, Decimal rem_qty, Decimal rem_basis)]
     short_option_rows: list,  # list[OpenShortOptionRow]
-    prices: dict,             # {ticker: Quote}
+    prices: dict,  # {ticker: Quote}
     as_of: dt.date,
 ) -> UnrealizedBreakdown:
     """Walk the FIFO-consumed lots and the open short option positions to
@@ -175,9 +175,7 @@ def build_unrealized_breakdown(
         days_remaining = max(0, (row.expiry - as_of).days)
         contracts = row.qty_short
         multiplier = Decimal(str(row.contract_multiplier))
-        premium_per_share = (
-            row.premium_received / contracts / multiplier if contracts > 0 else Decimal("0")
-        )
+        premium_per_share = row.premium_received / contracts / multiplier if contracts > 0 else Decimal("0")
         time_value = premium_per_share * (Decimal(days_remaining) / Decimal(days_total))
         est_per_share = max(intrinsic, time_value)
         est_liability = (est_per_share * contracts * multiplier).quantize(Decimal("0.01"))

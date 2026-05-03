@@ -366,7 +366,9 @@ def compute_kpis(
     else:
         long_unrealized = market - basis  # long stock + long options (carried at basis)
         short_opt_adj = _short_option_unrealized_adjustment(
-            trades=trades, prices=prices, as_of=as_of,
+            trades=trades,
+            prices=prices,
+            as_of=as_of,
             gl_option_closures=opt_closures,
         )
         unrealized = long_unrealized + short_opt_adj

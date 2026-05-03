@@ -47,8 +47,8 @@ def test_build_unrealized_breakdown_long_stock_only():
     from decimal import Decimal
 
     from net_alpha.models.domain import Lot
-    from net_alpha.pricing.provider import Quote
     from net_alpha.portfolio.explain import build_unrealized_breakdown
+    from net_alpha.pricing.provider import Quote
 
     today = dt.date(2026, 5, 3)
     long_lot = Lot(
@@ -63,12 +63,18 @@ def test_build_unrealized_breakdown_long_stock_only():
     consumed = [(long_lot, Decimal("10"), Decimal("1500"))]
     prices = {
         "AAPL": Quote(
-            symbol="AAPL", price=Decimal("180"), previous_close=Decimal("178"),
-            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.timezone.utc), source="yahoo",
+            symbol="AAPL",
+            price=Decimal("180"),
+            previous_close=Decimal("178"),
+            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.UTC),
+            source="yahoo",
         ),
     }
     b = build_unrealized_breakdown(
-        consumed=consumed, short_option_rows=[], prices=prices, as_of=today,
+        consumed=consumed,
+        short_option_rows=[],
+        prices=prices,
+        as_of=today,
     )
     assert len(b.long_lines) == 1
     assert b.long_lines[0].unrealized == Decimal("300.00")
@@ -84,26 +90,35 @@ def test_build_unrealized_breakdown_short_put_otm():
     import datetime as dt
     from decimal import Decimal
 
-    from net_alpha.pricing.provider import Quote
-    from net_alpha.portfolio.models import OpenShortOptionRow
     from net_alpha.portfolio.explain import build_unrealized_breakdown
+    from net_alpha.portfolio.models import OpenShortOptionRow
+    from net_alpha.pricing.provider import Quote
 
     today = dt.date(2026, 5, 3)
     short_put = OpenShortOptionRow(
-        account="X", ticker="SPY", strike=500.0,
-        expiry=dt.date(2026, 7, 2), call_put="P",
+        account="X",
+        ticker="SPY",
+        strike=500.0,
+        expiry=dt.date(2026, 7, 2),
+        call_put="P",
         qty_short=Decimal("1"),
         premium_received=Decimal("500"),
         opened_at=dt.date(2026, 4, 3),
     )
     prices = {
         "SPY": Quote(
-            symbol="SPY", price=Decimal("520"), previous_close=Decimal("519"),
-            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.timezone.utc), source="yahoo",
+            symbol="SPY",
+            price=Decimal("520"),
+            previous_close=Decimal("519"),
+            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.UTC),
+            source="yahoo",
         ),
     }
     b = build_unrealized_breakdown(
-        consumed=[], short_option_rows=[short_put], prices=prices, as_of=today,
+        consumed=[],
+        short_option_rows=[short_put],
+        prices=prices,
+        as_of=today,
     )
     assert len(b.short_option_lines) == 1
     line = b.short_option_lines[0]
@@ -128,12 +143,19 @@ def test_build_unrealized_breakdown_excluded_count_for_unpriced_lot():
 
     today = dt.date(2026, 5, 3)
     lot = Lot(
-        account="X", date=dt.date(2025, 6, 1), ticker="WXYZ",
-        quantity=5.0, cost_basis=400.0, adjusted_basis=400.0, trade_id="t9",
+        account="X",
+        date=dt.date(2025, 6, 1),
+        ticker="WXYZ",
+        quantity=5.0,
+        cost_basis=400.0,
+        adjusted_basis=400.0,
+        trade_id="t9",
     )
     b = build_unrealized_breakdown(
         consumed=[(lot, Decimal("5"), Decimal("400"))],
-        short_option_rows=[], prices={}, as_of=today,
+        short_option_rows=[],
+        prices={},
+        as_of=today,
     )
     assert b.long_lines == []
     assert b.excluded_count == 1

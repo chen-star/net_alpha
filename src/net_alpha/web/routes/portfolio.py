@@ -1002,7 +1002,10 @@ def explain_total_return(
         cash_events = [e for e in cash_events if e.account == account]
 
     cash_points_full = build_cash_balance_series(
-        events=cash_events, trades=trades, account=None, period=None,
+        events=cash_events,
+        trades=trades,
+        account=None,
+        period=None,
     )
 
     if period_tuple is None:
@@ -1011,7 +1014,9 @@ def explain_total_return(
     else:
         boundary = date(period_tuple[0], 1, 1) - timedelta(days=1)
         starting_value = account_value_at(
-            on=boundary, trades=trades, lots=lots,
+            on=boundary,
+            trades=trades,
+            lots=lots,
             cash_points=cash_points_full,
             get_close=svc.get_historical_close,
         )
@@ -1020,13 +1025,21 @@ def explain_total_return(
     symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(symbols) if symbols else {}
     kpis_now = compute_kpis(
-        trades=trades, lots=lots, prices=prices, period_label=period_label,
-        period=period_tuple, account=None, gl_lots=repo.list_all_gl_lots(),
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label=period_label,
+        period=period_tuple,
+        account=None,
+        gl_lots=repo.list_all_gl_lots(),
     )
     holdings_value = kpis_now.open_position_value or Decimal("0")
     cash_kpis = compute_cash_kpis(
-        events=cash_events, trades=trades, holdings_value=holdings_value,
-        account=None, period=period_tuple,
+        events=cash_events,
+        trades=trades,
+        holdings_value=holdings_value,
+        account=None,
+        period=period_tuple,
         period_starting_value=starting_value,
     )
 
@@ -1068,14 +1081,17 @@ def explain_unrealized(
 
     consumed = consume_lots_fifo(lots=lots, trades=trades)
     short_rows = compute_open_short_option_positions(
-        trades, gl_option_closures=repo.get_option_gl_closures(),
+        trades,
+        gl_option_closures=repo.get_option_gl_closures(),
     )
     symbols = sorted({lot.ticker for lot in lots} | {row.ticker for row in short_rows})
     prices = svc.get_prices(symbols) if symbols else {}
 
     breakdown = build_unrealized_breakdown(
-        consumed=consumed, short_option_rows=short_rows,
-        prices=prices, as_of=today,
+        consumed=consumed,
+        short_option_rows=short_rows,
+        prices=prices,
+        as_of=today,
     )
     return request.app.state.templates.TemplateResponse(
         request,

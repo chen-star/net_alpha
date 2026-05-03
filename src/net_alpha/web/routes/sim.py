@@ -241,9 +241,7 @@ def sim_suggestions(
     sell_tickers = {
         t.ticker
         for t in repo.all_trades()
-        if t.action.lower() in {"sell", "sell to close"}
-        and (today - t.date).days <= 30
-        and t.option_details is None
+        if t.action.lower() in {"sell", "sell to close"} and (today - t.date).days <= 30 and t.option_details is None
     }
     open_tickers = {p.symbol for p in positions}
     extra = sell_tickers - open_tickers
