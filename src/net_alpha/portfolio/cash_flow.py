@@ -125,6 +125,7 @@ def compute_cash_kpis(
     holdings_value: Decimal,
     account: str | None,
     period: tuple[int, int] | None,
+    period_starting_value: Decimal = Decimal("0"),
 ) -> CashFlowKPIs:
     """Single-shot summary used by the KPI strip."""
     series = build_cash_balance_series(
@@ -157,8 +158,9 @@ def compute_cash_kpis(
             period_contrib += _event_contrib_delta(e)
 
     account_value = cash + holdings_value
-    growth = account_value - contrib
-    growth_pct: Decimal | None = (growth / contrib) if contrib != 0 else None
+    growth = account_value - period_starting_value - period_contrib
+    growth_denom = period_starting_value + period_contrib
+    growth_pct: Decimal | None = (growth / growth_denom) if growth_denom != 0 else None
     cash_share_pct = (cash / account_value) if account_value != 0 else Decimal("0")
     return CashFlowKPIs(
         cash_balance=cash,
@@ -169,6 +171,7 @@ def compute_cash_kpis(
         growth=growth,
         growth_pct=growth_pct,
         cash_share_pct=cash_share_pct,
+        period_starting_value=period_starting_value,
     )
 
 
