@@ -368,6 +368,8 @@ def portfolio_kpis(
             "vs_contributed_delta": vs_contributed_delta,
             "today_change": kpis.today_change,
             "today_pct": kpis.today_pct,
+            "selected_period": period or "ytd",
+            "selected_account": account or "",
         },
     )
 
@@ -926,6 +928,8 @@ def portfolio_body(
             "account_points": account_points,
             "period_label": period_label,
             "account": account,  # used by the inbox lazy-load wrapper
+            "selected_period": period or "ytd",
+            "selected_account": account or "",
         },
     )
 
@@ -1123,3 +1127,9 @@ def explain_unrealized(
         "_explain_unrealized.html",
         {"b": breakdown},
     )
+
+
+@router.get("/portfolio/explain/dismiss", response_class=HTMLResponse)
+def explain_dismiss() -> HTMLResponse:
+    """Empty fragment used by the explainer panels' close button."""
+    return HTMLResponse("")

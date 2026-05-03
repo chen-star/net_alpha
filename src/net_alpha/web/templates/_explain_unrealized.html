@@ -1,6 +1,12 @@
 {# Math explainer fragment for the Unrealized P/L KPI tile.
    Receives `b: UnrealizedBreakdown`. #}
-<div class="panel p-4 mt-2 text-[13px]" data-explain="unrealized">
+<div class="panel p-4 mt-2 text-[13px] relative" data-explain="unrealized">
+  <button type="button"
+          class="absolute top-2 right-3 text-label-3 hover:text-text text-[16px] leading-none cursor-pointer"
+          hx-get="/portfolio/explain/dismiss"
+          hx-target="#explain-unrealized"
+          hx-swap="innerHTML"
+          title="Close">×</button>
   <div class="font-semibold mb-3">Unrealized P/L — open positions</div>
 
   {% if b.long_lines %}

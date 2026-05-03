@@ -1,7 +1,13 @@
 {# Math explainer fragment for the Total Return KPI tile.
    Receives `b: TotalReturnBreakdown`. Loaded via HTMX from
    /portfolio/explain/total-return and swapped into a div under the tile. #}
-<div class="panel p-4 mt-2 text-[13px]" data-explain="total-return">
+<div class="panel p-4 mt-2 text-[13px] relative" data-explain="total-return">
+  <button type="button"
+          class="absolute top-2 right-3 text-label-3 hover:text-text text-[16px] leading-none cursor-pointer"
+          hx-get="/portfolio/explain/dismiss"
+          hx-target="#explain-total-return"
+          hx-swap="innerHTML"
+          title="Close">×</button>
   <div class="font-semibold mb-3">Total Return — {{ b.period_label }}</div>
 
   <table class="w-full">

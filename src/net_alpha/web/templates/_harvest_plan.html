@@ -116,7 +116,7 @@
     </tbody>
   </table>
 
-  {% if pagination is defined and pagination.total_pages > 1 %}
+  {% if pagination is defined and pagination.total_rows > 0 %}
   <div class="flex items-center justify-between mt-3 text-[12px]">
     <div class="text-label-2">
       Showing {{ ((pagination.page - 1) * pagination.page_size) + 1 }}–{{ [pagination.page * pagination.page_size, pagination.total_rows]|min }} of {{ pagination.total_rows }}
