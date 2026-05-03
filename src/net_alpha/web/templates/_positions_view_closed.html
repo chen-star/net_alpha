@@ -71,40 +71,12 @@
     </table>
   </div>
 
-  {% if pagination is defined and pagination.total_rows > 0 %}
-  <div class="flex items-center justify-between mt-3 text-[12px]">
-    <div class="text-label-2">
-      Showing {{ ((pagination.page - 1) * pagination.page_size) + 1 }}–{{ [pagination.page * pagination.page_size, pagination.total_rows]|min }} of {{ pagination.total_rows }}
-    </div>
-    <div class="flex items-center gap-3">
-      {% if pagination.page > 1 %}
-        <a class="text-label-1 hover:underline cursor-pointer"
-           hx-get="/positions?view=closed&page={{ pagination.page - 1 }}&page_size={{ pagination.page_size }}{% if selected_period %}&period={{ selected_period }}{% endif %}{% if selected_account %}&account={{ selected_account }}{% endif %}"
-           hx-target="#positions-tab-content"
-           hx-swap="outerHTML">← Prev</a>
-      {% else %}
-        <span class="text-label-3">← Prev</span>
-      {% endif %}
-      <span class="text-label-2">Page {{ pagination.page }} / {{ pagination.total_pages }}</span>
-      {% if pagination.page < pagination.total_pages %}
-        <a class="text-label-1 hover:underline cursor-pointer"
-           hx-get="/positions?view=closed&page={{ pagination.page + 1 }}&page_size={{ pagination.page_size }}{% if selected_period %}&period={{ selected_period }}{% endif %}{% if selected_account %}&account={{ selected_account }}{% endif %}"
-           hx-target="#positions-tab-content"
-           hx-swap="outerHTML">Next →</a>
-      {% else %}
-        <span class="text-label-3">Next →</span>
-      {% endif %}
-      <select class="text-label-2 bg-bg border border-hairline rounded px-1"
-              hx-get="/positions?view=closed&page=1{% if selected_period %}&period={{ selected_period }}{% endif %}{% if selected_account %}&account={{ selected_account }}{% endif %}"
-              hx-include="this"
-              hx-target="#positions-tab-content"
-              hx-swap="outerHTML"
-              name="page_size">
-        {% for size in pagination.page_size_options %}
-          <option value="{{ size }}" {% if size == pagination.page_size %}selected{% endif %}>{{ size }} / page</option>
-        {% endfor %}
-      </select>
-    </div>
-  </div>
-  {% endif %}
+  {% set _qs = '&view=closed' %}
+  {% if selected_period %}{% set _qs = _qs + '&period=' + selected_period %}{% endif %}
+  {% if selected_account %}{% set _qs = _qs + '&account=' + selected_account %}{% endif %}
+  {% set page_base_url = '/positions' %}
+  {% set page_extra_qs = _qs %}
+  {% set page_target = '#positions-tab-content' %}
+  {% set page_swap = 'outerHTML' %}
+  {% include "_pagination_footer.html" %}
 </div>

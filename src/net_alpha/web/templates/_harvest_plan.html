@@ -116,45 +116,13 @@
     </tbody>
   </table>
 
-  {% if pagination is defined and pagination.total_rows > 0 %}
-  <div class="flex items-center justify-between mt-3 text-[12px]">
-    <div class="text-label-2">
-      Showing {{ ((pagination.page - 1) * pagination.page_size) + 1 }}–{{ [pagination.page * pagination.page_size, pagination.total_rows]|min }} of {{ pagination.total_rows }}
-    </div>
-    <div class="flex items-center gap-3">
-      {# Reconstruct the picks query string so pagination doesn't drop the user's manual selections. #}
-      {% set pick_qs = '' %}
-      {% if picks %}{% for p in picks %}{% set pick_qs = pick_qs + '&pick=' + (p|urlencode) %}{% endfor %}{% endif %}
-      {% if pagination.page > 1 %}
-        <a class="text-label-1 hover:underline cursor-pointer"
-           hx-get="/tax/harvest/plan?page={{ pagination.page - 1 }}&page_size={{ pagination.page_size }}{{ pick_qs }}"
-           hx-target="#harvest-queue-region"
-           hx-swap="outerHTML">← Prev</a>
-      {% else %}
-        <span class="text-label-3">← Prev</span>
-      {% endif %}
-      <span class="text-label-2">Page {{ pagination.page }} / {{ pagination.total_pages }}</span>
-      {% if pagination.page < pagination.total_pages %}
-        <a class="text-label-1 hover:underline cursor-pointer"
-           hx-get="/tax/harvest/plan?page={{ pagination.page + 1 }}&page_size={{ pagination.page_size }}{{ pick_qs }}"
-           hx-target="#harvest-queue-region"
-           hx-swap="outerHTML">Next →</a>
-      {% else %}
-        <span class="text-label-3">Next →</span>
-      {% endif %}
-      <select class="text-label-2 bg-bg border border-hairline rounded px-1"
-              hx-get="/tax/harvest/plan?page=1{{ pick_qs }}"
-              hx-include="this"
-              hx-target="#harvest-queue-region"
-              hx-swap="outerHTML"
-              name="page_size">
-        {% for size in pagination.page_size_options %}
-          <option value="{{ size }}" {% if size == pagination.page_size %}selected{% endif %}>{{ size }} / page</option>
-        {% endfor %}
-      </select>
-    </div>
-  </div>
-  {% endif %}
+  {% set pick_qs = '' %}
+  {% if picks %}{% for p in picks %}{% set pick_qs = pick_qs + '&pick=' + (p|urlencode) %}{% endfor %}{% endif %}
+  {% set page_base_url = '/tax/harvest/plan' %}
+  {% set page_extra_qs = pick_qs %}
+  {% set page_target = '#harvest-queue-region' %}
+  {% set page_swap = 'outerHTML' %}
+  {% include "_pagination_footer.html" %}
   {% else %}
     <p class="text-label-2 text-[13px]">No harvestable candidates right now.</p>
   {% endif %}

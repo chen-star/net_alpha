@@ -1,0 +1,47 @@
+{# Shared pagination footer.
+
+   Inputs (set by the includer with `{% set %}` BEFORE the include):
+     pagination     — dict with page, page_size, total_pages, total_rows, page_size_options
+     page_base_url  — URL path WITHOUT any query (e.g. "/positions")
+     page_extra_qs  — extra "&key=value..." string to preserve filters
+                      (must include leading "&"; e.g. "&view=closed&period=ytd")
+     page_target    — HTMX swap target id (e.g. "#positions-tab-content")
+     page_swap      — HTMX swap mode ("outerHTML" or "innerHTML")
+
+   Renders nothing when there are no rows. #}
+{% if pagination is defined and pagination.total_rows > 0 %}
+  <div class="pagination-footer flex items-center justify-between mt-3 text-[12px]">
+    <div class="text-label-2">
+      Showing {{ ((pagination.page - 1) * pagination.page_size) + 1 }}–{{ [pagination.page * pagination.page_size, pagination.total_rows]|min }} of {{ pagination.total_rows }}
+    </div>
+    <div class="flex items-center gap-3">
+      {% if pagination.page > 1 %}
+        <a class="text-label-1 hover:underline cursor-pointer"
+           hx-get="{{ page_base_url }}?page={{ pagination.page - 1 }}&page_size={{ pagination.page_size }}{{ page_extra_qs|default('') }}"
+           hx-target="{{ page_target }}"
+           hx-swap="{{ page_swap|default('outerHTML') }}">← Prev</a>
+      {% else %}
+        <span class="text-label-3">← Prev</span>
+      {% endif %}
+      <span class="text-label-2">Page {{ pagination.page }} / {{ pagination.total_pages }}</span>
+      {% if pagination.page < pagination.total_pages %}
+        <a class="text-label-1 hover:underline cursor-pointer"
+           hx-get="{{ page_base_url }}?page={{ pagination.page + 1 }}&page_size={{ pagination.page_size }}{{ page_extra_qs|default('') }}"
+           hx-target="{{ page_target }}"
+           hx-swap="{{ page_swap|default('outerHTML') }}">Next →</a>
+      {% else %}
+        <span class="text-label-3">Next →</span>
+      {% endif %}
+      <select class="text-label-2 bg-bg border border-hairline rounded px-1"
+              hx-get="{{ page_base_url }}?page=1{{ page_extra_qs|default('') }}"
+              hx-include="this"
+              hx-target="{{ page_target }}"
+              hx-swap="{{ page_swap|default('outerHTML') }}"
+              name="page_size">
+        {% for size in pagination.page_size_options %}
+          <option value="{{ size }}" {% if size == pagination.page_size %}selected{% endif %}>{{ size }} / page</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+{% endif %}

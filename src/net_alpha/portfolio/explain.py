@@ -61,12 +61,21 @@ class UnrealizedShortOptionLine:
 
 @dataclass(frozen=True)
 class UnrealizedBreakdown:
-    """Payload for the Unrealized P/L explainer panel."""
+    """Payload for the Unrealized P/L explainer panel.
+
+    Per-line lists (`long_lines`, `short_option_lines`) are kept for callers
+    that want a per-position drilldown; the panel template uses only the
+    aggregated totals for a simpler "formula and numbers" view.
+    """
 
     long_lines: list[UnrealizedLongLine]
-    long_subtotal: Decimal
+    long_market_total: Decimal  # Σ market value across long lines
+    long_cost_total: Decimal  # Σ cost basis across long lines
+    long_subtotal: Decimal  # = long_market_total − long_cost_total
     short_option_lines: list[UnrealizedShortOptionLine]
-    short_subtotal: Decimal
+    short_premium_total: Decimal  # Σ premium received across short options
+    short_liability_total: Decimal  # Σ est. value to close across short options
+    short_subtotal: Decimal  # = short_premium_total − short_liability_total
     total_unrealized: Decimal
     excluded_count: int  # lots/shorts skipped because no quote available
 
@@ -117,7 +126,11 @@ def build_unrealized_breakdown(
     long_lines: list[UnrealizedLongLine] = []
     short_lines: list[UnrealizedShortOptionLine] = []
     long_subtotal = Decimal("0")
+    long_market_total = Decimal("0")
+    long_cost_total = Decimal("0")
     short_subtotal = Decimal("0")
+    short_premium_total = Decimal("0")
+    short_liability_total = Decimal("0")
     excluded = 0
 
     for lot, rem_qty, rem_basis in consumed:
@@ -125,10 +138,14 @@ def build_unrealized_breakdown(
             continue
         if lot.option_details is not None:
             # Long option lot. Past-expiry → skip silently. Otherwise carried
-            # at basis (market = basis → unrealized = 0).
+            # at basis (market = basis → unrealized = 0); contributes
+            # rem_basis to BOTH market and cost so the aggregate reads
+            # consistently.
             if lot.option_details.expiry < as_of:
                 continue
             opt = lot.option_details
+            long_market_total += rem_basis
+            long_cost_total += rem_basis
             long_lines.append(
                 UnrealizedLongLine(
                     symbol=f"{lot.ticker} {opt.strike}{opt.call_put} {opt.expiry.isoformat()}",
@@ -147,6 +164,8 @@ def build_unrealized_breakdown(
         market = (rem_qty * last).quantize(Decimal("0.01"))
         unrealized = (market - rem_basis).quantize(Decimal("0.01"))
         long_subtotal += unrealized
+        long_market_total += market
+        long_cost_total += rem_basis
         long_lines.append(
             UnrealizedLongLine(
                 symbol=lot.ticker,
@@ -181,6 +200,8 @@ def build_unrealized_breakdown(
         est_liability = (est_per_share * contracts * multiplier).quantize(Decimal("0.01"))
         unrealized = (row.premium_received - est_liability).quantize(Decimal("0.01"))
         short_subtotal += unrealized
+        short_premium_total += row.premium_received
+        short_liability_total += est_liability
         short_lines.append(
             UnrealizedShortOptionLine(
                 symbol_display=f"{row.ticker} {strike}{row.call_put} {row.expiry.isoformat()}",
@@ -199,8 +220,12 @@ def build_unrealized_breakdown(
 
     return UnrealizedBreakdown(
         long_lines=long_lines,
+        long_market_total=long_market_total.quantize(Decimal("0.01")),
+        long_cost_total=long_cost_total.quantize(Decimal("0.01")),
         long_subtotal=long_subtotal,
         short_option_lines=short_lines,
+        short_premium_total=short_premium_total.quantize(Decimal("0.01")),
+        short_liability_total=short_liability_total.quantize(Decimal("0.01")),
         short_subtotal=short_subtotal,
         total_unrealized=long_subtotal + short_subtotal,
         excluded_count=excluded,
