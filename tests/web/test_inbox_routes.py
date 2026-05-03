@@ -106,3 +106,103 @@ def test_dismiss_unknown_key_is_noop(client, repo):
     # No data; just hit the endpoint with a bogus key.
     resp = client.post("/portfolio/inbox/dismiss/does:not:exist")
     assert resp.status_code == 200
+
+
+def test_account_filter_query_param_scopes_signals(client, repo):
+    """The ?account=X query param must narrow signals to that account."""
+    from datetime import date, timedelta
+    from datetime import datetime as _datetime
+
+    from net_alpha.models.domain import ImportRecord, Trade, WashSaleViolation
+
+    today = date.today()
+    sale_date = today - timedelta(days=33)
+    buy_date = sale_date - timedelta(days=10)
+
+    # Two accounts, each with its own wash-sale violation on a different ticker.
+    acct_a = repo.get_or_create_account("Schwab", "A")
+    acct_b = repo.get_or_create_account("Schwab", "B")
+
+    def _seed(account, ticker):
+        buy = Trade(
+            account=f"Schwab/{account.label}",
+            date=buy_date,
+            ticker=ticker,
+            action="Buy",
+            quantity=10,
+            proceeds=None,
+            cost_basis=2000.0,
+        )
+        sell = Trade(
+            account=f"Schwab/{account.label}",
+            date=sale_date,
+            ticker=ticker,
+            action="Sell",
+            quantity=10,
+            proceeds=1388.0,
+            cost_basis=2000.0,
+        )
+        record = ImportRecord(
+            account_id=account.id,
+            csv_filename=f"{ticker}.csv",
+            csv_sha256=f"sha-{ticker}",
+            imported_at=_datetime.now(),
+            trade_count=2,
+        )
+        repo.add_import(account, record, [buy, sell])
+
+    _seed(acct_a, "AAPL")
+    _seed(acct_b, "GOOG")
+
+    # Map back to persisted trade ids per ticker for the violation rows.
+    trades = repo.all_trades()
+    aapl_buy = next(t for t in trades if t.ticker == "AAPL" and t.is_buy())
+    aapl_sell = next(t for t in trades if t.ticker == "AAPL" and t.is_sell())
+    goog_buy = next(t for t in trades if t.ticker == "GOOG" and t.is_buy())
+    goog_sell = next(t for t in trades if t.ticker == "GOOG" and t.is_sell())
+
+    repo.replace_violations_in_window(
+        sale_date,
+        sale_date,
+        [
+            WashSaleViolation(
+                loss_trade_id=aapl_sell.id,
+                replacement_trade_id=aapl_buy.id,
+                confidence="Confirmed",
+                disallowed_loss=612.0,
+                matched_quantity=10.0,
+                ticker="AAPL",
+                loss_account="Schwab/A",
+                buy_account="Schwab/A",
+                loss_sale_date=sale_date,
+                triggering_buy_date=buy_date,
+            ),
+            WashSaleViolation(
+                loss_trade_id=goog_sell.id,
+                replacement_trade_id=goog_buy.id,
+                confidence="Confirmed",
+                disallowed_loss=612.0,
+                matched_quantity=10.0,
+                ticker="GOOG",
+                loss_account="Schwab/B",
+                buy_account="Schwab/B",
+                loss_sale_date=sale_date,
+                triggering_buy_date=buy_date,
+            ),
+        ],
+    )
+
+    # No filter: both tickers visible.
+    resp = client.get("/portfolio/inbox")
+    assert "AAPL" in resp.text
+    assert "GOOG" in resp.text
+
+    # Schwab/A filter: only AAPL.
+    resp = client.get("/portfolio/inbox?account=Schwab/A")
+    assert "AAPL" in resp.text
+    assert "GOOG" not in resp.text
+
+    # Schwab/B filter: only GOOG.
+    resp = client.get("/portfolio/inbox?account=Schwab/B")
+    assert "GOOG" in resp.text
+    assert "AAPL" not in resp.text

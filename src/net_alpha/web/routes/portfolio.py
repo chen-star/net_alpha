@@ -873,7 +873,7 @@ def portfolio_body(
     )
 
 
-def _resolve_inbox_rates(repo: Repository) -> tuple[Decimal, Decimal]:
+def _resolve_inbox_rates() -> tuple[Decimal, Decimal]:
     """Pull (short-term, long-term) effective rates from the user's tax: config.
 
     ST = federal_marginal_rate + state_marginal_rate (ordinary income on ST gains)
@@ -900,7 +900,7 @@ def portfolio_inbox(
     pricing: PricingService = Depends(get_pricing_service),
 ):
     cfg = load_inbox_config(Path.home() / ".net_alpha" / "config.yaml")
-    st_rate, lt_rate = _resolve_inbox_rates(repo)
+    st_rate, lt_rate = _resolve_inbox_rates()
     today = _date.today()
     with Session(repo.engine) as session:
         items = gather_inbox(
