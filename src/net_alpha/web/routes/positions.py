@@ -172,8 +172,27 @@ def positions_page(
             )
 
     if selected_view == "plan":
+        import dataclasses as _dc
+
         plan_view = _build_plan_view_for_request(repo, pricing, account)
+
+        page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
+        page_norm = max(1, page)
+        total_rows = len(plan_view.rows)
+        total_pages = max(1, (total_rows + page_size_norm - 1) // page_size_norm)
+        page_norm = min(page_norm, total_pages)
+        start_idx = (page_norm - 1) * page_size_norm
+        end_idx = start_idx + page_size_norm
+        plan_view = _dc.replace(plan_view, rows=list(plan_view.rows)[start_idx:end_idx])
+
         ctx["plan_view"] = plan_view
+        ctx["pagination"] = {
+            "page": page_norm,
+            "page_size": page_size_norm,
+            "total_pages": total_pages,
+            "total_rows": total_rows,
+            "page_size_options": (10, 25, 50, 100),
+        }
         if request.headers.get("hx-request"):
             return request.app.state.templates.TemplateResponse(
                 request,
@@ -396,8 +415,22 @@ def _render_plan_body(
     repo: Repository,
     pricing: PricingService,
     account: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
 ) -> HTMLResponse:
+    import dataclasses as _dc
+
     plan_view = _build_plan_view_for_request(repo, pricing, account)
+
+    page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
+    page_norm = max(1, page)
+    total_rows = len(plan_view.rows)
+    total_pages = max(1, (total_rows + page_size_norm - 1) // page_size_norm)
+    page_norm = min(page_norm, total_pages)
+    start_idx = (page_norm - 1) * page_size_norm
+    end_idx = start_idx + page_size_norm
+    plan_view = _dc.replace(plan_view, rows=list(plan_view.rows)[start_idx:end_idx])
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_positions_view_plan.html",
@@ -405,6 +438,13 @@ def _render_plan_body(
             "plan_view": plan_view,
             "selected_account": account or "",
             "selected_period": "ytd",
+            "pagination": {
+                "page": page_norm,
+                "page_size": page_size_norm,
+                "total_pages": total_pages,
+                "total_rows": total_rows,
+                "page_size_options": (10, 25, 50, 100),
+            },
         },
     )
 
