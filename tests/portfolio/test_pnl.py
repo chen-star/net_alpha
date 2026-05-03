@@ -869,3 +869,60 @@ def test_short_option_no_underlying_quote_falls_back_to_zero():
     # in — but there are no equity lots, so all_unpriced stays False, and
     # period_unrealized is the sum, which is 0).
     assert kpis.period_unrealized == Decimal("0")
+
+
+def test_short_option_closed_via_gl_does_not_contribute_to_unrealized():
+    """A short option closed by a Realized G/L import (no BTC trade row)
+    must drop out of unrealized — otherwise it phantom-contributes after
+    the user imports their GL CSV.
+    """
+    today = dt.date(2026, 5, 3)
+    expiry = dt.date(2026, 7, 2)
+    open_date = dt.date(2026, 4, 3)
+
+    trade = Trade(
+        account="X", date=open_date, ticker="SPY", action="Sell",
+        quantity=1.0, cost_basis=None, proceeds=500.0,
+        gross_cash_impact=500.0,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=500.0, expiry=expiry, call_put="P"),
+    )
+
+    # Mark the short put as closed via a GL import: 1 contract on this chain
+    # was closed (e.g., expired worthless on a date Schwab only logged in GL).
+    gl_lot = RealizedGLLot(
+        account_display="X",
+        symbol_raw="SPY 07/02/2026 500.00 P",
+        ticker="SPY",
+        quantity=1.0,
+        cost_basis=0.0,
+        unadjusted_cost_basis=0.0,
+        proceeds=500.0,
+        opened_date=open_date,
+        closed_date=dt.date(2026, 6, 30),
+        term="Short Term",
+        wash_sale=False,
+        disallowed_loss=0.0,
+        option_strike=500.0,
+        option_expiry=expiry.isoformat(),
+        option_call_put="P",
+    )
+
+    prices = {
+        "SPY": Quote(
+            symbol="SPY",
+            price=Decimal("520.00"),
+            previous_close=Decimal("519"),
+            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.timezone.utc),
+            source="yahoo",
+        ),
+    }
+
+    kpis = compute_kpis(
+        trades=[trade], lots=[], prices=prices,
+        period_label="YTD 2026", period=(2026, 2027), account=None, as_of=today,
+        gl_lots=[gl_lot],
+    )
+    # Without the fix, the OTM short put would contribute +$166.67.
+    # With the fix, the GL closure flushes the short → contribution = 0.
+    assert kpis.period_unrealized == Decimal("0")

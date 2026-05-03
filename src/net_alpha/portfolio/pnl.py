@@ -268,6 +268,7 @@ def _short_option_unrealized_adjustment(
     trades: list[Trade],
     prices: dict[str, Quote],
     as_of: _date,
+    gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
 ) -> Decimal:
     """Estimated unrealized P/L on open short option positions.
 
@@ -286,7 +287,7 @@ def _short_option_unrealized_adjustment(
     """
     from net_alpha.portfolio.positions import compute_open_short_option_positions
 
-    rows = compute_open_short_option_positions(trades)
+    rows = compute_open_short_option_positions(trades, gl_option_closures=gl_option_closures)
     total_adj = Decimal("0")
     for row in rows:
         if row.opened_at is None:
@@ -366,6 +367,7 @@ def compute_kpis(
         long_unrealized = market - basis  # long stock + long options (carried at basis)
         short_opt_adj = _short_option_unrealized_adjustment(
             trades=trades, prices=prices, as_of=as_of,
+            gl_option_closures=opt_closures,
         )
         unrealized = long_unrealized + short_opt_adj
         period_unrealized = unrealized  # unrealized is "now"; period only relabels the card
