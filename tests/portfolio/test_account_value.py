@@ -413,9 +413,21 @@ def test_account_value_at_uses_most_recent_cash_point_before_date():
     from net_alpha.portfolio.models import CashBalancePoint
 
     cash_points = [
-        CashBalancePoint(on=dt.date(2025, 6, 1), cash_balance=Decimal("10000"), cumulative_contributions=Decimal("10000")),
-        CashBalancePoint(on=dt.date(2025, 12, 1), cash_balance=Decimal("12000"), cumulative_contributions=Decimal("12000")),
-        CashBalancePoint(on=dt.date(2026, 2, 1), cash_balance=Decimal("15000"), cumulative_contributions=Decimal("15000")),
+        CashBalancePoint(
+            on=dt.date(2025, 6, 1),
+            cash_balance=Decimal("10000"),
+            cumulative_contributions=Decimal("10000"),
+        ),
+        CashBalancePoint(
+            on=dt.date(2025, 12, 1),
+            cash_balance=Decimal("12000"),
+            cumulative_contributions=Decimal("12000"),
+        ),
+        CashBalancePoint(
+            on=dt.date(2026, 2, 1),
+            cash_balance=Decimal("15000"),
+            cumulative_contributions=Decimal("15000"),
+        ),
     ]
     val = account_value_at(
         on=dt.date(2025, 12, 31),

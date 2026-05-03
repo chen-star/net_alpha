@@ -22,7 +22,7 @@ from net_alpha.db.repository import Repository
 from net_alpha.inbox.aggregator import gather_inbox
 from net_alpha.inbox.config import load_inbox_config
 from net_alpha.inbox.dismissals import toggle_dismissal
-from net_alpha.portfolio.account_value import build_account_value_series, build_eval_dates
+from net_alpha.portfolio.account_value import account_value_at, build_account_value_series, build_eval_dates
 from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.portfolio.benchmark import build_benchmark_series
 from net_alpha.portfolio.cash_flow import (
@@ -312,12 +312,33 @@ def portfolio_kpis(
     else:
         scoped_trades_for_cash = trades
     holdings_value = kpis.open_position_value or Decimal("0")
+    # Period start anchor for Total Return — account value at the close of the day
+    # before the period began. Lifetime → 0; YTD/year → value on Dec 31 prior.
+    if period_tuple is None:
+        period_starting_value = Decimal("0")
+    else:
+        boundary = date(period_tuple[0], 1, 1) - timedelta(days=1)
+        cash_points_for_anchor = build_cash_balance_series(
+            events=cash_events,
+            trades=scoped_trades_for_cash,
+            account=None,
+            period=None,  # need full history through the boundary
+        )
+        scoped_lots_for_anchor = [lt for lt in lots if lt.account == account] if account else lots
+        period_starting_value = account_value_at(
+            on=boundary,
+            trades=scoped_trades_for_cash,
+            lots=scoped_lots_for_anchor,
+            cash_points=cash_points_for_anchor,
+            get_close=svc.get_historical_close,
+        )
     cash_kpis = compute_cash_kpis(
         events=cash_events,
         trades=scoped_trades_for_cash,
         holdings_value=holdings_value,
         account=None,  # events + trades are pre-scoped above
         period=period_tuple,
+        period_starting_value=period_starting_value,
     )
 
     # Hero / Today tile context.
@@ -736,12 +757,32 @@ def portfolio_body(
         (Decimal(str(p.market_value)) for p in positions_for_alloc if p.market_value is not None),
         start=Decimal("0"),
     )
+    # Period start anchor for Total Return — account value at the close of the day
+    # before the period began. Lifetime → 0; YTD/year → value on Dec 31 prior.
+    if period_tuple is None:
+        period_starting_value = Decimal("0")
+    else:
+        boundary = date(period_tuple[0], 1, 1) - timedelta(days=1)
+        cash_points_for_anchor = build_cash_balance_series(
+            events=cash_events,
+            trades=scoped_trades,
+            account=None,
+            period=None,  # need full history through the boundary
+        )
+        period_starting_value = account_value_at(
+            on=boundary,
+            trades=scoped_trades,
+            lots=scoped_lots,
+            cash_points=cash_points_for_anchor,
+            get_close=svc.get_historical_close,
+        )
     cash_kpis = compute_cash_kpis(
         events=cash_events,
         trades=scoped_trades,
         holdings_value=holdings_value_total,
         account=None,  # already filtered above
         period=period_tuple,
+        period_starting_value=period_starting_value,
     )
     cash_points = build_cash_balance_series(
         events=cash_events,
