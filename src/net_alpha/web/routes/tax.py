@@ -140,6 +140,8 @@ def harvest_plan(
     custom_budget: str = "",
     exclude_locked: bool = True,
     pick: list[str] | None = Query(default=None),
+    page: int = 1,
+    page_size: int = 25,
 ):
     """Return the harvest plan-builder fragment.
 
@@ -224,18 +226,37 @@ def harvest_plan(
 
     selected_keys = {(c.symbol, c.account_label) for c in plan.selected}
 
+    page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
+    page_norm = max(1, page)
+    total_rows = len(rows)
+    total_pages = max(1, (total_rows + page_size_norm - 1) // page_size_norm)
+    page_norm = min(page_norm, total_pages)
+    start_idx = (page_norm - 1) * page_size_norm
+    end_idx = start_idx + page_size_norm
+    rows_page = rows[start_idx:end_idx]
+    pagination = {
+        "page": page_norm,
+        "page_size": page_size_norm,
+        "total_pages": total_pages,
+        "total_rows": total_rows,
+        "page_size_options": (10, 25, 50, 100),
+    }
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_harvest_plan.html",
         {
             "plan": plan,
             "rows": rows,
+            "rows_page": rows_page,
             "selected_keys": selected_keys,
             "tax_saved_by_key": tax_saved_by_key,
             "mode": mode,
             "custom_budget": budget_str,
             "exclude_locked": exclude_locked,
             "has_tax_config": brackets is not None,
+            "pagination": pagination,
+            "picks": pick or [],
         },
     )
 
