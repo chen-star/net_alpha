@@ -2,10 +2,9 @@
 
 import pathlib
 import tempfile
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
-import pytest
 from fastapi.testclient import TestClient
 
 from net_alpha.config import Settings
@@ -61,10 +60,9 @@ def test_fully_closed_position_does_not_appear_in_chips(repo, client):
     from net_alpha.engine.detector import detect_in_window
     from net_alpha.models.domain import Trade
     from net_alpha.pricing.provider import Quote
-    from net_alpha.pricing.service import PricingService
     from net_alpha.web.routes.sim import _build_sim_positions
 
-    _NOW = datetime.now(tz=timezone.utc)
+    _NOW = datetime.now(tz=UTC)
 
     # Seed: WOLF fully bought then fully sold; SQQQ still open.
     account = repo.get_or_create_account("Schwab", "X")

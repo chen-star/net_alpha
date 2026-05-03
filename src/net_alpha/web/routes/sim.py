@@ -22,8 +22,13 @@ def _build_sim_positions(
     pricing: PricingService,
 ) -> list:
     """Return Position objects for the sim suggestions, with FIFO-consumed
-    quantities. Closed positions (fully-sold equities like WOLF) are
-    excluded; partially-closed positions reflect remaining quantity.
+    quantities. Fully-closed positions are excluded; partially-closed
+    positions reflect remaining quantity.
+
+    Aggregation is per-symbol (not per (account, symbol)) — the chip's
+    pre-fill account uses the alphabetically-first account when a symbol
+    is held across multiple accounts. The user can change account on the
+    sim form.
     """
     from net_alpha.portfolio.positions import compute_open_positions
     from net_alpha.portfolio.sim_suggestions import Position
