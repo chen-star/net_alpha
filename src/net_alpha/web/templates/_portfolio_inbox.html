@@ -1,0 +1,16 @@
+{# STUB: replaced by Task 10 with the full panel. Keeps the route working
+   and lets Task 9 tests assert basic content presence. #}
+<div id="inbox-panel" class="panel mb-4">
+  {% if items %}
+    <ul>
+      {% for it in items %}
+        <li data-key="{{ it.dismiss_key }}">
+          <span>{{ it.title }}</span>
+          <span>{{ it.subtitle }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Nothing to act on right now.</p>
+  {% endif %}
+</div>

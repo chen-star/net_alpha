@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import date, timedelta
 from datetime import date as _date
 from decimal import Decimal
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
+from sqlmodel import Session
 
 from net_alpha.audit import (
     CashRef,
@@ -15,7 +17,11 @@ from net_alpha.audit import (
     UnrealizedPLRef,
     WashImpactRef,
 )
+from net_alpha.config import load_tax_config
 from net_alpha.db.repository import Repository
+from net_alpha.inbox.aggregator import gather_inbox
+from net_alpha.inbox.config import load_inbox_config
+from net_alpha.inbox.dismissals import toggle_dismissal
 from net_alpha.portfolio.account_value import build_account_value_series, build_eval_dates
 from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.portfolio.benchmark import build_benchmark_series
@@ -864,3 +870,63 @@ def portfolio_body(
             "period_label": period_label,
         },
     )
+
+
+def _resolve_inbox_rates(repo: Repository) -> tuple[Decimal, Decimal]:
+    """Pull (short-term, long-term) effective rates from the user's tax: config.
+
+    ST = federal_marginal_rate + state_marginal_rate (ordinary income on ST gains)
+    LT = ltcg_rate + state_marginal_rate (LTCG federal + state)
+
+    Falls back to (0, 0) when no tax config is set — the LT-eligibility signal
+    still emits items, but with dollar_impact = None, which the template
+    renders without the +$X clause.
+    """
+    cfg_path = Path.home() / ".net_alpha" / "config.yaml"
+    tax = load_tax_config(cfg_path)
+    if tax is None:
+        return Decimal("0"), Decimal("0")
+    st = Decimal(str(tax.federal_marginal_rate)) + Decimal(str(tax.state_marginal_rate))
+    lt = Decimal(str(tax.ltcg_rate)) + Decimal(str(tax.state_marginal_rate))
+    return st, lt
+
+
+@router.get("/portfolio/inbox", response_class=HTMLResponse)
+def portfolio_inbox(
+    request: Request,
+    account: str | None = Query(default=None),
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+):
+    cfg = load_inbox_config(Path.home() / ".net_alpha" / "config.yaml")
+    st_rate, lt_rate = _resolve_inbox_rates(repo)
+    today = _date.today()
+    with Session(repo.engine) as session:
+        items = gather_inbox(
+            repo=repo,
+            prices=pricing,
+            session=session,
+            today=today,
+            config=cfg,
+            st_rate=st_rate,
+            lt_rate=lt_rate,
+            account=account,
+        )
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_portfolio_inbox.html",
+        {"items": items, "account": account},
+    )
+
+
+@router.post("/portfolio/inbox/dismiss/{dismiss_key:path}", response_class=HTMLResponse)
+def portfolio_inbox_dismiss(
+    request: Request,
+    dismiss_key: str,
+    account: str | None = Query(default=None),
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+):
+    with Session(repo.engine) as session:
+        toggle_dismissal(session, dismiss_key)
+    return portfolio_inbox(request=request, account=account, repo=repo, pricing=pricing)
