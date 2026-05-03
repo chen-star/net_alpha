@@ -2,6 +2,204 @@
 
 
 
+## v0.45.0 (2026-05-03)
+
+### Chore
+
+* chore(sim): lint cleanup + docstring note on per-symbol aggregation
+
+Drops 3 ruff errors introduced in the prior commit and notes the
+per-symbol granularity for the chip&#39;s account pre-fill in the helper
+docstring.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`53e4c97`](https://github.com/chen-star/net_alpha/commit/53e4c972328d6910a08c3a266f538b7c32d1219f))
+
+### Documentation
+
+* docs(ui): update Unrealized P/L tooltip for short-option intrinsic floor
+
+Calls out that short options (sold puts and covered calls) are
+estimated rather than marked-to-market, so the user knows the number
+isn&#39;t broker-verified.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`60cc9ba`](https://github.com/chen-star/net_alpha/commit/60cc9bae1dbba05d602c8d8241612c680a928ac0))
+
+* docs(ui): update Total Return tooltip + suffix for Period P/L semantics
+
+Tooltip now describes ending − starting − contributions; the small text
+under the number reads &#34;% vs starting + contributed&#34; to match the new
+denominator.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8d2a3b0`](https://github.com/chen-star/net_alpha/commit/8d2a3b081e7f7ae699b74e790ef1c27d46faa5d8))
+
+### Feature
+
+* feat(ui): paginate harvest plan rows
+
+Add page/page_size params to /tax/harvest/plan; keep full rows list
+for summary metrics and pass rows_page slice + picks to template so
+manual pick checkboxes survive page transitions.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c8ade85`](https://github.com/chen-star/net_alpha/commit/c8ade858c88920a4a5ad2b97af8d425bd8c5fd98))
+
+* feat(ui): paginate open-options table
+
+Add page/page_size params to /holdings/options; pass selected_account
+to template so pagination links preserve account filter context.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4c836b2`](https://github.com/chen-star/net_alpha/commit/4c836b2c0eee4088295696f78c00f0a0120f20b1))
+
+* feat(ui): paginate closed-positions view
+
+Add page/page_size query params (default 25/page) to the closed tab;
+sort by closed_date desc so most recent lots appear on page 1.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`df6b38d`](https://github.com/chen-star/net_alpha/commit/df6b38d4e98487ebefdf937455f50a354c1129f9))
+
+* feat(ui): add ? icons to Total Return and Unrealized P/L KPI tiles
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e2d7289`](https://github.com/chen-star/net_alpha/commit/e2d728985f76a87a8d0854f9d782decc4939a6b5))
+
+* feat(ui): explain Jinja templates for Total Return and Unrealized P/L
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`40e269b`](https://github.com/chen-star/net_alpha/commit/40e269b9d13daf01dfd06f20f3de558d12d51d5c))
+
+* feat(web): explain endpoints for Total Return and Unrealized P/L
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`06609bb`](https://github.com/chen-star/net_alpha/commit/06609bb337d5b2cb4eb3a5e8b037eb3da3e647a3))
+
+* feat(portfolio): explain.py — pure-function payloads for KPI explainer panels
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4e35bca`](https://github.com/chen-star/net_alpha/commit/4e35bca0a92dc5404e5ee5d4f570693b6c000e10))
+
+* feat(portfolio): intrinsic-value floor for short option unrealized P/L
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a2b2a5c`](https://github.com/chen-star/net_alpha/commit/a2b2a5cd507c63b1bb1c25dc14bb937d2308f0af))
+
+* feat(ui): stop computing SPY benchmark series for equity curve
+
+Drops the build_benchmark_series import and replaces both call sites
+(equity-curve fragment route + portfolio_body) with an empty list.
+Template still receives benchmark_points/benchmark_symbol context vars
+(no usage now); benchmark.py module is kept in case a future feature
+wants it.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4e3feee`](https://github.com/chen-star/net_alpha/commit/4e3feeed05f4b0bbaa89698eb32bcc3a31ce6319))
+
+* feat(ui): remove SPY benchmark line from equity curve
+
+User feedback: the SPY (buy &amp; hold) overlay distracts from the user&#39;s
+own equity curve. Drop the series push and the matching color/width
+extension; benchmark_points and benchmark_symbol context vars are still
+passed but unused, so the route can stop computing the series in a
+follow-up commit.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0af70d3`](https://github.com/chen-star/net_alpha/commit/0af70d39606c7f9e8b017eb11d3d14037c31b76c))
+
+* feat(portfolio): wire period-start value into Total Return
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a9fe50a`](https://github.com/chen-star/net_alpha/commit/a9fe50aebe24e75058c5ba9a5443ba9e76b3198b))
+
+* feat(portfolio): account_value_at — pinned period-start lookup
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6ebf9f1`](https://github.com/chen-star/net_alpha/commit/6ebf9f1acd64343b8fa63ce37c145d5079718a1f))
+
+* feat(portfolio): switch Total Return to Period P/L formula
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d0f7067`](https://github.com/chen-star/net_alpha/commit/d0f7067bc883e0e20a8b051fd4cac4d37b5411fc))
+
+* feat(portfolio): add period_starting_value field to CashFlowKPIs
+
+Defaults to 0 so existing call sites are unaffected. Will carry the
+account value at the period boundary for the upcoming Period P/L
+formula change to Total Return.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`39c7f35`](https://github.com/chen-star/net_alpha/commit/39c7f35f440ef26ef5745c920487aa555ce1abed))
+
+### Fix
+
+* fix(ui): GL-closure parity in explainer + total counts in pagination headers
+
+- explain_unrealized now passes gl_closures + gl_option_closures (account-
+  scoped) to consume_lots_fifo, matching the compute_kpis path so the
+  explainer panel total agrees with the KPI tile when Realized G/L CSVs
+  are imported
+- positions closed-view header now reads closed_rows_total (pre-slice) so
+  the &#34;N closed lots&#34; count reflects all pages, not just the current page
+- holdings/options summary header now reads option_counts dict (pre-slice)
+  so long/short totals are correct across pages
+- Added tests: test_portfolio_explain.py (GL-closure wiring smoke) and a
+  pagination-header assertion in test_positions_view_closed.py
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`22f9065`](https://github.com/chen-star/net_alpha/commit/22f9065094996cbf35b60a53117a441d659e2ebc))
+
+* fix(sim): consume FIFO so closed positions drop from suggestion chips
+
+Replaces the raw lot-quantity sum in the /sim/suggestions handler with
+_build_sim_positions(), which delegates to compute_open_positions() for
+proper FIFO consumption. Fully-sold positions like WOLF now have qty=0
+after FIFO and are excluded; the loss-closes block retains its own quote
+lookup for recently-closed tickers.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c2f3691`](https://github.com/chen-star/net_alpha/commit/c2f3691c6e939a8172d07f71225d62354db131f6))
+
+* fix(portfolio): thread GL closures into short-option unrealized adjustment
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`52fbe5b`](https://github.com/chen-star/net_alpha/commit/52fbe5bbeefdd12407e014203bb0d4b5a083727e))
+
+* fix(portfolio): forward-fill equity curve through today when quotes lag
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d71d616`](https://github.com/chen-star/net_alpha/commit/d71d616addca2905b5b4fd112c7b59abbf3c9b03))
+
+### Style
+
+* style: ruff format + ruff lint cleanup across new code
+
+Auto-fix from ruff format + ruff check --fix on the files modified by
+the portfolio KPI clarity work. uv.lock sync to match committed
+version 0.44.0.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`89c00d5`](https://github.com/chen-star/net_alpha/commit/89c00d5d27ce591b63d035b7a191db7901f9995f))
+
+* style: ruff format tests/portfolio/test_pnl.py
+
+Restores CI lint step (failed since 225ac25) by reflowing long lot/trade
+constructor calls onto one argument per line.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ee0e6f8`](https://github.com/chen-star/net_alpha/commit/ee0e6f89c74138a09546f652c791c1c94eed55cb))
+
+### Test
+
+* test(web): failing test for closed-position filter in sim chips
+
+Adds test_fully_closed_position_does_not_appear_in_chips: seeds a WOLF
+buy+full-sell plus an open SQQQ position, then asserts _build_sim_positions
+(via stub pricing) excludes WOLF and includes SQQQ.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b6122c1`](https://github.com/chen-star/net_alpha/commit/b6122c13f208a361c0a2eea57422442ea9a8efb0))
+
+* test(portfolio): cover explain payload builders for long, short, and excluded cases
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`31ba2ec`](https://github.com/chen-star/net_alpha/commit/31ba2ec75b84138fef10a0a33f06d8fccf563ee2))
+
+* test(portfolio): failing tests for short option intrinsic-value floor
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2ec14bf`](https://github.com/chen-star/net_alpha/commit/2ec14bfe76ee698a3571954e34fa86b76054ed57))
+
+* test(portfolio): cover account_value_at silent-skip + expired-option behavior
+
+Add three missing tests for account_value_at: equity lot pricing via
+get_close, silent-skip of unpriced lots (vs holdings_value_at returning
+None), and expired-option contribution of zero. Also fix stale docstring
+on CashFlowKPIs.growth_pct to reflect the actual denominator guard.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6ac630c`](https://github.com/chen-star/net_alpha/commit/6ac630cbef0adb61ab5d8e26df350ed2c638edb4))
+
+* test(portfolio): add failing tests for period-aware Total Return
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ef4a7f7`](https://github.com/chen-star/net_alpha/commit/ef4a7f7aed7a2122a6cba31114a97a762945a05d))
+
+
 ## v0.44.0 (2026-05-03)
 
 ### Chore
