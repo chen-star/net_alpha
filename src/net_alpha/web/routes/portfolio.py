@@ -956,3 +956,109 @@ def portfolio_inbox_dismiss(
     with Session(repo.engine) as session:
         toggle_dismissal(session, dismiss_key)
     return portfolio_inbox(request=request, account=account, repo=repo, pricing=pricing)
+
+
+@router.get("/portfolio/explain/total-return", response_class=HTMLResponse)
+def explain_total_return(
+    request: Request,
+    period: str | None = None,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Math explainer fragment for the Total Return KPI tile."""
+    from net_alpha.portfolio.explain import build_total_return_breakdown
+
+    today = date.today()
+    period_tuple, period_label = _parse_period(period, today.year)
+
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    if account:
+        trades = [t for t in trades if t.account == account]
+        lots = [lt for lt in lots if lt.account == account]
+    cash_events = repo.list_cash_events(account_id=None)
+    if account:
+        cash_events = [e for e in cash_events if e.account == account]
+
+    cash_points_full = build_cash_balance_series(
+        events=cash_events, trades=trades, account=None, period=None,
+    )
+
+    if period_tuple is None:
+        starting_value = Decimal("0")
+        is_lifetime = True
+    else:
+        boundary = date(period_tuple[0], 1, 1) - timedelta(days=1)
+        starting_value = account_value_at(
+            on=boundary, trades=trades, lots=lots,
+            cash_points=cash_points_full,
+            get_close=svc.get_historical_close,
+        )
+        is_lifetime = False
+
+    symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
+    prices = svc.get_prices(symbols) if symbols else {}
+    kpis_now = compute_kpis(
+        trades=trades, lots=lots, prices=prices, period_label=period_label,
+        period=period_tuple, account=None, gl_lots=repo.list_all_gl_lots(),
+    )
+    holdings_value = kpis_now.open_position_value or Decimal("0")
+    cash_kpis = compute_cash_kpis(
+        events=cash_events, trades=trades, holdings_value=holdings_value,
+        account=None, period=period_tuple,
+        period_starting_value=starting_value,
+    )
+
+    breakdown = build_total_return_breakdown(
+        period_label=period_label,
+        ending_value=cash_kpis.account_value,
+        starting_value=starting_value,
+        contributions=cash_kpis.period_net_contributions,
+        realized_in_period=kpis_now.period_realized,
+        is_lifetime=is_lifetime,
+    )
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_explain_total_return.html",
+        {"b": breakdown},
+    )
+
+
+@router.get("/portfolio/explain/unrealized", response_class=HTMLResponse)
+def explain_unrealized(
+    request: Request,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Math explainer fragment for the Unrealized P/L KPI tile.
+
+    Period-agnostic — Unrealized always shows current open positions.
+    """
+    from net_alpha.portfolio.explain import build_unrealized_breakdown
+    from net_alpha.portfolio.positions import consume_lots_fifo
+
+    today = date.today()
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    if account:
+        trades = [t for t in trades if t.account == account]
+        lots = [lt for lt in lots if lt.account == account]
+
+    consumed = consume_lots_fifo(lots=lots, trades=trades)
+    short_rows = compute_open_short_option_positions(
+        trades, gl_option_closures=repo.get_option_gl_closures(),
+    )
+    symbols = sorted({lot.ticker for lot in lots} | {row.ticker for row in short_rows})
+    prices = svc.get_prices(symbols) if symbols else {}
+
+    breakdown = build_unrealized_breakdown(
+        consumed=consumed, short_option_rows=short_rows,
+        prices=prices, as_of=today,
+    )
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_explain_unrealized.html",
+        {"b": breakdown},
+    )
