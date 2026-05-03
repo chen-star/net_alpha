@@ -385,3 +385,44 @@ def test_account_value_series_cash_balance_steps_with_deposits():
     assert series[0].cash_balance == Decimal("5000")
     assert series[1].cash_balance == Decimal("5000")  # walks forward to last <= D
     assert series[2].cash_balance == Decimal("8000")
+
+
+def test_account_value_at_returns_zero_when_no_history():
+    """No cash_points → 0 (account didn't exist yet)."""
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.portfolio.account_value import account_value_at
+
+    val = account_value_at(
+        on=dt.date(2025, 12, 31),
+        trades=[],
+        lots=[],
+        cash_points=[],
+        get_close=lambda t, d: None,
+    )
+    assert val == Decimal("0")
+
+
+def test_account_value_at_uses_most_recent_cash_point_before_date():
+    """Picks the latest cash_point whose date is on or before ``on``."""
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.portfolio.account_value import account_value_at
+    from net_alpha.portfolio.models import CashBalancePoint
+
+    cash_points = [
+        CashBalancePoint(on=dt.date(2025, 6, 1), cash_balance=Decimal("10000"), cumulative_contributions=Decimal("10000")),
+        CashBalancePoint(on=dt.date(2025, 12, 1), cash_balance=Decimal("12000"), cumulative_contributions=Decimal("12000")),
+        CashBalancePoint(on=dt.date(2026, 2, 1), cash_balance=Decimal("15000"), cumulative_contributions=Decimal("15000")),
+    ]
+    val = account_value_at(
+        on=dt.date(2025, 12, 31),
+        trades=[],
+        lots=[],
+        cash_points=cash_points,
+        get_close=lambda t, d: None,
+    )
+    # Most recent cash_point on/before 2025-12-31 is 2025-12-01 with $12,000
+    assert val == Decimal("12000.00")

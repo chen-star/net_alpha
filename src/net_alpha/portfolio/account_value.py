@@ -145,6 +145,56 @@ def holdings_value_at(
     return total, ()
 
 
+def account_value_at(
+    *,
+    on: dt.date,
+    trades: list[Trade],
+    lots: list[Lot],
+    cash_points: list[CashBalancePoint],
+    get_close: Callable[[str, dt.date], Decimal | None],
+) -> Decimal:
+    """Return the account value (cash + holdings) as of the close of ``on``.
+
+    Used to pin the period-start anchor for Total Return calculations.
+    Returns Decimal("0") when there is no history before ``on`` (account
+    started inside the period).
+
+    Missing equity quotes are forward-filled up to 7 calendar days back via
+    _close_with_forward_fill; if a price is still missing, that lot's
+    contribution is treated as 0 (best-effort under partial data — Total
+    Return is informative, not financial-grade).
+    """
+    if not cash_points:
+        return Decimal("0")
+
+    cash_bal = Decimal("0")
+    for cp in sorted(cash_points, key=lambda p: p.on):
+        if cp.on > on:
+            break
+        cash_bal = cp.cash_balance
+
+    # holdings_value_at returns None when ANY equity lot is unpriced — too strict
+    # for a starting-value anchor. Replicate its core loop, but skip unpriced
+    # lots silently rather than aborting.
+    trades_asof = [t for t in trades if t.date <= on]
+    lots_asof = [lt for lt in lots if lt.date <= on]
+    consumed = consume_lots_fifo(lots=lots_asof, trades=trades_asof)
+    holdings = Decimal("0")
+    for lot, rem_qty, rem_basis in consumed:
+        if rem_qty <= 0:
+            continue
+        if lot.option_details is not None:
+            if lot.option_details.expiry < on:
+                continue
+            holdings += rem_basis
+            continue
+        close = _close_with_forward_fill(ticker=lot.ticker, on=on, get_close=get_close)
+        if close is None:
+            continue
+        holdings += (rem_qty * close).quantize(Decimal("0.01"))
+    return (cash_bal + holdings).quantize(Decimal("0.01"))
+
+
 def build_account_value_series(
     *,
     trades: list[Trade],
