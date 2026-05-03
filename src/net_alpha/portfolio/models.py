@@ -241,6 +241,7 @@ class CashFlowKPIs:
     growth: Decimal
     growth_pct: Decimal | None  # None when net_contributions == 0
     cash_share_pct: Decimal
+    period_starting_value: Decimal = Decimal("0")  # account value at last second of period start; 0 for Lifetime
 
 
 @dataclass(frozen=True)
