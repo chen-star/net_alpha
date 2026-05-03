@@ -24,7 +24,6 @@ from net_alpha.inbox.config import load_inbox_config
 from net_alpha.inbox.dismissals import toggle_dismissal
 from net_alpha.portfolio.account_value import account_value_at, build_account_value_series, build_eval_dates
 from net_alpha.portfolio.allocation import build_allocation
-from net_alpha.portfolio.benchmark import build_benchmark_series
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
     cash_allocation_slice,
@@ -652,15 +651,7 @@ def portfolio_equity_curve(
         get_close=svc.get_historical_close,
     )
 
-    try:
-        benchmark_points = build_benchmark_series(
-            symbol=benchmark_symbol,
-            eq_dates=[p.on for p in account_points],
-            cash_points=cash_points,
-            get_close=svc.get_historical_close,
-        )
-    except Exception:
-        benchmark_points = []
+    benchmark_points: list = []
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -820,19 +811,7 @@ def portfolio_body(
         get_close=svc.get_historical_close,
     )
 
-    # Benchmark shadow series for the same date axis. Best-effort: a missing
-    # benchmark must NOT break the chart, so we wrap the call in try/except
-    # and pass empty list on any failure.
-    try:
-        eq_dates = [p.on for p in account_points]
-        benchmark_points = build_benchmark_series(
-            symbol=benchmark_symbol,
-            eq_dates=eq_dates,
-            cash_points=cash_points,
-            get_close=svc.get_historical_close,
-        )
-    except Exception:
-        benchmark_points = []
+    benchmark_points: list = []
 
     open_shorts = compute_open_short_option_positions(
         scoped_trades,
