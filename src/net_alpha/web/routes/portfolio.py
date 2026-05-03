@@ -17,7 +17,7 @@ from net_alpha.audit import (
     UnrealizedPLRef,
     WashImpactRef,
 )
-from net_alpha.config import load_tax_config
+from net_alpha.config import TaxConfig
 from net_alpha.db.repository import Repository
 from net_alpha.inbox.aggregator import gather_inbox
 from net_alpha.inbox.config import load_inbox_config
@@ -873,8 +873,8 @@ def portfolio_body(
     )
 
 
-def _resolve_inbox_rates() -> tuple[Decimal, Decimal]:
-    """Pull (short-term, long-term) effective rates from the user's tax: config.
+def _resolve_inbox_rates(tax: TaxConfig | None) -> tuple[Decimal, Decimal]:
+    """Pull (short-term, long-term) effective rates from the cached tax config.
 
     ST = federal_marginal_rate + state_marginal_rate (ordinary income on ST gains)
     LT = ltcg_rate + state_marginal_rate (LTCG federal + state)
@@ -882,9 +882,11 @@ def _resolve_inbox_rates() -> tuple[Decimal, Decimal]:
     Falls back to (0, 0) when no tax config is set — the LT-eligibility signal
     still emits items, but with dollar_impact = None, which the template
     renders without the +$X clause.
+
+    Reads from app.state.tax_brackets_cfg (loaded once at startup, refreshed
+    by the /settings POST) rather than re-reading config.yaml per request, so
+    the inbox stays in sync with the rest of the dashboard's tax projections.
     """
-    cfg_path = Path.home() / ".net_alpha" / "config.yaml"
-    tax = load_tax_config(cfg_path)
     if tax is None:
         return Decimal("0"), Decimal("0")
     st = Decimal(str(tax.federal_marginal_rate)) + Decimal(str(tax.state_marginal_rate))
@@ -900,7 +902,7 @@ def portfolio_inbox(
     pricing: PricingService = Depends(get_pricing_service),
 ):
     cfg = load_inbox_config(Path.home() / ".net_alpha" / "config.yaml")
-    st_rate, lt_rate = _resolve_inbox_rates()
+    st_rate, lt_rate = _resolve_inbox_rates(request.app.state.tax_brackets_cfg)
     today = _date.today()
     with Session(repo.engine) as session:
         items = gather_inbox(
