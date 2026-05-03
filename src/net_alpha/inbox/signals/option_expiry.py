@@ -16,6 +16,7 @@ from decimal import Decimal
 from typing import Any, Protocol
 
 from net_alpha.inbox.models import InboxItem, Severity, SignalType
+from net_alpha.portfolio.positions import open_lots_view
 
 OPTION_MULTIPLIER = Decimal("100")
 DEFAULT_EXPIRY_LOOKAHEAD_DAYS = 14
@@ -26,6 +27,8 @@ WATCH_DAYS = 7
 
 class _RepoLike(Protocol):
     def all_lots(self) -> Iterable[Any]: ...
+
+    def all_trades(self) -> Iterable[Any]: ...
 
 
 class _PricesLike(Protocol):
@@ -63,9 +66,19 @@ def compute_option_expiry(
     assignment_window_days: int = DEFAULT_ASSIGNMENT_WINDOW_DAYS,
     account: str | None = None,
 ) -> list[InboxItem]:
+    # FIFO-net lots against trades so options the user has STC'd no longer
+    # appear. The detector only ever creates lots for buys, so a closed-out
+    # long-call lot keeps its original positive quantity in the DB —
+    # `repo.all_lots()` alone treats it as still open. (See WULF 23C bug.)
+    # `open_lots_view` drops rem_qty <= 0, which includes negative-quantity
+    # short lots that consumption never touches; preserve them since shorts
+    # aren't netted via FIFO in this codebase (STO doesn't create a lot).
+    raw_lots = list(repo.all_lots())
+    consumed_lots = list(open_lots_view(lots=raw_lots, trades=repo.all_trades()))
+    short_lots = [lot for lot in raw_lots if lot.quantity < 0]
     open_option_lots = [
         lot
-        for lot in repo.all_lots()
+        for lot in consumed_lots + short_lots
         if lot.option_details is not None and (account is None or lot.account == account) and lot.quantity != 0
     ]
     if not open_option_lots:

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from net_alpha.inbox.models import Severity, SignalType
 from net_alpha.inbox.signals.lt_eligibility import compute_lt_eligibility
+from net_alpha.models.domain import Trade
 from tests.inbox.conftest import make_lot, make_prices_stub, make_repo
 
 # Marginal rates pulled from the user's tax: config (st_rate - lt_rate).
@@ -97,6 +98,34 @@ def test_lot_at_exactly_366_days_excluded():
     today = date(2026, 5, 1)
     acquired = today - timedelta(days=366)
     repo = make_repo(lots=[make_lot(acquired=acquired, ticker="AAPL", quantity=10, cost_basis=1000)])
+    prices = make_prices_stub({"AAPL": Decimal("200")})
+    items = compute_lt_eligibility(repo=repo, prices=prices, today=today, st_rate=ST_RATE, lt_rate=LT_RATE)
+    assert items == []
+
+
+def test_lot_fully_sold_is_filtered_out():
+    """A lot that has been entirely closed by SELL trades should NOT appear.
+
+    The detector keeps the original buy lot row at its original quantity
+    even after the user sells the position. Without FIFO consumption, the
+    inbox shows long-since-disposed lots as still on the LT-eligibility
+    radar — wrong.
+    """
+    today = date(2026, 5, 1)
+    acquired = today - timedelta(days=350)  # 16 days to LT
+    lot = make_lot(lid="42", acquired=acquired, ticker="AAPL", quantity=10, cost_basis=1000)
+    sell = Trade(
+        id="t-sell",
+        account="Schwab/Tax",
+        date=date(2026, 4, 15),
+        ticker="AAPL",
+        action="Sell",
+        quantity=10,
+        proceeds=2000,
+        cost_basis=1000,
+        basis_source="cost_basis",
+    )
+    repo = make_repo(lots=[lot], trades=[sell])
     prices = make_prices_stub({"AAPL": Decimal("200")})
     items = compute_lt_eligibility(repo=repo, prices=prices, today=today, st_rate=ST_RATE, lt_rate=LT_RATE)
     assert items == []

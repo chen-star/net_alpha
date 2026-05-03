@@ -16,6 +16,7 @@ from decimal import Decimal
 from typing import Any, Protocol
 
 from net_alpha.inbox.models import InboxItem, Severity, SignalType
+from net_alpha.portfolio.positions import open_lots_view
 
 LT_HOLDING_DAYS = 366  # IRS: holding period must be MORE than one year
 DEFAULT_LOOKAHEAD_DAYS = 60
@@ -24,6 +25,8 @@ WATCH_THRESHOLD_DAYS = 14
 
 class _RepoLike(Protocol):
     def all_lots(self) -> Iterable[Any]: ...
+
+    def all_trades(self) -> Iterable[Any]: ...
 
 
 class _PricesLike(Protocol):
@@ -40,9 +43,14 @@ def compute_lt_eligibility(
     lookahead_days: int = DEFAULT_LOOKAHEAD_DAYS,
     account: str | None = None,
 ) -> list[InboxItem]:
+    # FIFO-net lots against trades so positions that have been entirely sold
+    # no longer appear. `Lot.quantity` in the DB stays at the original buy
+    # quantity even after the user closes; raw filtering would surface
+    # already-disposed positions on the LT-eligibility radar.
+    consumed_lots = open_lots_view(lots=repo.all_lots(), trades=repo.all_trades())
     open_equity_lots = [
         lot
-        for lot in repo.all_lots()
+        for lot in consumed_lots
         if lot.option_details is None and (account is None or lot.account == account) and lot.quantity > 0
     ]
     if not open_equity_lots:

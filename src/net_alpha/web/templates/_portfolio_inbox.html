@@ -3,65 +3,80 @@
    each dismissal POST. Items already arrive in display order. #}
 
 {% set urgent_count = items | selectattr('severity.value', 'equalto', 'urgent') | list | length %}
+{% set watch_count  = items | selectattr('severity.value', 'equalto', 'watch')  | list | length %}
 {% set total = items | length %}
 
 <div id="inbox-panel" class="panel mb-4"
      x-data="{ open: {{ 'true' if urgent_count > 0 else 'false' }} }"
      {% if account %}data-account="{{ account }}"{% endif %}>
-  <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
+  <div class="flex items-center justify-between cursor-pointer select-none" @click="open = !open">
     <div class="flex items-center gap-2">
-      <span class="font-semibold">Action Inbox</span>
+      <span class="text-[14px] font-semibold">Action Inbox</span>
       {% if total > 0 %}
-        <span class="text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-100">{{ total }}</span>
+        <span class="text-[11px] num font-medium px-2 py-[2px] rounded-full"
+              style="color: var(--color-label-1); background: var(--color-hairline);">{{ total }}</span>
       {% endif %}
       {% if urgent_count > 0 %}
-        <span class="text-xs px-2 py-0.5 rounded-full bg-red-600/20 text-red-400">{{ urgent_count }} urgent</span>
+        <span class="text-[11px] font-medium px-2 py-[2px] rounded-full"
+              style="color: var(--color-neg); background: var(--color-neg-tint);">{{ urgent_count }} urgent</span>
+      {% endif %}
+      {% if watch_count > 0 %}
+        <span class="text-[11px] font-medium px-2 py-[2px] rounded-full"
+              style="color: var(--color-warn); background: var(--color-warn-tint);">{{ watch_count }} watch</span>
       {% endif %}
     </div>
-    <span x-text="open ? '▾' : '▸'" class="text-zinc-400"></span>
+    <span x-text="open ? '▾' : '▸'" class="text-label-2 text-[13px]"></span>
   </div>
 
   <div x-show="open" x-transition class="mt-3">
     {% if total == 0 %}
-      <p class="text-sm text-zinc-500">Nothing to act on right now.</p>
+      <div class="text-[12px] text-label-2 py-2">Nothing to act on right now.</div>
     {% else %}
       {% set sections = [
-        ('urgent', 'Urgent'),
-        ('watch', 'Watch'),
-        ('info', 'Info'),
+        ('urgent', 'Urgent', 'var(--color-neg)'),
+        ('watch',  'Watch',  'var(--color-warn)'),
+        ('info',   'Info',   'var(--color-info)'),
       ] %}
-      {% for sev, label in sections %}
+      {% for sev, label, sev_color in sections %}
         {% set rows = items | selectattr('severity.value', 'equalto', sev) | list %}
         {% if rows %}
-          <div class="mt-2">
-            <div class="text-xs uppercase tracking-wide text-zinc-500 mb-1">{{ label }}</div>
-            <ul class="divide-y divide-zinc-800">
+          <div class="mt-3 first:mt-0">
+            <div class="label-uc text-[10px] mb-2" style="color: {{ sev_color }};">{{ label }}</div>
+            <div class="flex flex-col">
               {% for it in rows %}
-                <li class="py-2 flex items-start justify-between gap-3">
-                  <div class="flex items-start gap-2 min-w-0">
-                    <span class="mt-1 inline-block w-2 h-2 rounded-full
-                      {% if sev == 'urgent' %}bg-red-500
-                      {% elif sev == 'watch' %}bg-amber-500
-                      {% else %}bg-blue-500{% endif %}"></span>
-                    <div class="min-w-0">
-                      <a href="{{ it.deep_link }}" class="font-medium hover:underline truncate block">{{ it.title }}</a>
-                      <div class="text-xs text-zinc-400 truncate">{{ it.subtitle }}</div>
-                      <div class="text-xs text-zinc-500">
-                        {{ it.event_date.isoformat() }}
+                <div class="flex items-start justify-between gap-3 py-[9px]"
+                     data-symbol="{{ it.ticker|upper }}"
+                     style="border-bottom: 0.5px solid var(--color-hairline);">
+                  <div class="flex items-start gap-[10px] min-w-0 flex-1">
+                    <span class="mt-[5px] shrink-0"
+                          style="width:6px; height:6px; border-radius:50%;
+                                 background: {{ sev_color }};
+                                 box-shadow: 0 0 6px {{ sev_color }};"></span>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-baseline justify-between gap-2">
+                        <a href="{{ it.deep_link }}"
+                           class="text-[13px] font-medium tracking-tightish text-text no-underline hover:underline truncate">{{ it.title }}</a>
                         {% if it.dollar_impact is not none %}
-                          · ${{ '{:,.0f}'.format(it.dollar_impact) }}
+                          <span class="num text-[12px] font-medium shrink-0"
+                                style="color: {{ sev_color }};">
+                            ${{ '{:,.0f}'.format(it.dollar_impact) }}
+                          </span>
                         {% endif %}
                       </div>
+                      <div class="text-[11px] text-label-2 truncate">{{ it.subtitle }}</div>
+                      <div class="text-[10px] text-label-3 num mt-[2px]">{{ it.event_date.isoformat() }}</div>
                     </div>
                   </div>
-                  <button class="text-zinc-500 hover:text-zinc-200 px-2"
+                  <button type="button"
+                          class="text-label-2 hover:text-text text-[16px] leading-none px-2 py-1 cursor-pointer shrink-0"
                           hx-post="/portfolio/inbox/dismiss/{{ it.dismiss_key }}{% if account %}?account={{ account }}{% endif %}"
                           hx-target="#inbox-panel"
                           hx-swap="outerHTML"
-                          aria-label="Dismiss">×</button>
-                </li>
+                          aria-label="Dismiss"
+                          title="Dismiss">×</button>
+                </div>
               {% endfor %}
-            </ul>
+            </div>
           </div>
         {% endif %}
       {% endfor %}
