@@ -2,6 +2,41 @@
 
 
 
+## v0.50.1 (2026-05-04)
+
+### Fix
+
+* fix(portfolio): correct Total Return decomposition for per-account scope and unpriced lots
+
+Two related bugs made the YTD Total Return decomposition disagree with the
+standalone Realized P/L + Unrealized P/L tiles:
+
+1. Per-account GL leak in the explainer route. /portfolio/explain/total-return
+   pre-filtered trades and lots by account but passed account=None into
+   compute_kpis along with all-account gl_lots. compute_kpis only filters
+   gl_lots when its account arg is truthy, so other accounts&#39; GL realizations
+   silently leaked into the decomposition&#39;s realized leg.
+
+2. Negative-cached historical closes silently treated as $0 in the period
+   anchor. account_value_at drops lots whose forward-fill close lookup
+   returns None, so missing 12/31 closes for held lots undercounted
+   starting_value and inflated Total Return. The bulk warmer was the source:
+   it stored None for every calendar day in a yfinance bulk response,
+   including real trading days the partial response missed.
+
+Fixes:
+- explain_total_return now passes account through to compute_kpis.
+- warm_historical_range only negative-caches Sat/Sun. Weekday misses stay
+  _MISS so the single-fetch fallback can recover them — self-healing.
+- New account_value_at_with_warnings surfaces lot drops; the Total Return
+  panel renders a caveat banner with the affected tickers and basis sum.
+- New net-alpha refresh-historical-cache [--since DATE] CLI command purges
+  legacy NULL rows and re-warms from yfinance for users with already-poisoned
+  caches.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a9cd627`](https://github.com/chen-star/net_alpha/commit/a9cd627464f0aaf05015b944531daf0554049859))
+
+
 ## v0.50.0 (2026-05-04)
 
 ### Chore
