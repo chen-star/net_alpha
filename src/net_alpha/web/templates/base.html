@@ -110,9 +110,9 @@
     <div class="max-w-screen-2xl mx-auto px-5 text-[11px] text-label-2">
       {{ disclaimer }}
     </div>
-    {% if price_disclosure %}
-      <div class="text-[11px] text-label-2 text-center mt-1 opacity-70">{{ price_disclosure }}</div>
-    {% endif %}
+    {# Per-page freshness chips now own the data-source disclaimer in their
+       tooltip (see _portfolio_toolbar.html), so the footer no longer
+       duplicates "Prices via Yahoo Finance, ~15 min delayed.". #}
   </footer>
   <dialog id="provenance-dialog"
           class="provenance-dialog backdrop:bg-overlay-medium bg-bg text-text rounded p-0">

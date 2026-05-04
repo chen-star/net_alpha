@@ -25,14 +25,7 @@
     </select>
   </div>
   <div class="ml-auto flex items-center gap-2">
-    <span class="text-[11px] text-label-2">Prices via Yahoo (~15 min delay)</span>
-    <button type="button"
-            hx-post="/splits/sync?symbols=ALL"
-            hx-target="body" hx-swap="none"
-            onclick="window.location.reload()"
-            class="btn-ghost">&#8645; Sync splits</button>
-    {# Freshness chip (§5.11). One chip per page; replaces the inline "cached prices" copy
-       that previously decorated KPI tiles (§6.2 P5). Click → POST /prices/refresh?symbols=ALL. #}
+    {# Freshness chip — absorbs the data-source disclaimer in its tooltip. #}
     <button type="button"
             data-testid="freshness-chip"
             class="freshness-chip inline-flex items-center gap-1 px-2 py-1 rounded text-[12px] {% if price_freshness == 'green' %}text-pos{% elif price_freshness == 'amber' %}text-warn{% elif price_freshness == 'red' %}text-neg{% else %}text-label-3{% endif %}"
@@ -40,9 +33,42 @@
             hx-target="body"
             hx-swap="none"
             onclick="window.location.reload()"
-            title="{% if price_freshness == 'green' %}Prices are fresh — click to force refresh{% elif price_freshness == 'amber' %}Some prices are from cache — click to refresh{% elif price_freshness == 'red' %}Prices are stale — click to refresh{% else %}No price data yet — click to fetch{% endif %}">
+            title="Quotes via Yahoo Finance (~15 min delay). {% if price_freshness == 'green' %}Prices are fresh — click to force refresh.{% elif price_freshness == 'amber' %}Some prices are from cache — click to refresh.{% elif price_freshness == 'red' %}Prices are stale — click to refresh.{% else %}No price data yet — click to fetch.{% endif %}">
       <span class="rounded-full w-1.5 h-1.5 {% if price_freshness == 'green' %}bg-pos{% elif price_freshness == 'amber' %}bg-warn{% elif price_freshness == 'red' %}bg-neg{% else %}bg-label-3{% endif %}"></span>
       Prices {{ price_freshness_label|default('—') }}
     </button>
+
+    {# Overflow menu — admin-grade actions live behind a kebab to keep the
+       primary toolbar focused on Period/Account + freshness. Pattern mirrors
+       _row_actions.html. #}
+    <div class="relative" x-data="{ open: false }" data-testid="toolbar-overflow">
+      <button type="button"
+              class="inline-flex items-center justify-center w-7 h-7 rounded-md text-label-2 hover:text-text hover:bg-surface-2"
+              aria-label="More actions"
+              aria-haspopup="menu"
+              :aria-expanded="open"
+              @click.stop="open = !open"
+              @keydown.escape.stop="open = false">
+        <img src="/static/icons/ellipsis.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="">
+      </button>
+      <div x-show="open"
+           x-cloak
+           @click.outside="open = false"
+           class="absolute right-0 mt-1 w-56 bg-bg border rounded shadow-lg z-10"
+           style="box-shadow: var(--shadow-pane); border-color: var(--color-hairline);"
+           role="menu">
+        <button type="button"
+                class="w-full text-left flex items-center justify-between px-3 py-2 text-[13px] hover:bg-surface-2"
+                role="menuitem"
+                hx-post="/splits/sync?symbols=ALL"
+                hx-target="body"
+                hx-swap="none"
+                onclick="window.location.reload()"
+                @click="open = false">
+          <span>Sync splits</span>
+          <span class="text-label-3 text-[11px]">↕</span>
+        </button>
+      </div>
+    </div>
   </div>
 </form>

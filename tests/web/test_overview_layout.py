@@ -56,3 +56,40 @@ def test_equity_and_cash_curves_use_two_thirds_one_third_split(seeded_client):
     preceding = html[max(0, equity_idx - 400):equity_idx]
     assert 'grid-template-columns: 2fr 1fr;' in preceding
     assert 'grid-template-columns: 1fr 1fr;' not in preceding
+
+
+def test_toolbar_overflow_menu_holds_sync_splits(seeded_client):
+    """Sync splits is admin-grade — it belongs behind a kebab menu, not as
+    a primary inline button competing with Period and Account."""
+    html = seeded_client.get("/").text
+    # Kebab menu trigger uses the existing ellipsis icon + Alpine pattern.
+    assert 'data-testid="toolbar-overflow"' in html
+    # Sync splits is reachable inside the menu, not as a top-level button.
+    overflow_idx = html.find('data-testid="toolbar-overflow"')
+    assert overflow_idx > 0
+    # The Sync-splits markup (POST to /splits/sync) must live AFTER the
+    # overflow trigger, inside the dropdown.
+    sync_idx = html.find('hx-post="/splits/sync', overflow_idx)
+    assert sync_idx > 0, "Sync splits action must live inside the overflow menu"
+
+
+def test_toolbar_does_not_show_inline_yahoo_disclaimer(seeded_client):
+    """The 'Prices via Yahoo (~15 min delay)' inline text is gone — that
+    information now lives in the freshness chip tooltip."""
+    html = seeded_client.get("/").text
+    assert "Prices via Yahoo" not in html
+
+
+def test_freshness_chip_tooltip_mentions_provider_and_delay(seeded_client):
+    """The freshness chip absorbs the provider + delay disclaimer in its
+    title= so users still discover where the prices come from."""
+    html = seeded_client.get("/").text
+    # Find the chip's opening tag and confirm its title includes both
+    # 'Yahoo' and 'delay' (case-insensitive).
+    assert 'data-testid="freshness-chip"' in html
+    chip_idx = html.find('data-testid="freshness-chip"')
+    tag_start = html.rfind("<button", 0, chip_idx)
+    tag_end = html.index(">", chip_idx)
+    chip_tag = html[tag_start : tag_end + 1].lower()
+    assert "yahoo" in chip_tag
+    assert "delay" in chip_tag
