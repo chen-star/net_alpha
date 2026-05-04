@@ -1,4 +1,4 @@
-.PHONY: test lint format check release build-css vendor-fonts vendor-apex vendor-lucide snapshot-test snapshot-update
+.PHONY: test lint format check release build-css vendor-fonts vendor-apex vendor-lucide vendor-sortable snapshot-test snapshot-update
 
 test:
 	uv run pytest
@@ -59,6 +59,14 @@ vendor-lucide:
 			$(LUCIDE_BASE)/$$icon.svg; \
 	done
 	@echo "✓ vendored $(words $(LUCIDE_ICONS)) icons to src/net_alpha/web/static/icons/"
+
+# Plan-tab drag-to-reorder — SortableJS pinned for reproducibility.
+SORTABLE_VERSION := 1.15.2
+vendor-sortable:
+	@mkdir -p src/net_alpha/web/static/vendor/sortablejs
+	curl -sSL -o src/net_alpha/web/static/vendor/sortablejs/Sortable.min.js \
+		https://cdn.jsdelivr.net/npm/sortablejs@$(SORTABLE_VERSION)/Sortable.min.js
+	@echo "✓ vendored SortableJS $(SORTABLE_VERSION)"
 
 snapshot-test:
 	uv run pytest tests/web/snapshots -v
