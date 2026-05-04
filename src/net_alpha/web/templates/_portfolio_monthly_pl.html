@@ -1,0 +1,153 @@
+{# Inputs:
+   monthly_pl_points: list[MonthlyPnlPoint]   -- chronological, may be empty
+   period_label: str                          -- e.g. "YTD 2026", "2025", "Lifetime"
+#}
+
+{% set has_data = monthly_pl_points and (monthly_pl_points|map(attribute='trade_count')|sum) > 0 %}
+
+<div class="panel-head">
+  <h4>Monthly realized P&amp;L</h4>
+  <span class="meta">{{ period_label }}</span>
+</div>
+
+{% if not has_data %}
+  <div class="text-label-2 text-[13px] py-4">No realized closes in {{ period_label }}.</div>
+{% else %}
+  {# Always wrap in an overflow-x container so the same CSS path covers both
+     YTD/single-year (which fit) and Lifetime (which can scroll). The inner
+     min-width keeps each bar at least 32px wide once the count exceeds the
+     panel's natural width. #}
+  <div class="overflow-x-auto">
+    <div id="monthly-pl-chart-wrap"
+         style="min-width: max(100%, calc(32px * {{ monthly_pl_points|length }})); height: 180px;">
+      <div id="monthly-pl-chart" style="height: 100%;"></div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    const points = [
+      {% for p in monthly_pl_points %}
+        {
+          year: {{ p.year }},
+          month: {{ p.month }},
+          netPl: {{ p.net_pl|float }},
+          grossGain: {{ p.gross_gain|float }},
+          grossLoss: {{ p.gross_loss|float }},
+          tradeCount: {{ p.trade_count }},
+        }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    // Cross-year axis (Lifetime) needs "Jan '25" to disambiguate; same-year
+    // scope (YTD / single-year) fits with bare "Jan", "Feb", etc.
+    const years = new Set(points.map(p => p.year));
+    const isMultiYear = years.size > 1;
+    const monthAbbr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthFull = ["January", "February", "March", "April", "May", "June",
+                       "July", "August", "September", "October", "November", "December"];
+
+    function axisLabel(p) {
+      if (isMultiYear) {
+        return monthAbbr[p.month - 1] + " '" + String(p.year).slice(-2);
+      }
+      return monthAbbr[p.month - 1];
+    }
+
+    function fmtSigned(n) {
+      const sign = n >= 0 ? "+" : "−";
+      return sign + "$" + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+    function fmtUnsigned(n) {
+      return "$" + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    function buildOpts() {
+      const c = window.netAlphaChartTheme.colors;
+      return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
+        chart: {
+          type: "bar",
+          height: 180,
+          toolbar: { show: false },
+          zoom: { enabled: false },
+        },
+        // distributed:true is required for the per-bar color callback to
+        // apply to each column individually within the single series.
+        plotOptions: {
+          bar: { columnWidth: "65%", borderRadius: 2, distributed: true },
+        },
+        // Per-bar color: green when the month was a net gain, red when a net
+        // loss. Apex calls this for every datapoint when distributed is true.
+        colors: [function ({ value }) {
+          return value >= 0 ? c.pos : c.neg;
+        }],
+        dataLabels: { enabled: false },
+        legend: { show: false },
+        xaxis: {
+          type: "category",
+          categories: points.map(axisLabel),
+          tickPlacement: "on",
+          labels: { hideOverlappingLabels: true, rotate: 0 },
+        },
+        yaxis: {
+          labels: {
+            // Same $1k / −$1k formatter the equity curve uses inline.
+            formatter: (v) => {
+              if (v == null) return "—";
+              const n = Math.round(v);
+              const abs = Math.abs(n);
+              const sign = n < 0 ? "−" : "";
+              if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(0) + "k";
+              return sign + "$" + abs;
+            },
+          },
+        },
+        annotations: {
+          // Zero baseline anchors positive vs negative visually, matching
+          // the "even at $0 we know about this month" intent for empty bars.
+          yaxis: [{ y: 0, strokeDashArray: 0, borderColor: c.label3 }],
+        },
+        series: [{
+          name: "Net realized P&L",
+          data: points.map(p => ({ x: axisLabel(p), y: p.netPl })),
+        }],
+        tooltip: {
+          custom: function ({ dataPointIndex }) {
+            const p = points[dataPointIndex];
+            if (!p) return "";
+            return `
+              <div class="apex-tt">
+                <div class="apex-tt-date">${monthFull[p.month - 1]} ${p.year}</div>
+                <div class="apex-tt-row"><span>Net</span><span>${fmtSigned(p.netPl)}</span></div>
+                <div class="apex-tt-row"><span>Gains</span><span>+${fmtUnsigned(p.grossGain)}</span></div>
+                <div class="apex-tt-row"><span>Losses</span><span>−${fmtUnsigned(p.grossLoss)}</span></div>
+                <div class="apex-tt-row"><span>Closes</span><span>${p.tradeCount}</span></div>
+              </div>
+            `;
+          },
+        },
+      });
+    }
+
+    function render() {
+      const el = document.querySelector("#monthly-pl-chart");
+      if (!el) return;
+      el.innerHTML = "";
+      const chart = new ApexCharts(el, buildOpts());
+      chart.render();
+    }
+
+    if (window.ApexCharts && window.netAlphaChartTheme) {
+      window.netAlphaChartTheme.register(render);
+    } else {
+      const iv = setInterval(() => {
+        if (window.ApexCharts && window.netAlphaChartTheme) {
+          clearInterval(iv);
+          window.netAlphaChartTheme.register(render);
+        }
+      }, 50);
+    }
+  })();
+  </script>
+{% endif %}
