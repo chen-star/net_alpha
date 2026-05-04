@@ -41,21 +41,27 @@ def seeded_client(tmp_path):
     return TestClient(create_app(settings), raise_server_exceptions=False)
 
 
-def test_equity_and_cash_curves_use_two_thirds_one_third_split(seeded_client):
-    """Equity is the primary chart; cash is operational context. The grid
-    that holds them should give equity roughly two-thirds of the row width."""
+def test_equity_and_cash_curves_use_three_to_two_split(seeded_client):
+    """Equity is the primary chart; cash is operational context. The row
+    holding them is 3:2 (60/40) — wider than the legacy 2:1 split so the
+    cash + contributions chart has room to read, but still keeps equity
+    visually dominant. The allocation row below stays at 2:1."""
     html = seeded_client.get("/portfolio/body").text
-    # The body uses an inline grid-template-columns style. The string we want
-    # is the one wrapping the equity-curve and cash-curve panels.
-    assert "grid-template-columns: 2fr 1fr;" in html
-    # And the old 50/50 string is gone from the equity/cash row context.
-    # (We allow `1fr 1fr` elsewhere on the page if any other row uses it.)
+    # The new equity/cash row uses the 3:2 ratio.
+    assert "grid-template-columns: 3fr 2fr;" in html
+    # Walk back from the equity panel and confirm the nearest
+    # grid-template-columns is the new 3:2 (and NOT the legacy 2:1 or 1:1).
     equity_idx = html.find('id="portfolio-equity"')
     assert equity_idx > 0
-    # Walk back 400 chars and confirm the nearest grid-template-columns is 2fr 1fr.
     preceding = html[max(0, equity_idx - 400) : equity_idx]
-    assert "grid-template-columns: 2fr 1fr;" in preceding
+    assert "grid-template-columns: 3fr 2fr;" in preceding
+    assert "grid-template-columns: 2fr 1fr;" not in preceding
     assert "grid-template-columns: 1fr 1fr;" not in preceding
+    # The allocation row below still uses 2:1 — confirm that lock is intact.
+    alloc_idx = html.find('id="portfolio-allocation"')
+    assert alloc_idx > equity_idx
+    alloc_preceding = html[max(0, alloc_idx - 400) : alloc_idx]
+    assert "grid-template-columns: 2fr 1fr;" in alloc_preceding
 
 
 def test_toolbar_overflow_menu_holds_sync_splits(seeded_client):
