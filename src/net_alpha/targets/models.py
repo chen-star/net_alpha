@@ -21,3 +21,4 @@ class PositionTarget:
     created_at: datetime
     updated_at: datetime
     tags: tuple[str, ...] = field(default=())  # always sorted, deduped, normalized
+    sort_order: int = 0  # Manual (drag-to-reorder) ordering for the Plan tab.
