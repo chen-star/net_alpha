@@ -38,8 +38,8 @@
 
 <div class="grid grid-cols-12 gap-[10px]" data-profile="{{ _profile.profile if _profile else 'active' }}">
 
-  {# ── Row 1: Hero (col-span-8) + Total Return (col-span-4) ─────────────── #}
-  <div class="kpi kpi-hero col-span-12 lg:col-span-8" data-kpi-slot="hero"
+  {# ── Row 1: Hero alone, full width ────────────────────────────────────── #}
+  <div class="kpi kpi-hero col-span-12" data-kpi-slot="hero"
        title="Sum of cash + open position market value across all in-scope accounts. Updates as quotes refresh.">
     <div class="label-uc">TOTAL ACCOUNT VALUE</div>
     <div class="num num-hero mt-2">
@@ -62,7 +62,12 @@
     </div>
   </div>
 
-  <div class="kpi kpi-promoted col-span-12 lg:col-span-4" data-kpi-slot="total_return"
+</div>
+
+{# ── Row 2: 4 small KPIs — col-span-3 each ────────────────────────────────── #}
+<div class="grid grid-cols-12 gap-[10px] mt-[10px]">
+
+  <div class="kpi col-span-12 lg:col-span-3" data-kpi-slot="total_return"
        title="Account value at the end of the period minus the value at the start, minus contributions during the period. The actual gain (or loss) inside this window.">
     <div class="label-uc">Total Return
       <button type="button"
@@ -72,7 +77,7 @@
               hx-swap="innerHTML"
               title="Show how this is calculated">?</button>
     </div>
-    <div class="num num-promoted mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
+    <div class="num text-[22px] font-bold mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
       {% if cash_kpis is defined and cash_kpis %}
         {% if cash_kpis.growth < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(cash_kpis.growth|float|abs) }}
       {% else %}
@@ -89,12 +94,7 @@
     <div id="explain-total-return"></div>
   </div>
 
-</div>
-
-{# ── Row 2: 3 small KPIs — col-span-4 each ────────────────────────────────── #}
-<div class="grid grid-cols-12 gap-[10px] mt-[10px]">
-
-  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="realized"
+  <div class="kpi col-span-12 lg:col-span-3" data-kpi-slot="realized"
        title="Tax-recognized realized P/L for the selected period — matches Schwab UI and Form 8949. Includes wash-sale-disallowed losses added back to basis. The economic figure shown below is the actual cash netted (recognized − disallowed).">
     <div class="label-uc">Realized P/L</div>
     <div class="num text-[22px] font-bold mt-2 {% if kpis.period_realized < 0 %}text-neg{% else %}text-pos{% endif %}">
@@ -108,7 +108,7 @@
     </div>
   </div>
 
-  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="unrealized"
+  <div class="kpi col-span-12 lg:col-span-3" data-kpi-slot="unrealized"
        title="Mark-to-market on open positions. Long stock and options use the latest quote. Short options (sold puts and covered calls) are estimated using intrinsic value plus straight-line time decay — confirm cost-to-close with your broker before acting.">
     <div class="label-uc">Unrealized P/L
       <button type="button"
@@ -130,7 +130,7 @@
 
   {% set _csp_n = csp_count if csp_count is defined and csp_count else 0 %}
   {% set _cash_val = (cash_kpis.cash_balance|float) if cash_kpis else 0 %}
-  <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="cash"
+  <div class="kpi col-span-12 lg:col-span-3" data-kpi-slot="cash"
        title="{% if cash_secured_total is defined and cash_secured_total > 0 %}Total liquid cash. {{ '{:,.0f}'.format(cash_secured_total|float) }} is pledged as collateral for {{ _csp_n }} cash-secured put{% if _csp_n != 1 %}s{% endif %} — your free cash is what's left.{% else %}Total liquid cash in this scope. No CSP collateral pledged.{% endif %}">
     <div class="label-uc">Cash {% if cash_secured_total is defined and cash_secured_total > 0 %}<span class="text-label-2 normal-case">(free / pledged)</span>{% endif %}</div>
     <div class="num text-[22px] font-bold mt-2">
