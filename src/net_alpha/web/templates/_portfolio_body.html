@@ -14,8 +14,9 @@
   {% include "_portfolio_kpis.html" %}
 </div>
 
-{# Top row — two charts side by side at 50/50 #}
-<div class="grid gap-3 mb-4" style="grid-template-columns: 1fr 1fr;">
+{# Top row: equity is the primary "am I winning?" chart; cash is operational
+   context. 2/3 + 1/3 split mirrors the Allocation + Deployment row below. #}
+<div class="grid gap-3 mb-4" style="grid-template-columns: 2fr 1fr;">
   <div id="portfolio-equity" class="panel">
     {% include "_portfolio_equity_curve.html" %}
   </div>
