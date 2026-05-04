@@ -136,6 +136,7 @@ def test_year_boundary_dec31_jan1():
 # spanning multiple years for Lifetime.
 # ---------------------------------------------------------------------------
 
+
 def test_series_ytd_truncates_future_months():
     """YTD scope: emit Jan..today.month only — no future months."""
     today = dt.date(2026, 5, 3)
