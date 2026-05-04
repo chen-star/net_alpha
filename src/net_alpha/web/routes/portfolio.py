@@ -24,6 +24,7 @@ from net_alpha.inbox.config import load_inbox_config
 from net_alpha.inbox.dismissals import toggle_dismissal
 from net_alpha.portfolio.account_value import account_value_at, build_account_value_series, build_eval_dates
 from net_alpha.portfolio.allocation import build_allocation
+from net_alpha.portfolio.calendar_pnl import monthly_realized_pl_series
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
     cash_allocation_slice,
@@ -812,6 +813,17 @@ def portfolio_body(
         period=period_tuple,
         period_starting_value=period_starting_value,
     )
+    # Monthly realized P&L series — feeds the wide bar chart on the overview
+    # body, sits directly below the equity-curve row. Honors the page's
+    # Period selector by truncating future months (YTD) or spanning the
+    # first-trade-year through today (Lifetime). Account is already
+    # pre-scoped on `scoped_trades` above, so we pass account=None here.
+    monthly_pl_points = monthly_realized_pl_series(
+        trades=scoped_trades,
+        period=period_tuple,
+        account=None,
+        today=today,
+    )
     cash_points = build_cash_balance_series(
         events=cash_events,
         trades=scoped_trades,
@@ -926,6 +938,7 @@ def portfolio_body(
             "benchmark_symbol": benchmark_symbol,
             "account_points": account_points,
             "period_label": period_label,
+            "monthly_pl_points": monthly_pl_points,
             "account": account,  # used by the inbox lazy-load wrapper
             "selected_period": period or "ytd",
             "selected_account": account or "",
