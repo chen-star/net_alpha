@@ -1664,16 +1664,11 @@ class Repository:
         each with its tag tuple populated. One round trip for tags."""
         with Session(self.engine) as s:
             rows = s.exec(select(PositionTargetRow).order_by(PositionTargetRow.symbol)).all()
-            tag_rows = s.exec(
-                text("SELECT target_symbol, tag FROM position_target_tag ORDER BY tag")
-            ).all()
+            tag_rows = s.exec(text("SELECT target_symbol, tag FROM position_target_tag ORDER BY tag")).all()
         tags_by_sym: dict[str, list[str]] = {}
         for sym, tag in tag_rows:
             tags_by_sym.setdefault(sym, []).append(tag)
-        return [
-            self._row_to_target(r, tuple(tags_by_sym.get(r.symbol, ())))
-            for r in rows
-        ]
+        return [self._row_to_target(r, tuple(tags_by_sym.get(r.symbol, ()))) for r in rows]
 
     def get_target(self, symbol: str) -> PositionTarget | None:
         """Return the target for `symbol` (case-insensitive), or None if absent.
@@ -1684,8 +1679,7 @@ class Repository:
             if row is None:
                 return None
             tag_rows = s.exec(
-                text("SELECT tag FROM position_target_tag "
-                     "WHERE target_symbol = :sym ORDER BY tag"),
+                text("SELECT tag FROM position_target_tag WHERE target_symbol = :sym ORDER BY tag"),
                 params={"sym": sym},
             ).all()
         return self._row_to_target(row, tuple(r[0] for r in tag_rows))
@@ -1693,21 +1687,26 @@ class Repository:
     def upsert_target(self, symbol: str, amount: Decimal, unit: TargetUnit) -> PositionTarget:
         """Create or update the position target for `symbol`.
 
-        On insert, created_at and updated_at are both set to now.
-        On update, only target_amount, target_unit, and updated_at change;
-        created_at is preserved.
+        On insert, created_at and updated_at are both set to now and
+        sort_order is set to MAX(sort_order) + 1 (new targets append to
+        the end of the manual order). On update, only target_amount,
+        target_unit, and updated_at change; created_at and sort_order are
+        preserved.
         """
         sym = symbol.upper()
         now = datetime.now(UTC).isoformat()
         with Session(self.engine) as s:
             row = s.exec(select(PositionTargetRow).where(PositionTargetRow.symbol == sym)).first()
             if row is None:
+                max_so = s.exec(text("SELECT COALESCE(MAX(sort_order), 0) FROM position_targets")).first()
+                next_so = int(max_so[0]) + 1 if max_so else 1
                 row = PositionTargetRow(
                     symbol=sym,
                     target_amount=amount,
                     target_unit=unit.value,
                     created_at=now,
                     updated_at=now,
+                    sort_order=next_so,
                 )
             else:
                 row.target_amount = amount
@@ -1744,8 +1743,7 @@ class Repository:
         sym = symbol.upper()
         with Session(self.engine) as s:
             rows = s.exec(
-                text("SELECT tag FROM position_target_tag "
-                     "WHERE target_symbol = :sym ORDER BY tag"),
+                text("SELECT tag FROM position_target_tag WHERE target_symbol = :sym ORDER BY tag"),
                 params={"sym": sym},
             ).all()
         return tuple(r[0] for r in rows)
@@ -1767,8 +1765,7 @@ class Repository:
             )
             for t in normalized:
                 s.exec(
-                    text("INSERT INTO position_target_tag(target_symbol, tag) "
-                         "VALUES (:sym, :tag)"),
+                    text("INSERT INTO position_target_tag(target_symbol, tag) VALUES (:sym, :tag)"),
                     params={"sym": sym, "tag": t},
                 )
             s.commit()
@@ -1782,8 +1779,7 @@ class Repository:
         sym = symbol.upper()
         with Session(self.engine) as s:
             s.exec(
-                text("INSERT OR IGNORE INTO position_target_tag(target_symbol, tag) "
-                     "VALUES (:sym, :tag)"),
+                text("INSERT OR IGNORE INTO position_target_tag(target_symbol, tag) VALUES (:sym, :tag)"),
                 params={"sym": sym, "tag": norm},
             )
             s.commit()
@@ -1797,8 +1793,7 @@ class Repository:
         sym = symbol.upper()
         with Session(self.engine) as s:
             s.exec(
-                text("DELETE FROM position_target_tag "
-                     "WHERE target_symbol = :sym AND tag = :tag"),
+                text("DELETE FROM position_target_tag WHERE target_symbol = :sym AND tag = :tag"),
                 params={"sym": sym, "tag": norm},
             )
             s.commit()
@@ -1806,9 +1801,7 @@ class Repository:
     def list_all_tags(self) -> tuple[str, ...]:
         """Union of all tags currently in use, alpha-sorted, deduped."""
         with Session(self.engine) as s:
-            rows = s.exec(
-                text("SELECT DISTINCT tag FROM position_target_tag ORDER BY tag")
-            ).all()
+            rows = s.exec(text("SELECT DISTINCT tag FROM position_target_tag ORDER BY tag")).all()
         return tuple(r[0] for r in rows)
 
     @staticmethod

@@ -90,3 +90,21 @@ def test_list_targets_includes_sort_order(repo: Repository):
     assert len(targets) == 1
     # First insert into a fresh DB lands at sort_order = 1.
     assert targets[0].sort_order == 1
+
+
+def test_upsert_assigns_max_sort_order_plus_one_on_insert(repo: Repository):
+    a = repo.upsert_target("AAPL", Decimal("1"), TargetUnit.USD)
+    b = repo.upsert_target("BBB",  Decimal("1"), TargetUnit.USD)
+    c = repo.upsert_target("CCC",  Decimal("1"), TargetUnit.USD)
+    assert (a.sort_order, b.sort_order, c.sort_order) == (1, 2, 3)
+
+
+def test_upsert_preserves_sort_order_on_update(repo: Repository):
+    repo.upsert_target("AAPL", Decimal("1"), TargetUnit.USD)
+    b1 = repo.upsert_target("BBB", Decimal("1"), TargetUnit.USD)
+    assert b1.sort_order == 2
+
+    # Update BBB — sort_order must not change.
+    b2 = repo.upsert_target("BBB", Decimal("999"), TargetUnit.SHARES)
+    assert b2.sort_order == 2
+    assert b2.target_amount == Decimal("999")
