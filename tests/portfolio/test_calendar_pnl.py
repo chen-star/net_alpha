@@ -2,7 +2,8 @@ import datetime as dt
 from decimal import Decimal
 
 from net_alpha.models.domain import Trade
-from net_alpha.portfolio.calendar_pnl import monthly_realized_pl
+from net_alpha.portfolio.calendar_pnl import monthly_realized_pl, monthly_realized_pl_series
+from net_alpha.portfolio.models import MonthlyPnlPoint
 
 
 def _sell(day, *, ticker="SPY", account="Tax", proceeds, cost, qty=10.0):
@@ -134,10 +135,6 @@ def test_year_boundary_dec31_jan1():
 # selector (YTD / specific year / Lifetime) by truncating future months and
 # spanning multiple years for Lifetime.
 # ---------------------------------------------------------------------------
-
-from net_alpha.portfolio.calendar_pnl import monthly_realized_pl_series  # noqa: E402
-from net_alpha.portfolio.models import MonthlyPnlPoint  # noqa: E402
-
 
 def test_series_ytd_truncates_future_months():
     """YTD scope: emit Jan..today.month only — no future months."""
