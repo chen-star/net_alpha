@@ -564,3 +564,43 @@ def plan_target_tag_remove(
     """Remove a tag from a target. Idempotent. Returns refreshed plan body."""
     repo.remove_target_tag(symbol, tag)
     return _render_plan_body(request, repo, pricing)
+
+
+@router.post("/positions/plan/reorder", response_class=HTMLResponse)
+async def plan_target_reorder(
+    request: Request,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Persist a new manual ordering of Plan targets and re-render the body.
+
+    Body: form-encoded, repeated `order` keys (e.g. order=AAPL&order=MSFT).
+    Optional query/form params propagated for the re-render: `account`,
+    `tag`, `page`. Always re-renders in Manual mode (sort_key='manual').
+    """
+    form_data = await request.form()
+    raw_order = form_data.getlist("order")
+
+    def _pick(name: str) -> str | None:
+        v = form_data.get(name) or request.query_params.get(name)
+        return v.strip() if isinstance(v, str) and v.strip() else None
+
+    account = _pick("account")
+    selected_tag = _pick("tag")
+    page_raw = _pick("page")
+    try:
+        page = max(1, int(page_raw)) if page_raw else 1
+    except ValueError:
+        page = 1
+
+    repo.set_target_order(raw_order)
+
+    return _render_plan_body(
+        request,
+        repo,
+        pricing,
+        account=account,
+        page=page,
+        selected_tag=selected_tag,
+        sort_key="manual",
+    )
