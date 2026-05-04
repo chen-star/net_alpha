@@ -2,6 +2,64 @@
 
 
 
+## v0.50.0 (2026-05-04)
+
+### Chore
+
+* chore: ruff format on tests/portfolio/test_calendar_pnl.py
+
+Single blank line between section comment and first new test function.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2e62cb8`](https://github.com/chen-star/net_alpha/commit/2e62cb8f6bb758081566c5cee0e88c944d22247b))
+
+* chore(tests): hoist monthly_realized_pl_series imports to top of file
+
+Removes the # noqa: E402 suppressions on mid-file imports flagged in Phase A
+review. Pure cleanup, no behavior change.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8a37e23`](https://github.com/chen-star/net_alpha/commit/8a37e23919bf1f1967971549778011c7899f4eee))
+
+### Feature
+
+* feat(web): insert monthly realized P&amp;L row into overview body ([`02f9c9f`](https://github.com/chen-star/net_alpha/commit/02f9c9f51551e49159d3835f385c80c0f8ea09ac))
+
+* feat(web): compute monthly realized P&amp;L series in /portfolio/body handler ([`4f40139`](https://github.com/chen-star/net_alpha/commit/4f40139ac1665b9f777240c0a9b28d1c44a78886))
+
+* feat(web): _portfolio_monthly_pl partial — wide ApexCharts bar chart for monthly realized P&amp;L ([`dd0c77c`](https://github.com/chen-star/net_alpha/commit/dd0c77c157e88a9c5537886b2725b26ce8ea397f))
+
+* feat(portfolio): monthly_realized_pl_series for chronological multi-year P&amp;L bars ([`276946d`](https://github.com/chen-star/net_alpha/commit/276946d4873f080b0defcf5f5a65498b8a93e302))
+
+* feat(portfolio): add MonthlyPnlPoint view model for chronological monthly P&amp;L series ([`8cb4579`](https://github.com/chen-star/net_alpha/commit/8cb45790d691ba7b897a8bba8098e1091d45aed5))
+
+### Fix
+
+* fix(web): label decomposition total row in Total Return explainer
+
+The Decomposition section&#39;s total row had an empty label cell with a
+hanging hairline rule — the value floated alone with no &#39;=&#39; label,
+breaking the equation&#39;s visual symmetry against the upper grid.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4fd6ac0`](https://github.com/chen-star/net_alpha/commit/4fd6ac07b3bca30805e1955b18007f29f7097f55))
+
+### Test
+
+* test(web): tighten specific-year monthly P&amp;L smoke test contract
+
+The old &#39;assert &#34;2025&#34; in html&#39; was satisfied by the period meta label
+regardless of which template branch fired, so the test couldn&#39;t catch a
+regression that swapped the empty-state for zero bars (or vice versa).
+Pin both halves of the contract: panel chrome present AND empty-state
+copy is what fills the chart area when no closes exist in the period.
+
+Per final whole-branch review (M-1).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`78efabd`](https://github.com/chen-star/net_alpha/commit/78efabd7a55c80a4460d67598f4083b3fbe6a634))
+
+* test(web): smoke tests for monthly realized P&amp;L panel across YTD/year/Lifetime
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fa3c934`](https://github.com/chen-star/net_alpha/commit/fa3c9348c5393560f3e7d22a3c282769113249dd))
+
+
 ## v0.49.1 (2026-05-04)
 
 ### Fix
