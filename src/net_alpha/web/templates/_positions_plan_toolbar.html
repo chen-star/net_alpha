@@ -15,6 +15,7 @@
       <option value="gap"    {% if plan_view.sort_key == 'gap' %}selected{% endif %}>Largest gap</option>
       <option value="filled" {% if plan_view.sort_key == 'filled' %}selected{% endif %}>Lowest % filled</option>
       <option value="target" {% if plan_view.sort_key == 'target' %}selected{% endif %}>Highest target $</option>
+      <option value="manual" {% if plan_view.sort_key == 'manual' %}selected{% endif %}>Manual (drag to reorder)</option>
     </select>
   </form>
   <button type="button"

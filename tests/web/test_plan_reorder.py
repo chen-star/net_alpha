@@ -24,3 +24,12 @@ def test_get_plan_manual_uses_manual_order(client, repo):
     pos_aaa = body.find('data-symbol="AAA"')
     pos_bbb = body.find('data-symbol="BBB"')
     assert -1 < pos_ccc < pos_aaa < pos_bbb
+
+
+def test_manual_option_present_in_toolbar(client, repo):
+    _seed_three(repo)
+    resp = client.get("/positions?view=plan&sort=manual")
+    body = resp.text
+    assert '<option value="manual"' in body
+    # And it should be marked selected when sort=manual.
+    assert 'value="manual"' in body and 'selected' in body
