@@ -778,10 +778,13 @@ def portfolio_body(
     cash_events = repo.list_cash_events(account_id=None)
     if account:
         cash_events = [e for e in cash_events if e.account == account]
-    holdings_value_total = sum(
-        (Decimal(str(p.market_value)) for p in positions_for_alloc if p.market_value is not None),
-        start=Decimal("0"),
-    )
+    # Use the same total `compute_kpis` already produced for the Hero tile and
+    # `account_value_at` (period-start anchor) — both include open long-option
+    # lots carried at basis. Summing `compute_open_positions` market values
+    # alone skips those lots (it only iterates equity), which made the Total
+    # Return tile read low by the long-option-basis amount and disagree with
+    # the Hero tile and the explain panel on the same page.
+    holdings_value_total = kpis.open_position_value or Decimal("0")
     # Period start anchor for Total Return — account value at the close of the day
     # before the period began. Lifetime → 0; YTD/year → value on Dec 31 prior.
     if period_tuple is None:
