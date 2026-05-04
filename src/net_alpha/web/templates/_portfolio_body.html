@@ -26,6 +26,14 @@
   </div>
 </div>
 
+{# Monthly realized P&L — full-width bar chart pairing with the equity curve.
+   Reads `monthly_pl_points` + `period_label` set by the bundled body handler.
+   Honors the page Period (YTD / specific year / Lifetime) and Account
+   filters identically to the equity curve above. #}
+<div id="portfolio-monthly-pl" class="panel mb-4">
+  {% include "_portfolio_monthly_pl.html" %}
+</div>
+
 {# Allocation row: existing concentration donut on the left, the cash-vs-
    positions deployment chart on the right. 2/3 + 1/3 split keeps the chip
    leaderboard breathing while giving the deployment panel enough room for
