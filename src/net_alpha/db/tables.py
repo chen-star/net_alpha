@@ -265,6 +265,7 @@ class PositionTargetRow(SQLModel, table=True):
     target_unit: str  # 'usd' | 'shares'
     created_at: str  # ISO datetime
     updated_at: str  # ISO datetime
+    sort_order: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
 
 
 class PositionTargetTagRow(SQLModel, table=True):
