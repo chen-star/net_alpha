@@ -2,6 +2,105 @@
 
 
 
+## v0.49.0 (2026-05-04)
+
+### Chore
+
+* chore: sync uv.lock to v0.48.0
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`918d2b4`](https://github.com/chen-star/net_alpha/commit/918d2b4ccdac0748aad605cf1a52a4ae98748c47))
+
+* chore: ruff import-order autofixes on plan-ux modules
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f31e6cc`](https://github.com/chen-star/net_alpha/commit/f31e6cc4f6f1abb8e933c5f0d7be587e509a3e76))
+
+* chore: update uv.lock ([`636f0b1`](https://github.com/chen-star/net_alpha/commit/636f0b18bebdacf5b514565bab5c4b15f09a92af))
+
+### Feature
+
+* feat(ui): recompose Plan tab with KPI/tag/toolbar strips and bullet rows
+
+Extracts the plan table row into _positions_plan_row.html (includes the
+bullet chart and inline tag chip editor) and rewires _positions_view_plan.html
+to compose all four chrome partials (KPI strip, tag strip, toolbar, row)
+around the table.
+
+Also registers the `ord` built-in as a Jinja2 filter in app.py so the
+|ord usage in _positions_plan_tag_strip.html and
+_positions_plan_tag_chip_editor.html (added in earlier tasks but never
+wired) renders without a 500 error.
+
+Adjusted test_plan_tab_renders_target_rows: &#34;Total to fill&#34; → &#34;To Fill&#34;
+and &#34;Free cash&#34; → &#34;Free Cash&#34; to match the new KPI strip wording.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`21ceba9`](https://github.com/chen-star/net_alpha/commit/21ceba9acdffe62597d35adde4df26a7f86a2f46))
+
+* feat(ui): Plan tab toolbar (sort dropdown + Add target) ([`1af089a`](https://github.com/chen-star/net_alpha/commit/1af089ae27a6391dc55f7423355b8bc59f44a40d))
+
+* feat(ui): Plan tab tag summary strip (clickable filter tiles) ([`7be0da7`](https://github.com/chen-star/net_alpha/commit/7be0da7a32f95db9d36babb7fc4d7b77807e85e0))
+
+* feat(ui): Plan tab KPI strip (planned · to-fill · cash · coverage) ([`239f749`](https://github.com/chen-star/net_alpha/commit/239f749e4318262331f96086977feeb353fea1d0))
+
+* feat(ui): inline tag chip editor (pills + add popover) ([`3f9f574`](https://github.com/chen-star/net_alpha/commit/3f9f574b90b45936d5cc1f36da050f76ff28cb15))
+
+* feat(ui): add bullet-chart partial for Plan rows ([`19aad2e`](https://github.com/chen-star/net_alpha/commit/19aad2e6635bb3a7b2b73b93dea91448de21a501))
+
+* feat(plan-modal): add tags chips field with datalist autocomplete
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b0bbe5b`](https://github.com/chen-star/net_alpha/commit/b0bbe5beb21819fcb75f2a94ba1d6a2bb6fb6817))
+
+* feat(web): thread ?tag= and ?sort= into Plan view
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`19c4a92`](https://github.com/chen-star/net_alpha/commit/19c4a92ce99b50faa2e8d8f6f4586c7910f25ca6))
+
+* feat(web): POST/DELETE tag endpoints with normalization + 404/422 ([`9b23733`](https://github.com/chen-star/net_alpha/commit/9b2373392b9d94360455d6c1cbe2ed27c2384bc6))
+
+* feat(web): GET /positions/plan/tags autocomplete endpoint ([`a53529b`](https://github.com/chen-star/net_alpha/commit/a53529b309a922d317cbfe2cae1df91612e22a58))
+
+* feat(view): add tag filter + 4-way sort to build_plan_view
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`32ca7b4`](https://github.com/chen-star/net_alpha/commit/32ca7b481c035ab3d4d4fc0dd723ccaeae4748bf))
+
+* feat(view): add PlanTagSummary and tag-aware PlanView fields
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5a78176`](https://github.com/chen-star/net_alpha/commit/5a78176eb2cc9bc5d6aec9364bb9f1fbb7ed364a))
+
+* feat(repo): populate PositionTarget.tags in list_targets/get_target
+
+Extend list_targets() with a single bulk tag query (no N+1) and
+get_target() with a per-symbol tag query; _row_to_target gains an
+optional tags parameter (default empty tuple) so upsert_target is
+unaffected.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`607517e`](https://github.com/chen-star/net_alpha/commit/607517e97cafc34b6f1656cf593148576f274bef))
+
+* feat(repo): tag CRUD on position targets (set/add/remove/list)
+
+Adds set_target_tags, add_target_tag, remove_target_tag, list_target_tags,
+and list_all_tags methods to Repository; imports normalize_tag/normalize_tags
+from targets.tags. All 11 cascade + normalization tests pass.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1c0f223`](https://github.com/chen-star/net_alpha/commit/1c0f223685ef97f07842b99754e21d790763744c))
+
+* feat(targets): add PositionTarget.tags (default empty tuple) ([`b8914ec`](https://github.com/chen-star/net_alpha/commit/b8914ece51dc935a25f9345018599b3e24c22ef4))
+
+* feat(db): schema v16 — add position_target_tag with FK cascade ([`bc172c7`](https://github.com/chen-star/net_alpha/commit/bc172c7afb8a6f9149ac83d63e9a7ed670617046))
+
+* feat(targets): add tag normalization (lowercase, hyphenize, validate, dedupe) ([`e7084ed`](https://github.com/chen-star/net_alpha/commit/e7084ed2ec2f382ecbf034315d53430c62df2792))
+
+### Fix
+
+* fix(repo): explicit cascade in delete_target so fresh-install DBs don&#39;t orphan tags
+
+SQLite ON DELETE CASCADE only fires when foreign_keys=ON AND the table was
+created via the v16 migration. SQLModel.metadata.create_all (used on fresh
+installs) produces position_target_tag without the FK, so target deletion
+would leak orphan tag rows into list_all_tags. Application-level cascade is
+unconditional and DB-origin-independent.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a7f5673`](https://github.com/chen-star/net_alpha/commit/a7f5673f2b2fe3631d1980b76bd5eba53d88ea73))
+
+
 ## v0.48.0 (2026-05-04)
 
 ### Chore
