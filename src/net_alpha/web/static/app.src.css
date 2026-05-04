@@ -572,3 +572,15 @@
 .positions-pane {
   z-index: 20;
 }
+
+/* Plan-tab drag-to-reorder. */
+.drag-handle {
+  cursor: grab;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+.plan-row-ghost {
+  opacity: 0.4;
+  background: var(--color-surface);
+}
