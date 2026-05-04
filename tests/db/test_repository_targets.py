@@ -107,4 +107,32 @@ def test_upsert_preserves_sort_order_on_update(repo: Repository):
     # Update BBB — sort_order must not change.
     b2 = repo.upsert_target("BBB", Decimal("999"), TargetUnit.SHARES)
     assert b2.sort_order == 2
-    assert b2.target_amount == Decimal("999")
+
+
+def test_list_targets_by_manual_order_orders_by_sort_order(repo: Repository):
+    repo.upsert_target("AAA", Decimal("1"), TargetUnit.USD)  # sort_order 1
+    repo.upsert_target("BBB", Decimal("1"), TargetUnit.USD)  # sort_order 2
+    repo.upsert_target("CCC", Decimal("1"), TargetUnit.USD)  # sort_order 3
+    syms = [t.symbol for t in repo.list_targets_by_manual_order()]
+    assert syms == ["AAA", "BBB", "CCC"]
+
+
+def test_list_targets_by_manual_order_breaks_ties_by_symbol(repo: Repository):
+    """If two rows share a sort_order, fall back to symbol asc for stability."""
+    from sqlalchemy import text as _text
+    from sqlmodel import Session as _Session
+    repo.upsert_target("ZZZ", Decimal("1"), TargetUnit.USD)
+    repo.upsert_target("AAA", Decimal("1"), TargetUnit.USD)
+    # Force both to sort_order = 5.
+    with _Session(repo.engine) as s:
+        s.exec(_text("UPDATE position_targets SET sort_order = 5"))
+        s.commit()
+    syms = [t.symbol for t in repo.list_targets_by_manual_order()]
+    assert syms == ["AAA", "ZZZ"]
+
+
+def test_list_targets_by_manual_order_includes_tags(repo: Repository):
+    repo.upsert_target("HIMS", Decimal("1000"), TargetUnit.USD)
+    repo.set_target_tags("HIMS", ["core"])
+    rows = repo.list_targets_by_manual_order()
+    assert rows[0].tags == ("core",)

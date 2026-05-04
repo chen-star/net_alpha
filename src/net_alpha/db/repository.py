@@ -1670,6 +1670,20 @@ class Repository:
             tags_by_sym.setdefault(sym, []).append(tag)
         return [self._row_to_target(r, tuple(tags_by_sym.get(r.symbol, ()))) for r in rows]
 
+    def list_targets_by_manual_order(self) -> list[PositionTarget]:
+        """Return all position targets ordered by sort_order ASC, with
+        symbol ASC as the deterministic tiebreaker. Used by the Plan tab's
+        Manual sort mode. Tags are populated in one round trip."""
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(PositionTargetRow).order_by(PositionTargetRow.sort_order, PositionTargetRow.symbol)
+            ).all()
+            tag_rows = s.exec(text("SELECT target_symbol, tag FROM position_target_tag ORDER BY tag")).all()
+        tags_by_sym: dict[str, list[str]] = {}
+        for sym, tag in tag_rows:
+            tags_by_sym.setdefault(sym, []).append(tag)
+        return [self._row_to_target(r, tuple(tags_by_sym.get(r.symbol, ()))) for r in rows]
+
     def get_target(self, symbol: str) -> PositionTarget | None:
         """Return the target for `symbol` (case-insensitive), or None if absent.
         Tag tuple is populated."""
