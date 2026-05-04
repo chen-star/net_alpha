@@ -3,8 +3,8 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
 
 from net_alpha.db.repository import Repository
@@ -447,6 +447,15 @@ def _render_plan_body(
             },
         },
     )
+
+
+@router.get("/positions/plan/tags")
+def plan_tags_autocomplete(
+    repo: Repository = Depends(get_repository),
+) -> JSONResponse:
+    """Union of tags currently in use, alpha-sorted. Powers the chips
+    autocomplete in the modal and the inline `+` popover."""
+    return JSONResponse({"tags": list(repo.list_all_tags())})
 
 
 @router.get("/positions/plan/modal", response_class=HTMLResponse)
