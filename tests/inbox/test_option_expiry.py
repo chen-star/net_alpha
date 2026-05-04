@@ -174,6 +174,17 @@ def test_long_option_closed_by_stc_is_filtered_out():
     today = date(2026, 5, 1)
     expiry = date(2026, 5, 5)
     lot = _opt(lid="1", ticker="WULF", strike=23, expiry=expiry, call_put="C", qty=1)
+    bto = Trade(
+        id="t-bto",
+        account="Schwab/Tax",
+        date=date(2026, 4, 1),
+        ticker="WULF",
+        action="Buy",
+        quantity=1,
+        cost_basis=100,
+        proceeds=None,
+        option_details=OptionDetails(strike=23, expiry=expiry, call_put="C"),
+    )
     stc = Trade(
         id="t-stc",
         account="Schwab/Tax",
@@ -186,7 +197,7 @@ def test_long_option_closed_by_stc_is_filtered_out():
         basis_source="option_close",
         option_details=OptionDetails(strike=23, expiry=expiry, call_put="C"),
     )
-    repo = make_repo(lots=[lot], trades=[stc])
+    repo = make_repo(lots=[lot], trades=[bto, stc])
     prices = make_prices_stub({"WULF": Decimal("25")})
     items = compute_option_expiry(repo=repo, prices=prices, today=today)
     assert items == []
@@ -197,6 +208,17 @@ def test_long_option_partially_closed_still_appears_with_remaining_qty():
     today = date(2026, 5, 1)
     expiry = date(2026, 5, 5)
     lot = _opt(lid="1", ticker="AAPL", strike=200, expiry=expiry, call_put="C", qty=3)
+    bto = Trade(
+        id="t-bto",
+        account="Schwab/Tax",
+        date=date(2026, 4, 1),
+        ticker="AAPL",
+        action="Buy",
+        quantity=3,
+        cost_basis=300,
+        proceeds=None,
+        option_details=OptionDetails(strike=200, expiry=expiry, call_put="C"),
+    )
     stc = Trade(
         id="t-stc",
         account="Schwab/Tax",
@@ -209,7 +231,7 @@ def test_long_option_partially_closed_still_appears_with_remaining_qty():
         basis_source="option_close",
         option_details=OptionDetails(strike=200, expiry=expiry, call_put="C"),
     )
-    repo = make_repo(lots=[lot], trades=[stc])
+    repo = make_repo(lots=[lot], trades=[bto, stc])
     prices = make_prices_stub({"AAPL": Decimal("210")})
     items = compute_option_expiry(repo=repo, prices=prices, today=today)
     expiry_items = [i for i in items if i.signal_type is SignalType.OPTION_EXPIRY]
@@ -249,3 +271,122 @@ def test_account_filter_excludes_other_accounts():
     items = compute_option_expiry(repo=repo, prices=prices, today=today, account="Schwab/A")
     tickers = {i.ticker for i in items}
     assert tickers == {"AAPL"}
+
+
+def _sto(*, ticker: str, strike: float, expiry: date, cp: str, qty: int, when: date, premium: float):
+    """Helper: a Sell-to-Open option trade as the production parser produces it."""
+    return Trade(
+        id=f"sto-{ticker}-{strike}-{cp}",
+        account="Schwab/Tax",
+        date=when,
+        ticker=ticker,
+        action="Sell",
+        quantity=qty,
+        proceeds=premium,
+        cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=strike, expiry=expiry, call_put=cp),
+    )
+
+
+def test_short_put_from_trades_appears_in_inbox():
+    """An open CSP (STO with no matching BTC) is reconstructed from trades.
+
+    Production never creates a Lot for an STO, so prior to the trades-driven
+    short-chain reconstruction this signal couldn't see CSPs at all.
+    """
+    today = date(2026, 5, 1)
+    expiry = date(2026, 5, 8)  # 7 days out
+    sto = _sto(ticker="AAPL", strike=180, expiry=expiry, cp="P", qty=1, when=date(2026, 4, 20), premium=200)
+    repo = make_repo(lots=[], trades=[sto])
+    prices = make_prices_stub({"AAPL": Decimal("190")})  # OTM
+    items = compute_option_expiry(repo=repo, prices=prices, today=today)
+    expiry_items = [i for i in items if i.signal_type is SignalType.OPTION_EXPIRY]
+    assert len(expiry_items) == 1
+    assert expiry_items[0].ticker == "AAPL"
+    assert expiry_items[0].extras["is_short"] is True
+    assert expiry_items[0].severity is Severity.WATCH
+
+
+def test_short_put_from_trades_itm_emits_assignment_risk():
+    today = date(2026, 5, 1)
+    expiry = date(2026, 5, 5)  # 4 days out, inside assignment window
+    sto = _sto(ticker="AAPL", strike=200, expiry=expiry, cp="P", qty=1, when=date(2026, 4, 20), premium=300)
+    repo = make_repo(lots=[], trades=[sto])
+    prices = make_prices_stub({"AAPL": Decimal("190")})  # $10 ITM for short put
+    items = compute_option_expiry(repo=repo, prices=prices, today=today)
+    risk = [i for i in items if i.signal_type is SignalType.ASSIGNMENT_RISK]
+    assert len(risk) == 1
+    assert risk[0].dollar_impact == Decimal("1000")  # 1 contract * 100 * $10
+
+
+def test_short_put_closed_by_btc_does_not_appear():
+    """STO + matching BTC nets to zero — the chain is closed, no inbox item."""
+    today = date(2026, 5, 1)
+    expiry = date(2026, 5, 8)
+    sto = _sto(ticker="AAPL", strike=180, expiry=expiry, cp="P", qty=1, when=date(2026, 4, 10), premium=200)
+    btc = Trade(
+        id="btc-1",
+        account="Schwab/Tax",
+        date=date(2026, 4, 25),
+        ticker="AAPL",
+        action="Buy",
+        quantity=1,
+        cost_basis=80,
+        proceeds=None,
+        basis_source="option_short_close",
+        option_details=OptionDetails(strike=180, expiry=expiry, call_put="P"),
+    )
+    repo = make_repo(lots=[], trades=[sto, btc])
+    prices = make_prices_stub({"AAPL": Decimal("190")})
+    items = compute_option_expiry(repo=repo, prices=prices, today=today)
+    assert items == []
+
+
+def test_short_put_account_filter():
+    today = date(2026, 5, 1)
+    expiry = date(2026, 5, 8)
+    sto_a = Trade(
+        id="sto-a",
+        account="Schwab/A",
+        date=date(2026, 4, 20),
+        ticker="AAPL",
+        action="Sell",
+        quantity=1,
+        proceeds=200,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=180, expiry=expiry, call_put="P"),
+    )
+    sto_b = Trade(
+        id="sto-b",
+        account="Schwab/B",
+        date=date(2026, 4, 20),
+        ticker="GOOG",
+        action="Sell",
+        quantity=1,
+        proceeds=200,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=140, expiry=expiry, call_put="P"),
+    )
+    repo = make_repo(lots=[], trades=[sto_a, sto_b])
+    prices = make_prices_stub({"AAPL": Decimal("190"), "GOOG": Decimal("150")})
+    items = compute_option_expiry(repo=repo, prices=prices, today=today, account="Schwab/A")
+    tickers = {i.ticker for i in items}
+    assert tickers == {"AAPL"}
+
+
+def test_short_put_dismiss_key_is_stable_across_runs():
+    """Dismiss key is derived from the chain (account, ticker, strike, expiry, cp),
+    not a specific trade_id, so re-runs after a re-import don't orphan dismissals."""
+    today = date(2026, 5, 1)
+    expiry = date(2026, 5, 8)
+    sto = _sto(ticker="AAPL", strike=180, expiry=expiry, cp="P", qty=1, when=date(2026, 4, 20), premium=200)
+    repo = make_repo(lots=[], trades=[sto])
+    prices = make_prices_stub({"AAPL": Decimal("190")})
+    first = compute_option_expiry(repo=repo, prices=prices, today=today)
+    # Same chain, different Trade id (e.g., re-import generated a new id)
+    sto2 = _sto(ticker="AAPL", strike=180, expiry=expiry, cp="P", qty=1, when=date(2026, 4, 20), premium=200)
+    sto2.id = "different-id"
+    repo2 = make_repo(lots=[], trades=[sto2])
+    second = compute_option_expiry(repo=repo2, prices=prices, today=today)
+    assert first[0].dismiss_key == second[0].dismiss_key
