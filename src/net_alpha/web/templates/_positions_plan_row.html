@@ -1,5 +1,14 @@
 {# One row in the Plan table. Inputs: r (PlanRow). #}
 <tr data-symbol="{{ r.symbol|upper }}" style="border-bottom: 0.5px solid var(--color-hairline);">
+  {% if plan_view.sort_key == 'manual' %}
+    <td class="drag-handle p-[7px] w-[24px] align-middle text-label-3 select-none" aria-label="Drag to reorder">
+      <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor" aria-hidden="true">
+        <circle cx="3" cy="3" r="1.2"/><circle cx="9" cy="3" r="1.2"/>
+        <circle cx="3" cy="8" r="1.2"/><circle cx="9" cy="8" r="1.2"/>
+        <circle cx="3" cy="13" r="1.2"/><circle cx="9" cy="13" r="1.2"/>
+      </svg>
+    </td>
+  {% endif %}
   <td class="p-[7px]">
     <div class="font-semibold">{{ r.symbol }}</div>
     {% include "_positions_plan_tag_chip_editor.html" %}

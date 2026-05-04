@@ -33,3 +33,22 @@ def test_manual_option_present_in_toolbar(client, repo):
     assert '<option value="manual"' in body
     # And it should be marked selected when sort=manual.
     assert 'value="manual"' in body and 'selected' in body
+
+
+def test_manual_mode_renders_handle_column(client, repo):
+    _seed_three(repo)
+    resp = client.get("/positions?view=plan&sort=manual")
+    body = resp.text
+    # The tbody is tagged for the JS to find.
+    assert 'id="plan-tbody"' in body
+    assert 'data-sort-mode="manual"' in body
+    # Each row carries a drag-handle cell.
+    assert body.count('class="drag-handle') >= 3
+
+
+def test_alpha_mode_does_not_render_handle_column(client, repo):
+    _seed_three(repo)
+    resp = client.get("/positions?view=plan&sort=alpha")
+    body = resp.text
+    assert 'data-sort-mode="alpha"' in body
+    assert 'class="drag-handle' not in body

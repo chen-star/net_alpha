@@ -20,6 +20,9 @@
       <table class="net-table w-full" style="font-size:12px;">
         <thead class="sticky top-0 z-10 bg-bg">
           <tr style="border-bottom: 0.5px solid var(--color-hairline); color: var(--color-label-2);">
+            {% if plan_view.sort_key == 'manual' %}
+              <th class="p-[7px] w-[24px]"><span class="sr-only">Drag handle</span></th>
+            {% endif %}
             <th class="text-left p-[7px]">Symbol</th>
             <th class="r p-[7px]">Target</th>
             <th class="r p-[7px]">Current</th>
@@ -29,7 +32,7 @@
             <th class="r p-[7px]"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="plan-tbody" data-sort-mode="{{ plan_view.sort_key }}">
           {% for r in plan_view.rows %}
             {% include "_positions_plan_row.html" %}
           {% endfor %}
