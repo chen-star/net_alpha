@@ -56,6 +56,20 @@
                placeholder="1000">
       </div>
 
+      <div>
+        <label class="label-uc text-[10px] text-label-2 block mb-1">Tags</label>
+        <input type="text" name="tags"
+               value="{% if _target and _target.tags %}{{ _target.tags|join(', ') }}{% endif %}"
+               class="w-full px-2 py-[6px] text-[13px] rounded-md"
+               style="background:var(--color-surface); border:0.5px solid var(--color-hairline); color:var(--color-text);"
+               placeholder="core, income, watch"
+               list="all-tags-datalist">
+        <datalist id="all-tags-datalist">
+          {% for t in (all_tags or []) %}<option value="{{ t }}"></option>{% endfor %}
+        </datalist>
+        <div class="text-[10px] text-label-3 mt-1">Comma-separated. Lowercased on save.</div>
+      </div>
+
       <div class="flex justify-end gap-2 pt-2">
         <button type="button"
                 class="px-3 py-[6px] text-[12px] rounded-md"

@@ -77,3 +77,53 @@ def test_delete_removes_target(client: TestClient, repo: Repository):
 def test_delete_unknown_symbol_is_ok(client: TestClient):
     r = client.delete("/positions/plan/target/NOPE")
     assert r.status_code == 200  # idempotent — body just shows empty state
+
+
+def test_modal_upsert_with_tags(client, repo):
+    from decimal import Decimal
+    resp = client.post(
+        "/positions/plan/target",
+        data={
+            "symbol": "HIMS",
+            "target_unit": "usd",
+            "target_amount": "1000",
+            "tags": "core, Income, untagged, ",
+        },
+    )
+    assert resp.status_code == 200
+    assert repo.list_target_tags("HIMS") == ("core", "income")
+
+
+def test_modal_upsert_without_tags_keeps_existing(client, repo):
+    from decimal import Decimal
+    from net_alpha.targets.models import TargetUnit
+    repo.upsert_target("HIMS", Decimal("1000"), TargetUnit.USD)
+    repo.set_target_tags("HIMS", ["core"])
+    resp = client.post(
+        "/positions/plan/target",
+        data={
+            "symbol": "HIMS",
+            "target_unit": "usd",
+            "target_amount": "2000",
+        },
+    )
+    assert resp.status_code == 200
+    assert repo.list_target_tags("HIMS") == ("core",)
+
+
+def test_modal_upsert_empty_tags_string_clears(client, repo):
+    from decimal import Decimal
+    from net_alpha.targets.models import TargetUnit
+    repo.upsert_target("HIMS", Decimal("1000"), TargetUnit.USD)
+    repo.set_target_tags("HIMS", ["core"])
+    resp = client.post(
+        "/positions/plan/target",
+        data={
+            "symbol": "HIMS",
+            "target_unit": "usd",
+            "target_amount": "1000",
+            "tags": "",
+        },
+    )
+    assert resp.status_code == 200
+    assert repo.list_target_tags("HIMS") == ()

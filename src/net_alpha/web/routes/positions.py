@@ -410,7 +410,7 @@ def _modal_error(request: Request, msg: str, status: int) -> HTMLResponse:
     response = request.app.state.templates.TemplateResponse(
         request,
         "_positions_plan_modal.html",
-        {"_target": None, "error": msg},
+        {"_target": None, "error": msg, "all_tags": []},
     )
     response.status_code = status
     response.headers["HX-Retarget"] = "#plan-modal-backdrop"
@@ -478,16 +478,17 @@ def plan_modal(
     return request.app.state.templates.TemplateResponse(
         request,
         "_positions_plan_modal.html",
-        {"_target": target, "error": None},
+        {"_target": target, "error": None, "all_tags": list(repo.list_all_tags())},
     )
 
 
 @router.post("/positions/plan/target", response_class=HTMLResponse)
-def plan_target_upsert(
+async def plan_target_upsert(
     request: Request,
     symbol: str = Form(""),
     target_unit: str = Form("usd"),
     target_amount: str = Form("0"),
+    tags: str | None = Form(default=None),
     repo: Repository = Depends(get_repository),
     pricing: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
@@ -504,6 +505,19 @@ def plan_target_upsert(
         return _modal_error(request, "Invalid target type.", status=422)
 
     repo.upsert_target(sym, amount, TargetUnit(target_unit))
+
+    # Tags semantics:
+    #   - "tags" key absent from form   → leave existing tags untouched.
+    #   - "tags" key present, value ""  → user cleared all tags.
+    #   - "tags" key present, non-empty → CSV; split on commas, normalize.
+    # FastAPI coerces empty-string form values to None for `str | None`,
+    # so we read raw form data to distinguish "omitted" from "cleared".
+    form_data = await request.form()
+    if "tags" in form_data:
+        raw_tags: str = form_data.get("tags") or ""  # type: ignore[assignment]
+        parts = [p.strip() for p in raw_tags.split(",")]
+        repo.set_target_tags(sym, parts)
+
     return _render_plan_body(request, repo, pricing)
 
 
