@@ -176,9 +176,7 @@ def positions_page(
 
         selected_tag_param = request.query_params.get("tag") or None
         sort_key_param = request.query_params.get("sort") or "alpha"
-        plan_view = _build_plan_view_for_request(
-            repo, pricing, account, selected_tag_param, sort_key_param
-        )
+        plan_view = _build_plan_view_for_request(repo, pricing, account, selected_tag_param, sort_key_param)
 
         page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
         page_norm = max(1, page)
@@ -350,7 +348,10 @@ def _build_plan_view_for_request(
     """Compute the PlanView used by both GET ?view=plan and the POST/DELETE
     fragment refreshes. Pulls trades, lots, prices, cash events, CSP collateral,
     free cash, then calls build_plan_view."""
-    targets = repo.list_targets()
+    if sort_key == "manual":
+        targets = repo.list_targets_by_manual_order()
+    else:
+        targets = repo.list_targets()
     trades = repo.all_trades()
     lots = repo.all_lots()
     gl_closures = repo.get_equity_gl_closures()
