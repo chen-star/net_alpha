@@ -1,11 +1,11 @@
-"""Lock the post-2026-05 KPI row structure on the Portfolio overview.
+"""Lock the post-2026-05 KPI command-center layout on the Portfolio overview.
 
-Row 1: Hero alone, full-width on lg+ (col-span-12).
-Row 2: 4 equal small KPIs — Total Return, Realized, Unrealized, Cash —
-       each at lg:col-span-3.
+Single grid: hero (TOTAL ACCOUNT VALUE) anchors the left as a 4-col × 2-row
+tile, and the four small KPIs (Total Return, Realized, Unrealized, Cash)
+auto-flow into a 2×2 area to the right at lg:col-span-4 each.
 
-Total Return is demoted from `kpi-promoted` (28px) to plain `kpi` (22px)
-so it sits comfortably alongside the other three.
+Hero uses flex+justify-center so its content sits at the visual midpoint of
+the stretched card (which matches the 2-stacked right column's height).
 """
 
 from __future__ import annotations
@@ -57,20 +57,26 @@ def _kpi_block(html: str) -> str:
     return html[start : start + 16000]
 
 
-def test_hero_is_full_width_on_lg(seeded_client):
-    """Hero spans all 12 columns on lg+ — Total Return no longer rides shotgun."""
+def test_hero_spans_four_cols_and_two_rows_on_lg(seeded_client):
+    """Hero is the left anchor of the command-center header — 4 cols wide, 2 rows tall on lg+."""
     html = seeded_client.get("/portfolio/body").text
     block = _kpi_block(html)
 
     m = re.search(r'<div class="([^"]*)"\s+data-kpi-slot="hero"', block)
     assert m is not None, "hero kpi tile not found"
     classes = m.group(1)
-    assert "col-span-12" in classes, f"hero must be full-width, got classes: {classes}"
-    assert "lg:col-span-8" not in classes, "hero should no longer share row 1 with another tile"
+    assert "lg:col-span-4" in classes, f"hero must be lg:col-span-4, got: {classes}"
+    assert "lg:row-span-2" in classes, f"hero must be lg:row-span-2, got: {classes}"
+    # Mobile fallback: stacks full width below lg.
+    assert "col-span-12" in classes, f"hero must keep mobile col-span-12 fallback, got: {classes}"
+    # Should not retain prior wide variants.
+    assert "lg:col-span-8" not in classes, "hero should not be the old 8-col variant"
+    assert "lg:col-span-12" not in classes, "hero should not span all 12 cols on lg"
 
 
-def test_four_small_kpis_each_col_span_3(seeded_client):
-    """Total Return + Realized + Unrealized + Cash each take 3/12 on lg+."""
+def test_four_small_kpis_each_col_span_4(seeded_client):
+    """Total Return + Realized + Unrealized + Cash each take 4/12 on lg+ — they
+    auto-flow into the 2×2 area to the right of the row-span-2 hero."""
     html = seeded_client.get("/portfolio/body").text
     block = _kpi_block(html)
 
@@ -78,12 +84,14 @@ def test_four_small_kpis_each_col_span_3(seeded_client):
         m = re.search(rf'<div class="([^"]*)"\s+data-kpi-slot="{slot}"', block)
         assert m is not None, f"slot {slot} not found"
         classes = m.group(1)
-        assert "lg:col-span-3" in classes, f"{slot} must be lg:col-span-3, got: {classes}"
-        assert "lg:col-span-4" not in classes, f"{slot} should no longer be lg:col-span-4"
+        assert "lg:col-span-4" in classes, f"{slot} must be lg:col-span-4, got: {classes}"
+        assert "lg:col-span-3" not in classes, f"{slot} should no longer be lg:col-span-3"
 
 
-def test_total_return_demoted_to_plain_kpi(seeded_client):
-    """Total Return drops `kpi-promoted` so it matches the other small tiles."""
+def test_total_return_remains_plain_kpi(seeded_client):
+    """Total Return does not use `kpi-promoted` — it sits in the small-KPI cluster
+    with peer-level visual weight to Realized / Unrealized / Cash. (Carried over
+    from the prior round; locks the demotion that shipped in b718936.)"""
     html = seeded_client.get("/portfolio/body").text
     block = _kpi_block(html)
 
@@ -91,7 +99,22 @@ def test_total_return_demoted_to_plain_kpi(seeded_client):
     assert m is not None, "total_return tile not found"
     classes = m.group(1)
     assert "kpi-promoted" not in classes, (
-        "total_return should no longer use the promoted variant; it now sits in row 2 with the other small KPIs"
+        "total_return should remain a plain `kpi`; the promoted variant is reserved for the hero."
     )
     # Sanity: the base `kpi` class must still be there.
     assert "kpi" in classes.split()
+
+
+def test_hero_content_is_vertically_centered(seeded_client):
+    """Hero stretches to match the 2-stacked right column; flex+justify-center keeps
+    the big number visually centered inside the card instead of clinging to the top
+    with empty space below."""
+    html = seeded_client.get("/portfolio/body").text
+    block = _kpi_block(html)
+
+    m = re.search(r'<div class="([^"]*)"\s+data-kpi-slot="hero"', block)
+    assert m is not None, "hero kpi tile not found"
+    classes = m.group(1).split()
+    assert "flex" in classes, f"hero must use flex layout, got: {classes}"
+    assert "flex-col" in classes, f"hero must use flex-col, got: {classes}"
+    assert "justify-center" in classes, f"hero must vertically center content, got: {classes}"
