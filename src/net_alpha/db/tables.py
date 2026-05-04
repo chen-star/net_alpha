@@ -267,6 +267,12 @@ class PositionTargetRow(SQLModel, table=True):
     updated_at: str  # ISO datetime
 
 
+class PositionTargetTagRow(SQLModel, table=True):
+    __tablename__ = "position_target_tag"
+    target_symbol: str = Field(primary_key=True, index=True)
+    tag: str = Field(primary_key=True, index=True)
+
+
 class DismissedInboxItemRow(SQLModel, table=True):
     __tablename__ = "dismissed_inbox_items"
 

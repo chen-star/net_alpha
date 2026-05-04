@@ -30,6 +30,8 @@ Schema versions:
         Sell → transfer_out) while flipping transfer_basis_user_set=1.
   v15 — Adds dismissed_inbox_items table for the Action Inbox panel
         (single-column dismiss_key + ISO timestamp).
+  v16 — Adds position_target_tag table (many-to-many user tags on position
+        targets) with FK ON DELETE CASCADE to position_targets.symbol.
 """
 
 from __future__ import annotations
@@ -37,7 +39,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 15
+CURRENT_SCHEMA_VERSION = 16
 
 
 def get_schema_version(session: Session) -> int:
@@ -450,6 +452,34 @@ def _migrate_v14_to_v15(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v15_to_v16(session: Session) -> None:
+    """Create position_target_tag (many-to-many user tags on position
+    targets). Idempotent.
+
+    Tags are free-form labels normalized through targets.tags.normalize_tag.
+    A target with no tags falls into a synthetic 'untagged' bucket in the
+    Plan view; the literal 'untagged' is reserved and cannot be a real tag.
+    """
+    if not _table_exists(session, "position_target_tag"):
+        session.exec(
+            text("""
+            CREATE TABLE position_target_tag (
+                target_symbol TEXT NOT NULL,
+                tag           TEXT NOT NULL,
+                PRIMARY KEY (target_symbol, tag),
+                FOREIGN KEY (target_symbol)
+                    REFERENCES position_targets(symbol)
+                    ON DELETE CASCADE
+            )
+            """)
+        )
+        session.exec(text(
+            "CREATE INDEX IF NOT EXISTS ix_position_target_tag_tag "
+            "ON position_target_tag(tag)"
+        ))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -521,6 +551,10 @@ def migrate(session: Session) -> None:
     if current < 15:
         _migrate_v14_to_v15(session)
         set_schema_version(session, 15)
+        current = 15
+    if current < 16:
+        _migrate_v15_to_v16(session)
+        set_schema_version(session, 16)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(

@@ -76,11 +76,13 @@ def test_v14_leaves_non_transfer_user_set_untouched():
 
 
 def test_migration_chain_from_v13_reaches_current_version():
+    from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION
+
     engine = _v13_engine_with_buggy_transfer_rows()
     with Session(engine) as s:
         migrate(s)
         v = s.exec(text("SELECT value FROM meta WHERE key='schema_version'")).first()
-        assert v[0] == "15"
+        assert v[0] == str(CURRENT_SCHEMA_VERSION)
 
 
 def test_v14_idempotent():
