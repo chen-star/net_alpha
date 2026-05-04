@@ -174,7 +174,11 @@ def positions_page(
     if selected_view == "plan":
         import dataclasses as _dc
 
-        plan_view = _build_plan_view_for_request(repo, pricing, account)
+        selected_tag_param = request.query_params.get("tag") or None
+        sort_key_param = request.query_params.get("sort") or "alpha"
+        plan_view = _build_plan_view_for_request(
+            repo, pricing, account, selected_tag_param, sort_key_param
+        )
 
         page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
         page_norm = max(1, page)
@@ -340,6 +344,8 @@ def _build_plan_view_for_request(
     repo: Repository,
     pricing: PricingService,
     account: str | None,
+    selected_tag: str | None = None,
+    sort_key: str = "alpha",
 ):
     """Compute the PlanView used by both GET ?view=plan and the POST/DELETE
     fragment refreshes. Pulls trades, lots, prices, cash events, CSP collateral,
@@ -395,6 +401,8 @@ def _build_plan_view_for_request(
         positions_by_symbol=pos_by_sym,
         quotes_by_symbol=quotes_by_sym,
         free_cash=free_cash,
+        selected_tag=selected_tag,
+        sort_key=sort_key,
     )
 
 
@@ -417,10 +425,12 @@ def _render_plan_body(
     account: str | None = None,
     page: int = 1,
     page_size: int = 25,
+    selected_tag: str | None = None,
+    sort_key: str = "alpha",
 ) -> HTMLResponse:
     import dataclasses as _dc
 
-    plan_view = _build_plan_view_for_request(repo, pricing, account)
+    plan_view = _build_plan_view_for_request(repo, pricing, account, selected_tag, sort_key)
 
     page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
     page_norm = max(1, page)
