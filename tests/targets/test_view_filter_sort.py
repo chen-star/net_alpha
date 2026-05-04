@@ -152,3 +152,19 @@ def test_unknown_tag_falls_back_to_all(common_targets, common_positions, common_
     )
     assert [r.symbol for r in pv.rows] == ["AAPL", "HIMS", "VOO"]
     assert pv.selected_tag is None
+
+
+def test_sort_manual_preserves_input_order(common_targets, common_positions, common_quotes):
+    """When sort_key='manual', build_plan_view performs no internal re-sort
+    — the caller is responsible for passing pre-ordered targets."""
+    # common_targets fixture is alpha-sorted: AAPL, HIMS, VOO.
+    # Pass them in reverse to prove no re-sort happens.
+    pv = build_plan_view(
+        targets=list(reversed(common_targets)),
+        positions_by_symbol=common_positions,
+        quotes_by_symbol=common_quotes,
+        free_cash=Decimal("0"),
+        sort_key="manual",
+    )
+    assert [r.symbol for r in pv.rows] == ["VOO", "HIMS", "AAPL"]
+    assert pv.sort_key == "manual"

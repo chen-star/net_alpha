@@ -54,7 +54,7 @@ class PlanView:
 
 
 _TWO = Decimal("0.01")
-_VALID_SORT_KEYS = ("alpha", "gap", "filled", "target")
+_VALID_SORT_KEYS = ("alpha", "gap", "filled", "target", "manual")
 
 
 def _quantize(d: Decimal | None) -> Decimal | None:
@@ -113,8 +113,11 @@ def build_plan_view(
     selected_tag: str | None = None,
     sort_key: str = "alpha",
 ) -> PlanView:
+    # When sort_key=="manual", trust the caller's order. Otherwise alpha-sort
+    # so non-alpha sort branches below get a stable starting order.
+    iter_targets = list(targets) if sort_key == "manual" else sorted(targets, key=lambda x: x.symbol)
     rows: list[PlanRow] = []
-    for t in sorted(targets, key=lambda x: x.symbol):
+    for t in iter_targets:
         last_price = quotes_by_symbol.get(t.symbol)
         pos = positions_by_symbol.get(t.symbol)
         current_dollar = pos.market_value if (pos and pos.market_value is not None) else Decimal("0")
@@ -214,9 +217,7 @@ def build_plan_view(
         filtered.sort(key=lambda r: r.gap_dollar, reverse=True)
     elif effective_sort == "filled":
         # Nulls first (most-uncertain on top), then ascending.
-        filtered.sort(
-            key=lambda r: (r.pct_filled is not None, r.pct_filled or Decimal("0"))
-        )
+        filtered.sort(key=lambda r: (r.pct_filled is not None, r.pct_filled or Decimal("0")))
     elif effective_sort == "target":
         # Nulls last; descending by target_dollar_equiv.
         filtered.sort(
@@ -225,7 +226,8 @@ def build_plan_view(
                 -(r.target_dollar_equiv or Decimal("0")),
             )
         )
-    # 'alpha' = already alpha-sorted; no-op.
+    # 'alpha' = already alpha-sorted by construction loop.
+    # 'manual' = caller supplied the order; no re-sort.
 
     return PlanView(
         rows=filtered,
