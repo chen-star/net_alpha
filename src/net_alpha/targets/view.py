@@ -55,6 +55,7 @@ class PlanView:
 
 
 _TWO = Decimal("0.01")
+_VALID_SORT_KEYS = ("alpha", "gap", "filled", "target")
 
 
 def _quantize(d: Decimal | None) -> Decimal | None:
@@ -110,6 +111,8 @@ def build_plan_view(
     positions_by_symbol: dict[str, PositionRow],
     quotes_by_symbol: dict[str, Decimal],
     free_cash: Decimal,
+    selected_tag: str | None = None,
+    sort_key: str = "alpha",
 ) -> PlanView:
     rows: list[PlanRow] = []
     for t in sorted(targets, key=lambda x: x.symbol):
@@ -188,8 +191,45 @@ def build_plan_view(
     tag_summaries = _build_tag_summaries(rows)
     all_tags = tuple(sorted({tag for r in rows for tag in r.tags}))
 
+    # Validate sort_key — fall back to alpha on bogus input.
+    effective_sort = sort_key if sort_key in _VALID_SORT_KEYS else "alpha"
+
+    # Validate selected_tag — must be in all_tags or 'untagged' (when present).
+    has_untagged = any(not r.tags for r in rows)
+    valid_filter_keys = set(all_tags) | ({_UNTAGGED} if has_untagged else set())
+    effective_tag = selected_tag if selected_tag in valid_filter_keys else None
+
+    # Apply filter — tag_summaries above were computed pre-filter so the strip
+    # stays stable when a filter is applied. Likewise total_to_fill,
+    # coverage_pct, total_planned describe the WHOLE plan, not the filtered
+    # slice — do not move their computation past this point.
+    if effective_tag == _UNTAGGED:
+        filtered = [r for r in rows if not r.tags]
+    elif effective_tag is not None:
+        filtered = [r for r in rows if effective_tag in r.tags]
+    else:
+        filtered = list(rows)
+
+    # Apply sort to filtered rows.
+    if effective_sort == "gap":
+        filtered.sort(key=lambda r: r.gap_dollar, reverse=True)
+    elif effective_sort == "filled":
+        # Nulls first (most-uncertain on top), then ascending.
+        filtered.sort(
+            key=lambda r: (r.pct_filled is not None, r.pct_filled or Decimal("0"))
+        )
+    elif effective_sort == "target":
+        # Nulls last; descending by target_dollar_equiv.
+        filtered.sort(
+            key=lambda r: (
+                r.target_dollar_equiv is None,
+                -(r.target_dollar_equiv or Decimal("0")),
+            )
+        )
+    # 'alpha' = already alpha-sorted; no-op.
+
     return PlanView(
-        rows=rows,
+        rows=filtered,
         total_to_fill_dollar=total_to_fill,
         free_cash=free_cash,
         coverage_pct=coverage_pct,
@@ -198,6 +238,6 @@ def build_plan_view(
         planned_rows_total=len(rows),
         tag_summaries=tag_summaries,
         all_tags=all_tags,
-        selected_tag=None,
-        sort_key="alpha",
+        selected_tag=effective_tag,
+        sort_key=effective_sort,
     )
