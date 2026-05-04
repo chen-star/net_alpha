@@ -589,7 +589,7 @@ def migrate(session: Session) -> None:
     if current < 17:
         _migrate_v16_to_v17(session)
         set_schema_version(session, 17)
-        return
+        current = 17
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "
