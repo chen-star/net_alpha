@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -20,3 +20,4 @@ class PositionTarget:
     target_unit: TargetUnit
     created_at: datetime
     updated_at: datetime
+    tags: tuple[str, ...] = field(default=())  # always sorted, deduped, normalized

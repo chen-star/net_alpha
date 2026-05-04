@@ -33,3 +33,26 @@ def test_position_target_is_frozen():
     )
     with pytest.raises((AttributeError, Exception)):
         t.symbol = "OTHER"  # type: ignore[misc]
+
+
+def test_position_target_default_tags_empty():
+    pt = PositionTarget(
+        symbol="HIMS",
+        target_amount=Decimal("1000"),
+        target_unit=TargetUnit.USD,
+        created_at=datetime(2026, 1, 1),
+        updated_at=datetime(2026, 1, 1),
+    )
+    assert pt.tags == ()
+
+
+def test_position_target_accepts_tags():
+    pt = PositionTarget(
+        symbol="HIMS",
+        target_amount=Decimal("1000"),
+        target_unit=TargetUnit.USD,
+        created_at=datetime(2026, 1, 1),
+        updated_at=datetime(2026, 1, 1),
+        tags=("core", "income"),
+    )
+    assert pt.tags == ("core", "income")
