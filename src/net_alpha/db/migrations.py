@@ -34,10 +34,11 @@ Schema versions:
         targets) with FK ON DELETE CASCADE to position_targets.symbol.
   v17 — Adds position_targets.sort_order (INTEGER NOT NULL DEFAULT 0) for
         the Plan tab's manual drag-to-reorder mode. On first migration,
-        existing rows are backfilled with sort_order = alphabetical rank
-        (1, 2, 3, …) so Manual view initially matches alpha. Subsequent
-        runs are no-ops (the ALTER is gated on column existence and the
-        backfill is gated on whether any row has a non-zero sort_order).
+        existing rows are backfilled with sort_order = 1-based
+        alphabetical rank so Manual view initially matches alpha.
+        Idempotent: the ALTER and the backfill are both gated on column
+        absence, so subsequent runs are no-ops and never clobber a
+        user-set order.
 """
 
 from __future__ import annotations
