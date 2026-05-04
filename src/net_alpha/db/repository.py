@@ -1708,6 +1708,14 @@ class Repository:
             row = s.exec(select(PositionTargetRow).where(PositionTargetRow.symbol == sym)).first()
             if row is None:
                 return False
+            # Application-level cascade: SQLite FK ON DELETE CASCADE only fires
+            # when foreign_keys=ON AND the table was created via the v16 migration
+            # path (not SQLModel.metadata.create_all on fresh installs). Belt and
+            # suspenders so orphan tag rows can't leak into list_all_tags.
+            s.exec(
+                text("DELETE FROM position_target_tag WHERE target_symbol = :sym"),
+                params={"sym": sym},
+            )
             s.delete(row)
             s.commit()
         return True
