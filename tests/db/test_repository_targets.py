@@ -94,8 +94,8 @@ def test_list_targets_includes_sort_order(repo: Repository):
 
 def test_upsert_assigns_max_sort_order_plus_one_on_insert(repo: Repository):
     a = repo.upsert_target("AAPL", Decimal("1"), TargetUnit.USD)
-    b = repo.upsert_target("BBB",  Decimal("1"), TargetUnit.USD)
-    c = repo.upsert_target("CCC",  Decimal("1"), TargetUnit.USD)
+    b = repo.upsert_target("BBB", Decimal("1"), TargetUnit.USD)
+    c = repo.upsert_target("CCC", Decimal("1"), TargetUnit.USD)
     assert (a.sort_order, b.sort_order, c.sort_order) == (1, 2, 3)
 
 
@@ -122,6 +122,7 @@ def test_list_targets_by_manual_order_breaks_ties_by_symbol(repo: Repository):
     """If two rows share a sort_order, fall back to symbol asc for stability."""
     from sqlalchemy import text as _text
     from sqlmodel import Session as _Session
+
     repo.upsert_target("ZZZ", Decimal("1"), TargetUnit.USD)
     repo.upsert_target("AAA", Decimal("1"), TargetUnit.USD)
     # Force both to sort_order = 5.

@@ -32,7 +32,7 @@ def test_manual_option_present_in_toolbar(client, repo):
     body = resp.text
     assert '<option value="manual"' in body
     # And it should be marked selected when sort=manual.
-    assert 'value="manual"' in body and 'selected' in body
+    assert 'value="manual"' in body and "selected" in body
 
 
 def test_manual_mode_renders_handle_column(client, repo):

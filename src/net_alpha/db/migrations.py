@@ -480,10 +480,7 @@ def _migrate_v15_to_v16(session: Session) -> None:
             )
             """)
         )
-        session.exec(text(
-            "CREATE INDEX IF NOT EXISTS ix_position_target_tag_tag "
-            "ON position_target_tag(tag)"
-        ))
+        session.exec(text("CREATE INDEX IF NOT EXISTS ix_position_target_tag_tag ON position_target_tag(tag)"))
     session.commit()
 
 
@@ -497,17 +494,16 @@ def _migrate_v16_to_v17(session: Session) -> None:
     if not _table_exists(session, "position_targets"):
         return
     if not _column_exists(session, "position_targets", "sort_order"):
-        session.exec(text(
-            "ALTER TABLE position_targets "
-            "ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"
-        ))
+        session.exec(text("ALTER TABLE position_targets ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"))
         # Backfill by alpha rank. ROW_NUMBER() works in SQLite >= 3.25.
-        session.exec(text(
-            "UPDATE position_targets SET sort_order = ranked.rn "
-            "FROM (SELECT symbol, ROW_NUMBER() OVER (ORDER BY symbol) AS rn "
-            "      FROM position_targets) AS ranked "
-            "WHERE position_targets.symbol = ranked.symbol"
-        ))
+        session.exec(
+            text(
+                "UPDATE position_targets SET sort_order = ranked.rn "
+                "FROM (SELECT symbol, ROW_NUMBER() OVER (ORDER BY symbol) AS rn "
+                "      FROM position_targets) AS ranked "
+                "WHERE position_targets.symbol = ranked.symbol"
+            )
+        )
     session.commit()
 
 
