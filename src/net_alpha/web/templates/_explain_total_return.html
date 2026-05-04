@@ -43,8 +43,8 @@
     <div class="text-label-2">Δ Unrealized (period)</div>
     <div class="num text-right">{% if b.delta_unrealized_residual < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.delta_unrealized_residual|float|abs) }}</div>
 
-    <div class="border-t border-hairline pt-2 mt-1"></div>
-    <div class="num text-right border-t border-hairline pt-2 mt-1 {% if b.total_return < 0 %}text-neg{% else %}text-pos{% endif %}">
+    <div class="font-semibold border-t border-hairline pt-2 mt-1">= Total Return</div>
+    <div class="num text-right font-semibold border-t border-hairline pt-2 mt-1 {% if b.total_return < 0 %}text-neg{% else %}text-pos{% endif %}">
       {% if b.total_return < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.total_return|float|abs) }}
     </div>
   </div>

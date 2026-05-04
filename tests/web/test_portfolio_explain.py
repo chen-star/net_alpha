@@ -22,6 +22,24 @@ def _make_client(tmp_path: pathlib.Path) -> tuple[TestClient, Repository]:
     return client, repo
 
 
+def test_explain_total_return_decomposition_total_has_label(tmp_path):
+    """The Decomposition section's total row must carry the '= Total Return'
+    label — otherwise the hairline rule + value hang in space with no label,
+    which is a visible format bug.
+    """
+    client, _ = _make_client(tmp_path)
+    r = client.get("/portfolio/explain/total-return?period=ytd")
+    assert r.status_code == 200
+    html = r.text
+    assert "Decomposition:" in html
+    # '= Total Return' must appear twice: once for the top equation total,
+    # once for the decomposition total row.
+    assert html.count("= Total Return") >= 2, (
+        "Decomposition total row is missing its '= Total Return' label "
+        "(empty <div> with a hairline rule)."
+    )
+
+
 def test_explain_unrealized_smoke_empty_db(tmp_path):
     """explain_unrealized returns 200 on an empty database (no crash)."""
     client, _ = _make_client(tmp_path)
