@@ -1661,17 +1661,35 @@ class Repository:
     # ---- Position Targets ----
 
     def list_targets(self) -> list[PositionTarget]:
-        """Return all position targets sorted alphabetically by symbol."""
+        """Return all position targets sorted alphabetically by symbol,
+        each with its tag tuple populated. One round trip for tags."""
         with Session(self.engine) as s:
             rows = s.exec(select(PositionTargetRow).order_by(PositionTargetRow.symbol)).all()
-        return [self._row_to_target(r) for r in rows]
+            tag_rows = s.exec(
+                text("SELECT target_symbol, tag FROM position_target_tag ORDER BY tag")
+            ).all()
+        tags_by_sym: dict[str, list[str]] = {}
+        for sym, tag in tag_rows:
+            tags_by_sym.setdefault(sym, []).append(tag)
+        return [
+            self._row_to_target(r, tuple(tags_by_sym.get(r.symbol, ())))
+            for r in rows
+        ]
 
     def get_target(self, symbol: str) -> PositionTarget | None:
-        """Return the target for `symbol` (case-insensitive), or None if absent."""
+        """Return the target for `symbol` (case-insensitive), or None if absent.
+        Tag tuple is populated."""
         sym = symbol.upper()
         with Session(self.engine) as s:
             row = s.exec(select(PositionTargetRow).where(PositionTargetRow.symbol == sym)).first()
-        return self._row_to_target(row) if row else None
+            if row is None:
+                return None
+            tag_rows = s.exec(
+                text("SELECT tag FROM position_target_tag "
+                     "WHERE target_symbol = :sym ORDER BY tag"),
+                params={"sym": sym},
+            ).all()
+        return self._row_to_target(row, tuple(r[0] for r in tag_rows))
 
     def upsert_target(self, symbol: str, amount: Decimal, unit: TargetUnit) -> PositionTarget:
         """Create or update the position target for `symbol`.
@@ -1795,13 +1813,17 @@ class Repository:
         return tuple(r[0] for r in rows)
 
     @staticmethod
-    def _row_to_target(row: PositionTargetRow) -> PositionTarget:
+    def _row_to_target(
+        row: PositionTargetRow,
+        tags: tuple[str, ...] = (),
+    ) -> PositionTarget:
         return PositionTarget(
             symbol=row.symbol,
             target_amount=Decimal(str(row.target_amount)),
             target_unit=TargetUnit(row.target_unit),
             created_at=datetime.fromisoformat(row.created_at),
             updated_at=datetime.fromisoformat(row.updated_at),
+            tags=tags,
         )
 
 

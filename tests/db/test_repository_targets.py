@@ -58,3 +58,27 @@ def test_symbol_uppercased(repo: Repository):
     assert t.symbol == "HIMS"
     assert repo.get_target("HIMS").target_amount == Decimal("1000")
     assert repo.get_target("hims").target_amount == Decimal("1000")  # case-insensitive lookup
+
+
+def test_list_targets_includes_tags(repo: Repository):
+    repo.upsert_target("HIMS", Decimal("1000"), TargetUnit.USD)
+    repo.upsert_target("VOO", Decimal("10000"), TargetUnit.USD)
+    repo.set_target_tags("HIMS", ["core", "income"])
+    repo.set_target_tags("VOO", ["etf"])
+    by_sym = {t.symbol: t for t in repo.list_targets()}
+    assert by_sym["HIMS"].tags == ("core", "income")
+    assert by_sym["VOO"].tags == ("etf",)
+
+
+def test_list_targets_empty_tags_when_none_set(repo: Repository):
+    repo.upsert_target("AAPL", Decimal("500"), TargetUnit.USD)
+    by_sym = {t.symbol: t for t in repo.list_targets()}
+    assert by_sym["AAPL"].tags == ()
+
+
+def test_get_target_includes_tags(repo: Repository):
+    repo.upsert_target("HIMS", Decimal("1000"), TargetUnit.USD)
+    repo.set_target_tags("HIMS", ["core"])
+    t = repo.get_target("HIMS")
+    assert t is not None
+    assert t.tags == ("core",)
