@@ -117,18 +117,18 @@ Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, MXEF, MXEA — b
 
 ### Web UI (optional, v2.1+)
 
-`src/net_alpha/web/` is an optional FastAPI subpackage providing a local browser UI. It only calls existing public seams (`Repository`, engine functions, `csv_loader`, `BrokerParser`, audit/portfolio/planner pure functions) — **no business logic in `web/`**. Templates use Jinja with HTMX for fragment swaps and Alpine for tiny client state. Static assets (htmx, alpine, ApexCharts, Lucide icons, built `app.css`, Inter + JetBrains Mono fonts) are vendored under `web/static/` — no CDN at runtime, no node, no npm.
+`src/net_alpha/web/` is an optional FastAPI subpackage providing a local browser UI. It only calls existing public seams (`Repository`, engine functions, `csv_loader`, `BrokerParser`, audit/portfolio/planner pure functions) — **no business logic in `web/`**. Templates use Jinja with HTMX for fragment swaps and Alpine for tiny client state. Static assets (htmx, alpine, ApexCharts, Lucide icons, SortableJS, built `app.css`, Inter + JetBrains Mono fonts) are vendored under `web/static/` — no CDN at runtime, no node, no npm.
 
 Launch with `net-alpha ui`. Picks a free port in 8765–8775 (override with `--port`), binds to loopback only, dies on Ctrl-C. UI deps are in the `[ui]` optional group (FastAPI, uvicorn, Jinja2, python-multipart, yfinance); install with `uv sync --extra ui`.
 
-Asset rebuild targets in the `Makefile`: `build-css` (Tailwind via `pytailwindcss`), `vendor-fonts`, `vendor-apex`, `vendor-lucide` (pinned to v0.469.0).
+Asset rebuild targets in the `Makefile`: `build-css` (Tailwind via `pytailwindcss`), `vendor-fonts`, `vendor-apex`, `vendor-lucide` (pinned to v0.469.0), `vendor-sortable` (SortableJS pinned to v1.15.2 for Plan-tab drag-to-reorder).
 
 ### Web UI surface
 
 Top-level pages (one route file per area in `web/routes/`):
 
 - `/` — Portfolio (KPIs, allocation, equity curve, cash curve, top movers, options/short-options panels, wash-sale watch).
-- `/positions` — Holdings views (all / stocks / options / at-loss / closed) plus a Plan view backed by `PositionTarget`s; includes a "Set basis" multi-lot editor and a per-row "↗ Sim" deep link.
+- `/positions` — Holdings views (all / stocks / options / at-loss / closed) plus a Plan view backed by `PositionTarget`s; includes a "Set basis" multi-lot editor, a per-row "↗ Sim" deep link, and a Manual sort mode that lets the user drag rows into a custom order persisted via `position_targets.sort_order` (POST `/positions/plan/reorder`).
 - `/sim` — Pre-trade simulator with a `/sim/suggestions` chip strip (largest unrealized loss, wash-sale risk, largest unrealized gain, or a demo chip on empty portfolios) and a recents list.
 - `/tax` — Tax performance, harvest queue, harvest plan-builder (`/tax/harvest/plan`), tax-projection setup form (`/tax/projection-config`), wash-sale + exempt-match listings.
 - `/imports` — Imports table, drop-zone upload, preview/commit, per-import detail, data-hygiene groups (Missing basis / No price quote / Missing dates as collapsible `<details>` buckets).
