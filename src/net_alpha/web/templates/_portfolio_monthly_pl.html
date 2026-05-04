@@ -19,7 +19,7 @@
      panel's natural width. #}
   <div class="overflow-x-auto">
     <div id="monthly-pl-chart-wrap"
-         style="min-width: max(100%, calc(32px * {{ monthly_pl_points|length }})); height: 180px;">
+         style="min-width: max(100%, calc(32px * {{ monthly_pl_points|length }})); height: 90px;">
       <div id="monthly-pl-chart" style="height: 100%;"></div>
     </div>
   </div>
@@ -68,7 +68,7 @@
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
         chart: {
           type: "bar",
-          height: 180,
+          height: 90,
           toolbar: { show: false },
           zoom: { enabled: false },
         },
