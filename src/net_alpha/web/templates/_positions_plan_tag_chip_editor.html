@@ -1,0 +1,45 @@
+{# Tag chip editor for a Plan row.
+   Inputs: r (PlanRow with .symbol and .tags).
+   - Each tag renders as a pill with an HTMX-wired ×.
+   - The "+" button toggles a text input (Alpine x-data). Submitting the
+     input POSTs to /positions/plan/target/{sym}/tag with form field "tag".
+#}
+{% set palette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'] %}
+<div class="flex flex-wrap gap-1 mt-1 items-center"
+     x-data="{ adding: false }">
+  {% for t in r.tags %}
+    {% set idx = (t|length + (t[0]|ord if t|length > 0 else 0)) % 8 %}
+    <span class="inline-flex items-center gap-1 px-2 py-[1px] text-[10px] rounded-full"
+          style="background:rgba(0,0,0,0); border:0.5px solid var(--color-hairline);
+                 color:var(--color-text);">
+      <span style="width:6px; height:6px; border-radius:50%;
+                   background:{{ palette[idx] }}; display:inline-block;"></span>
+      {{ t }}
+      <button type="button"
+              class="text-label-2 hover:text-neg"
+              hx-delete="/positions/plan/target/{{ r.symbol }}/tag/{{ t }}"
+              hx-target="#plan-body"
+              hx-swap="outerHTML"
+              aria-label="Remove tag {{ t }}">×</button>
+    </span>
+  {% endfor %}
+  <button type="button"
+          class="text-[10px] px-2 py-[1px] rounded-full text-label-2 hover:text-text"
+          style="border:0.5px dashed var(--color-hairline);"
+          x-show="!adding"
+          @click="adding = true; $nextTick(() => $refs.tagInput.focus())">+ tag</button>
+  <form x-show="adding"
+        x-cloak
+        hx-post="/positions/plan/target/{{ r.symbol }}/tag"
+        hx-target="#plan-body"
+        hx-swap="outerHTML"
+        hx-on::after-request="adding = false; $refs.tagInput.value=''"
+        class="inline-flex items-center gap-1">
+    <input type="text" name="tag" x-ref="tagInput" required
+           list="all-tags-datalist"
+           class="px-1 py-0 text-[10px] rounded font-mono w-[80px]"
+           style="background:var(--color-surface); border:0.5px solid var(--color-hairline); color:var(--color-text);"
+           placeholder="tag"
+           @keydown.escape="adding = false">
+  </form>
+</div>
