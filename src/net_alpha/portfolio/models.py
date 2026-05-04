@@ -179,6 +179,24 @@ class MonthlyPnl:
 
 
 @dataclass(frozen=True)
+class MonthlyPnlPoint:
+    """One month's realized P&L in a chronological series.
+
+    Used by the Portfolio overview's wide bar chart. Same fields as
+    ``MonthlyPnl`` plus ``year`` so the series can span multiple calendar
+    years (Lifetime period). Built by
+    ``portfolio.calendar_pnl.monthly_realized_pl_series``.
+    """
+
+    year: int
+    month: int  # 1..12
+    net_pl: Decimal  # gain - loss
+    gross_gain: Decimal  # sum of positive sell P&L
+    gross_loss: Decimal  # sum of |negative sell P&L| (positive number)
+    trade_count: int  # number of sell trades contributing
+
+
+@dataclass(frozen=True)
 class AllocationSlice:
     """One ranked holding for the donut + leaderboard module."""
 
