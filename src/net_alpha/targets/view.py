@@ -2,38 +2,56 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 
 from net_alpha.portfolio.models import PositionRow
 from net_alpha.targets.models import PositionTarget, TargetUnit
 
 
+_UNTAGGED = "untagged"
+
+
 @dataclass(frozen=True)
 class PlanRow:
     symbol: str
     target_unit: TargetUnit
-    target_amount: Decimal  # raw input (the unit the user picked)
-    target_dollar_equiv: Decimal | None  # populated when conversion possible
+    target_amount: Decimal
+    target_dollar_equiv: Decimal | None
     target_share_equiv: Decimal | None
-    current_dollar: Decimal  # 0 if not held
-    current_shares: Decimal  # 0 if not held
-    gap_dollar: Decimal  # positive = buy more, negative = trim
-    gap_shares: Decimal | None  # None when share equiv unknown
-    pct_filled: Decimal | None  # None when target = 0 or undefined
+    current_dollar: Decimal
+    current_shares: Decimal
+    gap_dollar: Decimal
+    gap_shares: Decimal | None
+    pct_filled: Decimal | None
     last_price: Decimal | None
     is_held: bool
+    tags: tuple[str, ...] = field(default=())
+
+
+@dataclass(frozen=True)
+class PlanTagSummary:
+    tag: str
+    target_count: int
+    planned_dollar: Decimal | None
+    current_dollar: Decimal
+    gap_to_fill_dollar: Decimal
+    pct_filled: Decimal | None
 
 
 @dataclass(frozen=True)
 class PlanView:
     rows: list[PlanRow]
-    total_to_fill_dollar: Decimal  # sum of max(0, gap_dollar) — buys only
+    total_to_fill_dollar: Decimal
     free_cash: Decimal
-    coverage_pct: Decimal | None  # free_cash / total_to_fill * 100; None when total = 0
-    total_planned_dollar: Decimal  # sum of target_dollar_equiv across rows where it's known
-    planned_rows_with_quote: int  # how many rows contributed to total_planned_dollar
-    planned_rows_total: int  # total number of rows (for "X of Y" display)
+    coverage_pct: Decimal | None
+    total_planned_dollar: Decimal
+    planned_rows_with_quote: int
+    planned_rows_total: int
+    tag_summaries: list[PlanTagSummary] = field(default_factory=list)
+    all_tags: tuple[str, ...] = field(default=())
+    selected_tag: str | None = None
+    sort_key: str = "alpha"
 
 
 _TWO = Decimal("0.01")
@@ -43,6 +61,47 @@ def _quantize(d: Decimal | None) -> Decimal | None:
     if d is None:
         return None
     return d.quantize(_TWO)
+
+
+def _build_tag_summaries(rows: list[PlanRow]) -> list[PlanTagSummary]:
+    """Aggregate per-tag stats. A row with N tags counts in N buckets.
+    Rows with no tags fall into the synthetic 'untagged' bucket."""
+    by_tag: dict[str, list[PlanRow]] = {}
+    for r in rows:
+        keys = r.tags if r.tags else (_UNTAGGED,)
+        for k in keys:
+            by_tag.setdefault(k, []).append(r)
+
+    summaries: list[PlanTagSummary] = []
+    for tag in sorted(by_tag.keys(), key=lambda k: (k == _UNTAGGED, k)):
+        bucket = by_tag[tag]
+        current = sum((r.current_dollar for r in bucket), Decimal("0"))
+        gap = sum(
+            (r.gap_dollar for r in bucket if r.gap_dollar > Decimal("0")),
+            Decimal("0"),
+        )
+        if any(r.target_dollar_equiv is None for r in bucket):
+            planned: Decimal | None = None
+        else:
+            planned = sum(
+                (r.target_dollar_equiv for r in bucket),
+                Decimal("0"),
+            ).quantize(_TWO)
+        if planned is None or planned == Decimal("0"):
+            pct: Decimal | None = None
+        else:
+            pct = (current / planned * Decimal("100")).quantize(_TWO)
+        summaries.append(
+            PlanTagSummary(
+                tag=tag,
+                target_count=len(bucket),
+                planned_dollar=planned,
+                current_dollar=current.quantize(_TWO),
+                gap_to_fill_dollar=gap.quantize(_TWO),
+                pct_filled=pct,
+            )
+        )
+    return summaries
 
 
 def build_plan_view(
@@ -107,6 +166,7 @@ def build_plan_view(
                 pct_filled=pct_filled,
                 last_price=last_price,
                 is_held=pos is not None,
+                tags=t.tags,
             )
         )
 
@@ -125,6 +185,9 @@ def build_plan_view(
     )
     planned_with_quote = sum(1 for r in rows if r.target_dollar_equiv is not None)
 
+    tag_summaries = _build_tag_summaries(rows)
+    all_tags = tuple(sorted({tag for r in rows for tag in r.tags}))
+
     return PlanView(
         rows=rows,
         total_to_fill_dollar=total_to_fill,
@@ -133,4 +196,8 @@ def build_plan_view(
         total_planned_dollar=total_planned.quantize(_TWO),
         planned_rows_with_quote=planned_with_quote,
         planned_rows_total=len(rows),
+        tag_summaries=tag_summaries,
+        all_tags=all_tags,
+        selected_tag=None,
+        sort_key="alpha",
     )
