@@ -143,3 +143,39 @@ def test_equity_curve_fragment_template_uses_new_series(tmp_path):
     assert "Equity curve" in r.text
     # The old broken series name from _portfolio_equity_curve.html must be gone.
     assert "Total (incl. unrealized)" not in r.text
+
+
+def test_portfolio_body_renders_monthly_pl_panel_ytd(tmp_path):
+    """The monthly realized-P/L panel renders inside /portfolio/body for YTD
+    even with no trades (empty-state copy must appear)."""
+    client = _client(tmp_path)
+    response = client.get("/portfolio/body?period=ytd&account=")
+    assert response.status_code == 200
+    html = response.text
+    # Panel chrome must be present.
+    assert 'id="portfolio-monthly-pl"' in html
+    assert "Monthly realized P&amp;L" in html or "Monthly realized P&L" in html
+    # No imports yet -> no realized closes in YTD -> empty-state copy.
+    assert "No realized closes in" in html
+
+
+def test_portfolio_body_renders_monthly_pl_panel_specific_year(tmp_path):
+    """Specific-year scope still emits the panel + its empty state."""
+    client = _client(tmp_path)
+    response = client.get("/portfolio/body?period=2025&account=")
+    assert response.status_code == 200
+    html = response.text
+    assert 'id="portfolio-monthly-pl"' in html
+    assert "2025" in html  # year label appears in the panel head meta
+
+
+def test_portfolio_body_renders_monthly_pl_panel_lifetime(tmp_path):
+    """Lifetime scope renders the panel; with no trades the empty state
+    appears (Lifetime returns []  -> has_data is false)."""
+    client = _client(tmp_path)
+    response = client.get("/portfolio/body?period=lifetime&account=")
+    assert response.status_code == 200
+    html = response.text
+    assert 'id="portfolio-monthly-pl"' in html
+    assert "Lifetime" in html
+    assert "No realized closes in" in html
