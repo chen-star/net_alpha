@@ -2,6 +2,71 @@
 
 
 
+## v0.47.0 (2026-05-04)
+
+### Chore
+
+* chore: sync uv.lock to v0.46.2 ([`76cac0e`](https://github.com/chen-star/net_alpha/commit/76cac0ed288105ea499b381785105bb2ab4855fd))
+
+### Feature
+
+* feat(ui): introduce real KPI hierarchy on Portfolio overview
+
+Promote Total Account Value to a 38px hero spanning two-thirds of the top
+row, add a 28px Total Return tile beside it, and reduce the bottom row to
+three tiles (Realized / Unrealized / Cash). Net Contributed folds into the
+Cash tile subtitle — it&#39;s operational metadata that was diluting the
+performance row at the same visual weight as Realized/Unrealized. ([`f41fc3f`](https://github.com/chen-star/net_alpha/commit/f41fc3f6297a4bcb1e7fdb17c2b2e3c14c84cdd3))
+
+### Fix
+
+* fix(ui): preserve base.html footer disclosure; scope toolbar test
+
+The Task 4 toolbar declutter removed the global &#39;Prices via Yahoo Finance&#39;
+footer block, which was the only price-source disclosure on Sim, Tax,
+Imports, Ticker, Wash Sales, Settings, and Error pages. The freshness chip
+that absorbs it lives in the toolbar — present on only 2 of 9 pages — so
+the original change broke disclosure coverage.
+
+Restore the footer block and tighten the toolbar regression test to scope
+its assertion to the toolbar form only, matching the plan&#39;s actual intent
+(declutter the toolbar, not kill the global disclosure).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`251f985`](https://github.com/chen-star/net_alpha/commit/251f985d8da2c3af88ad371d47484d2e11445dcc))
+
+* fix(ui): collapse toolbar overflow into kebab; chip absorbs disclaimer
+
+Sync splits was a primary-position button most users never touch — move
+it behind an ⋯ overflow menu using the same Alpine pattern as the row
+action menus. The &#39;Prices via Yahoo (~15 min delay)&#39; inline disclaimer
+moves into the freshness chip tooltip so users still discover the data
+source without burning toolbar real estate on it.
+
+Also drops the duplicate footer &#34;Prices via Yahoo Finance, ~15 min
+delayed.&#34; line in base.html — the per-page freshness chip is now the
+single source of truth for that disclosure. ([`0ae6ad2`](https://github.com/chen-star/net_alpha/commit/0ae6ad2b7e5029dc23da5e47faf10a770ccec3a3))
+
+* fix(ui): widen equity curve to 2/3 and cash curve to 1/3
+
+Equity is the page&#39;s primary &#39;am I winning?&#39; chart; the cash curve is
+operational context. Equal weighting undersold equity — the new split
+mirrors the Allocation + Deployment row directly below. ([`61ce904`](https://github.com/chen-star/net_alpha/commit/61ce9046d26e75898b1d8cc47e44e6a5448743fd))
+
+### Refactor
+
+* refactor: remove orphaned Today tile and dead compute path
+
+The _portfolio_today_tile.html template was never wired into any body or
+fragment, so its supporting fields (today_change, today_pct on KpiSet) and
+the compute_today_change function in positions.py were producing values that
+nothing consumed. Monthly CSV-import workflows have no use for an intraday
+delta — drop the dead code rather than wire up a tile users don&#39;t want. ([`e8a77e8`](https://github.com/chen-star/net_alpha/commit/e8a77e86cb9a0081c2f7e3b74ae662f4aa280762))
+
+### Style
+
+* style: ruff-format test_overview_layout.py ([`435073f`](https://github.com/chen-star/net_alpha/commit/435073fb219d2cdec1c8f9d60c6456b9f7b84f5d))
+
+
 ## v0.46.2 (2026-05-03)
 
 ### Fix
