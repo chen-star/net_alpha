@@ -1,0 +1,43 @@
+{# Bullet chart for a Plan row.
+   Inputs: r (PlanRow). Reuses the existing color rule from the flat bar:
+     pct == 0 → info, 0 < pct < 95 → warn, 95 ≤ pct ≤ 105 → pos, pct > 105 → neg.
+   Tooltip: native title= with target / current / gap dollars.
+#}
+{% if r.pct_filled is not none %}
+  {% set pct = r.pct_filled|float %}
+  {% if pct == 0 %}
+    {% set color = 'var(--color-info)' %}
+  {% elif pct < 95 %}
+    {% set color = 'var(--color-warn)' %}
+  {% elif pct <= 105 %}
+    {% set color = 'var(--color-pos)' %}
+  {% else %}
+    {% set color = 'var(--color-neg)' %}
+  {% endif %}
+  {% set tip %}
+    Target: ${{ "%.2f"|format(r.target_dollar_equiv|float) if r.target_dollar_equiv else '—' }} ·
+    Current: ${{ "%.2f"|format(r.current_dollar|float) }} ·
+    Gap: {% if r.gap_dollar > 0 %}+{% endif %}${{ "%.2f"|format(r.gap_dollar|float) }}
+  {% endset %}
+  <div class="flex items-center gap-2" title="{{ tip|trim }}">
+    <div class="flex-1 relative rounded-full overflow-hidden"
+         style="height:8px; background:var(--color-hairline); max-width:160px;">
+      {% if pct > 100 %}
+        <div style="position:absolute; left:0; top:0; bottom:0;
+                    width:{{ (100 / pct * 100) }}%; background:var(--color-pos);"></div>
+        <div style="position:absolute; top:0; bottom:0;
+                    left:{{ (100 / pct * 100) }}%; right:0; background:var(--color-neg);"></div>
+      {% else %}
+        <div style="position:absolute; left:0; top:0; bottom:0;
+                    width:{{ pct }}%; background:{{ color }};"></div>
+      {% endif %}
+      <div style="position:absolute; right:0; top:-1px; bottom:-1px;
+                  width:1px; background:var(--color-text); opacity:0.55;"></div>
+    </div>
+    <span class="num text-[11px] font-semibold" style="color:{{ color }};">
+      {{ "%.0f"|format(pct) }}%
+    </span>
+  </div>
+{% else %}
+  <span class="text-label-3">—</span>
+{% endif %}
