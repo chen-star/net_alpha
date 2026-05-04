@@ -2,6 +2,23 @@
 
 
 
+## v0.49.1 (2026-05-04)
+
+### Fix
+
+* fix(ui): Total Return tile must include long-option basis in account value
+
+The Portfolio body route was feeding `compute_cash_kpis` an equity-only
+holdings total (sum of `compute_open_positions` market values, which
+skips long option lots), while the Hero tile, the period-start anchor,
+and the explain panel all used `kpis.open_position_value` which carries
+open long options at basis. Result: the Total Return KPI read low by the
+long-option-basis amount and disagreed with both the Hero tile and the
+explain panel on the same page.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`18ee01d`](https://github.com/chen-star/net_alpha/commit/18ee01d0f7404ef4493a3df9ebf5d73a97a208e0))
+
+
 ## v0.49.0 (2026-05-04)
 
 ### Chore
