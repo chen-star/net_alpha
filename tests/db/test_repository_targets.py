@@ -82,3 +82,11 @@ def test_get_target_includes_tags(repo: Repository):
     t = repo.get_target("HIMS")
     assert t is not None
     assert t.tags == ("core",)
+
+
+def test_list_targets_includes_sort_order(repo: Repository):
+    repo.upsert_target("HIMS", Decimal("1000"), TargetUnit.USD)
+    targets = repo.list_targets()
+    assert len(targets) == 1
+    # First insert into a fresh DB lands at sort_order = 1.
+    assert targets[0].sort_order == 1
