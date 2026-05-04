@@ -107,6 +107,7 @@ def test_upsert_preserves_sort_order_on_update(repo: Repository):
     # Update BBB — sort_order must not change.
     b2 = repo.upsert_target("BBB", Decimal("999"), TargetUnit.SHARES)
     assert b2.sort_order == 2
+    assert b2.target_amount == Decimal("999")
 
 
 def test_list_targets_by_manual_order_orders_by_sort_order(repo: Repository):
