@@ -1,0 +1,54 @@
+{# One row in the Plan table. Inputs: r (PlanRow). #}
+<tr data-symbol="{{ r.symbol|upper }}" style="border-bottom: 0.5px solid var(--color-hairline);">
+  <td class="p-[7px]">
+    <div class="font-semibold">{{ r.symbol }}</div>
+    {% include "_positions_plan_tag_chip_editor.html" %}
+  </td>
+  <td class="r p-[7px] num">
+    <strong>
+      {% if r.target_unit.value == 'usd' %}${{ "%.2f"|format(r.target_amount|float) }}
+      {% else %}{{ "%.2f"|format(r.target_amount|float) }} sh{% endif %}
+    </strong>
+    <div class="text-[10px] text-label-2">
+      {% if r.target_unit.value == 'usd' %}
+        {% if r.target_share_equiv %}≈ {{ "%.2f"|format(r.target_share_equiv|float) }} sh{% else %}—{% endif %}
+      {% else %}
+        {% if r.target_dollar_equiv %}≈ ${{ "%.2f"|format(r.target_dollar_equiv|float) }}{% else %}—{% endif %}
+      {% endif %}
+    </div>
+  </td>
+  <td class="r p-[7px] num">
+    {% if r.is_held %}
+      ${{ "%.2f"|format(r.current_dollar|float) }}
+      <div class="text-[10px] text-label-2">{{ "%.2f"|format(r.current_shares|float) }} sh</div>
+    {% else %}
+      <span class="text-label-3">—</span>
+      <div class="text-[10px] text-label-3">not held</div>
+    {% endif %}
+  </td>
+  <td class="r p-[7px] num">
+    <strong class="{% if r.gap_dollar > 0 %}text-pos{% elif r.gap_dollar < 0 %}text-neg{% endif %}">
+      {% if r.gap_dollar > 0 %}+{% endif %}${{ "%.2f"|format(r.gap_dollar|float) }}
+    </strong>
+    {% if r.gap_shares is not none %}
+      <div class="text-[10px] text-label-2">
+        {% if r.gap_shares > 0 %}+{% endif %}{{ "%.2f"|format(r.gap_shares|float) }} sh{% if r.gap_dollar < 0 %} (over){% endif %}
+      </div>
+    {% endif %}
+  </td>
+  <td class="p-[7px] w-[200px]">
+    {% include "_positions_plan_bullet.html" %}
+  </td>
+  <td class="r p-[7px] num">
+    {% if r.last_price %}${{ "%.2f"|format(r.last_price|float) }}{% else %}<span class="text-label-3">—</span>{% endif %}
+  </td>
+  <td class="r p-[7px] text-[11px]">
+    <button type="button" class="text-label-2 hover:text-text"
+            hx-get="/positions/plan/modal?symbol={{ r.symbol }}"
+            hx-target="body" hx-swap="beforeend">edit</button>
+    <button type="button" class="text-label-2 hover:text-neg ml-2"
+            hx-delete="/positions/plan/target/{{ r.symbol }}"
+            hx-target="#plan-body" hx-swap="outerHTML"
+            hx-confirm="Delete target for {{ r.symbol }}?">×</button>
+  </td>
+</tr>

@@ -1,16 +1,20 @@
-{# Plan tab — pooled targets across all accounts, alphabetical sort. #}
+{# Plan tab — pooled targets across all accounts. KPI strip + tag strip +
+   sort/filter toolbar above a table of bullet-chart rows with inline tag
+   chips. #}
 <div id="plan-body">
   {% if plan_view is defined and plan_view and plan_view.rows %}
+    {% include "_positions_plan_kpi_strip.html" %}
+    {% if plan_view.tag_summaries %}
+      {% include "_positions_plan_tag_strip.html" %}
+    {% endif %}
+    {% include "_positions_plan_toolbar.html" %}
+
     <div class="panel">
-      <div class="flex items-end justify-between mb-3">
-        <div>
-          <h4 class="text-[14px] font-semibold">Position targets</h4>
-          <div class="text-[11px] text-label-2">Pooled across accounts · alphabetical · {{ pagination.total_rows if (pagination is defined) else plan_view.rows|length }} target{% if (pagination.total_rows if (pagination is defined) else plan_view.rows|length) != 1 %}s{% endif %}</div>
-        </div>
-        <button type="button"
-                class="text-[12px] px-3 py-[5px] rounded-md"
-                style="background: var(--color-accent); color: white;"
-                hx-get="/positions/plan/modal" hx-target="body" hx-swap="beforeend">+ Add target</button>
+      <div class="text-[11px] text-label-2 mb-2">
+        Pooled across accounts ·
+        {{ pagination.total_rows if (pagination is defined) else plan_view.rows|length }}
+        target{% if (pagination.total_rows if (pagination is defined) else plan_view.rows|length) != 1 %}s{% endif %}
+        {% if plan_view.selected_tag %} · filtered: <strong>{{ plan_view.selected_tag }}</strong>{% endif %}
       </div>
 
       <table class="net-table w-full" style="font-size:12px;">
@@ -20,107 +24,23 @@
             <th class="r p-[7px]">Target</th>
             <th class="r p-[7px]">Current</th>
             <th class="r p-[7px]">Gap to fill</th>
-            <th class="text-left p-[7px] w-[180px]">% Filled</th>
+            <th class="text-left p-[7px] w-[200px]">% Filled</th>
             <th class="r p-[7px]">Last</th>
             <th class="r p-[7px]"></th>
           </tr>
         </thead>
         <tbody>
           {% for r in plan_view.rows %}
-            <tr data-symbol="{{ r.symbol|upper }}" style="border-bottom: 0.5px solid var(--color-hairline);">
-              <td class="p-[7px] font-semibold">{{ r.symbol }}</td>
-              <td class="r p-[7px] num">
-                <strong>
-                  {% if r.target_unit.value == 'usd' %}${{ "%.2f"|format(r.target_amount|float) }}
-                  {% else %}{{ "%.2f"|format(r.target_amount|float) }} sh{% endif %}
-                </strong>
-                <div class="text-[10px] text-label-2">
-                  {% if r.target_unit.value == 'usd' %}
-                    {% if r.target_share_equiv %}≈ {{ "%.2f"|format(r.target_share_equiv|float) }} sh{% else %}—{% endif %}
-                  {% else %}
-                    {% if r.target_dollar_equiv %}≈ ${{ "%.2f"|format(r.target_dollar_equiv|float) }}{% else %}—{% endif %}
-                  {% endif %}
-                </div>
-              </td>
-              <td class="r p-[7px] num">
-                {% if r.is_held %}
-                  ${{ "%.2f"|format(r.current_dollar|float) }}
-                  <div class="text-[10px] text-label-2">{{ "%.2f"|format(r.current_shares|float) }} sh</div>
-                {% else %}
-                  <span class="text-label-3">—</span>
-                  <div class="text-[10px] text-label-3">not held</div>
-                {% endif %}
-              </td>
-              <td class="r p-[7px] num">
-                <strong class="{% if r.gap_dollar > 0 %}text-pos{% elif r.gap_dollar < 0 %}text-neg{% endif %}">
-                  {% if r.gap_dollar > 0 %}+{% endif %}${{ "%.2f"|format(r.gap_dollar|float) }}
-                </strong>
-                {% if r.gap_shares is not none %}
-                  <div class="text-[10px] text-label-2">
-                    {% if r.gap_shares > 0 %}+{% endif %}{{ "%.2f"|format(r.gap_shares|float) }} sh{% if r.gap_dollar < 0 %} (over){% endif %}
-                  </div>
-                {% endif %}
-              </td>
-              <td class="p-[7px]">
-                {% if r.pct_filled is not none %}
-                  {% set pct = r.pct_filled|float %}
-                  {% set color = 'var(--color-info)' if pct == 0 else ('var(--color-warn)' if pct < 95 else ('var(--color-pos)' if pct <= 105 else 'var(--color-neg)')) %}
-                  <div class="flex items-center gap-2">
-                    <div class="flex-1 flex rounded-full overflow-hidden" style="height:6px; background:var(--color-hairline); max-width:140px;">
-                      {% if pct > 100 %}
-                        {# Fully filled bar split into a 'target met' segment + an 'over' segment. The split mark sits at the proportional 100% boundary so the red sliver visually conveys how much past target you are. #}
-                        <div style="width:{{ (100 / pct * 100) }}%; height:100%; background:var(--color-pos);"></div>
-                        <div style="width:{{ ((pct - 100) / pct * 100) }}%; height:100%; background:var(--color-neg);"></div>
-                      {% else %}
-                        <div style="width:{{ pct }}%; height:100%; background:{{ color }};"></div>
-                      {% endif %}
-                    </div>
-                    <span class="num text-[11px] font-semibold" style="color:{{ color }};">{{ "%.0f"|format(pct) }}%</span>
-                  </div>
-                {% else %}
-                  <span class="text-label-3">—</span>
-                {% endif %}
-              </td>
-              <td class="r p-[7px] num">
-                {% if r.last_price %}${{ "%.2f"|format(r.last_price|float) }}{% else %}<span class="text-label-3">—</span>{% endif %}
-              </td>
-              <td class="r p-[7px] text-[11px]">
-                <button type="button" class="text-label-2 hover:text-text"
-                        hx-get="/positions/plan/modal?symbol={{ r.symbol }}"
-                        hx-target="body" hx-swap="beforeend">edit</button>
-                <button type="button" class="text-label-2 hover:text-neg ml-2"
-                        hx-delete="/positions/plan/target/{{ r.symbol }}"
-                        hx-target="#plan-body" hx-swap="outerHTML"
-                        hx-confirm="Delete target for {{ r.symbol }}?">×</button>
-              </td>
-            </tr>
+            {% include "_positions_plan_row.html" %}
           {% endfor %}
         </tbody>
       </table>
 
-      {# Footer summary #}
-      <div class="mt-3 pt-3 flex justify-between flex-wrap gap-x-4 gap-y-1 text-[12px]" style="border-top:0.5px solid var(--color-hairline);">
-        <span class="text-label-2">
-          Total planned:
-          <strong class="num text-text">${{ "%.2f"|format(plan_view.total_planned_dollar|float) }}</strong>
-          {% if plan_view.planned_rows_with_quote < plan_view.planned_rows_total %}
-            <span class="text-label-3" title="{{ plan_view.planned_rows_total - plan_view.planned_rows_with_quote }} target(s) excluded — no quote available to convert to USD.">({{ plan_view.planned_rows_with_quote }}/{{ plan_view.planned_rows_total }} priced)</span>
-          {% endif %}
-        </span>
-        {% if plan_view.total_to_fill_dollar > 0 %}
-          <span class="text-label-2">Total to fill: <strong class="num text-text">+${{ "%.2f"|format(plan_view.total_to_fill_dollar|float) }}</strong></span>
-          <span class="text-label-2">Free cash: <strong class="num text-text">${{ "%.2f"|format(plan_view.free_cash|float) }}</strong></span>
-          {% set cov = plan_view.coverage_pct|float if plan_view.coverage_pct is not none else 0 %}
-          {% set cov_color = 'text-pos' if cov >= 100 else ('text-warn' if cov >= 50 else 'text-neg') %}
-          <span class="{{ cov_color }}">Coverage: <strong>{{ "%.0f"|format(cov) }}%</strong>{% if cov < 100 %} — short by ${{ "%.2f"|format((plan_view.total_to_fill_dollar - plan_view.free_cash)|float) }}{% endif %}</span>
-        {% else %}
-          <span class="text-pos">All targets met</span>
-        {% endif %}
-      </div>
-
-      {# Pagination footer — shared partial for cross-view consistency. #}
+      {# Pagination footer — shared partial. #}
       {% set _qs = '&view=plan' %}
       {% if selected_account %}{% set _qs = _qs + '&account=' + selected_account %}{% endif %}
+      {% if plan_view.selected_tag %}{% set _qs = _qs + '&tag=' + plan_view.selected_tag %}{% endif %}
+      {% if plan_view.sort_key and plan_view.sort_key != 'alpha' %}{% set _qs = _qs + '&sort=' + plan_view.sort_key %}{% endif %}
       {% set page_base_url = '/positions' %}
       {% set page_extra_qs = _qs %}
       {% set page_target = '#positions-tab-content' %}
@@ -129,7 +49,13 @@
     </div>
   {% else %}
     <div class="panel py-12 text-center">
-      <div class="text-label-2 text-[14px] mb-3">No targets yet.</div>
+      <div class="text-label-2 text-[14px] mb-3">
+        {% if plan_view and plan_view.selected_tag %}
+          No targets match the <strong>{{ plan_view.selected_tag }}</strong> filter.
+        {% else %}
+          No targets yet.
+        {% endif %}
+      </div>
       <button type="button"
               class="text-[13px] px-3 py-1.5 rounded-md"
               style="background: var(--color-accent); color: white;"

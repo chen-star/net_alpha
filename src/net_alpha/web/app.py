@@ -133,6 +133,9 @@ def create_app(settings: Settings) -> FastAPI:
 
     templates.env.globals["etf_pairs_data"] = _etf_pairs_data
 
+    # Register Python built-ins as Jinja2 filters that templates use.
+    templates.env.filters["ord"] = ord
+
     app.state.templates = templates
 
     @app.get("/healthz")
