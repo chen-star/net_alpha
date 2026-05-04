@@ -506,3 +506,36 @@ def plan_target_delete(
 ) -> HTMLResponse:
     repo.delete_target(symbol)
     return _render_plan_body(request, repo, pricing)
+
+
+@router.post("/positions/plan/target/{symbol}/tag", response_class=HTMLResponse)
+def plan_target_tag_add(
+    request: Request,
+    symbol: str,
+    tag: str = Form(""),
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Add a tag to a target. Returns the refreshed plan body for HTMX."""
+    sym = symbol.upper()
+    if repo.get_target(sym) is None:
+        raise HTTPException(status_code=404, detail=f"No target for {sym}")
+    if not repo.add_target_tag(sym, tag):
+        raise HTTPException(status_code=422, detail="Invalid tag")
+    return _render_plan_body(request, repo, pricing)
+
+
+@router.delete(
+    "/positions/plan/target/{symbol}/tag/{tag}",
+    response_class=HTMLResponse,
+)
+def plan_target_tag_remove(
+    request: Request,
+    symbol: str,
+    tag: str,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Remove a tag from a target. Idempotent. Returns refreshed plan body."""
+    repo.remove_target_tag(symbol, tag)
+    return _render_plan_body(request, repo, pricing)
