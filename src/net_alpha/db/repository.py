@@ -1750,6 +1750,38 @@ class Repository:
             s.commit()
         return True
 
+    def set_target_order(self, symbols: Sequence[str]) -> None:
+        """Atomically rewrite the manual ordering of targets.
+
+        For each symbol in `symbols` (case-insensitive), set its
+        sort_order to its 1-indexed position in the list.
+
+        - Symbols absent from the input list keep their existing
+          sort_order (defensive against a stale browser POST that omits
+          a recently-added symbol).
+        - Unknown symbols in the input list are silently dropped.
+        - All writes happen in a single transaction; partial failure
+          leaves prior order intact.
+
+        An empty list is a no-op.
+        """
+        if not symbols:
+            return
+        normalized = [s.upper() for s in symbols if s and s.strip()]
+        with Session(self.engine) as s:
+            position = 1
+            for sym in normalized:
+                result = s.exec(
+                    text("UPDATE position_targets SET sort_order = :so WHERE symbol = :sym"),
+                    params={"so": position, "sym": sym},
+                )
+                # Only advance the position counter if the row existed.
+                # SQLAlchemy returns a Result whose rowcount is reliable
+                # for single-row UPDATEs in SQLite.
+                if result.rowcount > 0:
+                    position += 1
+            s.commit()
+
     # ---- Position Target Tags (M:N) ----
 
     def list_target_tags(self, symbol: str) -> tuple[str, ...]:

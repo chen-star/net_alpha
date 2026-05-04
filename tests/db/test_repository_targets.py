@@ -137,3 +137,58 @@ def test_list_targets_by_manual_order_includes_tags(repo: Repository):
     repo.set_target_tags("HIMS", ["core"])
     rows = repo.list_targets_by_manual_order()
     assert rows[0].tags == ("core",)
+
+
+def test_set_target_order_assigns_one_indexed_positions(repo: Repository):
+    repo.upsert_target("AAA", Decimal("1"), TargetUnit.USD)
+    repo.upsert_target("BBB", Decimal("1"), TargetUnit.USD)
+    repo.upsert_target("CCC", Decimal("1"), TargetUnit.USD)
+
+    repo.set_target_order(["CCC", "AAA", "BBB"])
+
+    syms = [t.symbol for t in repo.list_targets_by_manual_order()]
+    assert syms == ["CCC", "AAA", "BBB"]
+
+
+def test_set_target_order_preserves_sort_order_for_omitted_symbols(repo: Repository):
+    """If a symbol exists in the DB but is missing from the input list,
+    leave its sort_order untouched (defensive against stale browser POSTs)."""
+    repo.upsert_target("AAA", Decimal("1"), TargetUnit.USD)  # so 1
+    repo.upsert_target("BBB", Decimal("1"), TargetUnit.USD)  # so 2
+    repo.upsert_target("CCC", Decimal("1"), TargetUnit.USD)  # so 3
+
+    # Reorder only AAA & CCC; BBB is omitted.
+    repo.set_target_order(["CCC", "AAA"])
+
+    by_sym = {t.symbol: t.sort_order for t in repo.list_targets_by_manual_order()}
+    assert by_sym["CCC"] == 1
+    assert by_sym["AAA"] == 2
+    assert by_sym["BBB"] == 2  # unchanged from before
+
+
+def test_set_target_order_silently_drops_unknown_symbols(repo: Repository):
+    repo.upsert_target("AAA", Decimal("1"), TargetUnit.USD)
+    repo.upsert_target("BBB", Decimal("1"), TargetUnit.USD)
+
+    # NOPE doesn't exist — must not raise.
+    repo.set_target_order(["BBB", "NOPE", "AAA"])
+
+    syms = [t.symbol for t in repo.list_targets_by_manual_order()]
+    # NOPE skipped → BBB gets index 1, AAA gets index 2.
+    assert syms == ["BBB", "AAA"]
+
+
+def test_set_target_order_uppercases_input(repo: Repository):
+    repo.upsert_target("AAA", Decimal("1"), TargetUnit.USD)
+    repo.upsert_target("BBB", Decimal("1"), TargetUnit.USD)
+    repo.set_target_order(["bbb", "aaa"])
+    syms = [t.symbol for t in repo.list_targets_by_manual_order()]
+    assert syms == ["BBB", "AAA"]
+
+
+def test_set_target_order_empty_list_is_noop(repo: Repository):
+    repo.upsert_target("AAA", Decimal("1"), TargetUnit.USD)
+    repo.upsert_target("BBB", Decimal("1"), TargetUnit.USD)
+    repo.set_target_order([])
+    syms = [t.symbol for t in repo.list_targets_by_manual_order()]
+    assert syms == ["AAA", "BBB"]  # unchanged
