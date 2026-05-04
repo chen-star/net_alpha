@@ -160,13 +160,19 @@ def test_portfolio_body_renders_monthly_pl_panel_ytd(tmp_path):
 
 
 def test_portfolio_body_renders_monthly_pl_panel_specific_year(tmp_path):
-    """Specific-year scope still emits the panel + its empty state."""
+    """Specific-year scope still emits the panel + its empty state.
+
+    With no trades anywhere, the spec says a no-Sells-in-period scope hits
+    the empty-state branch (`has_data` = sum(trade_count) > 0). We pin both
+    halves of that contract: the period label appears in the panel head AND
+    the empty-state copy is what fills the chart area (not zero bars).
+    """
     client = _client(tmp_path)
     response = client.get("/portfolio/body?period=2025&account=")
     assert response.status_code == 200
     html = response.text
     assert 'id="portfolio-monthly-pl"' in html
-    assert "2025" in html  # year label appears in the panel head meta
+    assert "No realized closes in 2025" in html
 
 
 def test_portfolio_body_renders_monthly_pl_panel_lifetime(tmp_path):
