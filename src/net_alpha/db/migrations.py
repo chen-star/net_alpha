@@ -32,6 +32,12 @@ Schema versions:
         (single-column dismiss_key + ISO timestamp).
   v16 — Adds position_target_tag table (many-to-many user tags on position
         targets) with FK ON DELETE CASCADE to position_targets.symbol.
+  v17 — Adds position_targets.sort_order (INTEGER NOT NULL DEFAULT 0) for
+        the Plan tab's manual drag-to-reorder mode. On first migration,
+        existing rows are backfilled with sort_order = alphabetical rank
+        (1, 2, 3, …) so Manual view initially matches alpha. Subsequent
+        runs are no-ops (the ALTER is gated on column existence and the
+        backfill is gated on whether any row has a non-zero sort_order).
 """
 
 from __future__ import annotations
@@ -39,7 +45,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 16
+CURRENT_SCHEMA_VERSION = 17
 
 
 def get_schema_version(session: Session) -> int:
@@ -480,6 +486,30 @@ def _migrate_v15_to_v16(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v16_to_v17(session: Session) -> None:
+    """Add position_targets.sort_order (Plan tab manual reorder).
+
+    On first migration, backfill existing rows with sort_order =
+    alphabetical rank (1..N). On subsequent runs, leave existing values
+    alone. Idempotent.
+    """
+    if not _table_exists(session, "position_targets"):
+        return
+    if not _column_exists(session, "position_targets", "sort_order"):
+        session.exec(text(
+            "ALTER TABLE position_targets "
+            "ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"
+        ))
+        # Backfill by alpha rank. ROW_NUMBER() works in SQLite >= 3.25.
+        session.exec(text(
+            "UPDATE position_targets SET sort_order = ranked.rn "
+            "FROM (SELECT symbol, ROW_NUMBER() OVER (ORDER BY symbol) AS rn "
+            "      FROM position_targets) AS ranked "
+            "WHERE position_targets.symbol = ranked.symbol"
+        ))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -555,6 +585,10 @@ def migrate(session: Session) -> None:
     if current < 16:
         _migrate_v15_to_v16(session)
         set_schema_version(session, 16)
+        current = 16
+    if current < 17:
+        _migrate_v16_to_v17(session)
+        set_schema_version(session, 17)
         return
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
