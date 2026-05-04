@@ -22,6 +22,7 @@
       violet:   readVar("--color-violet")   || "#BF5AF2",
       info:     readVar("--color-info")     || "#64D2FF",
       warn:     readVar("--color-warn")     || "#FF9F0A",
+      label1:   readVar("--color-label-1")  || "rgba(235,235,245,0.92)",
       label2:   readVar("--color-label-2")  || "rgba(235,235,245,0.6)",
       label3:   readVar("--color-label-3")  || "rgba(235,235,245,0.35)",
       hairline: readVar("--color-hairline") || "rgba(255,255,255,0.08)",
@@ -46,10 +47,16 @@
 
   function buildDefaults() {
     var c = readColors();
+    var isLight = activeTheme() === "light";
+    // In dark mode label3 (35% white) reads fine on near-black; in light
+    // mode the same opacity on white falls below WCAG, so step axis labels
+    // up to label2 (60%) and legend up to label1 (~85%).
+    var axisColor = isLight ? c.label2 : c.label3;
+    var legendColor = isLight ? c.label1 : c.label2;
     return {
       chart: {
         background: "transparent",
-        foreColor: c.label2,
+        foreColor: legendColor,
         fontFamily: "Inter, -apple-system, system-ui, sans-serif",
         toolbar: { show: false },
         zoom: { enabled: false },
@@ -71,14 +78,14 @@
       },
       xaxis: {
         labels: {
-          style: { colors: c.label3, fontSize: "10px", fontFamily: "JetBrains Mono, ui-monospace, monospace" },
+          style: { colors: axisColor, fontSize: "10px", fontFamily: "JetBrains Mono, ui-monospace, monospace" },
         },
         axisBorder: { color: c.hairline },
         axisTicks: { color: c.hairline },
       },
       yaxis: {
         labels: {
-          style: { colors: c.label3, fontSize: "10px", fontFamily: "JetBrains Mono, ui-monospace, monospace" },
+          style: { colors: axisColor, fontSize: "10px", fontFamily: "JetBrains Mono, ui-monospace, monospace" },
         },
       },
       tooltip: {
@@ -87,7 +94,7 @@
       },
       dataLabels: { enabled: false },
       legend: {
-        labels: { colors: c.label2 },
+        labels: { colors: legendColor },
         fontSize: "12px",
         fontFamily: "Inter, sans-serif",
       },

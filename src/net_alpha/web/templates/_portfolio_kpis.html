@@ -68,11 +68,14 @@
        title="Account value at the end of the period minus the value at the start, minus contributions during the period. The actual gain (or loss) inside this window.">
     <div class="label-uc">Total Return
       <button type="button"
-              class="ml-1 text-label-3 hover:text-label-1 cursor-pointer text-[12px]"
+              class="ml-1 inline-flex align-middle text-label-3 hover:text-label-1 cursor-pointer"
               hx-get="/portfolio/explain/total-return?period={{ selected_period|default('ytd') }}&account={{ selected_account|default('') }}"
               hx-target="#explain-total-return"
               hx-swap="innerHTML"
-              title="Show how this is calculated">?</button>
+              aria-label="How is this calculated?"
+              title="Show how this is calculated">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </button>
     </div>
     <div class="num text-[22px] font-bold mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
       {% if cash_kpis is defined and cash_kpis %}
@@ -109,11 +112,14 @@
        title="Mark-to-market on open positions. Long stock and options use the latest quote. Short options (sold puts and covered calls) are estimated using intrinsic value plus straight-line time decay — confirm cost-to-close with your broker before acting.">
     <div class="label-uc">Unrealized P/L
       <button type="button"
-              class="ml-1 text-label-3 hover:text-label-1 cursor-pointer text-[12px]"
+              class="ml-1 inline-flex align-middle text-label-3 hover:text-label-1 cursor-pointer"
               hx-get="/portfolio/explain/unrealized?account={{ selected_account|default('') }}"
               hx-target="#explain-unrealized"
               hx-swap="innerHTML"
-              title="Show how this is calculated">?</button>
+              aria-label="How is this calculated?"
+              title="Show how this is calculated">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </button>
     </div>
     <div class="num text-[22px] font-bold mt-2">
       {% if kpis.period_unrealized is none %}<span class="text-label-3">—</span>

@@ -40,25 +40,17 @@
       },
     ];
 
+
     function buildOpts() {
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
         chart: {
           type: "line",
           height: 218,
+          // See equity curve — drag-to-zoom stays, but the floating Apex
+          // toolbar is hidden so the chart's corner doesn't fight the rest
+          // of the dashboard chrome.
           zoom: { enabled: true, type: "x", autoScaleYaxis: true },
-          toolbar: {
-            show: true,
-            tools: {
-              download: false,
-              selection: true,
-              zoom: true,
-              zoomin: true,
-              zoomout: true,
-              pan: true,
-              reset: true,
-            },
-            autoSelected: "zoom",
-          },
+          toolbar: { show: false },
         },
         colors: [
           window.netAlphaChartTheme.colors.info,
@@ -77,7 +69,23 @@
         legend: { show: true },
         xaxis: {
           type: "datetime",
-          labels: { format: "MMM" },
+          labels: {
+            // See comment on the equity curve — `format: "MMM"` produces
+            // duplicate adjacent labels at YTD scale; datetimeFormatter
+            // formats each tick at the picked granularity, e.g. "Feb 04",
+            // which is unique per tick.
+            datetimeUTC: false,
+            // See equity curve: same MMM-d shape across all granularity
+            // buckets so ticks never collapse to duplicate month strings.
+            datetimeFormatter: {
+              year: "MMM d, yyyy",
+              month: "MMM d",
+              day: "MMM d",
+              hour: "MMM d",
+            },
+            hideOverlappingLabels: true,
+            rotate: 0,
+          },
         },
         yaxis: {
           labels: {

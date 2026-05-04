@@ -251,14 +251,17 @@
                       <span class="num text-[10px]" style="color:{{ _color }};">{{ "%.0f"|format(_pct) }}%</span>
                     </div>
                   {% else %}
-                    <span class="text-label-3 text-[11px]">— no target</span>
+                    {# Use an em-dash alone at strong-tertiary opacity so this
+                       empty-state recedes — the goal is for rows that *do*
+                       have a target progress bar to pop. #}
+                    <span class="text-label-3 text-[11px] opacity-60" aria-label="no target">—</span>
                   {% endif %}
                 </td>
               {% endif %}
             {% endif %}
             <td class="text-right">
               <a href="/sim?ticker={{ r.symbol }}&qty={{ r.qty }}&action=sell{% if r.market_value is not none and r.qty and r.qty != 0 %}&price={{ '%.4f'|format(r.market_value|float / r.qty|float) }}{% endif %}"
-                 class="opacity-60 hover:opacity-100 text-[12px]"
+                 class="row-sim-link text-[12px]"
                  title="Simulate sale"
                  @click.stop>↗ Sim</a>
             </td>

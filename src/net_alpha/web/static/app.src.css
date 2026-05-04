@@ -293,11 +293,13 @@
     border: 0.5px solid var(--color-hairline);
   }
   .panel-head {
-    @apply flex items-baseline justify-between mb-2;
+    @apply flex items-baseline justify-between mb-3;
   }
   .panel-head h4 {
-    @apply text-[14px] font-semibold m-0;
-    letter-spacing: var(--tracking-tightish);
+    /* Lifted from 14px to 15px / 600 with tighter tracking so panel titles
+       register as a clear hierarchy tier between the page H1 and body. */
+    @apply text-[15px] font-semibold m-0;
+    letter-spacing: var(--tracking-tight);
   }
   .panel-head .meta {
     @apply text-[11px] font-medium;
@@ -315,11 +317,9 @@
     border: 0.5px solid var(--color-hairline);
   }
   .kpi-hero {
-    background:
-      radial-gradient(120% 90% at 0% 0%,    var(--color-indigo-tint) 0%, transparent 55%),
-      radial-gradient(140% 100% at 100% 100%, var(--color-violet-tint) 0%, transparent 55%),
-      var(--color-surface);
-    border-color: var(--color-indigo-edge);
+    /* Flat surface so the hero sits as a peer to the four small KPIs in the
+       command-center grid; only the larger type gives it weight. */
+    background: var(--color-surface);
     @apply px-5 py-4;
   }
   .kpi-hero .num.num-hero {
@@ -429,8 +429,22 @@
   }
   .net-table tbody tr:last-child { border-bottom: 0; }
   .net-table tbody tr:hover { background: var(--color-row-hover); }
-  .net-table tbody td { @apply px-3 py-2; }
+  .net-table tbody td {
+    @apply px-3 py-2;
+    /* Tabular figures so digit columns stay vertically aligned across rows
+       without forcing every template cell to wrap content in `.num`. */
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "ss01";
+  }
   .net-table tbody td.r { @apply text-right; }
+  /* Apply tabular figures to every KPI value, not just those tagged `.num`,
+     so quick-scan reading of the KPI grid stays clean. */
+  .kpi .num,
+  .kpi [class*="text-["][class*="font-bold"],
+  .kpi-value {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "ss01";
+  }
 
   /* Brand mark */
   .brand-mark {
@@ -447,6 +461,21 @@
   tr:hover .row-actions,
   tr:focus-within .row-actions {
     opacity: 1;
+  }
+
+  /* Per-row sim deeplink (positions table). Hidden by default so the table
+     reads as data first, surfaces on row hover/focus or when the link itself
+     receives keyboard focus (so it stays reachable via Tab). */
+  .row-sim-link {
+    opacity: 0;
+    transition: opacity 120ms;
+    color: var(--color-label-2);
+  }
+  tr:hover .row-sim-link,
+  tr:focus-within .row-sim-link,
+  .row-sim-link:focus-visible {
+    opacity: 1;
+    color: var(--color-text);
   }
 
   /* Mono-icon helper. Icons are stored as black SVG; on dark we invert to

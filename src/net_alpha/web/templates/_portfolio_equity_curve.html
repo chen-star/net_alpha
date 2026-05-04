@@ -65,12 +65,12 @@
         chart: {
           type: "line",
           height: 218,
+          // Drag-to-zoom stays enabled (auto-scales y); the floating Apex
+          // toolbar with its generic +/−/pan/home icons is hidden because it
+          // clashes visually with the rest of the dashboard chrome. Use the
+          // page period selector to change scope; double-click resets zoom.
           zoom: { enabled: true, type: "x", autoScaleYaxis: true },
-          toolbar: {
-            show: true,
-            tools: { download: false, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true },
-            autoSelected: "zoom",
-          },
+          toolbar: { show: false },
         },
         colors: colors,
         stroke: { width: widths, curve: "smooth", lineCap: "round", dashArray: dashArr },
@@ -80,7 +80,28 @@
           opacity: fillOps,
         },
         legend: { show: true },
-        xaxis: { type: "datetime", labels: { format: "MMM", hideOverlappingLabels: true } },
+        xaxis: {
+          type: "datetime",
+          labels: {
+            // `format: "MMM"` collapses every day in the same month to the
+            // same string, so adjacent auto-paced ticks emit duplicates
+            // ("Jan / Feb / Feb / Mar / Mar / …"). Apex's datetimeFormatter
+            // honors the picked granularity instead — at YTD daily scale it
+            // formats each tick as "Jan 15" / "Feb 04", which is unique.
+            datetimeUTC: false,
+            // Use the same MMM-d shape at every Apex granularity bucket so
+            // ticks read consistently as "Jan 15 / Feb 1 / Feb 15 …" instead
+            // of mixing bare-month and day-of-month labels.
+            datetimeFormatter: {
+              year: "MMM d, yyyy",
+              month: "MMM d",
+              day: "MMM d",
+              hour: "MMM d",
+            },
+            hideOverlappingLabels: true,
+            rotate: 0,
+          },
+        },
         yaxis: {
           labels: {
             formatter: (v) => {
