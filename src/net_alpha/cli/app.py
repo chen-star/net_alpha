@@ -10,6 +10,7 @@ from typer.core import TyperGroup
 from net_alpha.cli import default as default_cmd
 from net_alpha.cli import imports as imports_cmd
 from net_alpha.cli import migrate as migrate_cmd
+from net_alpha.cli import refresh_cache as refresh_cache_cmd
 from net_alpha.cli import sim as sim_cmd
 from net_alpha.cli import ui as ui_cmd
 
@@ -112,6 +113,25 @@ def imports_rm(
 @app.command(name="migrate-from-v1", help="One-shot migration of v1 DB into v2 schema.")
 def migrate_from_v1(yes: bool = typer.Option(False, "--yes", "-y")):
     raise typer.Exit(migrate_cmd.run(yes))
+
+
+@app.command(
+    name="refresh-historical-cache",
+    help=(
+        "Purge NULL historical cache rows and re-warm from yfinance. Use when "
+        "Total Return shows a 'starting value may be undercounted' caveat — "
+        "an older partial bulk fetch left real trading days negative-cached."
+    ),
+)
+def refresh_historical_cache(
+    since: str | None = typer.Option(
+        None,
+        "--since",
+        help="Only purge/re-warm rows on or after this date (YYYY-MM-DD). Default: all dates.",
+    ),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt."),
+):
+    raise typer.Exit(refresh_cache_cmd.run(since, yes))
 
 
 # ---------------------------------------------------------------------------

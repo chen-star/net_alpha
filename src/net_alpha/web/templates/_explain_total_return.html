@@ -52,5 +52,13 @@
   <div class="mt-3 text-label-3 text-[11px] leading-snug">
     Δ Unrealized is computed as a residual (Total Return − Realized). It differs from the standalone Unrealized P/L tile, which always shows current open unrealized regardless of period.
   </div>
+  {% if b.unpriced_lot_count and b.unpriced_lot_count > 0 %}
+  <div class="mt-3 p-2 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300 text-[11px] leading-snug" data-explain="starting-value-caveat">
+    ⚠ Starting value may be undercounted. {{ b.unpriced_lot_count }} lot{% if b.unpriced_lot_count != 1 %}s{% endif %}
+    (cost basis ${{ "{:,.2f}".format(b.unpriced_basis_total|float) }}{% if b.unpriced_tickers %}: {{ b.unpriced_tickers[:8]|join(", ") }}{% if b.unpriced_tickers|length > 8 %}, +{{ b.unpriced_tickers|length - 8 }} more{% endif %}{% endif %})
+    had no historical close cached for the period boundary, so they were treated as $0 in the starting value.
+    Run <code class="font-mono">net-alpha refresh-historical-cache</code> to repair the cache, then reopen this panel.
+  </div>
+  {% endif %}
   <div class="mt-2 text-label-3 text-[11px]">⚠ This is informational only. Consult a tax professional before filing.</div>
 </div>

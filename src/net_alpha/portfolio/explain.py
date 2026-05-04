@@ -18,6 +18,12 @@ class TotalReturnBreakdown:
     (`total_return - realized_in_period`) rather than from a historical
     unrealized snapshot. This avoids needing to mark every position to
     market at the period boundary.
+
+    The `unpriced_*` fields surface lots that were silently dropped from the
+    starting-value anchor because their close was missing from the cache —
+    when non-zero, the rendered Total Return is an *overcount* (starting too
+    low → ending-minus-starting too high), and the user should re-warm the
+    historical cache.
     """
 
     period_label: str
@@ -28,6 +34,9 @@ class TotalReturnBreakdown:
     realized_in_period: Decimal
     delta_unrealized_residual: Decimal
     is_lifetime: bool
+    unpriced_lot_count: int = 0
+    unpriced_basis_total: Decimal = Decimal("0")
+    unpriced_tickers: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -88,6 +97,9 @@ def build_total_return_breakdown(
     contributions: Decimal,
     realized_in_period: Decimal,
     is_lifetime: bool,
+    unpriced_lot_count: int = 0,
+    unpriced_basis_total: Decimal = Decimal("0"),
+    unpriced_tickers: tuple[str, ...] = (),
 ) -> TotalReturnBreakdown:
     """Build the Total Return explainer payload.
 
@@ -106,6 +118,9 @@ def build_total_return_breakdown(
         realized_in_period=realized_in_period,
         delta_unrealized_residual=delta_unrealized_residual,
         is_lifetime=is_lifetime,
+        unpriced_lot_count=unpriced_lot_count,
+        unpriced_basis_total=unpriced_basis_total,
+        unpriced_tickers=unpriced_tickers,
     )
 
 

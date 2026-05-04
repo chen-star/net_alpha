@@ -46,40 +46,90 @@ def test_warm_uses_one_bulk_call_per_symbol_not_per_date(memory_engine):
     provider.get_historical_close.assert_not_called()
 
 
-def test_warm_populates_cache_for_every_date_in_range(memory_engine):
-    """Dates the provider didn't return must be negative-cached so subsequent
-    lookups don't re-fetch (e.g. weekends, holidays)."""
+def test_warm_negative_caches_only_weekends_not_weekday_misses(memory_engine):
+    """Dates absent from a partial bulk response must NOT be negative-cached
+    if they're weekdays. Weekends are authoritatively closed, so caching None
+    for Sat/Sun is fine — but caching None for a real trading day a partial
+    yfinance response missed leaves the user with a permanently undercounted
+    starting value (which inflates Total Return). Trading-day misses must
+    stay _MISS so the single-fetch fallback can recover them.
+    """
     cache = PriceCache(memory_engine)
     provider = MagicMock()
+    # Bulk response covers Thu+Fri but not the in-range Sat/Sun, AND drops a
+    # real trading day (Mon Jan 6) — simulating the partial-response failure
+    # mode that previously poisoned the cache.
     provider.get_historical_closes.return_value = {
         date(2025, 1, 2): Decimal("470.00"),  # Thu
         date(2025, 1, 3): Decimal("471.50"),  # Fri
-        # Sat/Sun absent on purpose.
+        # Sat/Sun absent (correct: market closed)
+        # Mon Jan 6 absent (incorrect: real trading day, partial response)
     }
     svc = PricingService(provider=provider, cache=cache, enabled=True)
 
-    svc.warm_historical_range(["SPY"], date(2025, 1, 1), date(2025, 1, 5))
+    svc.warm_historical_range(["SPY"], date(2025, 1, 1), date(2025, 1, 6))
 
-    # Subsequent get_historical_close hits cache for every date in range.
-    provider.reset_mock()
-    assert svc.get_historical_close("SPY", date(2025, 1, 2)) == Decimal("470.00")
-    assert svc.get_historical_close("SPY", date(2025, 1, 4)) is None  # Sat — neg cached
-    assert svc.get_historical_close("SPY", date(2025, 1, 5)) is None  # Sun — neg cached
-    provider.get_historical_close.assert_not_called()
+    # Weekends are negative-cached.
+    assert cache.historical_get("SPY", date(2025, 1, 4)) is None
+    assert cache.historical_get("SPY", date(2025, 1, 5)) is None
+    # Trading day Jan 1 (a Wed but New Year's Day, pre-range) AND Mon Jan 6
+    # are NOT negative-cached — they remain _MISS so a later single-fetch
+    # can populate them once yfinance is reachable again.
+    from net_alpha.pricing.cache import _MISS
+
+    assert cache.historical_get("SPY", date(2025, 1, 1)) is _MISS  # Wed (holiday)
+    assert cache.historical_get("SPY", date(2025, 1, 6)) is _MISS  # Mon (real trading day)
+    # Real returns are cached normally.
+    assert cache.historical_get("SPY", date(2025, 1, 2)) == Decimal("470.00")
+    assert cache.historical_get("SPY", date(2025, 1, 3)) == Decimal("471.50")
 
 
 def test_warm_skips_already_cached_range(memory_engine):
-    """Second warm over the same range must not re-fetch."""
+    """Second warm over a range whose every date is now cached (positive
+    closes for trading days, negative for weekends) must not re-fetch.
+
+    This is the steady-state behavior: once the warmer + the single-fetch
+    fallback have fully populated a range, subsequent warms are no-ops.
+    """
     cache = PriceCache(memory_engine)
     provider = MagicMock()
-    provider.get_historical_closes.return_value = {date(2025, 1, 2): Decimal("470.00")}
+    provider.get_historical_closes.return_value = {
+        # All trading days in [Mon Jan 6 .. Fri Jan 10] covered.
+        date(2025, 1, 6): Decimal("470.00"),
+        date(2025, 1, 7): Decimal("470.50"),
+        date(2025, 1, 8): Decimal("471.00"),
+        date(2025, 1, 9): Decimal("471.50"),
+        date(2025, 1, 10): Decimal("472.00"),
+    }
     svc = PricingService(provider=provider, cache=cache, enabled=True)
 
-    svc.warm_historical_range(["SPY"], date(2025, 1, 1), date(2025, 1, 5))
+    svc.warm_historical_range(["SPY"], date(2025, 1, 6), date(2025, 1, 12))
     assert provider.get_historical_closes.call_count == 1
 
-    svc.warm_historical_range(["SPY"], date(2025, 1, 1), date(2025, 1, 5))
-    assert provider.get_historical_closes.call_count == 1  # no second fetch
+    svc.warm_historical_range(["SPY"], date(2025, 1, 6), date(2025, 1, 12))
+    assert provider.get_historical_closes.call_count == 1  # all dates cached, no refetch
+
+
+def test_warm_refetches_when_cache_has_unfilled_trading_days(memory_engine):
+    """A second warm over a range where some weekdays are still _MISS (e.g.
+    a partial first response) must re-fetch — that's the whole point of not
+    poisoning the cache with negatives on real trading days. Self-healing.
+    """
+    cache = PriceCache(memory_engine)
+    provider = MagicMock()
+    # First response is partial: missing Mon Jan 6 (a real trading day).
+    provider.get_historical_closes.return_value = {
+        date(2025, 1, 7): Decimal("470.50"),
+        date(2025, 1, 8): Decimal("471.00"),
+    }
+    svc = PricingService(provider=provider, cache=cache, enabled=True)
+
+    svc.warm_historical_range(["SPY"], date(2025, 1, 6), date(2025, 1, 8))
+    assert provider.get_historical_closes.call_count == 1
+
+    # Jan 6 is still _MISS — warm again, expect a re-fetch.
+    svc.warm_historical_range(["SPY"], date(2025, 1, 6), date(2025, 1, 8))
+    assert provider.get_historical_closes.call_count == 2
 
 
 def test_warm_does_not_negative_cache_when_provider_fails(memory_engine):

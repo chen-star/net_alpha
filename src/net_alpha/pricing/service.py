@@ -174,10 +174,22 @@ class PricingService:
                 # Provider failed — leave cache untouched so a retry can recover.
                 logger.debug("pricing: bulk historical warm failed for {}", sym)
                 continue
+            # Negative-cache ONLY weekends. yfinance's bulk response is keyed by
+            # actual trading days; for missing dates we can't tell whether it's
+            # a non-trading day (Sat/Sun/holiday) or a fetch glitch. Sat/Sun
+            # are authoritative ("market is closed") so we cache None and skip
+            # future fetches. Weekday misses (holidays + glitches) stay _MISS
+            # so the single-fetch fallback in get_historical_close can recover
+            # them — this prevents a partial bulk response from poisoning the
+            # cache with permanent NULLs on real trading days.
             rows: list[tuple[str, dt.date, Decimal | None]] = []
             d = fetch_start
             while d <= fetch_end:
                 if d not in cached_dates:
-                    rows.append((sym, d, result.get(d)))
+                    v = result.get(d)
+                    if v is not None:
+                        rows.append((sym, d, v))
+                    elif d.weekday() >= 5:
+                        rows.append((sym, d, None))
                 d += dt.timedelta(days=1)
             self._cache.historical_put_many(rows)

@@ -142,6 +142,23 @@ class PriceCache:
             ).all()
         return {dt.date.fromisoformat(r[0]) for r in rows}
 
+    def purge_historical_negatives(self, since: dt.date | None = None) -> int:
+        """Delete rows from historical_price_cache where close_price IS NULL.
+
+        Returns the number of rows deleted. When ``since`` is provided, only
+        rows with ``on_date >= since`` are removed. Used by the recovery CLI
+        when a partial yfinance response left a window of valid trading days
+        permanently negative-cached.
+        """
+        sql = "DELETE FROM historical_price_cache WHERE close_price IS NULL"
+        params: dict[str, str] = {}
+        if since is not None:
+            sql += " AND on_date >= :since"
+            params["since"] = since.isoformat()
+        with self._engine.begin() as conn:
+            result = conn.execute(text(sql), params)
+            return result.rowcount or 0
+
     def historical_put_many(self, rows: list[tuple[str, dt.date, Decimal | None]]) -> None:
         """Bulk upsert closes. None close means negative cache."""
         if not rows:

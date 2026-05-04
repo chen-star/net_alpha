@@ -22,7 +22,13 @@ from net_alpha.db.repository import Repository
 from net_alpha.inbox.aggregator import gather_inbox
 from net_alpha.inbox.config import load_inbox_config
 from net_alpha.inbox.dismissals import toggle_dismissal
-from net_alpha.portfolio.account_value import account_value_at, build_account_value_series, build_eval_dates
+from net_alpha.portfolio.account_value import (
+    AccountValueWarning,
+    account_value_at,
+    account_value_at_with_warnings,
+    build_account_value_series,
+    build_eval_dates,
+)
 from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.portfolio.calendar_pnl import monthly_realized_pl_series
 from net_alpha.portfolio.cash_flow import (
@@ -1038,12 +1044,13 @@ def explain_total_return(
         period=None,
     )
 
+    starting_warning = AccountValueWarning()
     if period_tuple is None:
         starting_value = Decimal("0")
         is_lifetime = True
     else:
         boundary = date(period_tuple[0], 1, 1) - timedelta(days=1)
-        starting_value = account_value_at(
+        starting_value, starting_warning = account_value_at_with_warnings(
             on=boundary,
             trades=trades,
             lots=lots,
@@ -1060,7 +1067,7 @@ def explain_total_return(
         prices=prices,
         period_label=period_label,
         period=period_tuple,
-        account=None,
+        account=account,
         gl_lots=repo.list_all_gl_lots(),
     )
     holdings_value = kpis_now.open_position_value or Decimal("0")
@@ -1080,6 +1087,9 @@ def explain_total_return(
         contributions=cash_kpis.period_net_contributions,
         realized_in_period=kpis_now.period_realized,
         is_lifetime=is_lifetime,
+        unpriced_lot_count=starting_warning.dropped_lot_count,
+        unpriced_basis_total=starting_warning.dropped_basis_total,
+        unpriced_tickers=starting_warning.dropped_tickers,
     )
     return request.app.state.templates.TemplateResponse(
         request,

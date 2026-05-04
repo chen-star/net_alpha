@@ -531,6 +531,112 @@ def test_account_value_at_silently_skips_unpriced_equity_lots():
     assert val == Decimal("6800.00")
 
 
+def test_account_value_at_with_warnings_reports_dropped_lots():
+    """``account_value_at_with_warnings`` must surface the count, basis sum,
+    and ticker list of equity lots silently dropped because their close was
+    missing. Without this, a poisoned cache can leave starting-value silently
+    undercounted, inflating Total Return for the period.
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import Lot
+    from net_alpha.portfolio.account_value import account_value_at_with_warnings
+    from net_alpha.portfolio.models import CashBalancePoint
+
+    cash_points = [
+        CashBalancePoint(
+            on=dt.date(2025, 12, 1),
+            cash_balance=Decimal("5000"),
+            cumulative_contributions=Decimal("5000"),
+        ),
+    ]
+    lots = [
+        Lot(
+            account="X",
+            date=dt.date(2025, 6, 1),
+            ticker="AAPL",
+            quantity=10,
+            adjusted_basis=1500.0,
+            cost_basis=1500.0,
+            trade_id="t1",
+        ),
+        Lot(
+            account="X",
+            date=dt.date(2025, 6, 1),
+            ticker="WXYZ",
+            quantity=20,
+            adjusted_basis=400.0,
+            cost_basis=400.0,
+            trade_id="t2",
+        ),
+        Lot(
+            account="X",
+            date=dt.date(2025, 7, 1),
+            ticker="WXYZ",  # second lot of the same unpriced ticker
+            quantity=5,
+            adjusted_basis=125.0,
+            cost_basis=125.0,
+            trade_id="t3",
+        ),
+    ]
+
+    val, warning = account_value_at_with_warnings(
+        on=dt.date(2025, 12, 31),
+        trades=[],
+        lots=lots,
+        cash_points=cash_points,
+        get_close=lambda t, d: Decimal("180.00") if t == "AAPL" else None,
+    )
+
+    # Value still computed best-effort: cash + AAPL.
+    assert val == Decimal("6800.00")
+    # Two WXYZ lots dropped, basis $525 total, ticker reported once.
+    assert warning.dropped_lot_count == 2
+    assert warning.dropped_basis_total == Decimal("525.00")
+    assert warning.dropped_tickers == ("WXYZ",)
+
+
+def test_account_value_at_with_warnings_no_warning_when_all_priced():
+    """When every lot prices cleanly, the warning is empty."""
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import Lot
+    from net_alpha.portfolio.account_value import account_value_at_with_warnings
+    from net_alpha.portfolio.models import CashBalancePoint
+
+    cash_points = [
+        CashBalancePoint(
+            on=dt.date(2025, 12, 1),
+            cash_balance=Decimal("5000"),
+            cumulative_contributions=Decimal("5000"),
+        ),
+    ]
+    lots = [
+        Lot(
+            account="X",
+            date=dt.date(2025, 6, 1),
+            ticker="AAPL",
+            quantity=10,
+            adjusted_basis=1500.0,
+            cost_basis=1500.0,
+            trade_id="t1",
+        ),
+    ]
+
+    _, warning = account_value_at_with_warnings(
+        on=dt.date(2025, 12, 31),
+        trades=[],
+        lots=lots,
+        cash_points=cash_points,
+        get_close=lambda t, d: Decimal("180.00"),
+    )
+    assert warning.dropped_lot_count == 0
+    assert warning.dropped_basis_total == Decimal("0")
+    assert warning.dropped_tickers == ()
+
+
 def test_account_value_at_skips_expired_option_lots():
     """An option lot whose expiry is before ``on`` contributes nothing."""
     import datetime as dt

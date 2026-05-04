@@ -12,11 +12,29 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Callable, Iterable  # noqa: F401
+from dataclasses import dataclass, field
 from decimal import Decimal
 
 from net_alpha.models.domain import Lot, Trade
 from net_alpha.portfolio.models import AccountValuePoint, CashBalancePoint
 from net_alpha.portfolio.positions import consume_lots_fifo
+
+
+@dataclass(frozen=True)
+class AccountValueWarning:
+    """Diagnostic info about lots silently dropped from an ``account_value_at``
+    computation because their historical close was missing from the cache.
+
+    A non-zero ``dropped_lot_count`` means the returned account value is an
+    *undercount* — the caller should surface this to the user (e.g., as a
+    caveat in the Total Return explainer) so they can re-warm the cache and
+    recompute. Without this signal, missing 12/31 closes silently inflate the
+    period's Total Return by treating those holdings as $0.
+    """
+
+    dropped_lot_count: int = 0
+    dropped_basis_total: Decimal = Decimal("0")
+    dropped_tickers: tuple[str, ...] = field(default_factory=tuple)
 
 
 def build_eval_dates(
@@ -145,6 +163,68 @@ def holdings_value_at(
     return total, ()
 
 
+def account_value_at_with_warnings(
+    *,
+    on: dt.date,
+    trades: list[Trade],
+    lots: list[Lot],
+    cash_points: list[CashBalancePoint],
+    get_close: Callable[[str, dt.date], Decimal | None],
+) -> tuple[Decimal, AccountValueWarning]:
+    """Same contract as ``account_value_at`` but also returns an
+    :class:`AccountValueWarning` describing any equity lots silently dropped
+    because their historical close was missing.
+
+    Callers that surface starting-value to the user (Total Return panel)
+    should prefer this entry point so a misleading-low anchor doesn't go
+    unnoticed.
+    """
+    if not cash_points:
+        return Decimal("0"), AccountValueWarning()
+
+    cash_bal = Decimal("0")
+    for cp in sorted(cash_points, key=lambda p: p.on):
+        if cp.on > on:
+            break
+        cash_bal = cp.cash_balance
+
+    # holdings_value_at returns None when ANY equity lot is unpriced — too strict
+    # for a starting-value anchor. Replicate its core loop, but skip unpriced
+    # lots silently rather than aborting (and report what we skipped so the
+    # caller can surface a caveat).
+    trades_asof = [t for t in trades if t.date <= on]
+    lots_asof = [lt for lt in lots if lt.date <= on]
+    consumed = consume_lots_fifo(lots=lots_asof, trades=trades_asof)
+    holdings = Decimal("0")
+    dropped_lot_count = 0
+    dropped_basis_total = Decimal("0")
+    dropped_tickers: list[str] = []
+    seen_dropped: set[str] = set()
+    for lot, rem_qty, rem_basis in consumed:
+        if rem_qty <= 0:
+            continue
+        if lot.option_details is not None:
+            if lot.option_details.expiry < on:
+                continue
+            holdings += rem_basis
+            continue
+        close = _close_with_forward_fill(ticker=lot.ticker, on=on, get_close=get_close)
+        if close is None:
+            dropped_lot_count += 1
+            dropped_basis_total += rem_basis
+            if lot.ticker not in seen_dropped:
+                seen_dropped.add(lot.ticker)
+                dropped_tickers.append(lot.ticker)
+            continue
+        holdings += (rem_qty * close).quantize(Decimal("0.01"))
+    warning = AccountValueWarning(
+        dropped_lot_count=dropped_lot_count,
+        dropped_basis_total=dropped_basis_total.quantize(Decimal("0.01")),
+        dropped_tickers=tuple(sorted(dropped_tickers)),
+    )
+    return (cash_bal + holdings).quantize(Decimal("0.01")), warning
+
+
 def account_value_at(
     *,
     on: dt.date,
@@ -162,37 +242,13 @@ def account_value_at(
     Missing equity quotes are forward-filled up to 7 calendar days back via
     _close_with_forward_fill; if a price is still missing, that lot's
     contribution is treated as 0 (best-effort under partial data — Total
-    Return is informative, not financial-grade).
+    Return is informative, not financial-grade). Use
+    :func:`account_value_at_with_warnings` to surface the dropped count.
     """
-    if not cash_points:
-        return Decimal("0")
-
-    cash_bal = Decimal("0")
-    for cp in sorted(cash_points, key=lambda p: p.on):
-        if cp.on > on:
-            break
-        cash_bal = cp.cash_balance
-
-    # holdings_value_at returns None when ANY equity lot is unpriced — too strict
-    # for a starting-value anchor. Replicate its core loop, but skip unpriced
-    # lots silently rather than aborting.
-    trades_asof = [t for t in trades if t.date <= on]
-    lots_asof = [lt for lt in lots if lt.date <= on]
-    consumed = consume_lots_fifo(lots=lots_asof, trades=trades_asof)
-    holdings = Decimal("0")
-    for lot, rem_qty, rem_basis in consumed:
-        if rem_qty <= 0:
-            continue
-        if lot.option_details is not None:
-            if lot.option_details.expiry < on:
-                continue
-            holdings += rem_basis
-            continue
-        close = _close_with_forward_fill(ticker=lot.ticker, on=on, get_close=get_close)
-        if close is None:
-            continue
-        holdings += (rem_qty * close).quantize(Decimal("0.01"))
-    return (cash_bal + holdings).quantize(Decimal("0.01"))
+    value, _ = account_value_at_with_warnings(
+        on=on, trades=trades, lots=lots, cash_points=cash_points, get_close=get_close
+    )
+    return value
 
 
 def build_account_value_series(

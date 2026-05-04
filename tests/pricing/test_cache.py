@@ -67,3 +67,40 @@ def test_cache_get_many_returns_only_present(tmp_path):
     out = cache.get_many(["SPY", "QQQ", "TSLA"])
     assert set(out.keys()) == {"SPY", "QQQ"}
     assert out["QQQ"].quote.price == Decimal("390.0")
+
+
+def test_purge_historical_negatives_removes_only_null_rows(tmp_path):
+    """``purge_historical_negatives`` must drop rows where close_price IS NULL
+    and leave priced rows untouched. Used by ``net-alpha refresh-historical-cache``
+    to recover from a previous warmer that poisoned trading days with NULLs.
+    """
+    from net_alpha.pricing.cache import _MISS
+
+    cache = PriceCache(_engine(tmp_path))
+    cache.historical_put("SPY", dt.date(2025, 1, 2), Decimal("470.00"))
+    cache.historical_put("SPY", dt.date(2025, 1, 3), None)  # negative
+    cache.historical_put("QQQ", dt.date(2025, 1, 3), None)  # negative
+
+    deleted = cache.purge_historical_negatives()
+
+    assert deleted == 2
+    assert cache.historical_get("SPY", dt.date(2025, 1, 2)) == Decimal("470.00")
+    assert cache.historical_get("SPY", dt.date(2025, 1, 3)) is _MISS
+    assert cache.historical_get("QQQ", dt.date(2025, 1, 3)) is _MISS
+
+
+def test_purge_historical_negatives_respects_since_filter(tmp_path):
+    """``--since`` must scope the purge to dates on/after the boundary so
+    legitimate older negative caches (delisted tickers, etc.) are preserved.
+    """
+    cache = PriceCache(_engine(tmp_path))
+    cache.historical_put("SPY", dt.date(2024, 6, 1), None)  # before since
+    cache.historical_put("SPY", dt.date(2025, 1, 3), None)  # at/after since
+
+    deleted = cache.purge_historical_negatives(since=dt.date(2025, 1, 1))
+
+    assert deleted == 1
+    assert cache.historical_get("SPY", dt.date(2024, 6, 1)) is None  # kept
+    from net_alpha.pricing.cache import _MISS
+
+    assert cache.historical_get("SPY", dt.date(2025, 1, 3)) is _MISS  # purged
