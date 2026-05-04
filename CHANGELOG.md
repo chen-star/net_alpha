@@ -2,6 +2,92 @@
 
 
 
+## v0.48.0 (2026-05-04)
+
+### Chore
+
+* chore: refresh GitNexus index counts in AGENTS.md / CLAUDE.md
+
+Auto-bumped by the GitNexus PostToolUse hook: 4382→4384 symbols,
+15207→15285 relationships. Documentation only, no code change. ([`576b735`](https://github.com/chen-star/net_alpha/commit/576b735c8cf092d4476299827d79ea4453db74af))
+
+### Feature
+
+* feat(ui): polish overview command-center and positions table
+
+Eight UI improvements identified during a fresh design review of the
+Portfolio, Positions, and chart surfaces:
+
+- Apply tabular numerals to KPI values and table money columns so
+  digit columns line up across rows without forcing every template
+  to wrap content in `.num`.
+- Flatten the Total Account Value hero (drop the violet aurora
+  gradient) so it sits as a peer to the four small KPIs.
+- Replace literal `?` and `ⓘ` glyph help icons with an inline Lucide
+  `info` SVG everywhere a metric explains itself.
+- Fix duplicate-month axis ticks on the equity &amp; cash curves by
+  switching to `datetimeFormatter` with a single `MMM d` shape across
+  every Apex granularity bucket — yields unique labels without
+  closure-state hacks that fail across Apex&#39;s measurement passes.
+- Light-mode chart text contrast: bump axis labels from label3 to
+  label2 and legend from label2 to label1 so YTD-scale chart labels
+  meet WCAG on white.
+- Hide the floating ApexCharts toolbar (+/−/pan/home) on equity and
+  cash charts; drag-to-zoom + double-click-reset still work.
+- Positions table declutter: hide per-row `↗ Sim` link until row
+  hover/focus via new `.row-sim-link`, and reduce `— no target` to a
+  faint em-dash so rows with real progress bars pop.
+- Bump section-header hierarchy: `.panel-head h4` lifted from 14px to
+  15px / 600 weight with tighter tracking so panel titles register as
+  a clear tier between H1 and body.
+
+433/433 web tests still pass. ([`09a679f`](https://github.com/chen-star/net_alpha/commit/09a679fbe31d496a8f4f7d36cadecab0712f52af))
+
+* feat(ui): collapse KPI block into single command-center grid
+
+Hero (TOTAL ACCOUNT VALUE) anchors the left as a 4-col × 2-row tile.
+The four small KPIs auto-flow into the 2×2 area on the right at
+lg:col-span-4 each. Hero uses flex+justify-center so the big number
+sits at the visual midpoint of the stretched card (same height as
+two stacked small KPIs + 10px gap).
+
+DOM order preserved (hero, total_return, realized, unrealized, cash);
+slot-order regression tests stay green untouched.
+
+CSS rebuild required: lg:row-span-2 is the first row-span-* utility
+used in the project, so Tailwind&#39;s JIT pass had to compile a new rule.
+Regenerated app.css ships in this commit. ([`529b003`](https://github.com/chen-star/net_alpha/commit/529b003423c04d5acc16f2cdc6053b8f4293307b))
+
+* feat(ui): collapse Total Return into the small-KPI row
+
+Hero promotes to col-span-12 so the headline number owns row 1 alone.
+Total Return drops kpi-promoted (28px → 22px) and joins Realized,
+Unrealized, and Cash as the four equal-weight tiles in row 2 — each at
+lg:col-span-3. The data-kpi-slot order (hero, total_return, realized,
+unrealized, cash) is preserved so the existing slot-order regression
+tests stay green without edits. ([`1bf49e2`](https://github.com/chen-star/net_alpha/commit/1bf49e2fc7ff41fbbdd7b826f67bb7ed7ccea9a7))
+
+* feat(ui): widen cash curve — equity:cash row goes 2:1 → 3:2
+
+The cash + contributions chart was getting cramped at 1/3 width — its
+second series and dollar labels had nowhere to breathe. 3:2 (60/40) keeps
+equity dominant as the primary &#34;am I winning?&#34; chart but gives cash room
+to read. The allocation row below stays at 2:1. ([`b751cdd`](https://github.com/chen-star/net_alpha/commit/b751cdd033a0edb1d50420f1d3bb82ba69916149))
+
+### Test
+
+* test(ui): lock KPI command-center layout (4-col hero + 2x2 small KPIs)
+
+Updates the layout regression tests for the upcoming command-center
+header. Hero is now lg:col-span-4 lg:row-span-2 with flex+justify-center
+so the big number sits at the visual midpoint of the stretched card.
+The four small KPIs each move from lg:col-span-3 to lg:col-span-4 and
+auto-flow into the 2x2 area to the right of the hero.
+
+These will fail against the current template; the next commit makes them
+pass. ([`eb540d8`](https://github.com/chen-star/net_alpha/commit/eb540d881a66322b89aab662790b0dca7eaa2ee7))
+
+
 ## v0.47.0 (2026-05-04)
 
 ### Chore
