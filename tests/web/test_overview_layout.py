@@ -74,10 +74,21 @@ def test_toolbar_overflow_menu_holds_sync_splits(seeded_client):
 
 
 def test_toolbar_does_not_show_inline_yahoo_disclaimer(seeded_client):
-    """The 'Prices via Yahoo (~15 min delay)' inline text is gone — that
-    information now lives in the freshness chip tooltip."""
+    """The 'Prices via Yahoo (~15 min delay)' inline span inside the toolbar
+    is gone — that information now lives in the freshness chip tooltip.
+
+    (The global footer disclosure on base.html is unrelated and intentionally
+    preserved — it provides ambient disclosure on pages that don't render the
+    toolbar/chip, e.g. Sim, Tax, Imports.)"""
     html = seeded_client.get("/").text
-    assert "Prices via Yahoo" not in html
+    # Locate the toolbar form. The toolbar is a kpi-card form that contains
+    # the period select.
+    freshness_idx = html.find('data-testid="freshness-chip"')
+    assert freshness_idx > 0
+    form_start = html.rfind("<form", 0, freshness_idx)
+    form_end = html.index("</form>", freshness_idx)
+    toolbar_html = html[form_start:form_end]
+    assert "Prices via Yahoo (~15 min delay)" not in toolbar_html
 
 
 def test_freshness_chip_tooltip_mentions_provider_and_delay(seeded_client):
