@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import uuid4
-
-from collections.abc import Sequence
 
 from sqlalchemy import func, text
 from sqlalchemy.engine import Engine

@@ -9,7 +9,7 @@ pre-validate the individual values.
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from collections.abc import Iterable
 
 # Reserved word: the synthetic bucket for targets with no tags. Cannot be
 # used as a real tag.

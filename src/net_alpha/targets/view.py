@@ -8,7 +8,6 @@ from decimal import Decimal
 from net_alpha.portfolio.models import PositionRow
 from net_alpha.targets.models import PositionTarget, TargetUnit
 
-
 _UNTAGGED = "untagged"
 
 
