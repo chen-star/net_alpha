@@ -6,7 +6,9 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import func
+from collections.abc import Sequence
+
+from sqlalchemy import func, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
@@ -46,6 +48,7 @@ from net_alpha.models.splits import LotOverride, Split
 from net_alpha.section_1256.universe import is_section_1256 as _is_section_1256
 from net_alpha.section_1256.universe import load_universe
 from net_alpha.targets.models import PositionTarget, TargetUnit
+from net_alpha.targets.tags import normalize_tag, normalize_tags
 
 
 class Repository:
@@ -1708,6 +1711,80 @@ class Repository:
             s.delete(row)
             s.commit()
         return True
+
+    # ---- Position Target Tags (M:N) ----
+
+    def list_target_tags(self, symbol: str) -> tuple[str, ...]:
+        """Return tags for `symbol` (case-insensitive), alpha-sorted."""
+        sym = symbol.upper()
+        with Session(self.engine) as s:
+            rows = s.exec(
+                text("SELECT tag FROM position_target_tag "
+                     "WHERE target_symbol = :sym ORDER BY tag"),
+                params={"sym": sym},
+            ).all()
+        return tuple(r[0] for r in rows)
+
+    def set_target_tags(self, symbol: str, tags: Sequence[str]) -> None:
+        """Atomically replace the tag set for `symbol`.
+
+        Inputs are normalized through ``normalize_tags`` (lowercase,
+        deduped, alpha-sorted, invalid items dropped). Whole-tag-set
+        replace runs inside a single transaction so a failure mid-write
+        leaves the prior set intact.
+        """
+        sym = symbol.upper()
+        normalized = normalize_tags(tags)
+        with Session(self.engine) as s:
+            s.exec(
+                text("DELETE FROM position_target_tag WHERE target_symbol = :sym"),
+                params={"sym": sym},
+            )
+            for t in normalized:
+                s.exec(
+                    text("INSERT INTO position_target_tag(target_symbol, tag) "
+                         "VALUES (:sym, :tag)"),
+                    params={"sym": sym, "tag": t},
+                )
+            s.commit()
+
+    def add_target_tag(self, symbol: str, tag: str) -> bool:
+        """Add a single tag. Returns True if the tag is now present, False
+        if the input was invalid (and the set is unchanged). Idempotent."""
+        norm = normalize_tag(tag)
+        if norm is None:
+            return False
+        sym = symbol.upper()
+        with Session(self.engine) as s:
+            s.exec(
+                text("INSERT OR IGNORE INTO position_target_tag(target_symbol, tag) "
+                     "VALUES (:sym, :tag)"),
+                params={"sym": sym, "tag": norm},
+            )
+            s.commit()
+        return True
+
+    def remove_target_tag(self, symbol: str, tag: str) -> None:
+        """Remove a single tag. Idempotent (no-op if absent)."""
+        norm = normalize_tag(tag)
+        if norm is None:
+            return
+        sym = symbol.upper()
+        with Session(self.engine) as s:
+            s.exec(
+                text("DELETE FROM position_target_tag "
+                     "WHERE target_symbol = :sym AND tag = :tag"),
+                params={"sym": sym, "tag": norm},
+            )
+            s.commit()
+
+    def list_all_tags(self) -> tuple[str, ...]:
+        """Union of all tags currently in use, alpha-sorted, deduped."""
+        with Session(self.engine) as s:
+            rows = s.exec(
+                text("SELECT DISTINCT tag FROM position_target_tag ORDER BY tag")
+            ).all()
+        return tuple(r[0] for r in rows)
 
     @staticmethod
     def _row_to_target(row: PositionTargetRow) -> PositionTarget:
