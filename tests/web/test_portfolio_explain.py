@@ -227,6 +227,20 @@ def test_explain_total_return_realized_scoped_by_account(tmp_path):
     )
 
 
+def test_explain_account_value_smoke_empty_db(tmp_path):
+    """explain_account_value returns 200 on an empty database (no crash)."""
+    client, _ = _make_client(tmp_path)
+    r = client.get("/portfolio/explain/account-value")
+    assert r.status_code == 200
+
+
+def test_explain_account_value_smoke_with_account_filter(tmp_path):
+    """explain_account_value accepts an account query param without crashing."""
+    client, _ = _make_client(tmp_path)
+    r = client.get("/portfolio/explain/account-value?account=Schwab%2FTax")
+    assert r.status_code == 200
+
+
 def test_explain_unrealized_gl_closure_wired(tmp_path):
     """When a lot is fully closed by a Realized G/L import (no Sell trade),
     the explainer endpoint must not crash and must return 200, confirming

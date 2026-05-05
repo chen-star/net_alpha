@@ -1151,6 +1151,96 @@ def explain_unrealized(
     )
 
 
+@router.get("/portfolio/explain/account-value", response_class=HTMLResponse)
+def explain_account_value(
+    request: Request,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Math explainer fragment for the TOTAL ACCOUNT VALUE hero KPI tile.
+
+    Period-agnostic — Account Value is always a "right now" snapshot.
+    """
+    from net_alpha.portfolio.explain import build_account_value_breakdown
+    from net_alpha.portfolio.positions import consume_lots_fifo
+
+    today = date.today()
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    if account:
+        trades = [t for t in trades if t.account == account]
+        lots = [lt for lt in lots if lt.account == account]
+
+    cash_events = repo.list_cash_events(account_id=None)
+    if account:
+        cash_events = [e for e in cash_events if e.account == account]
+
+    gl_lots = repo.list_all_gl_lots()
+    if account:
+        gl_lots = [g for g in gl_lots if g.account_display == account]
+    gl_closures = repo.get_equity_gl_closures()
+    gl_option_closures = repo.get_option_gl_closures()
+    if account:
+        gl_closures = {k: v for k, v in gl_closures.items() if k[0] == account}
+        gl_option_closures = {
+            k: v for k, v in gl_option_closures.items() if k[0] == account
+        }
+
+    consumed = consume_lots_fifo(
+        lots=lots,
+        trades=trades,
+        gl_closures=gl_closures,
+        gl_option_closures=gl_option_closures,
+    )
+    short_rows = compute_open_short_option_positions(
+        trades,
+        gl_option_closures=gl_option_closures,
+    )
+    symbols = sorted({lot.ticker for lot in lots} | {row.ticker for row in short_rows})
+    prices = svc.get_prices(symbols) if symbols else {}
+
+    # KPIs for lifetime_realized_economic + missing_symbols.
+    kpis_now = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
+        account=None,  # already pre-filtered above
+        gl_lots=gl_lots,
+    )
+    holdings_value = kpis_now.open_position_value or Decimal("0")
+    cash_kpis = compute_cash_kpis(
+        events=cash_events,
+        trades=trades,
+        holdings_value=holdings_value,
+        account=None,  # already pre-filtered
+        period=None,
+        period_starting_value=Decimal("0"),
+    )
+
+    snap = svc.last_snapshot()
+    fetched_at = snap.fetched_at if snap else None
+
+    breakdown = build_account_value_breakdown(
+        consumed=consumed,
+        short_option_rows=short_rows,
+        prices=prices,
+        cash_balance=cash_kpis.cash_balance,
+        net_contributed=cash_kpis.net_contributions,
+        lifetime_realized_economic=kpis_now.lifetime_realized_economic,
+        missing_symbols=tuple(kpis_now.missing_symbols),
+        fetched_at=fetched_at,
+        as_of=today,
+    )
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_explain_account_value.html",
+        {"b": breakdown},
+    )
+
+
 @router.get("/portfolio/explain/dismiss", response_class=HTMLResponse)
 def explain_dismiss() -> HTMLResponse:
     """Empty fragment used by the explainer panels' close button."""
