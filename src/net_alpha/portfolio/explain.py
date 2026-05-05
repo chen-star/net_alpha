@@ -361,7 +361,7 @@ def build_account_value_breakdown(
             long_cost_total += rem_basis
             continue
         last = Decimal(str(quote.price))
-        market = (rem_qty * last).quantize(Decimal("0.01"))
+        market = rem_qty * last
         long_stock_mv += market
         long_cost_total += rem_basis
 
@@ -408,7 +408,7 @@ def build_account_value_breakdown(
 
     # Reconciliation invariant — both equations must agree to within $0.01.
     if abs(composition_total - source_total) > Decimal("0.01"):
-        raise AssertionError(
+        raise ValueError(
             f"AccountValueBreakdown reconciliation failed: "
             f"composition={composition_total} source={source_total}"
         )
