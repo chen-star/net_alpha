@@ -267,6 +267,22 @@ def test_explain_account_value_renders_both_equation_headings(tmp_path):
     assert "Consult a tax professional" in html
 
 
+def test_portfolio_kpis_renders_account_value_explain_trigger(tmp_path):
+    """The hero KPI tile must include the info-circle button wired to
+    /portfolio/explain/account-value and a mount div for the fragment.
+    """
+    client, _ = _make_client(tmp_path)
+    r = client.get("/portfolio/kpis")
+    assert r.status_code == 200
+    html = r.text
+    assert 'hx-get="/portfolio/explain/account-value' in html, (
+        "Hero tile is missing the info-circle button that opens the Account Value explainer."
+    )
+    assert 'id="explain-account-value"' in html, (
+        "Hero tile is missing the <div id='explain-account-value'> mount point for the fragment."
+    )
+
+
 def test_explain_unrealized_gl_closure_wired(tmp_path):
     """When a lot is fully closed by a Realized G/L import (no Sell trade),
     the explainer endpoint must not crash and must return 200, confirming
