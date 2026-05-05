@@ -1220,8 +1220,7 @@ def explain_account_value(
         period_starting_value=Decimal("0"),
     )
 
-    snap = svc.last_snapshot()
-    fetched_at = snap.fetched_at if snap else None
+    fetched_at = svc.last_snapshot().fetched_at
 
     breakdown = build_account_value_breakdown(
         consumed=consumed,
