@@ -71,9 +71,9 @@ def test_phase3_smoke(tmp_path):
     import re
 
     order = re.findall(r'data-kpi-slot="([^"]+)"', kpis)
-    # Top row: hero + total_return. Bottom row: realized + unrealized + cash.
+    # Top row: hero + total_return. Bottom row: cash + realized + unrealized.
     # Net Contributed folded into Cash subtitle (no longer its own slot).
-    assert order == ["hero", "total_return", "realized", "unrealized", "cash"]
+    assert order == ["hero", "total_return", "cash", "realized", "unrealized"]
     # wash_impact removed from Portfolio KPI grid entirely (lives on /tax).
     assert "wash_impact" not in order
     assert "contributed" not in order
@@ -91,4 +91,4 @@ def test_phase3_smoke(tmp_path):
     # Re-render /portfolio/kpis for Tax -> conservative; fixed layout unchanged.
     kpis2 = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order2 = re.findall(r'data-kpi-slot="([^"]+)"', kpis2)
-    assert order2 == ["hero", "total_return", "realized", "unrealized", "cash"]
+    assert order2 == ["hero", "total_return", "cash", "realized", "unrealized"]

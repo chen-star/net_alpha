@@ -80,7 +80,6 @@ def test_delete_unknown_symbol_is_ok(client: TestClient):
 
 
 def test_modal_upsert_with_tags(client, repo):
-    from decimal import Decimal
     resp = client.post(
         "/positions/plan/target",
         data={
@@ -95,8 +94,6 @@ def test_modal_upsert_with_tags(client, repo):
 
 
 def test_modal_upsert_without_tags_keeps_existing(client, repo):
-    from decimal import Decimal
-    from net_alpha.targets.models import TargetUnit
     repo.upsert_target("HIMS", Decimal("1000"), TargetUnit.USD)
     repo.set_target_tags("HIMS", ["core"])
     resp = client.post(
@@ -112,8 +109,6 @@ def test_modal_upsert_without_tags_keeps_existing(client, repo):
 
 
 def test_modal_upsert_empty_tags_string_clears(client, repo):
-    from decimal import Decimal
-    from net_alpha.targets.models import TargetUnit
     repo.upsert_target("HIMS", Decimal("1000"), TargetUnit.USD)
     repo.set_target_tags("HIMS", ["core"])
     resp = client.post(

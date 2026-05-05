@@ -35,12 +35,12 @@ def _kpi_slot_order(html: str) -> list[str]:
 
 def test_kpi_order_conservative(tmp_path):
     """Hierarchy redesign: 1 hero + 1 promoted + 3 small.
-    Top row: hero + total_return. Bottom row: realized + unrealized + cash.
+    Top row: hero + total_return. Bottom row: cash + realized + unrealized.
     Net Contributed is folded into the Cash tile subtitle (no longer a slot)."""
     client = _seed(tmp_path, "conservative")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    assert order == ["hero", "total_return", "realized", "unrealized", "cash"]
+    assert order == ["hero", "total_return", "cash", "realized", "unrealized"]
 
 
 def test_kpi_order_active(tmp_path):
@@ -48,7 +48,7 @@ def test_kpi_order_active(tmp_path):
     client = _seed(tmp_path, "active")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    assert order == ["hero", "total_return", "realized", "unrealized", "cash"]
+    assert order == ["hero", "total_return", "cash", "realized", "unrealized"]
     assert "today" not in order
     assert "growth" not in order
     assert "contributed" not in order  # folded into cash subtitle
@@ -58,5 +58,5 @@ def test_kpi_order_options(tmp_path):
     client = _seed(tmp_path, "options")
     html = client.get("/portfolio/kpis", params={"account": "Schwab/Tax"}).text
     order = _kpi_slot_order(html)
-    assert order == ["hero", "total_return", "realized", "unrealized", "cash"]
+    assert order == ["hero", "total_return", "cash", "realized", "unrealized"]
     assert "wash_impact" not in order

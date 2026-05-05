@@ -33,7 +33,8 @@ def repo() -> Repository:
         # ON DELETE CASCADE (ORM model has no cascade annotation). Drop and
         # recreate so the DB-level cascade fires when delete_target runs.
         s.exec(text("DROP TABLE IF EXISTS position_target_tag"))
-        s.exec(text("""
+        s.exec(
+            text("""
             CREATE TABLE position_target_tag (
                 target_symbol TEXT NOT NULL,
                 tag           TEXT NOT NULL,
@@ -42,11 +43,9 @@ def repo() -> Repository:
                     REFERENCES position_targets(symbol)
                     ON DELETE CASCADE
             )
-        """))
-        s.exec(text(
-            "CREATE INDEX IF NOT EXISTS ix_position_target_tag_tag "
-            "ON position_target_tag(tag)"
-        ))
+        """)
+        )
+        s.exec(text("CREATE INDEX IF NOT EXISTS ix_position_target_tag_tag ON position_target_tag(tag)"))
         s.commit()
     return Repository(engine)
 

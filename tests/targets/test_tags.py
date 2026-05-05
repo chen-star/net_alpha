@@ -35,7 +35,7 @@ def test_normalize_allows_leading_digit():
 
 def test_normalize_rejects_too_long():
     assert normalize_tag("a" * 24) == "a" * 24  # boundary OK
-    assert normalize_tag("a" * 25) is None      # over
+    assert normalize_tag("a" * 25) is None  # over
 
 
 def test_normalize_rejects_unicode():
