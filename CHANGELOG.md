@@ -2,6 +2,103 @@
 
 
 
+## v0.52.0 (2026-05-05)
+
+### Feature
+
+* feat(web): wire Account Value explain panel trigger
+
+Info-circle button next to TOTAL ACCOUNT VALUE label opens the new
+explainer fragment via HTMX.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7c3590f`](https://github.com/chen-star/net_alpha/commit/7c3590f7253f4ec63705a4699d585cada8556a57))
+
+* feat(web): _explain_account_value.html template
+
+Two equation grids (Composition + Source), short-option estimate caveat,
+missing-quotes caveat, fetched_at footer.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c3b0843`](https://github.com/chen-star/net_alpha/commit/c3b08435866c8238d3611fe795d73375296ed84d))
+
+* feat(web): /portfolio/explain/account-value route
+
+Period-agnostic explainer endpoint for the TOTAL ACCOUNT VALUE hero KPI.
+Placeholder template will be replaced in the next commit.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0cde7a5`](https://github.com/chen-star/net_alpha/commit/0cde7a5beebb8d38e2d3bd6c4569860efdf96a8d))
+
+* feat(explain): add build_account_value_breakdown
+
+Pure-function builder for the Total Account Value explainer panel.
+Two equations (Composition + Source) both reconcile to the same total.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d13c92b`](https://github.com/chen-star/net_alpha/commit/d13c92b84400cfd3371e09c7afd5affa6d52ba83))
+
+### Fix
+
+* fix(web): apply sign-aware coloring on Account Value total rows
+
+Matches the pattern used by _explain_total_return.html. A negative
+total (theoretical: short-option liability exceeds all other components)
+now renders in red instead of default text color.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f7d9e93`](https://github.com/chen-star/net_alpha/commit/f7d9e93073d886ab4dc5755c7c10c10897f40f53))
+
+* fix(web): drop misleading None-guard around last_snapshot()
+
+PricingService.last_snapshot() is typed -&gt; PricingSnapshot (never None);
+only the snapshot&#39;s fetched_at field is Optional. Aligns with the rest
+of portfolio.py.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`197b75d`](https://github.com/chen-star/net_alpha/commit/197b75dcc4e9d28cc85e9aeddccd236464ad210b))
+
+* fix(explain): use ValueError for reconciliation guard; drop per-lot quantize
+
+AssertionError is silenced by python -O. The reconciliation check is a
+real consistency guard against bad input data, not a debug assertion.
+
+Per-lot quantize on long stock MV could drift up to ~$0.005/lot before
+summing; quantize once at the end matches what short_liability_total
+already does.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`af7a219`](https://github.com/chen-star/net_alpha/commit/af7a21918640b689c238de5e89bf94597edfafe0))
+
+### Refactor
+
+* refactor(explain): extract _estimate_short_option_liability helper
+
+Pure refactor. Will be reused by upcoming build_account_value_breakdown.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`94d9956`](https://github.com/chen-star/net_alpha/commit/94d99562406429366f3013227d8daa955249a01c))
+
+### Style
+
+* style: ruff format pass on explain.py + portfolio.py
+
+Pure formatting — no behavior change. Brings the new code added in
+the account-value explainer series up to the project&#39;s ruff format style.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5c55ed4`](https://github.com/chen-star/net_alpha/commit/5c55ed4d7c4b5cafc0a3c1f9487238e1d6c83e4b))
+
+### Test
+
+* test(web): cover account-value missing-quotes caveat banner
+
+Seed an unpriced lot and assert the data-explain=&#34;missing-quotes-caveat&#34;
+div renders in the explainer fragment. Closes the test-pyramid gap
+flagged by the final review.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a20abfe`](https://github.com/chen-star/net_alpha/commit/a20abfeef1ef402b3ca764a2ac97678e6d9164ff))
+
+### Unknown
+
+* Merge branch &#39;feat/account-value-explain&#39;
+
+Account Value explainer panel: HTMX info-circle on the TOTAL ACCOUNT
+VALUE hero KPI tile opens a fragment showing two equation grids
+(Composition + Source) that reconcile to the hero number. ([`088e3ab`](https://github.com/chen-star/net_alpha/commit/088e3abe28f13abfec16d096af2736da9eee58cb))
+
+
 ## v0.51.0 (2026-05-05)
 
 ### Chore
