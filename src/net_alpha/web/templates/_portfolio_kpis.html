@@ -42,7 +42,17 @@
        four small KPIs auto-flow into the 2×2 area to the right. ───────── #}
   <div class="kpi kpi-hero col-span-12 lg:col-span-4 lg:row-span-2 flex flex-col justify-center" data-kpi-slot="hero"
        title="Sum of cash + open position market value across all in-scope accounts. Updates as quotes refresh.">
-    <div class="label-uc">TOTAL ACCOUNT VALUE</div>
+    <div class="label-uc">TOTAL ACCOUNT VALUE
+      <button type="button"
+              class="ml-1 inline-flex align-middle text-label-3 hover:text-label-1 cursor-pointer"
+              hx-get="/portfolio/explain/account-value?account={{ selected_account|default('') }}"
+              hx-target="#explain-account-value"
+              hx-swap="innerHTML"
+              aria-label="How is this calculated?"
+              title="Show how this is calculated">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </button>
+    </div>
     <div class="num num-hero mt-2">
       {% if total_account_value is defined and total_account_value is not none %}
         ${{ "%.2f"|format(total_account_value|float) }}
@@ -61,6 +71,7 @@
         <span class="text-label-3">· as of {{ snapshot.fetched_at.strftime("%b %-d") }} quotes</span>
       {% endif %}
     </div>
+    <div id="explain-account-value"></div>
   </div>
 
 

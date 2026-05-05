@@ -227,6 +227,62 @@ def test_explain_total_return_realized_scoped_by_account(tmp_path):
     )
 
 
+def test_explain_account_value_smoke_empty_db(tmp_path):
+    """explain_account_value returns 200 on an empty database (no crash)."""
+    client, _ = _make_client(tmp_path)
+    r = client.get("/portfolio/explain/account-value")
+    assert r.status_code == 200
+
+
+def test_explain_account_value_smoke_with_account_filter(tmp_path):
+    """explain_account_value accepts an account query param without crashing."""
+    client, _ = _make_client(tmp_path)
+    r = client.get("/portfolio/explain/account-value?account=Schwab%2FTax")
+    assert r.status_code == 200
+
+
+def test_explain_account_value_renders_both_equation_headings(tmp_path):
+    """Both equation sections must render labeled subtotal rows so the
+    panel is readable on an empty DB (no positions, no contributions).
+    """
+    client, _ = _make_client(tmp_path)
+    r = client.get("/portfolio/explain/account-value")
+    assert r.status_code == 200
+    html = r.text
+    # Composition equation rows
+    assert "Cash balance" in html
+    assert "Long stock" in html  # tolerate "Long stock & ETF market value"
+    assert "Long option" in html
+    assert "Short option" in html
+    # Source equation rows
+    assert "Net contributed" in html
+    assert "Lifetime realized P/L" in html
+    assert "Current unrealized P/L" in html
+    # Both equations must show a labeled "= Total Account Value" total row
+    assert html.count("= Total Account Value") >= 2, (
+        "Both Composition and Source totals must carry the '= Total Account Value' "
+        "label or the hairline rule + value hangs in space with no label."
+    )
+    # Standard disclaimer
+    assert "Consult a tax professional" in html
+
+
+def test_portfolio_kpis_renders_account_value_explain_trigger(tmp_path):
+    """The hero KPI tile must include the info-circle button wired to
+    /portfolio/explain/account-value and a mount div for the fragment.
+    """
+    client, _ = _make_client(tmp_path)
+    r = client.get("/portfolio/kpis")
+    assert r.status_code == 200
+    html = r.text
+    assert 'hx-get="/portfolio/explain/account-value' in html, (
+        "Hero tile is missing the info-circle button that opens the Account Value explainer."
+    )
+    assert 'id="explain-account-value"' in html, (
+        "Hero tile is missing the <div id='explain-account-value'> mount point for the fragment."
+    )
+
+
 def test_explain_unrealized_gl_closure_wired(tmp_path):
     """When a lot is fully closed by a Realized G/L import (no Sell trade),
     the explainer endpoint must not crash and must return 200, confirming
@@ -293,3 +349,65 @@ def test_explain_unrealized_gl_closure_wired(tmp_path):
     r = client.get("/portfolio/explain/unrealized")
     # Must not 500 — GL closures are now correctly passed to consume_lots_fifo.
     assert r.status_code == 200
+
+
+def test_explain_account_value_caveat_when_lots_have_no_quote(tmp_path):
+    """When equity lots have no live quote, the account-value explainer
+    must render the missing-quotes caveat banner so the user knows the
+    panel's totals are partial.
+    """
+    from datetime import date, datetime
+    from decimal import Decimal
+
+    from net_alpha.models.domain import CashEvent, ImportRecord, Trade
+
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+
+    # Seed: deposit + buy of a ticker yfinance won't have in the test cache
+    # → kpis.missing_symbols will include "UNPRICED" → caveat renders.
+    acct = repo.get_or_create_account(broker="Schwab", label="Tax")
+    record = ImportRecord(
+        account_id=acct.id,
+        csv_filename="t.csv",
+        csv_sha256="x",
+        imported_at=datetime.now(),
+        trade_count=1,
+    )
+    trade = Trade(
+        account="Schwab/Tax",
+        date=date(2025, 6, 1),
+        ticker="UNPRICED",
+        action="Buy",
+        quantity=Decimal("10"),
+        proceeds=None,
+        cost_basis=Decimal("500"),
+    )
+    cash_event = CashEvent(
+        account="Schwab/Tax",
+        event_date=date(2025, 1, 5),
+        kind="deposit",
+        amount=Decimal("1000"),
+        description="seed",
+    )
+    repo.add_import(acct, record, [trade], cash_events=[cash_event])
+    # add_import inserts only trade rows. Lots are materialized from buy
+    # trades by the wash-sale recompute pass.
+    from net_alpha.engine.recompute import recompute_all_violations
+
+    recompute_all_violations(repo, {})
+
+    app = create_app(settings)
+    client = TestClient(app, raise_server_exceptions=False)
+    r = client.get("/portfolio/explain/account-value")
+    assert r.status_code == 200
+    html = r.text
+    assert 'data-explain="missing-quotes-caveat"' in html, (
+        "Account Value explainer must show the missing-quotes caveat when "
+        "kpis.missing_symbols is non-empty."
+    )
+    assert "UNPRICED" in html, (
+        "The caveat should name the unpriced ticker(s)."
+    )
