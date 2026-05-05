@@ -405,9 +405,6 @@ def test_explain_account_value_caveat_when_lots_have_no_quote(tmp_path):
     assert r.status_code == 200
     html = r.text
     assert 'data-explain="missing-quotes-caveat"' in html, (
-        "Account Value explainer must show the missing-quotes caveat when "
-        "kpis.missing_symbols is non-empty."
+        "Account Value explainer must show the missing-quotes caveat when kpis.missing_symbols is non-empty."
     )
-    assert "UNPRICED" in html, (
-        "The caveat should name the unpriced ticker(s)."
-    )
+    assert "UNPRICED" in html, "The caveat should name the unpriced ticker(s)."
