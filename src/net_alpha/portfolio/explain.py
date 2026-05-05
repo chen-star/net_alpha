@@ -89,6 +89,45 @@ class UnrealizedBreakdown:
     excluded_count: int  # lots/shorts skipped because no quote available
 
 
+def _estimate_short_option_liability(
+    *,
+    row,  # OpenShortOptionRow
+    spot: Decimal,
+    as_of: dt.date,
+) -> tuple[Decimal, Decimal, int, int, Decimal, Decimal]:
+    """Estimate the cost-to-close for one open short option row.
+
+    Returns: (est_liability, intrinsic_per_share, days_total, days_remaining,
+              time_value_per_share, premium_per_share).
+
+    Math mirrors `pnl._short_option_unrealized_adjustment()`.
+    Pure — no I/O, no quote lookup (caller resolves spot first).
+    """
+    strike = Decimal(str(row.strike))
+    if row.call_put == "P":
+        intrinsic = max(Decimal("0"), strike - spot)
+    else:
+        intrinsic = max(Decimal("0"), spot - strike)
+    days_total = max(1, (row.expiry - row.opened_at).days)
+    days_remaining = max(0, (row.expiry - as_of).days)
+    contracts = row.qty_short
+    multiplier = Decimal(str(row.contract_multiplier))
+    premium_per_share = (
+        row.premium_received / contracts / multiplier if contracts > 0 else Decimal("0")
+    )
+    time_value = premium_per_share * (Decimal(days_remaining) / Decimal(days_total))
+    est_per_share = max(intrinsic, time_value)
+    est_liability = (est_per_share * contracts * multiplier).quantize(Decimal("0.01"))
+    return (
+        est_liability,
+        intrinsic,
+        days_total,
+        days_remaining,
+        time_value,
+        premium_per_share,
+    )
+
+
 def build_total_return_breakdown(
     *,
     period_label: str,
@@ -200,19 +239,14 @@ def build_unrealized_breakdown(
             continue
         spot = Decimal(str(quote.price))
         strike = Decimal(str(row.strike))
-        if row.call_put == "P":
-            intrinsic = max(Decimal("0"), strike - spot)
-        else:
-            intrinsic = max(Decimal("0"), spot - strike)
-
-        days_total = max(1, (row.expiry - row.opened_at).days)
-        days_remaining = max(0, (row.expiry - as_of).days)
-        contracts = row.qty_short
-        multiplier = Decimal(str(row.contract_multiplier))
-        premium_per_share = row.premium_received / contracts / multiplier if contracts > 0 else Decimal("0")
-        time_value = premium_per_share * (Decimal(days_remaining) / Decimal(days_total))
-        est_per_share = max(intrinsic, time_value)
-        est_liability = (est_per_share * contracts * multiplier).quantize(Decimal("0.01"))
+        (
+            est_liability,
+            intrinsic,
+            days_total,
+            days_remaining,
+            time_value,
+            _premium_per_share,
+        ) = _estimate_short_option_liability(row=row, spot=spot, as_of=as_of)
         unrealized = (row.premium_received - est_liability).quantize(Decimal("0.01"))
         short_subtotal += unrealized
         short_premium_total += row.premium_received
@@ -220,7 +254,7 @@ def build_unrealized_breakdown(
         short_lines.append(
             UnrealizedShortOptionLine(
                 symbol_display=f"{row.ticker} {strike}{row.call_put} {row.expiry.isoformat()}",
-                contracts=int(contracts),
+                contracts=int(row.qty_short),
                 premium_received=row.premium_received,
                 spot=spot,
                 intrinsic_per_share=intrinsic,
