@@ -1183,9 +1183,7 @@ def explain_account_value(
     gl_option_closures = repo.get_option_gl_closures()
     if account:
         gl_closures = {k: v for k, v in gl_closures.items() if k[0] == account}
-        gl_option_closures = {
-            k: v for k, v in gl_option_closures.items() if k[0] == account
-        }
+        gl_option_closures = {k: v for k, v in gl_option_closures.items() if k[0] == account}
 
     consumed = consume_lots_fifo(
         lots=lots,

@@ -114,7 +114,7 @@ class AccountValueBreakdown:
     cash_balance: Decimal
     long_stock_mv: Decimal
     long_option_mv: Decimal
-    short_option_liability: Decimal     # positive number, subtracted in the equation
+    short_option_liability: Decimal  # positive number, subtracted in the equation
     # Source (Equation 2)
     net_contributed: Decimal
     lifetime_realized_economic: Decimal
@@ -150,9 +150,7 @@ def _estimate_short_option_liability(
     days_remaining = max(0, (row.expiry - as_of).days)
     contracts = row.qty_short
     multiplier = Decimal(str(row.contract_multiplier))
-    premium_per_share = (
-        row.premium_received / contracts / multiplier if contracts > 0 else Decimal("0")
-    )
+    premium_per_share = row.premium_received / contracts / multiplier if contracts > 0 else Decimal("0")
     time_value = premium_per_share * (Decimal(days_remaining) / Decimal(days_total))
     est_per_share = max(intrinsic, time_value)
     est_liability = (est_per_share * contracts * multiplier).quantize(Decimal("0.01"))
@@ -321,9 +319,9 @@ def build_unrealized_breakdown(
 
 def build_account_value_breakdown(
     *,
-    consumed: list,            # list[(Lot, Decimal rem_qty, Decimal rem_basis)]
-    short_option_rows: list,   # list[OpenShortOptionRow]
-    prices: dict,              # {ticker: Quote}
+    consumed: list,  # list[(Lot, Decimal rem_qty, Decimal rem_basis)]
+    short_option_rows: list,  # list[OpenShortOptionRow]
+    prices: dict,  # {ticker: Quote}
     cash_balance: Decimal,
     net_contributed: Decimal,
     lifetime_realized_economic: Decimal,
@@ -380,9 +378,7 @@ def build_account_value_breakdown(
             # panel's behavior of excluding the row).
             continue
         spot = Decimal(str(quote.price))
-        est_liability, *_ = _estimate_short_option_liability(
-            row=row, spot=spot, as_of=as_of
-        )
+        est_liability, *_ = _estimate_short_option_liability(row=row, spot=spot, as_of=as_of)
         short_premium_total += row.premium_received
         short_liability_total += est_liability
 
@@ -391,26 +387,22 @@ def build_account_value_breakdown(
     short_liability_total = short_liability_total.quantize(Decimal("0.01"))
 
     # Composition: cash + long_stock + long_option − short_liability
-    composition_total = (
-        cash_balance + long_stock_mv + long_option_mv - short_liability_total
-    ).quantize(Decimal("0.01"))
+    composition_total = (cash_balance + long_stock_mv + long_option_mv - short_liability_total).quantize(
+        Decimal("0.01")
+    )
 
     # Current unrealized = (long MV − long cost) + (short premium received − short liability)
     current_unrealized = (
-        (long_stock_mv + long_option_mv - long_cost_total)
-        + (short_premium_total - short_liability_total)
+        (long_stock_mv + long_option_mv - long_cost_total) + (short_premium_total - short_liability_total)
     ).quantize(Decimal("0.01"))
 
     # Source: net_contributed + lifetime_realized_economic + current_unrealized
-    source_total = (
-        net_contributed + lifetime_realized_economic + current_unrealized
-    ).quantize(Decimal("0.01"))
+    source_total = (net_contributed + lifetime_realized_economic + current_unrealized).quantize(Decimal("0.01"))
 
     # Reconciliation invariant — both equations must agree to within $0.01.
     if abs(composition_total - source_total) > Decimal("0.01"):
         raise ValueError(
-            f"AccountValueBreakdown reconciliation failed: "
-            f"composition={composition_total} source={source_total}"
+            f"AccountValueBreakdown reconciliation failed: composition={composition_total} source={source_total}"
         )
 
     return AccountValueBreakdown(
