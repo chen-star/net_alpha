@@ -89,6 +89,44 @@ class UnrealizedBreakdown:
     excluded_count: int  # lots/shorts skipped because no quote available
 
 
+@dataclass(frozen=True)
+class AccountValueBreakdown:
+    """Payload for the Total Account Value explainer panel.
+
+    Both equations sum to the same `total_account_value`:
+
+      Composition: cash_balance
+                 + long_stock_mv
+                 + long_option_mv
+                 − short_option_liability   (positive number, subtracted)
+
+      Source:      net_contributed
+                 + lifetime_realized_economic   (after wash, the cash one)
+                 + current_unrealized
+
+    The reconciliation invariant is enforced in `build_account_value_breakdown`.
+    `lifetime_realized_economic` MUST be the wash-adjusted economic figure
+    (`KpiSet.lifetime_realized_economic`), not the tax-recognized one — the
+    cash account never sees a wash-sale disallowance.
+    """
+
+    # Composition (Equation 1)
+    cash_balance: Decimal
+    long_stock_mv: Decimal
+    long_option_mv: Decimal
+    short_option_liability: Decimal     # positive number, subtracted in the equation
+    # Source (Equation 2)
+    net_contributed: Decimal
+    lifetime_realized_economic: Decimal
+    current_unrealized: Decimal
+    # Reconciliation total — both equations agree to this value
+    total_account_value: Decimal
+    # Caveat data
+    missing_symbols: tuple[str, ...]
+    has_short_options: bool
+    fetched_at: dt.datetime | None
+
+
 def _estimate_short_option_liability(
     *,
     row,  # OpenShortOptionRow
@@ -278,4 +316,113 @@ def build_unrealized_breakdown(
         short_subtotal=short_subtotal,
         total_unrealized=long_subtotal + short_subtotal,
         excluded_count=excluded,
+    )
+
+
+def build_account_value_breakdown(
+    *,
+    consumed: list,            # list[(Lot, Decimal rem_qty, Decimal rem_basis)]
+    short_option_rows: list,   # list[OpenShortOptionRow]
+    prices: dict,              # {ticker: Quote}
+    cash_balance: Decimal,
+    net_contributed: Decimal,
+    lifetime_realized_economic: Decimal,
+    missing_symbols: tuple[str, ...],
+    fetched_at: dt.datetime | None,
+    as_of: dt.date,
+) -> AccountValueBreakdown:
+    """Build the Total Account Value explainer payload.
+
+    Splits the open position MV into long stock vs long option (carried at
+    basis when no quote) and short option liability (intrinsic + straight-
+    line time decay). Long-side math mirrors `pnl._open_market_and_basis()`;
+    short-side math mirrors `_estimate_short_option_liability()`.
+    """
+    long_stock_mv = Decimal("0")
+    long_option_mv = Decimal("0")
+    long_cost_total = Decimal("0")
+
+    for lot, rem_qty, rem_basis in consumed:
+        if rem_qty <= 0:
+            continue
+        if lot.option_details is not None:
+            # Long option lot — carried at cost basis (no live mark).
+            # Past-expiry → skip silently (matches build_unrealized_breakdown).
+            if lot.option_details.expiry < as_of:
+                continue
+            long_option_mv += rem_basis
+            long_cost_total += rem_basis
+            continue
+        quote = prices.get(lot.ticker)
+        if quote is None or quote.price is None:
+            # No quote — carry at basis so totals reconcile with kpis.open_position_value
+            # (which uses the same fallback when prices are missing for non-all-unpriced runs).
+            long_stock_mv += rem_basis
+            long_cost_total += rem_basis
+            continue
+        last = Decimal(str(quote.price))
+        market = (rem_qty * last).quantize(Decimal("0.01"))
+        long_stock_mv += market
+        long_cost_total += rem_basis
+
+    short_premium_total = Decimal("0")
+    short_liability_total = Decimal("0")
+    has_short_options = False
+    for row in short_option_rows:
+        if row.opened_at is None:
+            continue
+        has_short_options = True
+        quote = prices.get(row.ticker)
+        if quote is None or quote.price is None:
+            # No spot quote — short liability cannot be estimated; treat as 0
+            # (premium received already in cash_balance, so this errs on the
+            # side of overstating account value, mirroring the unrealized
+            # panel's behavior of excluding the row).
+            continue
+        spot = Decimal(str(quote.price))
+        est_liability, *_ = _estimate_short_option_liability(
+            row=row, spot=spot, as_of=as_of
+        )
+        short_premium_total += row.premium_received
+        short_liability_total += est_liability
+
+    long_stock_mv = long_stock_mv.quantize(Decimal("0.01"))
+    long_option_mv = long_option_mv.quantize(Decimal("0.01"))
+    short_liability_total = short_liability_total.quantize(Decimal("0.01"))
+
+    # Composition: cash + long_stock + long_option − short_liability
+    composition_total = (
+        cash_balance + long_stock_mv + long_option_mv - short_liability_total
+    ).quantize(Decimal("0.01"))
+
+    # Current unrealized = (long MV − long cost) + (short premium received − short liability)
+    current_unrealized = (
+        (long_stock_mv + long_option_mv - long_cost_total)
+        + (short_premium_total - short_liability_total)
+    ).quantize(Decimal("0.01"))
+
+    # Source: net_contributed + lifetime_realized_economic + current_unrealized
+    source_total = (
+        net_contributed + lifetime_realized_economic + current_unrealized
+    ).quantize(Decimal("0.01"))
+
+    # Reconciliation invariant — both equations must agree to within $0.01.
+    if abs(composition_total - source_total) > Decimal("0.01"):
+        raise AssertionError(
+            f"AccountValueBreakdown reconciliation failed: "
+            f"composition={composition_total} source={source_total}"
+        )
+
+    return AccountValueBreakdown(
+        cash_balance=cash_balance.quantize(Decimal("0.01")),
+        long_stock_mv=long_stock_mv,
+        long_option_mv=long_option_mv,
+        short_option_liability=short_liability_total,
+        net_contributed=net_contributed.quantize(Decimal("0.01")),
+        lifetime_realized_economic=lifetime_realized_economic.quantize(Decimal("0.01")),
+        current_unrealized=current_unrealized,
+        total_account_value=composition_total,
+        missing_symbols=tuple(missing_symbols),
+        has_short_options=has_short_options,
+        fetched_at=fetched_at,
     )

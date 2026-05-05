@@ -160,3 +160,180 @@ def test_build_unrealized_breakdown_excluded_count_for_unpriced_lot():
     assert b.long_lines == []
     assert b.excluded_count == 1
     assert b.total_unrealized == Decimal("0")
+
+
+def test_build_account_value_breakdown_cash_only_both_equations_zero_positions():
+    """With only cash, Composition = cash; Source = net_contributed + 0 + 0; both equal."""
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.portfolio.explain import build_account_value_breakdown
+
+    today = dt.date(2026, 5, 4)
+    b = build_account_value_breakdown(
+        consumed=[],
+        short_option_rows=[],
+        prices={},
+        cash_balance=Decimal("10000.00"),
+        net_contributed=Decimal("10000.00"),
+        lifetime_realized_economic=Decimal("0"),
+        missing_symbols=(),
+        fetched_at=None,
+        as_of=today,
+    )
+    assert b.cash_balance == Decimal("10000.00")
+    assert b.long_stock_mv == Decimal("0")
+    assert b.long_option_mv == Decimal("0")
+    assert b.short_option_liability == Decimal("0")
+    assert b.net_contributed == Decimal("10000.00")
+    assert b.lifetime_realized_economic == Decimal("0")
+    assert b.current_unrealized == Decimal("0")
+    assert b.total_account_value == Decimal("10000.00")
+    assert b.has_short_options is False
+    assert b.missing_symbols == ()
+
+
+def test_build_account_value_breakdown_long_stock_reconciles_both_equations():
+    """Buy 10 AAPL @ $150 cost, now $180. Cash had $1500 paid out.
+    Composition: $0 cash + $1800 stock = $1800.
+    Source: $1500 contributed + $0 realized + $300 unrealized = $1800.
+    Both equations must agree.
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import Lot
+    from net_alpha.portfolio.explain import build_account_value_breakdown
+    from net_alpha.pricing.provider import Quote
+
+    today = dt.date(2026, 5, 4)
+    long_lot = Lot(
+        account="X",
+        date=dt.date(2025, 6, 1),
+        ticker="AAPL",
+        quantity=10.0,
+        cost_basis=1500.0,
+        adjusted_basis=1500.0,
+        trade_id="t1",
+    )
+    consumed = [(long_lot, Decimal("10"), Decimal("1500"))]
+    prices = {
+        "AAPL": Quote(
+            symbol="AAPL",
+            price=Decimal("180"),
+            previous_close=Decimal("178"),
+            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.UTC),
+            source="yahoo",
+        ),
+    }
+    b = build_account_value_breakdown(
+        consumed=consumed,
+        short_option_rows=[],
+        prices=prices,
+        cash_balance=Decimal("0"),
+        net_contributed=Decimal("1500"),
+        lifetime_realized_economic=Decimal("0"),
+        missing_symbols=(),
+        fetched_at=None,
+        as_of=today,
+    )
+    assert b.long_stock_mv == Decimal("1800.00")
+    assert b.long_option_mv == Decimal("0")
+    assert b.short_option_liability == Decimal("0")
+    assert b.current_unrealized == Decimal("300.00")
+    assert b.total_account_value == Decimal("1800.00")
+    # Reconciliation: cash + long − short == net_contributed + realized + unrealized
+    assert (
+        b.cash_balance + b.long_stock_mv + b.long_option_mv - b.short_option_liability
+        == b.net_contributed + b.lifetime_realized_economic + b.current_unrealized
+    )
+
+
+def test_build_account_value_breakdown_short_put_sets_has_short_options_and_subtracts_liability():
+    """Short put OTM contributes a positive liability to subtract in
+    Composition. has_short_options flag is set.
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.portfolio.explain import build_account_value_breakdown
+    from net_alpha.portfolio.models import OpenShortOptionRow
+    from net_alpha.pricing.provider import Quote
+
+    today = dt.date(2026, 5, 4)
+    row = OpenShortOptionRow(
+        account="X",
+        ticker="SPY",
+        strike=400.0,
+        expiry=dt.date(2026, 6, 19),
+        call_put="P",
+        qty_short=Decimal("1"),
+        premium_received=Decimal("200.00"),
+        opened_at=dt.date(2026, 4, 4),
+    )
+    prices = {
+        "SPY": Quote(
+            symbol="SPY",
+            price=Decimal("420"),
+            previous_close=Decimal("418"),
+            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.UTC),
+            source="yahoo",
+        ),
+    }
+    b = build_account_value_breakdown(
+        consumed=[],
+        short_option_rows=[row],
+        prices=prices,
+        cash_balance=Decimal("400"),  # premium received ($200) + true net contributed ($200)
+        net_contributed=Decimal("200"),  # true contributions; chosen so reconciliation holds
+        lifetime_realized_economic=Decimal("0"),
+        missing_symbols=(),
+        fetched_at=None,
+        as_of=today,
+    )
+    # OTM put @ spot 420 vs strike 400: intrinsic = 0; liability = time-decay only.
+    assert b.has_short_options is True
+    assert b.short_option_liability >= Decimal("0")
+    # Reconciliation must hold (raises if not):
+    assert (
+        b.cash_balance + b.long_stock_mv + b.long_option_mv - b.short_option_liability
+        == b.net_contributed + b.lifetime_realized_economic + b.current_unrealized
+    )
+
+
+def test_build_account_value_breakdown_unpriced_lot_carried_at_basis():
+    """Unpriced equity lot is carried at cost basis (matches kpis.open_position_value
+    fallback). Reconciliation still holds; missing_symbols flows through.
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.models.domain import Lot
+    from net_alpha.portfolio.explain import build_account_value_breakdown
+
+    today = dt.date(2026, 5, 4)
+    long_lot = Lot(
+        account="X",
+        date=dt.date(2025, 6, 1),
+        ticker="UNPRICED",
+        quantity=10.0,
+        cost_basis=500.0,
+        adjusted_basis=500.0,
+        trade_id="t1",
+    )
+    consumed = [(long_lot, Decimal("10"), Decimal("500"))]
+    b = build_account_value_breakdown(
+        consumed=consumed,
+        short_option_rows=[],
+        prices={},  # no quote available
+        cash_balance=Decimal("0"),
+        net_contributed=Decimal("500"),
+        lifetime_realized_economic=Decimal("0"),
+        missing_symbols=("UNPRICED",),
+        fetched_at=None,
+        as_of=today,
+    )
+    assert b.long_stock_mv == Decimal("500.00")  # carried at basis
+    assert b.current_unrealized == Decimal("0")  # market == cost
+    assert b.total_account_value == Decimal("500.00")
+    assert b.missing_symbols == ("UNPRICED",)
