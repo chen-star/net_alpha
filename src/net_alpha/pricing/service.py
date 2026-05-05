@@ -167,21 +167,39 @@ class PricingService:
             missing = all_dates - cached_dates
             if not missing:
                 continue
-            fetch_start = min(missing)
-            fetch_end = max(missing)
+            # Pad the fetch range with a small buffer of already-cached days on
+            # each side, clamped to [start, end]. The buffer pulls one or more
+            # present trading days into the response so missing weekday holidays
+            # at the extremes (e.g., Jan 1 New Year, when min(missing)==Jan 1
+            # and Jan 2 is the first response day) can still be bracketed and
+            # negative-cached. 7 days comfortably exceeds the longest run of
+            # consecutive non-trading days on the NYSE calendar.
+            _BRACKET_BUFFER = dt.timedelta(days=7)
+            fetch_start = max(start, min(missing) - _BRACKET_BUFFER)
+            fetch_end = min(end, max(missing) + _BRACKET_BUFFER)
             result = self._provider.get_historical_closes(sym, fetch_start, fetch_end)
             if result is None:
                 # Provider failed — leave cache untouched so a retry can recover.
                 logger.debug("pricing: bulk historical warm failed for {}", sym)
                 continue
-            # Negative-cache ONLY weekends. yfinance's bulk response is keyed by
-            # actual trading days; for missing dates we can't tell whether it's
-            # a non-trading day (Sat/Sun/holiday) or a fetch glitch. Sat/Sun
-            # are authoritative ("market is closed") so we cache None and skip
-            # future fetches. Weekday misses (holidays + glitches) stay _MISS
-            # so the single-fetch fallback in get_historical_close can recover
-            # them — this prevents a partial bulk response from poisoning the
-            # cache with permanent NULLs on real trading days.
+            # Negative-cache absent dates so subsequent warms over the same
+            # range are no-ops. Two safe categories:
+            #   - Sat/Sun: market authoritatively closed.
+            #   - Weekdays bracketed by present trading days in the same bulk
+            #     response: almost certainly a market holiday (yfinance returns
+            #     every trading day in a successful response, so a gap between
+            #     two returned days is a non-trading day).
+            # Trailing/leading weekday gaps (no present trading day after/before)
+            # stay _MISS — these are the partial-response failure mode where
+            # negative-caching would permanently poison real trading days. The
+            # single-fetch fallback in get_historical_close can recover them.
+            #
+            # Why this matters: without bracketed-holiday caching, every page
+            # load re-fetched ~all symbols from Yahoo because each symbol had
+            # ≥1 uncached weekday holiday — turning a 200ms warm into 12+s.
+            present_dates = sorted(d for d, v in result.items() if v is not None)
+            min_present = present_dates[0] if present_dates else None
+            max_present = present_dates[-1] if present_dates else None
             rows: list[tuple[str, dt.date, Decimal | None]] = []
             d = fetch_start
             while d <= fetch_end:
@@ -190,6 +208,8 @@ class PricingService:
                     if v is not None:
                         rows.append((sym, d, v))
                     elif d.weekday() >= 5:
+                        rows.append((sym, d, None))
+                    elif min_present is not None and min_present < d < max_present:
                         rows.append((sym, d, None))
                 d += dt.timedelta(days=1)
             self._cache.historical_put_many(rows)
