@@ -26,8 +26,8 @@
     <div class="num text-right">−${{ "{:,.2f}".format(b.short_option_liability|float) }}</div>
 
     <div class="font-semibold border-t border-hairline pt-2 mt-1">= Total Account Value</div>
-    <div class="num text-right font-semibold border-t border-hairline pt-2 mt-1">
-      ${{ "{:,.2f}".format(b.total_account_value|float) }}
+    <div class="num text-right font-semibold border-t border-hairline pt-2 mt-1 {% if b.total_account_value < 0 %}text-neg{% else %}text-pos{% endif %}">
+      {% if b.total_account_value < 0 %}−${{ "{:,.2f}".format(b.total_account_value|float|abs) }}{% else %}${{ "{:,.2f}".format(b.total_account_value|float) }}{% endif %}
     </div>
   </div>
 
@@ -48,8 +48,8 @@
     </div>
 
     <div class="font-semibold border-t border-hairline pt-2 mt-1">= Total Account Value</div>
-    <div class="num text-right font-semibold border-t border-hairline pt-2 mt-1">
-      ${{ "{:,.2f}".format(b.total_account_value|float) }}
+    <div class="num text-right font-semibold border-t border-hairline pt-2 mt-1 {% if b.total_account_value < 0 %}text-neg{% else %}text-pos{% endif %}">
+      {% if b.total_account_value < 0 %}−${{ "{:,.2f}".format(b.total_account_value|float|abs) }}{% else %}${{ "{:,.2f}".format(b.total_account_value|float) }}{% endif %}
     </div>
   </div>
 
