@@ -2,6 +2,130 @@
 
 
 
+## v0.51.0 (2026-05-05)
+
+### Chore
+
+* chore: sync uv.lock to wash-alpha 0.50.0
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4ee71e6`](https://github.com/chen-star/net_alpha/commit/4ee71e666c4128d92625173f179a82ab5ffd5753))
+
+* chore(docs): refresh GitNexus index stats
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1f32b58`](https://github.com/chen-star/net_alpha/commit/1f32b583f5883ca3cfda9f0a49705dd9e1642fce))
+
+* chore(web): vendor SortableJS 1.15.2 for Plan drag-to-reorder ([`543db9f`](https://github.com/chen-star/net_alpha/commit/543db9f69e833bdbe3f109d965d9949aa38a87a6))
+
+### Documentation
+
+* docs(claude): note Plan Manual mode + SortableJS vendor target ([`5acd490`](https://github.com/chen-star/net_alpha/commit/5acd4908029f45c777acf622a0351a75969e5ca6))
+
+### Feature
+
+* feat(web): halve monthly P&amp;L chart height to 90px
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2859a17`](https://github.com/chen-star/net_alpha/commit/2859a17b66293768f8b384bbad545a1adc30d0bf))
+
+* feat(web): move Cash KPI ahead of Realized/Unrealized in portfolio header
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`dd5b94d`](https://github.com/chen-star/net_alpha/commit/dd5b94d2af4d3dbb2dbed842819aee5644bc3eeb))
+
+* feat(web): add drag-handle + ghost styles for Plan reorder ([`5caf535`](https://github.com/chen-star/net_alpha/commit/5caf535f58efe5fb5c1b3a14d01c49d7c0dc09b9))
+
+* feat(web): wire SortableJS + plan_reorder.js into base layout ([`e1f046f`](https://github.com/chen-star/net_alpha/commit/e1f046fa47130f8d1e62718cebe64c5891c5ccc2))
+
+* feat(web): add POST /positions/plan/reorder for Manual mode
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5312aed`](https://github.com/chen-star/net_alpha/commit/5312aed31ac5b88e6a41cfc088379b299bdd7636))
+
+* feat(web): render drag-handle column in Plan Manual mode
+
+Add id/data-sort-mode to plan tbody and a conditional drag-handle &lt;td&gt;
+(inline SVG grip) that appears only when sort_key == &#39;manual&#39;.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d76d010`](https://github.com/chen-star/net_alpha/commit/d76d01055d7738ee395d72f0c144459c7621526a))
+
+* feat(web): add Manual option to Plan sort dropdown ([`b808003`](https://github.com/chen-star/net_alpha/commit/b808003a9cbd166e17ee581c0d96860692ddb231))
+
+* feat(web): use manual-order target loader when sort=manual
+
+Switches _build_plan_view_for_request to call list_targets_by_manual_order()
+when sort=manual, so drag-reordered rows are reflected in the Plan tab view.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9f383e3`](https://github.com/chen-star/net_alpha/commit/9f383e33dbc43eb01a07128caf3e45dc6081ca29))
+
+* feat(targets): accept sort_key=&#39;manual&#39; (no-op sort, caller ordered) ([`ad19aef`](https://github.com/chen-star/net_alpha/commit/ad19aef74ae13f0e5cc634fe446bc2d52a24d697))
+
+* feat(repo): add set_target_order for Plan manual reorder
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`211ac06`](https://github.com/chen-star/net_alpha/commit/211ac069e8021d7b88063c1308b8f80eea5e0829))
+
+* feat(repo): add list_targets_by_manual_order for Plan Manual sort
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9fae732`](https://github.com/chen-star/net_alpha/commit/9fae7320d3684957d5469ebe3b021a81dc0086f2))
+
+* feat(repo): assign next sort_order on target insert; preserve on update ([`3af42e4`](https://github.com/chen-star/net_alpha/commit/3af42e43f3e7b5443b2f89d2c1c3552c688df4f6))
+
+* feat(repo): expose sort_order on PositionTarget reads ([`c465c57`](https://github.com/chen-star/net_alpha/commit/c465c574a30058dacbd69ed20233f7a3b5281a28))
+
+* feat(targets): add sort_order field to PositionTarget ([`4d33c84`](https://github.com/chen-star/net_alpha/commit/4d33c844bb575af044f3adbc5add1edee5ae5e5f))
+
+* feat(db): add sort_order to PositionTargetRow ([`eb3c8f5`](https://github.com/chen-star/net_alpha/commit/eb3c8f58176c7519ac289e61113db594ec6f617d))
+
+* feat(db): add schema v17 — position_targets.sort_order for Plan manual reorder
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`98489ea`](https://github.com/chen-star/net_alpha/commit/98489eaa2850f39e6902813d89f568c437e479a4))
+
+### Fix
+
+* fix(tests): repair lint + KPI-order assertions to unblock CI
+
+Three classes of failure:
+- tests/web/test_plan_modal.py had redundant in-function imports
+  (Decimal, TargetUnit) that ruff flagged as F401/I001. The names are
+  already imported at module top, so dropping the inline shadow imports
+  is the simplest fix.
+- tests/db/test_migration_v16.py, tests/db/test_repository_target_tags.py,
+  and tests/targets/test_tags.py needed `ruff format` (text() call
+  reflows from a recent ruff version).
+- tests/web/test_kpi_hero_order.py and tests/web/test_phase3_smoke.py
+  still asserted the pre-f8e6e07 KPI order. Update to the new
+  hero / total_return / cash / realized / unrealized order.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b7aa6ed`](https://github.com/chen-star/net_alpha/commit/b7aa6ed5df11e149c496128d6a012b1e932e843e))
+
+* fix(inbox): surface near-expiring open short option positions
+
+The detector creates Lots only for Buy actions, so STO trades never
+produced a Lot row. The inbox option-expiry signal walked
+repo.all_lots() exclusively, leaving CSPs and covered calls invisible
+to the inbox.
+
+Reuse compute_open_short_option_positions — the same aggregator the
+portfolio&#39;s open-shorts panel uses — to reconstruct open short chains
+from the trade table, plumbing get_option_gl_closures so broker-closed
+chains don&#39;t resurface as phantom shorts. Synthetic trade_id encodes
+the chain key, keeping dismiss keys stable across re-imports.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ef89173`](https://github.com/chen-star/net_alpha/commit/ef89173cb36fe938058dffbe31a57a7e523bd35b))
+
+* fix(db): chain v17 migration with current = 17 (was return) ([`fafbfd8`](https://github.com/chen-star/net_alpha/commit/fafbfd889a6531aed9ba459d26ee36b03829c766))
+
+### Refactor
+
+* refactor(db): clarify v17 docstring and split idempotency test
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`69a459a`](https://github.com/chen-star/net_alpha/commit/69a459a2d669c86d37b1f4a5e959a1a6379f8c67))
+
+### Style
+
+* style: apply ruff format to files touched in this branch ([`8815b4b`](https://github.com/chen-star/net_alpha/commit/8815b4bfa2d1295da10c8858b72741c797ea9ba5))
+
+### Test
+
+* test(repo): restore target_amount assertion in upsert update test ([`cff79ab`](https://github.com/chen-star/net_alpha/commit/cff79abc8b4bbc109c14f72990e0a194351cd36c))
+
+
 ## v0.50.1 (2026-05-04)
 
 ### Fix
