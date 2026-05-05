@@ -2,6 +2,34 @@
 
 
 
+## v0.52.1 (2026-05-05)
+
+### Performance
+
+* perf(pricing): negative-cache bracketed weekday holidays in warm path
+
+Every Portfolio page load re-fetched all ~93 symbols from Yahoo (~12s)
+because each symbol had several uncached weekday market holidays in the
+warm range, and the previous policy negative-cached only weekends —
+leaving holidays as _MISS forever, so warm never reached steady state.
+
+Now we negative-cache a missing weekday when it&#39;s bracketed by present
+trading days in the same bulk response (a real holiday signal vs. a
+partial Yahoo response). The fetch range is also padded by 7 days on
+each side, clamped to the requested range, so leading/trailing holidays
+like Jan 1 New Year&#39;s get a present trading day before them. Trailing/
+leading weekday gaps with no surrounding present day still stay _MISS,
+preserving self-healing on Yahoo glitches and avoiding poisoning today&#39;s
+not-yet-published close.
+
+Measured against the real local DB (92 equity tickers + SPY benchmark):
+  YTD:      13.05s -&gt; 0.97s steady-state (~13x)
+  Lifetime: 17.67s -&gt; 1.98s steady-state (~9x)
+
+The first page load after this change still takes the original time once
+to populate the holiday negative-cache; every subsequent load is fast. ([`c08572b`](https://github.com/chen-star/net_alpha/commit/c08572b6a5cb466279b97a7ec07a1012223082d7))
+
+
 ## v0.52.0 (2026-05-05)
 
 ### Feature
