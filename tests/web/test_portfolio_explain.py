@@ -241,6 +241,32 @@ def test_explain_account_value_smoke_with_account_filter(tmp_path):
     assert r.status_code == 200
 
 
+def test_explain_account_value_renders_both_equation_headings(tmp_path):
+    """Both equation sections must render labeled subtotal rows so the
+    panel is readable on an empty DB (no positions, no contributions).
+    """
+    client, _ = _make_client(tmp_path)
+    r = client.get("/portfolio/explain/account-value")
+    assert r.status_code == 200
+    html = r.text
+    # Composition equation rows
+    assert "Cash balance" in html
+    assert "Long stock" in html  # tolerate "Long stock & ETF market value"
+    assert "Long option" in html
+    assert "Short option" in html
+    # Source equation rows
+    assert "Net contributed" in html
+    assert "Lifetime realized P/L" in html
+    assert "Current unrealized P/L" in html
+    # Both equations must show a labeled "= Total Account Value" total row
+    assert html.count("= Total Account Value") >= 2, (
+        "Both Composition and Source totals must carry the '= Total Account Value' "
+        "label or the hairline rule + value hangs in space with no label."
+    )
+    # Standard disclaimer
+    assert "Consult a tax professional" in html
+
+
 def test_explain_unrealized_gl_closure_wired(tmp_path):
     """When a lot is fully closed by a Realized G/L import (no Sell trade),
     the explainer endpoint must not crash and must return 200, confirming
