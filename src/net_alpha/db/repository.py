@@ -16,6 +16,7 @@ from net_alpha.db.tables import (
     CashEventRow,
     ExemptMatchRow,
     ImportRecordRow,
+    LossCarryforwardRow,
     LotOverrideRow,
     LotRow,
     MetaRow,
@@ -433,6 +434,27 @@ class Repository:
                 select(TradeRow).where(
                     TradeRow.trade_date >= start.isoformat(),
                     TradeRow.trade_date <= end.isoformat(),
+                )
+            ).all()
+            return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
+    def trades_for_ticker_in_window(self, ticker: str, sell_date: date, days: int = 30) -> list[Trade]:
+        """Return trades for ``ticker`` whose date falls within ±``days`` of ``sell_date``.
+
+        Used by the pre-trade simulator's wash-sale check
+        (``engine.lot_selector._check_wash_sale``). The caller is responsible
+        for expanding the ticker list with substantially-identical ETF pairs.
+        """
+        from datetime import timedelta
+
+        lo = sell_date - timedelta(days=days)
+        hi = sell_date + timedelta(days=days)
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(TradeRow).where(
+                    TradeRow.ticker == ticker,
+                    TradeRow.trade_date >= lo.isoformat(),
+                    TradeRow.trade_date <= hi.isoformat(),
                 )
             ).all()
             return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
@@ -1864,6 +1886,112 @@ class Repository:
             tags=tags,
             sort_order=row.sort_order,
         )
+
+    # ---- Carryforward derivation adapters ----
+
+    def earliest_trade_year(self) -> int | None:
+        """Year of the earliest realized close in the DB. None if no trades."""
+        with Session(self.engine) as s:
+            row = s.exec(select(TradeRow.trade_date).order_by(TradeRow.trade_date).limit(1)).first()
+        if row is None:
+            return None
+        # trade_date is YYYY-MM-DD string; first 4 chars are year.
+        return int(row[:4])
+
+    def realized_pnl_split_by_year(self, year: int) -> tuple[Decimal, Decimal]:
+        """Return (st_pnl, lt_pnl) signed for the given calendar year.
+
+        Mirrors ``tax_planner._classify_st_lt_gains`` scoped to a single year.
+        Long-term threshold: held > 365 days. Equities only — option closes
+        and trades with missing proceeds/cost are skipped.
+        """
+        st = Decimal("0")
+        lt = Decimal("0")
+        all_trades = self.all_trades()
+        buys: dict[tuple[str, str], list] = {}
+        for t in all_trades:
+            if t.action.lower() in {"buy", "buy to open"} and t.option_details is None:
+                buys.setdefault((t.account, t.ticker), []).append(t)
+        for chain in buys.values():
+            chain.sort(key=lambda x: x.date)
+
+        for sell in all_trades:
+            if sell.action.lower() != "sell":
+                continue
+            if sell.option_details is not None:
+                continue
+            if sell.date.year != year:
+                continue
+            if sell.proceeds is None or sell.cost_basis is None:
+                continue
+            chain = buys.get((sell.account, sell.ticker), [])
+            pnl = Decimal(str(sell.proceeds)) - Decimal(str(sell.cost_basis))
+            if not chain:
+                st += pnl
+                continue
+            oldest = chain[0].date
+            days = (sell.date - oldest).days
+            if days > 365:
+                lt += pnl
+            else:
+                st += pnl
+        return st, lt
+
+    # ---- Carryforward overrides ----
+
+    def get_carryforward_override(self, year: int) -> LossCarryforwardRow | None:
+        """Return the user-entered ST/LT carryforward override for `year`,
+        or None if no override is recorded."""
+        with Session(self.engine) as s:
+            return s.get(LossCarryforwardRow, year)
+
+    def upsert_carryforward_override(
+        self,
+        *,
+        year: int,
+        st: Decimal,
+        lt: Decimal,
+        note: str | None = None,
+    ) -> None:
+        """Create or replace the carryforward override for `year`.
+
+        Amounts are stored as positive magnitudes (loss = positive number);
+        sign is flipped at apply-time inside the planner / after-tax math.
+        Always stamped with ``source="user"`` and a fresh ``updated_at``.
+        """
+        now = datetime.now(UTC)
+        with Session(self.engine) as s:
+            existing = s.get(LossCarryforwardRow, year)
+            if existing is None:
+                row = LossCarryforwardRow(
+                    year=year,
+                    st_amount=st,
+                    lt_amount=lt,
+                    source="user",
+                    note=note,
+                    updated_at=now,
+                )
+                s.add(row)
+            else:
+                existing.st_amount = st
+                existing.lt_amount = lt
+                existing.note = note
+                existing.updated_at = now
+                s.add(existing)
+            s.commit()
+
+    def delete_carryforward_override(self, year: int) -> None:
+        """Delete the carryforward override for `year`. No-op if absent."""
+        with Session(self.engine) as s:
+            existing = s.get(LossCarryforwardRow, year)
+            if existing is not None:
+                s.delete(existing)
+                s.commit()
+
+    def all_carryforward_overrides(self) -> list[LossCarryforwardRow]:
+        """Return every carryforward override, sorted ascending by year."""
+        with Session(self.engine) as s:
+            return list(s.exec(select(LossCarryforwardRow).order_by(LossCarryforwardRow.year)).all())
 
 
 # ---------------------------------------------------------------------------

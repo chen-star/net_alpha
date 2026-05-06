@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.db.repository import Repository
+from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.detail_aggregations import (
     compute_detail_summary,
     group_violations_by_ticker,
@@ -122,7 +123,11 @@ def _wash_sales_context(
         "rows": wash_watch_rows,
         "window_days": wash_watch_window,
         # T5: realized P/L kpis for the stacked mini-bar.
-        "realized_kpis": compute_offset_budget(repo=repo, year=selected_year),
+        "realized_kpis": compute_offset_budget(
+            repo=repo,
+            year=selected_year,
+            carryforward=get_effective_carryforward(repo, selected_year),
+        ),
     }
 
     if view == "calendar":

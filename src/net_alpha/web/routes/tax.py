@@ -314,6 +314,7 @@ def _build_performance_ctx(
 ) -> dict:
     """Build the template context for the performance tab body fragment."""
     from net_alpha.portfolio.after_tax import Period, compute_after_tax
+    from net_alpha.portfolio.carryforward import get_effective_carryforward
 
     ctx: dict = {"request": request, "tax_brackets_cfg": cfg}
     if cfg is None:
@@ -336,7 +337,12 @@ def _build_performance_ctx(
     else:
         period_obj = Period.ytd(today.year)
 
-    breakdown = compute_after_tax(repo, period_obj, account, brackets)
+    # Apply prior-year carryforward (override-wins) when the period is
+    # year-scoped. Lifetime period (year is None) gets no carryforward —
+    # carryforward semantics don't apply to a multi-year aggregate view.
+    cf = get_effective_carryforward(repo, period_obj.year) if period_obj.year is not None else None
+
+    breakdown = compute_after_tax(repo, period_obj, account, brackets, carryforward=cf)
     ctx["breakdown"] = breakdown
     ctx["has_tax_config"] = True
     return ctx

@@ -10,6 +10,7 @@ from net_alpha.db.migrations import migrate
 from net_alpha.db.repository import Repository
 from net_alpha.db.tables import AccountRow, ImportRecordRow, RealizedGLLotRow
 from net_alpha.portfolio.after_tax import Period, compute_after_tax
+from net_alpha.portfolio.carryforward import Carryforward
 from net_alpha.portfolio.tax_planner import TaxBrackets
 
 
@@ -120,10 +121,98 @@ def test_caveats_includes_lifetime_warning_when_lifetime():
     assert any("Lifetime" in c or "current rates" in c for c in r.caveats)
 
 
-def test_caveats_includes_capital_loss_limitation_note():
+def test_caveats_drop_capital_loss_limitation_note():
+    """Task 9: the old "$3K capital-loss limitation / multi-year carryforward
+    not modeled" caveat is gone — those are now modeled via the carryforward
+    pipeline."""
     repo = _StubRepo(st=Decimal("-100"))
     r = compute_after_tax(repo, _ytd(), None, _brackets())
-    assert any("$3" in c or "capital loss" in c.lower() for c in r.caveats)
+    assert all("not modeled" not in c for c in r.caveats)
+    assert all("Capital-loss limitation" not in c for c in r.caveats)
+
+
+def test_compute_after_tax_consumes_st_carryforward_reducing_tax_bill():
+    """A $5,000 ST carryforward applied against $10,000 ST gain reduces ST
+    taxable to $5,000 → federal_marginal_rate * 5000 + niit."""
+    repo = _StubRepo(st=Decimal("10000"))
+    cf = Carryforward(st=Decimal("5000"), lt=Decimal("0"), source="user")
+    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    # ST taxable: 10000 - 5000 = 5000
+    # st_tax = 5000 * 0.37 = 1850; niit = 5000 * 0.038 = 190 → 2040
+    assert r.short_term_pnl == Decimal("5000")
+    assert r.estimated_tax_bill == Decimal("2040")
+
+
+def test_compute_after_tax_consumes_lt_carryforward_reducing_tax_bill():
+    """LT carryforward absorbs same-bucket LT gain first."""
+    repo = _StubRepo(lt=Decimal("10000"))
+    cf = Carryforward(st=Decimal("0"), lt=Decimal("4000"), source="user")
+    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    # LT taxable: 10000 - 4000 = 6000
+    # lt_tax = 6000 * 0.20 = 1200; niit = 6000 * 0.038 = 228 → 1428
+    assert r.long_term_pnl == Decimal("6000")
+    assert r.estimated_tax_bill == Decimal("1428")
+
+
+def test_compute_after_tax_carryforward_crosses_categories_st_into_lt():
+    """ST carry surplus crosses into LT gain when ST has no gains to absorb
+    (§1212(b)(1)(B))."""
+    # ST gain $0, LT gain $10,000, ST carry $4,000.
+    # Same-bucket: ST carry vs ST gain (0) → unchanged.
+    # Cross: ST carry $4,000 vs LT gain $10,000 → LT gain becomes $6,000.
+    repo = _StubRepo(st=Decimal("0"), lt=Decimal("10000"))
+    cf = Carryforward(st=Decimal("4000"), lt=Decimal("0"), source="derived")
+    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    assert r.short_term_pnl == Decimal("0")
+    assert r.long_term_pnl == Decimal("6000")
+    # lt_tax = 6000*0.20=1200; niit = 6000*0.038=228 → 1428
+    assert r.estimated_tax_bill == Decimal("1428")
+
+
+def test_compute_after_tax_carryforward_crosses_categories_lt_into_st():
+    """LT carry surplus crosses into ST gain."""
+    repo = _StubRepo(st=Decimal("10000"), lt=Decimal("0"))
+    cf = Carryforward(st=Decimal("0"), lt=Decimal("3000"), source="user")
+    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    # ST gain reduced by 3000 cross-bucket LT carry → ST taxable 7000.
+    assert r.short_term_pnl == Decimal("7000")
+    assert r.long_term_pnl == Decimal("0")
+    # st_tax = 7000*0.37=2590; niit = 7000*0.038=266 → 2856
+    assert r.estimated_tax_bill == Decimal("2856")
+
+
+def test_compute_after_tax_caveat_emitted_when_carryforward_applied():
+    repo = _StubRepo(st=Decimal("10000"))
+    cf = Carryforward(st=Decimal("2000"), lt=Decimal("500"), source="user")
+    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    assert any("Carryforward applied" in c and "user" in c for c in r.caveats)
+
+
+def test_compute_after_tax_no_carryforward_caveat_when_zero():
+    """When carryforward is None or all-zero, no carryforward caveat is added."""
+    repo = _StubRepo(st=Decimal("10000"))
+    r_none = compute_after_tax(repo, _ytd(), None, _brackets())
+    assert all("Carryforward applied" not in c for c in r_none.caveats)
+
+    cf_zero = Carryforward(st=Decimal("0"), lt=Decimal("0"), source="none")
+    r_zero = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf_zero)
+    assert all("Carryforward applied" not in c for c in r_zero.caveats)
+
+
+def test_compute_after_tax_carryforward_default_is_zero():
+    """Omitting `carryforward` is equivalent to passing zero — preserves
+    legacy behavior for existing callers."""
+    repo = _StubRepo(st=Decimal("10000"))
+    r_default = compute_after_tax(repo, _ytd(), None, _brackets())
+    r_zero = compute_after_tax(
+        repo,
+        _ytd(),
+        None,
+        _brackets(),
+        carryforward=Carryforward(st=Decimal("0"), lt=Decimal("0"), source="none"),
+    )
+    assert r_default.estimated_tax_bill == r_zero.estimated_tax_bill
+    assert r_default.short_term_pnl == r_zero.short_term_pnl
 
 
 def test_realized_pnl_split_excludes_1256_at_repo_level(tmp_path):

@@ -1,0 +1,80 @@
+{# Settings → Loss carryforwards section.
+
+   Lists every relevant tax year (one row per year from earliest_trade+1
+   through current_year+1, plus any years with a user override that fall
+   outside that span). Source label distinguishes user override vs derived
+   replay vs none.
+
+   Read-only in this task — Edit / Reset to derived buttons land in Task 8
+   (POST endpoints). They are rendered now but currently no-op until those
+   handlers exist; HTMX swaps will 404 gracefully without breaking layout. #}
+
+<section id="settings-carryforward" class="space-y-3 text-[13px]">
+  <header>
+    <h3 class="text-[14px] font-semibold m-0 mb-1">Loss carryforwards</h3>
+    <p class="text-label-2 text-[12px] m-0">
+      Federal-level. ST and LT tracked separately per §1212(b) cross-category netting.
+    </p>
+  </header>
+
+  {% if not has_history and not rows %}
+    <p class="text-label-2 text-[12px] m-0">
+      No prior-year history found. If you have an unused capital-loss carryforward
+      from a previous 1040 Schedule D, enter it manually below.
+    </p>
+  {% endif %}
+
+  {% if rows %}
+  <table class="w-full text-[12px]">
+    <thead class="text-label-2">
+      <tr class="border-b" style="border-color: var(--color-hairline);">
+        <th class="text-left py-1 font-medium">Tax year (into)</th>
+        <th class="text-right py-1 font-medium">ST carryforward</th>
+        <th class="text-right py-1 font-medium">LT carryforward</th>
+        <th class="text-left py-1 font-medium">Source</th>
+        <th class="text-right py-1 font-medium">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr class="border-b" style="border-color: var(--color-hairline);">
+        <td class="py-1 font-mono">{{ row.year }}</td>
+        <td class="py-1 text-right font-mono">${{ '{:,.2f}'.format(row.st) }}</td>
+        <td class="py-1 text-right font-mono">${{ '{:,.2f}'.format(row.lt) }}</td>
+        <td class="py-1">
+          {% if row.source == 'user' %}
+            <span class="px-1.5 py-0.5 rounded bg-surface text-text"
+                  style="border:0.5px solid var(--color-hairline);">from override</span>
+          {% elif row.source == 'derived' %}
+            <span class="px-1.5 py-0.5 rounded bg-surface text-label-2"
+                  style="border:0.5px solid var(--color-hairline);">derived from history</span>
+          {% else %}
+            <span class="text-label-3">none</span>
+          {% endif %}
+        </td>
+        <td class="py-1 text-right">
+          <button type="button"
+                  hx-get="/settings/carryforward/edit?year={{ row.year }}"
+                  hx-target="closest tr"
+                  hx-swap="outerHTML"
+                  class="text-text hover:underline">Edit</button>
+          {% if row.source == 'user' %}
+          <button type="button"
+                  hx-post="/settings/carryforward/reset?year={{ row.year }}"
+                  hx-target="#settings-carryforward"
+                  hx-swap="outerHTML"
+                  class="text-label-2 hover:underline ml-2">Reset to derived</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <footer class="text-label-3 text-[11px] m-0">
+    Source of truth: your 1040 Schedule D Capital Loss Carryover Worksheet
+    (line 6 / 14). Derived values replay your imported trade history and apply
+    §1212(b) cross-category netting and the §1211 $3,000 ordinary cap.
+  </footer>
+</section>

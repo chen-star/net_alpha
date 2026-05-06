@@ -8,7 +8,13 @@ from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
 from net_alpha.engine.etf_pairs import load_etf_pairs
+from net_alpha.engine.lot_selector import (
+    InsufficientLotsError,
+    LotPickResult,
+    select_lots,
+)
 from net_alpha.engine.simulator import simulate_buy, simulate_sell
+from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.tax_planner import PlannedTrade, TaxBrackets, assess_trade
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
@@ -207,11 +213,66 @@ def sim_run(
         recent_trades=repo.all_trades(),
         today=on_date,
     )
+
+    # 5-strategy lot comparison: surface the engine.lot_selector results
+    # alongside the per-account simulator output so the user can see how
+    # FIFO/LIFO/HIFO/Min Tax/Max Loss differ in pre-tax / after-tax P&L
+    # and wash-sale risk before placing the trade.
+    lot_comparison: dict | None = None
+    lot_comparison_insufficient: str | None = None
+    sym = ticker.upper()
+    lots_for_sym = repo.get_lots_for_ticker(sym)
+    cf = get_effective_carryforward(repo, year=on_date.year)
+    try:
+        results: list[LotPickResult] = []
+        for strategy in ("FIFO", "LIFO", "HIFO", "MIN_TAX", "MAX_LOSS"):
+            results.append(
+                select_lots(
+                    lots=lots_for_sym,
+                    qty=Decimal(str(qty)),
+                    sell_price=Decimal(str(price)),
+                    sell_date=on_date,
+                    strategy=strategy,
+                    repo=repo,
+                    etf_pairs=request.app.state.etf_pairs,
+                    brackets=brackets_for_signal,
+                    carryforward=cf,
+                )
+            )
+        lot_comparison = {
+            "results": results,
+            "recommended_idx": _pick_recommended(results),
+        }
+    except InsufficientLotsError as e:
+        lot_comparison_insufficient = str(e)
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_sim_sell_result.html",
-        {"options": options, "ticker": ticker.upper(), "signal": signal},
+        {
+            "options": options,
+            "ticker": sym,
+            "signal": signal,
+            "lot_comparison": lot_comparison,
+            "lot_comparison_insufficient": lot_comparison_insufficient,
+        },
     )
+
+
+def _pick_recommended(results: list[LotPickResult]) -> int:
+    """Pick the recommended lot strategy.
+
+    Tiebreak: prefer no-wash-sale combos first, then highest after-tax P&L.
+    On a true tie, returns the earliest strategy in the input order.
+    """
+
+    def key(idx_r: tuple[int, LotPickResult]) -> tuple:
+        idx, r = idx_r
+        # Sort: wash-sale risk LAST (False < True), then largest after-tax first
+        # (negate so min() picks the largest), then input order for stability.
+        return (r.has_wash_sale_risk, -r.after_tax_pnl, idx)
+
+    return min(enumerate(results), key=key)[0]
 
 
 @router.get("/sim/suggestions", response_class=HTMLResponse)

@@ -4,7 +4,6 @@ Pure function. Reads from Repository (split realized P&L, §1256 net P&L,
 wash-sale disallowed total). Returns an AfterTaxBreakdown.
 
 Out-of-scope simplifications (caveats surface inline):
-- $3K capital-loss limitation against ordinary income / multi-year carryforward
 - MAGI-based NIIT threshold ($200K single / $250K MFJ)
 - Qualified dividends, §199A, AMT
 - Per-year historical brackets for Lifetime period
@@ -17,6 +16,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from net_alpha.portfolio.carryforward import Carryforward
 from net_alpha.portfolio.tax_planner import TaxBrackets
 
 _NIIT_RATE = Decimal("0.038")
@@ -73,12 +73,33 @@ def compute_after_tax(
     period: Period,
     account: str | None,
     brackets: TaxBrackets,
+    carryforward: Carryforward | None = None,
 ) -> AfterTaxBreakdown:
     pnl = repo.realized_pnl_split(period, account)
     st_pnl: Decimal = pnl["short_term"]
     lt_pnl: Decimal = pnl["long_term"]
     sec1256_pnl: Decimal = repo.section_1256_pnl(period, account)
     disallowed: Decimal = repo.wash_sale_disallowed_total(period, account)
+
+    cf = carryforward or Carryforward(st=Decimal("0"), lt=Decimal("0"), source="none")
+
+    # Apply carryforward against same-bucket P&L first; surplus crosses
+    # categories per §1212(b)(1)(B). Sign convention: cf.st / cf.lt are
+    # non-negative magnitudes (loss numbers); subtracting them reduces gains.
+    st_after_cf = st_pnl - cf.st
+    lt_after_cf = lt_pnl - cf.lt
+
+    if st_after_cf < 0 and lt_after_cf > 0:
+        absorbed = min(-st_after_cf, lt_after_cf)
+        st_after_cf += absorbed
+        lt_after_cf -= absorbed
+    elif lt_after_cf < 0 and st_after_cf > 0:
+        absorbed = min(-lt_after_cf, st_after_cf)
+        lt_after_cf += absorbed
+        st_after_cf -= absorbed
+
+    st_pnl = st_after_cf
+    lt_pnl = lt_after_cf
 
     sec1256_lt = sec1256_pnl * _LT_FRAC
     sec1256_st = sec1256_pnl * _ST_FRAC
@@ -106,7 +127,6 @@ def compute_after_tax(
 
     caveats = [
         "Estimate using your configured marginal rates — not a tax filing.",
-        "Capital-loss limitation ($3K/yr against ordinary income) and multi-year carryforward not modeled.",
         f"NIIT applied at 3.8% above MAGI threshold ($200K single / $250K MFJ) "
         f"when enabled (currently: {'on' if brackets.niit_enabled else 'off'}).",
         "Open §1256 positions Dec 31 not marked-to-market — see 1099-B / Form 6781 separately.",
@@ -117,6 +137,8 @@ def compute_after_tax(
             "Lifetime period uses currently configured rates for all historical years; "
             "bracket changes are not retro-applied."
         )
+    if cf.st > 0 or cf.lt > 0:
+        caveats.append(f"Carryforward applied: ST ${cf.st:,.2f} + LT ${cf.lt:,.2f} (source: {cf.source}).")
 
     return AfterTaxBreakdown(
         pre_tax_realized_pnl=pre_tax,

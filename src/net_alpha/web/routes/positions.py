@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
 
 from net_alpha.db.repository import Repository
+from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.cash_flow import compute_cash_kpis
 from net_alpha.portfolio.positions import (
     compute_closed_lots,
@@ -161,7 +162,11 @@ def positions_page(
         ctx["rows"] = rows
         ctx["today"] = today
         ctx["only_harvestable"] = only_harvestable_bool
-        ctx["budget"] = compute_offset_budget(repo=repo, year=today.year)
+        ctx["budget"] = compute_offset_budget(
+            repo=repo,
+            year=today.year,
+            carryforward=get_effective_carryforward(repo, today.year),
+        )
         ctx["harvest_form_action"] = "/positions?view=at-loss"
         ctx["harvest_form_target"] = "#positions-tab-content"
         if request.headers.get("hx-request"):

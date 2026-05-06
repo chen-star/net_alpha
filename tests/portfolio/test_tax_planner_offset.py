@@ -152,3 +152,60 @@ def test_compute_offset_budget_planned_trades_shift_delta(
     b = compute_offset_budget(repo=repo, year=2026, planned_trades=planned)
     # Planned: sell 100 at 8 vs basis 10/sh = -200 realized.
     assert b.planned_delta == Decimal("-200")
+
+
+def test_offset_budget_includes_incoming_carryforward(repo) -> None:
+    """A $4,000 ST carryforward INTO 2025 means the user already has $4K of
+    headroom against current-year gains before any new losses are needed."""
+    from net_alpha.portfolio.carryforward import Carryforward
+
+    cf = Carryforward(st=Decimal("4000"), lt=Decimal("0"), source="user")
+    budget = compute_offset_budget(repo=repo, year=2025, carryforward=cf)
+    assert budget.incoming_carryforward_st == Decimal("4000")
+    assert budget.incoming_carryforward_lt == Decimal("0")
+
+
+def test_offset_budget_no_carryforward_arg_defaults_to_zero(repo) -> None:
+    """When carryforward arg omitted (or None), incoming fields are 0."""
+    budget = compute_offset_budget(repo=repo, year=2025)
+    assert budget.incoming_carryforward_st == Decimal("0")
+    assert budget.incoming_carryforward_lt == Decimal("0")
+
+
+def test_offset_budget_carryforward_inflates_used_against_ordinary(
+    repo,
+    schwab_account,
+    seed_import,
+) -> None:
+    """If incoming cf is $4K and current-year net loss is $2K, used_against_ordinary
+    should reflect the combined $6K loss, capped at $3K against ordinary;
+    carryforward_projection $3K residue."""
+    from net_alpha.portfolio.carryforward import Carryforward
+
+    # Pre-seed repo with a $2K realized loss in 2025.
+    buy = Trade(
+        account=schwab_account.display(),
+        date=date(2025, 1, 5),
+        ticker="UUUU",
+        action="Buy",
+        quantity=Decimal("100"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("5000"),
+    )
+    sell = Trade(
+        account=schwab_account.display(),
+        date=date(2025, 3, 1),
+        ticker="UUUU",
+        action="Sell",
+        quantity=Decimal("100"),
+        proceeds=Decimal("3000"),
+        cost_basis=Decimal("5000"),
+    )
+    seed_import(repo, schwab_account, [buy, sell])
+
+    cf = Carryforward(st=Decimal("4000"), lt=Decimal("0"), source="user")
+    budget = compute_offset_budget(repo=repo, year=2025, carryforward=cf)
+    assert budget.realized_losses_ytd == Decimal("-2000")
+    assert budget.used_against_ordinary == Decimal("3000")
+    # carryforward_projection is the residue: $4K cf + $2K loss - $3K cap = $3K
+    assert budget.carryforward_projection == Decimal("3000")
