@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from net_alpha.db.repository import Repository
 from net_alpha.engine.lockout import compute_lockout_clear_date
 from net_alpha.models.domain import Lot, Trade
+from net_alpha.portfolio.carryforward import Carryforward
 from net_alpha.portfolio.positions import consume_lots_fifo
 from net_alpha.pricing.service import PricingService
 
@@ -451,19 +452,35 @@ def compute_offset_budget(
     repo: Repository,
     year: int,
     planned_trades: list[PlannedTrade] | None = None,
+    carryforward: Carryforward | None = None,
 ) -> OffsetBudget:
     """YTD realized P&L vs the $3,000-against-ordinary cap, optionally with planned trades.
 
     Pure read. Cap is fixed at $3,000.
+
+    When ``carryforward`` is supplied, the prior-year ST/LT loss carryforward is
+    folded into the projection: the combined (current-year net loss + incoming
+    carryforward) is what gets clamped at the $3K ordinary-income cap, with the
+    residue surfaced as ``carryforward_projection`` (the amount that will roll
+    forward into the next year).
     """
     losses, gains = _realized_in_year(repo, year)
     net = losses + gains
+
+    cf_st = carryforward.st if carryforward else Decimal("0")
+    cf_lt = carryforward.lt if carryforward else Decimal("0")
+    cf_total = cf_st + cf_lt
+
     cap = ORDINARY_LOSS_CAP
     used = Decimal("0")
     carry = Decimal("0")
-    if net < 0:
-        used = min(-net, cap)
-        carry = max(-net - cap, Decimal("0"))
+
+    # Prior carryforward + this year's net loss combine; the $3K cap applies.
+    total_loss_with_cf = max(Decimal("0"), -net) + cf_total
+    if total_loss_with_cf > 0:
+        used = min(total_loss_with_cf, cap)
+        carry = max(total_loss_with_cf - cap, Decimal("0"))
+
     planned_delta = _planned_pnl(planned_trades or [], repo)
 
     return OffsetBudget(
@@ -475,6 +492,8 @@ def compute_offset_budget(
         used_against_ordinary=used,
         carryforward_projection=carry,
         planned_delta=planned_delta,
+        incoming_carryforward_st=cf_st,
+        incoming_carryforward_lt=cf_lt,
     )
 
 
@@ -504,6 +523,10 @@ class OffsetBudget(BaseModel):
     used_against_ordinary: Decimal  # min(|net_loss|, cap), >= 0
     carryforward_projection: Decimal  # |net_loss| - cap, clamped to >= 0
     planned_delta: Decimal  # change in net_realized that would result from planned_trades
+    # Incoming prior-year ST/LT capital-loss carryforward magnitudes (positive
+    # numbers; zero when no carryforward is supplied or available).
+    incoming_carryforward_st: Decimal = Decimal("0")
+    incoming_carryforward_lt: Decimal = Decimal("0")
 
 
 # ---------------------------------------------------------------------------

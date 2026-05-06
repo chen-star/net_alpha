@@ -4,6 +4,9 @@
 {% set _pct = (_used / _cap * 100) if _cap else 0 %}
 {% set _pct_int = _pct|round(0,'floor')|int %}
 {% set _carry = budget.carryforward_projection|float %}
+{% set _cf_st = (budget.incoming_carryforward_st|float) if budget.incoming_carryforward_st is defined else 0 %}
+{% set _cf_lt = (budget.incoming_carryforward_lt|float) if budget.incoming_carryforward_lt is defined else 0 %}
+{% set _cf_in = _cf_st + _cf_lt %}
 <div class="kpi" data-testid="offset-budget">
   <div class="flex items-baseline justify-between">
     <div class="label-uc">Loss harvest budget</div>
@@ -26,4 +29,11 @@
     <span class="text-label-2">Carryforward: <span class="num text-label-1">${{ "{:,.0f}".format(budget.carryforward_projection) }}</span></span>
     {% endif %}
   </div>
+  {% if _cf_in > 0 %}
+  <div class="mt-1 text-[11px] text-label-2">
+    Incoming carryforward (from prior years):
+    <span class="num text-label-1">${{ "{:,.0f}".format(budget.incoming_carryforward_st) }}</span> ST
+    + <span class="num text-label-1">${{ "{:,.0f}".format(budget.incoming_carryforward_lt) }}</span> LT
+  </div>
+  {% endif %}
 </div>

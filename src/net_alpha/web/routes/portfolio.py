@@ -31,6 +31,7 @@ from net_alpha.portfolio.account_value import (
 )
 from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.portfolio.calendar_pnl import monthly_realized_pl_series
+from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
     cash_allocation_slice,
@@ -290,7 +291,11 @@ def portfolio_kpis(
     )
     cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
     csp_count = sum(1 for s in open_shorts if s.call_put == "P")
-    offset_budget = compute_offset_budget(repo=repo, year=today.year)
+    offset_budget = compute_offset_budget(
+        repo=repo,
+        year=today.year,
+        carryforward=get_effective_carryforward(repo, today.year),
+    )
     cfg = request.app.state.tax_brackets_cfg
     projection = None
     has_tax_config = cfg is not None
@@ -889,7 +894,11 @@ def portfolio_body(
     csp_count = sum(1 for s in open_shorts if s.call_put == "P")
 
     account_id = _resolve_account_id(account, repo)
-    offset_budget = compute_offset_budget(repo=repo, year=today.year)
+    offset_budget = compute_offset_budget(
+        repo=repo,
+        year=today.year,
+        carryforward=get_effective_carryforward(repo, today.year),
+    )
     cfg = request.app.state.tax_brackets_cfg
     projection = None
     has_tax_config = cfg is not None
