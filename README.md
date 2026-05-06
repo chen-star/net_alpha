@@ -30,12 +30,6 @@ The problem compounds when you trade **options** alongside the underlying, or **
 
 **net-alpha** is a local-first Python tool that gives you a single, unified view of your wash sale exposure across every account, asset class, and tax year — *before* it's too late to act.
 
-<p align="center">
-  <img src="assets/screenshot-portfolio.png" alt="Portfolio dashboard" width="820">
-  <br>
-  <sub><i>The local web UI — Portfolio overview with realized P&L, equity curve, and cash trace.</i></sub>
-</p>
-
 > [!NOTE]
 > The package is published to PyPI as **`wash-alpha`** but the CLI command is **`net-alpha`**. Both names refer to the same project.
 
@@ -127,12 +121,6 @@ Reads `~/.net_alpha/net_alpha.db` (v1 schema) and writes a fresh v2 DB at `~/.ne
 | **ETFs** | Sold ETF at a loss, bought ETF tracking the same index (e.g., `SPY` → `VOO`) | 🔵 **Unclear** |
 
 Bundled "substantially identical" pairs cover the major index-tracking ETFs (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, etc.). Extend with your own pairs by editing `~/.net_alpha/etf_pairs.yaml` — your file *adds* to the bundled defaults, never replaces them.
-
-<p align="center">
-  <img src="assets/screenshot-tax-wash.png" alt="Wash sale listing" width="820">
-  <br>
-  <sub><i>Tax → Wash sales — every flag is auditable with rule citation, math, and source trades.</i></sub>
-</p>
 
 ### Adding a broker
 
