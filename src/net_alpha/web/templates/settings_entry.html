@@ -5,4 +5,13 @@
     <p class="m-0 text-[14px]">Settings open in the panel on the right.</p>
     <p class="m-0 text-[12px] mt-1 text-label-2">Press <kbd class="px-1 border rounded">Esc</kbd> or click outside to close, then use the gear icon (top-right) to reopen.</p>
   </div>
+
+  {# Loss-carryforward section — lazy-loaded fragment. Sits beneath the
+     drawer landing copy so deep-links into /settings surface the per-year
+     carryforward state without forcing a drawer-tab switch. #}
+  <div hx-get="/settings/carryforward"
+       hx-trigger="load"
+       hx-swap="innerHTML"
+       id="settings-carryforward-mount"
+       class="mt-8 max-w-2xl mx-auto"></div>
 {% endblock %}
