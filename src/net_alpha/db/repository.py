@@ -438,6 +438,27 @@ class Repository:
             ).all()
             return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
 
+    def trades_for_ticker_in_window(self, ticker: str, sell_date: date, days: int = 30) -> list[Trade]:
+        """Return trades for ``ticker`` whose date falls within ±``days`` of ``sell_date``.
+
+        Used by the pre-trade simulator's wash-sale check
+        (``engine.lot_selector._check_wash_sale``). The caller is responsible
+        for expanding the ticker list with substantially-identical ETF pairs.
+        """
+        from datetime import timedelta
+
+        lo = sell_date - timedelta(days=days)
+        hi = sell_date + timedelta(days=days)
+        with Session(self.engine) as s:
+            rows = s.exec(
+                select(TradeRow).where(
+                    TradeRow.ticker == ticker,
+                    TradeRow.trade_date >= lo.isoformat(),
+                    TradeRow.trade_date <= hi.isoformat(),
+                )
+            ).all()
+            return [self._row_to_trade(r, self._account_display_for_id(s, r.account_id)) for r in rows]
+
     def trades_for_import(self, import_id: int) -> list[Trade]:
         with Session(self.engine) as s:
             rows = s.exec(select(TradeRow).where(TradeRow.import_id == import_id)).all()

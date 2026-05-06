@@ -44,7 +44,10 @@ def test_insufficient_lots_raises():
 
 
 def test_lot_pick_result_has_required_fields():
-    lots = [_lot(1, 100, 50.0, date(2024, 1, 1))]
+    # 100-share lot with $50/share total basis ($5000 total), partial-fill 50 shares.
+    # LotPick.adjusted_basis is per-share, so 5000 / 100 = $50/sh and the
+    # 50-share partial fill realizes 50 * (100 - 50) = $2500.
+    lots = [_lot(1, 100, 5000.0, date(2024, 1, 1))]
     result = select_lots(
         lots=lots,
         qty=Decimal("50"),
@@ -60,7 +63,8 @@ def test_lot_pick_result_has_required_fields():
     assert result.strategy == "FIFO"
     assert len(result.picks) == 1
     assert result.picks[0].qty_consumed == Decimal("50")
-    assert result.pre_tax_pnl == Decimal("2500")  # (100 - 50) * 50
+    assert result.picks[0].adjusted_basis == Decimal("50")  # per-share
+    assert result.pre_tax_pnl == Decimal("2500")  # 50 * (100 - 50)
     assert result.has_wash_sale_risk is False
     assert result.wash_sale_disallowed == Decimal("0")
 
@@ -163,3 +167,104 @@ def test_fifo_tiebreak_by_lot_id_when_same_date():
         carryforward=None,
     )
     assert result.picks[0].lot_id == "1"
+
+
+def test_wash_sale_flagged_when_existing_buy_within_30_days():
+    """A loss lot with a recent buy in the ±30d window should be flagged."""
+    from datetime import date as D
+
+    from net_alpha.models.domain import Trade
+
+    lots = [_lot(1, 100, 15000.0, D(2024, 6, 1))]  # basis $15K total, $150/sh
+
+    # Stub repo with a buy 10 days before the proposed sell.
+    class _R:
+        def trades_for_ticker_in_window(self, ticker, sell_date, days):
+            return [
+                Trade(
+                    id="b1",
+                    account="default",
+                    ticker="SPY",
+                    date=D(2026, 4, 25),
+                    action="Buy",
+                    quantity=10,
+                    proceeds=None,
+                    cost_basis=1100.0,
+                )
+            ]
+
+    result = select_lots(
+        lots=lots,
+        qty=Decimal("100"),
+        sell_price=Decimal("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=None,
+        carryforward=None,
+    )
+    assert result.has_wash_sale_risk is True
+    # Loss = (100 - 150) * 100 = -5000. Wash sale disallows the loss magnitude.
+    assert result.wash_sale_disallowed == Decimal("5000")
+
+
+def test_no_wash_sale_when_loss_lot_has_no_replacement_buy():
+    from datetime import date as D
+
+    lots = [_lot(1, 100, 15000.0, D(2024, 6, 1))]
+
+    class _R:
+        def trades_for_ticker_in_window(self, ticker, sell_date, days):
+            return []
+
+    result = select_lots(
+        lots=lots,
+        qty=Decimal("100"),
+        sell_price=Decimal("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=None,
+        carryforward=None,
+    )
+    assert result.has_wash_sale_risk is False
+    assert result.wash_sale_disallowed == Decimal("0")
+
+
+def test_no_wash_sale_when_lot_is_a_gain():
+    """Gains can't trigger wash sales."""
+    from datetime import date as D
+
+    from net_alpha.models.domain import Trade
+
+    lots = [_lot(1, 100, 5000.0, D(2024, 6, 1))]  # basis $50/sh, sell at $100 = gain
+
+    class _R:
+        def trades_for_ticker_in_window(self, ticker, sell_date, days):
+            return [
+                Trade(
+                    id="b1",
+                    account="default",
+                    ticker="SPY",
+                    date=D(2026, 4, 25),
+                    action="Buy",
+                    quantity=10,
+                    proceeds=None,
+                    cost_basis=1100.0,
+                )
+            ]
+
+    result = select_lots(
+        lots=lots,
+        qty=Decimal("100"),
+        sell_price=Decimal("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=None,
+        carryforward=None,
+    )
+    assert result.has_wash_sale_risk is False
