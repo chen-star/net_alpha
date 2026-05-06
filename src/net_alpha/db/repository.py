@@ -1866,6 +1866,56 @@ class Repository:
             sort_order=row.sort_order,
         )
 
+    # ---- Carryforward derivation adapters ----
+
+    def earliest_trade_year(self) -> int | None:
+        """Year of the earliest realized close in the DB. None if no trades."""
+        with Session(self.engine) as s:
+            row = s.exec(select(TradeRow.trade_date).order_by(TradeRow.trade_date).limit(1)).first()
+        if row is None:
+            return None
+        # trade_date is YYYY-MM-DD string; first 4 chars are year.
+        return int(row[:4])
+
+    def realized_pnl_split_by_year(self, year: int) -> tuple[Decimal, Decimal]:
+        """Return (st_pnl, lt_pnl) signed for the given calendar year.
+
+        Mirrors ``tax_planner._classify_st_lt_gains`` scoped to a single year.
+        Long-term threshold: held > 365 days. Equities only — option closes
+        and trades with missing proceeds/cost are skipped.
+        """
+        st = Decimal("0")
+        lt = Decimal("0")
+        all_trades = self.all_trades()
+        buys: dict[tuple[str, str], list] = {}
+        for t in all_trades:
+            if t.action.lower() in {"buy", "buy to open"} and t.option_details is None:
+                buys.setdefault((t.account, t.ticker), []).append(t)
+        for chain in buys.values():
+            chain.sort(key=lambda x: x.date)
+
+        for sell in all_trades:
+            if sell.action.lower() != "sell":
+                continue
+            if sell.option_details is not None:
+                continue
+            if sell.date.year != year:
+                continue
+            if sell.proceeds is None or sell.cost_basis is None:
+                continue
+            chain = buys.get((sell.account, sell.ticker), [])
+            pnl = Decimal(str(sell.proceeds)) - Decimal(str(sell.cost_basis))
+            if not chain:
+                st += pnl
+                continue
+            oldest = chain[0].date
+            days = (sell.date - oldest).days
+            if days > 365:
+                lt += pnl
+            else:
+                st += pnl
+        return st, lt
+
     # ---- Carryforward overrides ----
 
     def get_carryforward_override(self, year: int) -> LossCarryforwardRow | None:

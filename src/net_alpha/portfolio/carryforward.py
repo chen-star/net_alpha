@@ -30,6 +30,10 @@ class _CarryforwardRepo(Protocol):
     def earliest_trade_year(self) -> int | None: ...
 
 
+class _EffectiveCarryforwardRepo(_CarryforwardRepo, Protocol):
+    def get_carryforward_override(self, year: int): ...
+
+
 def derive_carryforward(repo: _CarryforwardRepo, year: int) -> Carryforward:
     """Replay all years from the earliest realized year up through year-1.
 
@@ -132,3 +136,20 @@ def _roll_one_year(
 
     # 5) Total carry into next year = unconsumed prior carry + new surplus.
     return st_carry + st_share, lt_carry + lt_share
+
+
+def get_effective_carryforward(repo: _EffectiveCarryforwardRepo, year: int) -> Carryforward:
+    """Override-wins resolution. Falls back to ``derive_carryforward``.
+
+    A user-recorded override always wins — even when both ST and LT amounts
+    are zero, an explicit zero means "I have no carryforward" and overrides
+    any derived value.
+    """
+    override = repo.get_carryforward_override(year)
+    if override is not None:
+        return Carryforward(
+            st=Decimal(str(override.st_amount)),
+            lt=Decimal(str(override.lt_amount)),
+            source="user",
+        )
+    return derive_carryforward(repo, year)

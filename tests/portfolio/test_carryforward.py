@@ -1,8 +1,15 @@
 from decimal import Decimal
+from decimal import Decimal as D
 
+from sqlalchemy import create_engine
+from sqlmodel import Session, SQLModel
+
+from net_alpha.db.migrations import migrate
+from net_alpha.db.repository import Repository
 from net_alpha.portfolio.carryforward import (
     Carryforward,
     derive_carryforward,
+    get_effective_carryforward,
 )
 
 
@@ -119,3 +126,35 @@ def test_three_year_chain_with_cross_category():
     )
     cf = derive_carryforward(repo, year=2025)
     assert cf == Carryforward(st=Decimal("0"), lt=Decimal("0"), source="derived")
+
+
+def _real_repo() -> Repository:
+    engine = create_engine("sqlite:///:memory:")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        migrate(session)
+    return Repository(engine)
+
+
+def test_user_override_beats_derived():
+    repo = _real_repo()
+    repo.upsert_carryforward_override(year=2025, st=D("999"), lt=D("0"))
+    cf = get_effective_carryforward(repo, year=2025)
+    assert cf.source == "user"
+    assert cf.st == D("999")
+
+
+def test_user_override_zero_still_beats_derived():
+    """Explicit zero override means 'I have no carryforward' — beats derive."""
+    repo = _real_repo()
+    repo.upsert_carryforward_override(year=2025, st=D("0"), lt=D("0"))
+    cf = get_effective_carryforward(repo, year=2025)
+    assert cf.source == "user"
+    assert cf == Carryforward(st=D("0"), lt=D("0"), source="user")
+
+
+def test_falls_back_to_derived_when_no_override():
+    repo = _real_repo()
+    cf = get_effective_carryforward(repo, year=2025)
+    # No trades in repo → "none"
+    assert cf.source == "none"
