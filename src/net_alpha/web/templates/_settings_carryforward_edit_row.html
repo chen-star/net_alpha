@@ -1,0 +1,46 @@
+{# Inline edit-row form for a single carryforward year.
+
+   Swaps the original `<tr>` in `_settings_carryforward.html`. Submitting
+   POSTs to `/settings/carryforward/save`, which re-renders the whole
+   section. Cancel re-fetches the GET and replaces the section as well. #}
+
+<tr id="cf-edit-{{ year }}" class="border-b" style="border-color: var(--color-hairline);">
+  <td class="py-1 font-mono">
+    <form id="cf-edit-form-{{ year }}"
+          hx-post="/settings/carryforward/save"
+          hx-target="#settings-carryforward"
+          hx-swap="outerHTML">
+      <input type="hidden" name="year" value="{{ year }}">
+      {{ year }}
+    </form>
+  </td>
+  <td class="py-1 text-right">
+    <input type="number" name="st_amount" step="0.01" min="0"
+           form="cf-edit-form-{{ year }}"
+           value="{{ '{:.2f}'.format(st) }}"
+           class="w-24 px-2 py-1 text-[12px] text-right bg-bg border rounded font-mono"
+           style="border-color: var(--color-hairline);">
+  </td>
+  <td class="py-1 text-right">
+    <input type="number" name="lt_amount" step="0.01" min="0"
+           form="cf-edit-form-{{ year }}"
+           value="{{ '{:.2f}'.format(lt) }}"
+           class="w-24 px-2 py-1 text-[12px] text-right bg-bg border rounded font-mono"
+           style="border-color: var(--color-hairline);">
+  </td>
+  <td class="py-1">
+    <input type="text" name="note" placeholder="from 2024 1040 Sched D"
+           form="cf-edit-form-{{ year }}"
+           class="w-full px-2 py-1 text-[12px] bg-bg border rounded text-label-2"
+           style="border-color: var(--color-hairline);">
+  </td>
+  <td class="py-1 text-right">
+    <button type="submit" form="cf-edit-form-{{ year }}"
+            class="text-text hover:underline">Save</button>
+    <button type="button"
+            hx-get="/settings/carryforward"
+            hx-target="#settings-carryforward"
+            hx-swap="outerHTML"
+            class="text-label-3 hover:underline ml-2">Cancel</button>
+  </td>
+</tr>

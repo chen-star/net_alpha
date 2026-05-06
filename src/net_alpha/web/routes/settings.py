@@ -27,8 +27,9 @@ file) so the entire Settings surface stays under one router.
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
@@ -96,3 +97,63 @@ def settings_carryforward(
         "_settings_carryforward.html",
         {"rows": rows, "has_history": has_history},
     )
+
+
+@router.get("/settings/carryforward/edit", response_class=HTMLResponse)
+def settings_carryforward_edit(
+    request: Request,
+    year: int,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """Render an inline edit-row form for a single carryforward year.
+
+    Pre-fills with the currently effective ST/LT magnitudes (override or
+    derived). The fragment swaps the original `<tr>` in the carryforward
+    table; submitting POSTs to `/settings/carryforward/save` and re-renders
+    the whole section.
+    """
+    cf = get_effective_carryforward(repo, year)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_settings_carryforward_edit_row.html",
+        {"year": year, "st": cf.st, "lt": cf.lt},
+    )
+
+
+@router.post("/settings/carryforward/save", response_class=HTMLResponse)
+def settings_carryforward_save(
+    request: Request,
+    year: int = Form(...),
+    st_amount: str = Form(...),
+    lt_amount: str = Form(...),
+    note: str | None = Form(None),
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """Upsert a user override for `year` and re-render the section.
+
+    Amounts are stored as positive magnitudes; sign is flipped at apply-time
+    inside the planner / after-tax math. Negative or non-numeric inputs are
+    rejected with 422.
+    """
+    try:
+        st = Decimal(st_amount)
+        lt = Decimal(lt_amount)
+    except InvalidOperation as exc:
+        raise HTTPException(status_code=422, detail="amounts must be numeric") from exc
+    if st < 0 or lt < 0:
+        raise HTTPException(status_code=422, detail="amounts must be non-negative")
+
+    note_value = note.strip() if note and note.strip() else None
+    repo.upsert_carryforward_override(year=year, st=st, lt=lt, note=note_value)
+    return settings_carryforward(request, repo=repo)
+
+
+@router.post("/settings/carryforward/reset", response_class=HTMLResponse)
+def settings_carryforward_reset(
+    request: Request,
+    year: int,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """Delete the override for `year`, falling back to the derived value."""
+    repo.delete_carryforward_override(year)
+    return settings_carryforward(request, repo=repo)
