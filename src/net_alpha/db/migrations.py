@@ -46,7 +46,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 17
+CURRENT_SCHEMA_VERSION = 18
 
 
 def get_schema_version(session: Session) -> int:
@@ -507,6 +507,24 @@ def _migrate_v16_to_v17(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v17_to_v18(session: Session) -> None:
+    """Add loss_carryforward table for prior-year ST/LT capital-loss tracking."""
+    if not _table_exists(session, "loss_carryforward"):
+        session.exec(
+            text(
+                "CREATE TABLE loss_carryforward ("
+                "  year INTEGER PRIMARY KEY,"
+                "  st_amount NUMERIC NOT NULL DEFAULT 0,"
+                "  lt_amount NUMERIC NOT NULL DEFAULT 0,"
+                "  source VARCHAR NOT NULL DEFAULT 'user',"
+                "  note VARCHAR,"
+                "  updated_at DATETIME NOT NULL"
+                ")"
+            )
+        )
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -587,6 +605,10 @@ def migrate(session: Session) -> None:
         _migrate_v16_to_v17(session)
         set_schema_version(session, 17)
         current = 17
+    if current < 18:
+        _migrate_v17_to_v18(session)
+        set_schema_version(session, 18)
+        current = 18
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "
