@@ -107,11 +107,14 @@ Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, MXEF, MXEA — b
 - Single SQLite DB at `~/.net_alpha/net_alpha.db` (all years, cross-year window detection works)
 - Schema versioning via `meta` table (`schema_version` integer); hand-written `ALTER TABLE` migrations — no migration framework
 - Wash sale recompute is incremental: only the ±30-day window around affected trade dates is recalculated on import or import removal
+- Schema is at v18 as of 2026-05-05 (added `loss_carryforward` table for prior-year ST/LT carryforward overrides).
 
 ### Pricing & Portfolio modules
 
 - Pricing subsystem: `pricing/` — `PriceProvider` ABC, `YahooPriceProvider`, SQLite-backed `PriceCache`, `PricingService` orchestrator.
 - Portfolio aggregations: `portfolio/` — pure functions for positions, KPIs, allocation (donut + leaderboard), equity curve, cash flow, lot aging, wash-sale watch (recent loss closes), top movers, calendar P&L, benchmark, after-tax realized P&L (`after_tax.py`), forward tax planner (`tax_planner.py` — harvest queue, offset budget, projection, traffic light), sim suggestions (`sim_suggestions.py` — chip-strip picks for the Sim page), and freshness checks.
+- Carryforward subsystem: `portfolio/carryforward.py` — pure-function ST/LT capital-loss carryforward derive (replays prior years honoring §1212(b) cross-category netting and the §1211 $3K cap) with hybrid auto-derive + user-override resolution; consumed by `compute_after_tax` and `compute_offset_budget`. User overrides are edited at `/settings/carryforward`.
+- Lot selector: `engine/lot_selector.py` — pure-function `select_lots()` with five strategies (FIFO/LIFO/HIFO/MIN_TAX/MAX_LOSS), wash-sale-aware via `engine/detector.py` and `engine/etf_pairs.py`. Surfaced as a comparison table on the Sim page (Sell action only). MIN_TAX brute-forces ≤12 lots; greedy fallback beyond.
 - Audit subsystem: `audit/` — provenance helpers (`provenance.py` encodes/decodes deep links to a metric's source rows), per-broker reconciliation against Realized G/L (`reconciliation.py` + `audit/brokers/`), and data-hygiene rollups (`hygiene.py`) for the Imports page.
 - Splits + targets + prefs: `splits/` (corporate-action sync + lot-quantity rewrite), `targets/` (position targets used by harvest plan-builder), `prefs/` (per-profile UI preferences).
 
