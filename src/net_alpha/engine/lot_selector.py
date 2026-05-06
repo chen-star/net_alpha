@@ -111,14 +111,24 @@ def _order_lots(lots: list[Lot], strategy: Strategy) -> list[Lot]:
 
     MIN_TAX and MAX_LOSS are NOT pure orderings — Tasks 15/16 implement them
     with combo enumeration. For now they fall through to FIFO (skeleton).
+
+    HIFO sorts on basis-per-share, not total basis. All orderings tiebreak
+    by lot_id ascending for determinism.
     """
     if strategy == "FIFO":
-        return sorted(lots, key=lambda lot: lot.date)
+        return sorted(lots, key=lambda lot: (lot.date, lot.id))
     if strategy == "LIFO":
-        return sorted(lots, key=lambda lot: lot.date, reverse=True)
+        return sorted(lots, key=lambda lot: (lot.date, lot.id), reverse=True)
     if strategy == "HIFO":
-        return sorted(lots, key=lambda lot: -Decimal(str(lot.adjusted_basis)))
-    return sorted(lots, key=lambda lot: lot.date)  # placeholder for MIN_TAX/MAX_LOSS
+
+        def _per_share_basis(lot: Lot) -> Decimal:
+            qty = Decimal(str(lot.quantity))
+            if qty == 0:
+                return Decimal("0")
+            return Decimal(str(lot.adjusted_basis)) / qty
+
+        return sorted(lots, key=lambda lot: (-_per_share_basis(lot), lot.id))
+    return sorted(lots, key=lambda lot: (lot.date, lot.id))  # MIN_TAX/MAX_LOSS placeholder
 
 
 def _consume(
