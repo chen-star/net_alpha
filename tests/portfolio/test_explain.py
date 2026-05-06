@@ -177,6 +177,8 @@ def test_build_account_value_breakdown_cash_only_both_equations_zero_positions()
         cash_balance=Decimal("10000.00"),
         net_contributed=Decimal("10000.00"),
         lifetime_realized_economic=Decimal("0"),
+        non_contribution_cash_flow=Decimal("0"),
+        share_transfer_basis_net=Decimal("0"),
         missing_symbols=(),
         fetched_at=None,
         as_of=today,
@@ -187,6 +189,7 @@ def test_build_account_value_breakdown_cash_only_both_equations_zero_positions()
     assert b.short_option_liability == Decimal("0")
     assert b.net_contributed == Decimal("10000.00")
     assert b.lifetime_realized_economic == Decimal("0")
+    assert b.non_contribution_cash_flow == Decimal("0")
     assert b.current_unrealized == Decimal("0")
     assert b.total_account_value == Decimal("10000.00")
     assert b.has_short_options is False
@@ -233,6 +236,8 @@ def test_build_account_value_breakdown_long_stock_reconciles_both_equations():
         cash_balance=Decimal("0"),
         net_contributed=Decimal("1500"),
         lifetime_realized_economic=Decimal("0"),
+        non_contribution_cash_flow=Decimal("0"),
+        share_transfer_basis_net=Decimal("0"),
         missing_symbols=(),
         fetched_at=None,
         as_of=today,
@@ -242,11 +247,8 @@ def test_build_account_value_breakdown_long_stock_reconciles_both_equations():
     assert b.short_option_liability == Decimal("0")
     assert b.current_unrealized == Decimal("300.00")
     assert b.total_account_value == Decimal("1800.00")
-    # Reconciliation: cash + long − short == net_contributed + realized + unrealized
-    assert (
-        b.cash_balance + b.long_stock_mv + b.long_option_mv - b.short_option_liability
-        == b.net_contributed + b.lifetime_realized_economic + b.current_unrealized
-    )
+    # On clean books the residual is zero — every dollar is classified.
+    assert b.reconciliation_residual == Decimal("0")
 
 
 def test_build_account_value_breakdown_short_put_sets_has_short_options_and_subtracts_liability():
@@ -287,6 +289,8 @@ def test_build_account_value_breakdown_short_put_sets_has_short_options_and_subt
         cash_balance=Decimal("400"),  # premium received ($200) + true net contributed ($200)
         net_contributed=Decimal("200"),  # true contributions; chosen so reconciliation holds
         lifetime_realized_economic=Decimal("0"),
+        non_contribution_cash_flow=Decimal("0"),
+        share_transfer_basis_net=Decimal("0"),
         missing_symbols=(),
         fetched_at=None,
         as_of=today,
@@ -294,11 +298,8 @@ def test_build_account_value_breakdown_short_put_sets_has_short_options_and_subt
     # OTM put @ spot 420 vs strike 400: intrinsic = 0; liability = time-decay only.
     assert b.has_short_options is True
     assert b.short_option_liability >= Decimal("0")
-    # Reconciliation must hold (raises if not):
-    assert (
-        b.cash_balance + b.long_stock_mv + b.long_option_mv - b.short_option_liability
-        == b.net_contributed + b.lifetime_realized_economic + b.current_unrealized
-    )
+    # Clean books → residual is zero.
+    assert b.reconciliation_residual == Decimal("0")
 
 
 def test_build_account_value_breakdown_unpriced_lot_carried_at_basis():
@@ -329,6 +330,8 @@ def test_build_account_value_breakdown_unpriced_lot_carried_at_basis():
         cash_balance=Decimal("0"),
         net_contributed=Decimal("500"),
         lifetime_realized_economic=Decimal("0"),
+        non_contribution_cash_flow=Decimal("0"),
+        share_transfer_basis_net=Decimal("0"),
         missing_symbols=("UNPRICED",),
         fetched_at=None,
         as_of=today,
@@ -337,3 +340,63 @@ def test_build_account_value_breakdown_unpriced_lot_carried_at_basis():
     assert b.current_unrealized == Decimal("0")  # market == cost
     assert b.total_account_value == Decimal("500.00")
     assert b.missing_symbols == ("UNPRICED",)
+
+
+def test_build_account_value_breakdown_dividends_and_interest_reconcile():
+    """Cash boosted by dividends + interest (less fees) is neither a
+    contribution nor trade P&L. The non_contribution_cash_flow term must
+    carry it so Composition and Source still reconcile.
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.portfolio.explain import build_account_value_breakdown
+
+    today = dt.date(2026, 5, 4)
+    # $1,000 contributed, $200 dividends + $50 interest − $25 fees = $225 net.
+    # No positions; cash now reads $1,225.
+    b = build_account_value_breakdown(
+        consumed=[],
+        short_option_rows=[],
+        prices={},
+        cash_balance=Decimal("1225"),
+        net_contributed=Decimal("1000"),
+        lifetime_realized_economic=Decimal("0"),
+        non_contribution_cash_flow=Decimal("225"),
+        share_transfer_basis_net=Decimal("0"),
+        missing_symbols=(),
+        fetched_at=None,
+        as_of=today,
+    )
+    assert b.total_account_value == Decimal("1225.00")
+    assert b.non_contribution_cash_flow == Decimal("225.00")
+
+
+def test_build_account_value_breakdown_unaccounted_flow_folds_into_residual():
+    """Previously the builder raised when composition and source disagreed,
+    crashing the explainer panel. It should now fold the gap into a labelled
+    residual so the panel renders even with an unmodeled flow.
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from net_alpha.portfolio.explain import build_account_value_breakdown
+
+    today = dt.date(2026, 5, 4)
+    # Cash $1,000 with no contributions, no realized, no other flows declared
+    # → composition $1,000, classified source $0 → residual $1,000.
+    b = build_account_value_breakdown(
+        consumed=[],
+        short_option_rows=[],
+        prices={},
+        cash_balance=Decimal("1000"),
+        net_contributed=Decimal("0"),
+        lifetime_realized_economic=Decimal("0"),
+        non_contribution_cash_flow=Decimal("0"),
+        share_transfer_basis_net=Decimal("0"),
+        missing_symbols=(),
+        fetched_at=None,
+        as_of=today,
+    )
+    assert b.total_account_value == Decimal("1000.00")
+    assert b.reconciliation_residual == Decimal("1000.00")

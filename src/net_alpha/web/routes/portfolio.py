@@ -1220,6 +1220,28 @@ def explain_account_value(
 
     fetched_at = svc.last_snapshot().fetched_at
 
+    # Cash events that move the cash balance but are neither contributions
+    # (transfers) nor trade P&L: dividends, interest, fees. Without this term
+    # the source equation under-counts those flows.
+    non_contribution_cash_flow = Decimal("0")
+    for e in cash_events:
+        if e.kind == "dividend" or e.kind == "interest":
+            non_contribution_cash_flow += Decimal(str(e.amount))
+        elif e.kind == "fee":
+            non_contribution_cash_flow -= Decimal(str(e.amount))
+
+    # In-kind share transfers create lots with cost basis but no cash impact.
+    # The lot's basis sits in long_cost on the composition side; we mirror it
+    # on the source side so transfers don't masquerade as P&L. transfer_out
+    # rows carry basis on `proceeds` for split segments and None otherwise —
+    # un-split rows leave a residual the builder surfaces.
+    share_transfer_basis_net = Decimal("0")
+    for t in trades:
+        if t.basis_source == "transfer_in":
+            share_transfer_basis_net += Decimal(str(t.cost_basis or 0))
+        elif t.basis_source == "transfer_out":
+            share_transfer_basis_net -= Decimal(str(t.proceeds or 0))
+
     breakdown = build_account_value_breakdown(
         consumed=consumed,
         short_option_rows=short_rows,
@@ -1227,6 +1249,8 @@ def explain_account_value(
         cash_balance=cash_kpis.cash_balance,
         net_contributed=cash_kpis.net_contributions,
         lifetime_realized_economic=kpis_now.lifetime_realized_economic,
+        non_contribution_cash_flow=non_contribution_cash_flow,
+        share_transfer_basis_net=share_transfer_basis_net,
         missing_symbols=tuple(kpis_now.missing_symbols),
         fetched_at=fetched_at,
         as_of=today,

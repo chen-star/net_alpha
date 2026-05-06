@@ -42,10 +42,33 @@
       {% if b.lifetime_realized_economic < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.lifetime_realized_economic|float|abs) }}
     </div>
 
+    {% if b.non_contribution_cash_flow != 0 %}
+    <div class="text-label-2">+ Dividends &amp; interest − fees</div>
+    <div class="num text-right {% if b.non_contribution_cash_flow < 0 %}text-neg{% else %}text-pos{% endif %}">
+      {% if b.non_contribution_cash_flow < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.non_contribution_cash_flow|float|abs) }}
+    </div>
+    {% endif %}
+
+    {% if b.share_transfer_basis_net != 0 %}
+    <div class="text-label-2">+ In-kind share transfers (basis)</div>
+    <div class="num text-right {% if b.share_transfer_basis_net < 0 %}text-neg{% else %}text-pos{% endif %}">
+      {% if b.share_transfer_basis_net < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.share_transfer_basis_net|float|abs) }}
+    </div>
+    {% endif %}
+
     <div class="text-label-2">+ Current unrealized P/L</div>
     <div class="num text-right {% if b.current_unrealized < 0 %}text-neg{% else %}text-pos{% endif %}">
       {% if b.current_unrealized < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.current_unrealized|float|abs) }}
     </div>
+
+    {% if b.reconciliation_residual != 0 %}
+    <div class="text-label-2" title="Composition − classified source. Usually a flow we don't yet model (in-kind transfer-out lot basis, corporate-action write-up, etc.).">
+      + Other / unattributed
+    </div>
+    <div class="num text-right {% if b.reconciliation_residual < 0 %}text-neg{% else %}text-pos{% endif %}">
+      {% if b.reconciliation_residual < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(b.reconciliation_residual|float|abs) }}
+    </div>
+    {% endif %}
 
     <div class="font-semibold border-t border-hairline pt-2 mt-1">= Total Account Value</div>
     <div class="num text-right font-semibold border-t border-hairline pt-2 mt-1 {% if b.total_account_value < 0 %}text-neg{% else %}text-pos{% endif %}">
@@ -65,6 +88,11 @@
   {% if b.has_short_options %}
     <div class="mt-3 text-label-3 text-[11px] leading-snug" data-explain="short-option-caveat">
       Short options estimated as intrinsic value + straight-line time decay; confirm cost-to-close with your broker.
+    </div>
+  {% endif %}
+  {% if b.reconciliation_residual != 0 %}
+    <div class="mt-3 p-2 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300 text-[11px] leading-snug" data-explain="reconciliation-caveat">
+      ⚠ The two equations didn't fully reconcile. ${{ "{:,.2f}".format(b.reconciliation_residual|float|abs) }} is shown as "Other / unattributed" — likely an in-kind transfer-out, corporate-action adjustment, or similar flow not yet modeled by the explainer.
     </div>
   {% endif %}
   {% if b.missing_symbols %}

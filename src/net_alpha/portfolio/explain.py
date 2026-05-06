@@ -102,12 +102,31 @@ class AccountValueBreakdown:
 
       Source:      net_contributed
                  + lifetime_realized_economic   (after wash, the cash one)
+                 + non_contribution_cash_flow   (dividends + interest − fees)
+                 + share_transfer_basis_net     (in-kind transfers' cost basis)
                  + current_unrealized
+                 + reconciliation_residual      (anything we couldn't classify)
 
-    The reconciliation invariant is enforced in `build_account_value_breakdown`.
     `lifetime_realized_economic` MUST be the wash-adjusted economic figure
     (`KpiSet.lifetime_realized_economic`), not the tax-recognized one — the
     cash account never sees a wash-sale disallowance.
+
+    `non_contribution_cash_flow` captures cash events that move the balance
+    but are neither user contributions nor trade P&L: dividends, interest,
+    fees. Without this term the composition over-counts those amounts.
+
+    `share_transfer_basis_net` is the cost basis of in-kind share transfers
+    (`Trade.basis_source` of "transfer_in" / "transfer_out"). These move
+    shares (not cash) into/out of the account, so the lots' cost basis adds
+    value to the composition without any matching cash flow or P&L event;
+    the source equation needs an explicit term to balance them.
+
+    `reconciliation_residual` is the catch-all the builder fills in so the
+    two equations agree by construction. A non-zero residual means the
+    explainer is missing a flow we don't yet model (a corporate action
+    write-up, an option assignment basis adjustment we haven't propagated,
+    etc.) — the panel surfaces it as a labelled row so users can see the
+    gap rather than the page 500ing.
     """
 
     # Composition (Equation 1)
@@ -118,7 +137,10 @@ class AccountValueBreakdown:
     # Source (Equation 2)
     net_contributed: Decimal
     lifetime_realized_economic: Decimal
+    non_contribution_cash_flow: Decimal  # dividends + interest − fees
+    share_transfer_basis_net: Decimal  # in-kind transfer-in basis − transfer-out basis
     current_unrealized: Decimal
+    reconciliation_residual: Decimal  # composition − (other source terms); zero on clean books
     # Reconciliation total — both equations agree to this value
     total_account_value: Decimal
     # Caveat data
@@ -325,6 +347,8 @@ def build_account_value_breakdown(
     cash_balance: Decimal,
     net_contributed: Decimal,
     lifetime_realized_economic: Decimal,
+    non_contribution_cash_flow: Decimal,
+    share_transfer_basis_net: Decimal,
     missing_symbols: tuple[str, ...],
     fetched_at: dt.datetime | None,
     as_of: dt.date,
@@ -396,14 +420,17 @@ def build_account_value_breakdown(
         (long_stock_mv + long_option_mv - long_cost_total) + (short_premium_total - short_liability_total)
     ).quantize(Decimal("0.01"))
 
-    # Source: net_contributed + lifetime_realized_economic + current_unrealized
-    source_total = (net_contributed + lifetime_realized_economic + current_unrealized).quantize(Decimal("0.01"))
-
-    # Reconciliation invariant — both equations must agree to within $0.01.
-    if abs(composition_total - source_total) > Decimal("0.01"):
-        raise ValueError(
-            f"AccountValueBreakdown reconciliation failed: composition={composition_total} source={source_total}"
-        )
+    # Source equation, before residual. Any remaining gap is folded into a
+    # labelled "Other / unattributed" row so the panel always renders — better
+    # to show the user a visible discrepancy than to 500 the whole tile.
+    classified_source = (
+        net_contributed
+        + lifetime_realized_economic
+        + non_contribution_cash_flow
+        + share_transfer_basis_net
+        + current_unrealized
+    ).quantize(Decimal("0.01"))
+    reconciliation_residual = (composition_total - classified_source).quantize(Decimal("0.01"))
 
     return AccountValueBreakdown(
         cash_balance=cash_balance.quantize(Decimal("0.01")),
@@ -412,7 +439,10 @@ def build_account_value_breakdown(
         short_option_liability=short_liability_total,
         net_contributed=net_contributed.quantize(Decimal("0.01")),
         lifetime_realized_economic=lifetime_realized_economic.quantize(Decimal("0.01")),
+        non_contribution_cash_flow=non_contribution_cash_flow.quantize(Decimal("0.01")),
+        share_transfer_basis_net=share_transfer_basis_net.quantize(Decimal("0.01")),
         current_unrealized=current_unrealized,
+        reconciliation_residual=reconciliation_residual,
         total_account_value=composition_total,
         missing_symbols=tuple(missing_symbols),
         has_short_options=has_short_options,
