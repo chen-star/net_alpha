@@ -390,3 +390,88 @@ def test_after_tax_no_brackets_falls_back_to_pretax_with_note():
     )
     assert result.after_tax_pnl == result.pre_tax_pnl
     assert any("brackets" in n.lower() for n in result.notes)
+
+
+def test_min_tax_picks_combo_minimizing_tax_bill():
+    """Two lots: one big LT loss, one small ST gain. Min Tax should prefer
+    the LT loss to maximize the deduction."""
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.portfolio.tax_planner import TaxBrackets
+
+    # Lot 1: 50 shares × $200/sh basis = $10,000 total. Held > 365d → LT.
+    #   At sell=$100: -$5000 LT loss
+    # Lot 2: 50 shares × $80/sh basis = $4,000 total. Held < 365d → ST.
+    #   At sell=$100: +$1000 ST gain
+    lots = [
+        _lot(1, 50, 10000.0, D(2023, 1, 1)),  # LT loss at sell
+        _lot(2, 50, 4000.0, D(2025, 12, 1)),  # ST gain at sell
+    ]
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Dc("0.35"),
+        state_marginal_rate=Dc("0"),
+        ltcg_rate=Dc("0.15"),
+        qualified_div_rate=Dc("0.15"),
+        niit_enabled=False,
+    )
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return []
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("50"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="MIN_TAX",
+        repo=_R(),
+        etf_pairs={},
+        brackets=brackets,
+        carryforward=None,
+    )
+    # MIN_TAX picks lot 1 (the LT loss) → max tax benefit.
+    assert [p.lot_id for p in result.picks] == ["1"]
+
+
+def test_min_tax_greedy_fallback_for_many_lots():
+    """With >12 lots, MIN_TAX uses greedy fallback and emits an 'approximate' note."""
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.portfolio.tax_planner import TaxBrackets
+
+    # 15 lots of 10 shares each, basis varying $100-$115.
+    lots = [_lot(i, 10, 1000.0 + i * 10, D(2023, 1, 1)) for i in range(1, 16)]
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Dc("0.35"),
+        state_marginal_rate=Dc("0"),
+        ltcg_rate=Dc("0.15"),
+        qualified_div_rate=Dc("0.15"),
+        niit_enabled=False,
+    )
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return []
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("100"),
+        sell_price=Dc("90"),
+        sell_date=D(2026, 5, 5),
+        strategy="MIN_TAX",
+        repo=_R(),
+        etf_pairs={},
+        brackets=brackets,
+        carryforward=None,
+    )
+    # 100 shares from 15 lots of 10 each → 10 lots picked.
+    assert sum(p.qty_consumed for p in result.picks) == Dc("100")
+    # Greedy fallback emits a note.
+    assert any("greedy" in n.lower() or "approximate" in n.lower() for n in result.notes)

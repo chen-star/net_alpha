@@ -4,9 +4,12 @@ Five strategies: FIFO, LIFO, HIFO, MIN_TAX, MAX_LOSS. All share the same
 output shape (LotPickResult) so the Sim comparison table can render any of
 them uniformly. Wash-sale awareness routes through engine.detector.
 
-This file ships the skeleton + FIFO/LIFO/HIFO ordering. Tasks 12-16 extend
-with wash-sale checks, after-tax math, MIN_TAX combo enumeration, and
-MAX_LOSS strategy.
+FIFO/LIFO/HIFO are pure orderings handled by ``_order_lots`` + ``_consume``.
+MIN_TAX and MAX_LOSS are not orderings — they pick the *combination* of lots
+that optimizes a score (after-tax P&L for MIN_TAX, pre-tax P&L for MAX_LOSS).
+For ≤``GREEDY_THRESHOLD`` lots they brute-force all combos; beyond that they
+fall back to a greedy heuristic (HIFO ordering) and emit an "approximate"
+note so the UI can flag the result.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from pydantic import BaseModel, Field
 from net_alpha.models.domain import Lot
 
 LT_HOLDING_DAYS = 365  # held > 365 days → long-term
+GREEDY_THRESHOLD = 12  # combos beyond this fall back to greedy
 
 Strategy = Literal["FIFO", "LIFO", "HIFO", "MIN_TAX", "MAX_LOSS"]
 
@@ -73,19 +77,55 @@ def select_lots(
 ) -> LotPickResult:
     """Pick lots for a hypothetical sell, returning a fully-populated result.
 
-    This skeleton implementation handles FIFO/LIFO/HIFO ordering. Wash-sale
-    check, after-tax math, and the MIN_TAX/MAX_LOSS strategies land in
-    subsequent tasks. The ``repo``, ``etf_pairs``, ``brackets``, and
-    ``carryforward`` parameters are accepted for forward compatibility and
-    intentionally unused at this stage.
+    FIFO/LIFO/HIFO are pure orderings: lots are sorted then consumed in order.
+    MIN_TAX/MAX_LOSS dispatch to ``_select_combo`` which brute-forces small
+    pools and falls back to a greedy heuristic beyond ``GREEDY_THRESHOLD``.
     """
     total_avail = sum((Decimal(str(lot.quantity)) for lot in lots), Decimal("0"))
     if total_avail < qty:
         raise InsufficientLotsError(f"requested {qty} but only {total_avail} available")
 
+    if strategy in ("MIN_TAX", "MAX_LOSS"):
+        return _select_combo(
+            lots=lots,
+            qty=qty,
+            sell_price=sell_price,
+            sell_date=sell_date,
+            strategy=strategy,
+            repo=repo,
+            etf_pairs=etf_pairs,
+            brackets=brackets,
+            carryforward=carryforward,
+        )
+
     ordered = _order_lots(lots, strategy)
     picks = _consume(ordered, qty, sell_date)
+    return _evaluate(
+        strategy=strategy,
+        picks=picks,
+        sell_price=sell_price,
+        sell_date=sell_date,
+        ticker=lots[0].ticker if lots else "",
+        repo=repo,
+        etf_pairs=etf_pairs,
+        brackets=brackets,
+        carryforward=carryforward,
+    )
 
+
+def _evaluate(
+    *,
+    strategy: Strategy,
+    picks: list[LotPick],
+    sell_price: Decimal,
+    sell_date: date,
+    ticker: str,
+    repo,
+    etf_pairs: dict,
+    brackets,
+    carryforward,
+) -> LotPickResult:
+    """Compose the LotPickResult from a finalized list of picks."""
     pre_tax = sum(
         (p.qty_consumed * (sell_price - p.adjusted_basis) for p in picks),
         Decimal("0"),
@@ -99,11 +139,6 @@ def select_lots(
         Decimal("0"),
     )
 
-    # Wash-sale check (Task 13). Each loss-pick is checked against the trade
-    # history for substantially-identical buys within the ±30-day window. When
-    # one is found, the loss magnitude is added to ``wash_sale_disallowed``
-    # (rolled into the replacement lot's basis under §1091 in real recompute).
-    ticker = lots[0].ticker if lots else ""
     wash_disallowed = Decimal("0")
     has_wash = False
     for p in picks:
@@ -141,14 +176,163 @@ def select_lots(
     )
 
 
+def _select_combo(
+    *,
+    lots: list[Lot],
+    qty: Decimal,
+    sell_price: Decimal,
+    sell_date: date,
+    strategy: Strategy,
+    repo,
+    etf_pairs: dict,
+    brackets,
+    carryforward,
+) -> LotPickResult:
+    """For MIN_TAX/MAX_LOSS — enumerate combos when feasible, greedy beyond."""
+    if len(lots) <= GREEDY_THRESHOLD:
+        return _select_brute(
+            lots=lots,
+            qty=qty,
+            sell_price=sell_price,
+            sell_date=sell_date,
+            strategy=strategy,
+            repo=repo,
+            etf_pairs=etf_pairs,
+            brackets=brackets,
+            carryforward=carryforward,
+        )
+    return _select_greedy(
+        lots=lots,
+        qty=qty,
+        sell_price=sell_price,
+        sell_date=sell_date,
+        strategy=strategy,
+        repo=repo,
+        etf_pairs=etf_pairs,
+        brackets=brackets,
+        carryforward=carryforward,
+    )
+
+
+def _select_brute(
+    *,
+    lots: list[Lot],
+    qty: Decimal,
+    sell_price: Decimal,
+    sell_date: date,
+    strategy: Strategy,
+    repo,
+    etf_pairs: dict,
+    brackets,
+    carryforward,
+) -> LotPickResult:
+    """Brute-force: try every subset (smallest first) that covers qty.
+
+    Iteration starts at 1-lot combos and grows; combined with stable lot_id
+    sorting this naturally prefers fewer-lot, deterministic solutions on ties.
+    """
+    from itertools import combinations
+
+    best: LotPickResult | None = None
+    sorted_lots = sorted(lots, key=lambda lot: lot.id)
+    ticker = lots[0].ticker if lots else ""
+    for r in range(1, len(sorted_lots) + 1):
+        for combo in combinations(sorted_lots, r):
+            combo_qty = sum((Decimal(str(lot.quantity)) for lot in combo), Decimal("0"))
+            if combo_qty < qty:
+                continue
+            picks = _consume(list(combo), qty, sell_date)
+            cand = _evaluate(
+                strategy=strategy,
+                picks=picks,
+                sell_price=sell_price,
+                sell_date=sell_date,
+                ticker=ticker,
+                repo=repo,
+                etf_pairs=etf_pairs,
+                brackets=brackets,
+                carryforward=carryforward,
+            )
+            if best is None or _is_better(cand, best, strategy):
+                best = cand
+    assert best is not None  # total_avail >= qty guaranteed by caller
+    return best
+
+
+def _is_better(a: LotPickResult, b: LotPickResult, strategy: Strategy) -> bool:
+    """Strategy-specific scoring for combo enumeration.
+
+    MIN_TAX picks the combo with the smallest *tax bill on this transaction*
+    — i.e., it maximizes the tax delta ``(after_tax_pnl - pre_tax_pnl)``,
+    which captures how much tax this sale saves (positive = refund, negative
+    = tax owed). Comparing ``after_tax_pnl`` directly would conflate trade
+    economics with tax outcome and pick the gain over the loss every time;
+    a tax-aware planner wants the loss so the user banks the deduction.
+
+    MAX_LOSS minimizes pre-tax P&L (most negative loss). Both strategies
+    prefer combos with no wash-sale risk on ties.
+    """
+    if strategy == "MIN_TAX":
+        a_savings = a.after_tax_pnl - a.pre_tax_pnl
+        b_savings = b.after_tax_pnl - b.pre_tax_pnl
+        if a_savings != b_savings:
+            return a_savings > b_savings
+        if a.has_wash_sale_risk != b.has_wash_sale_risk:
+            return not a.has_wash_sale_risk
+        return False
+    if strategy == "MAX_LOSS":
+        if a.pre_tax_pnl != b.pre_tax_pnl:
+            return a.pre_tax_pnl < b.pre_tax_pnl
+        if a.has_wash_sale_risk != b.has_wash_sale_risk:
+            return not a.has_wash_sale_risk
+        return False
+    return False
+
+
+def _select_greedy(
+    *,
+    lots: list[Lot],
+    qty: Decimal,
+    sell_price: Decimal,
+    sell_date: date,
+    strategy: Strategy,
+    repo,
+    etf_pairs: dict,
+    brackets,
+    carryforward,
+) -> LotPickResult:
+    """Greedy fallback for >GREEDY_THRESHOLD lots.
+
+    Both MIN_TAX and MAX_LOSS use HIFO ordering as a heuristic — highest
+    per-share basis first maximizes the loss (or minimizes the gain) per
+    pick, which is a decent proxy for "lowest tax bill" and a direct match
+    for "biggest loss." An "approximate" note is appended so the UI can
+    surface that exact search was skipped.
+    """
+    ordered = _order_lots(lots, "HIFO")
+    picks = _consume(ordered, qty, sell_date)
+    result = _evaluate(
+        strategy=strategy,
+        picks=picks,
+        sell_price=sell_price,
+        sell_date=sell_date,
+        ticker=lots[0].ticker if lots else "",
+        repo=repo,
+        etf_pairs=etf_pairs,
+        brackets=brackets,
+        carryforward=carryforward,
+    )
+    result.notes.append(f"Approximate (greedy): exact search disabled for >{GREEDY_THRESHOLD} lots")
+    return result
+
+
 def _order_lots(lots: list[Lot], strategy: Strategy) -> list[Lot]:
     """Return lots in consumption order for the given strategy.
 
-    MIN_TAX and MAX_LOSS are NOT pure orderings — Tasks 15/16 implement them
-    with combo enumeration. For now they fall through to FIFO (skeleton).
-
-    HIFO sorts on basis-per-share, not total basis. All orderings tiebreak
-    by lot_id ascending for determinism.
+    Only FIFO/LIFO/HIFO are valid here — MIN_TAX/MAX_LOSS go through
+    ``_select_combo`` and never reach this function. HIFO sorts on
+    basis-per-share, not total basis. All orderings tiebreak by lot_id
+    ascending for determinism.
     """
     if strategy == "FIFO":
         return sorted(lots, key=lambda lot: (lot.date, lot.id))
@@ -163,7 +347,8 @@ def _order_lots(lots: list[Lot], strategy: Strategy) -> list[Lot]:
             return Decimal(str(lot.adjusted_basis)) / qty
 
         return sorted(lots, key=lambda lot: (-_per_share_basis(lot), lot.id))
-    return sorted(lots, key=lambda lot: (lot.date, lot.id))  # MIN_TAX/MAX_LOSS placeholder
+    # Defensive: should not be reached — MIN_TAX/MAX_LOSS go through _select_combo.
+    return sorted(lots, key=lambda lot: (lot.date, lot.id))
 
 
 def _consume(
