@@ -16,6 +16,7 @@ from net_alpha.db.tables import (
     CashEventRow,
     ExemptMatchRow,
     ImportRecordRow,
+    LossCarryforwardRow,
     LotOverrideRow,
     LotRow,
     MetaRow,
@@ -1864,6 +1865,62 @@ class Repository:
             tags=tags,
             sort_order=row.sort_order,
         )
+
+    # ---- Carryforward overrides ----
+
+    def get_carryforward_override(self, year: int) -> LossCarryforwardRow | None:
+        """Return the user-entered ST/LT carryforward override for `year`,
+        or None if no override is recorded."""
+        with Session(self.engine) as s:
+            return s.get(LossCarryforwardRow, year)
+
+    def upsert_carryforward_override(
+        self,
+        *,
+        year: int,
+        st: Decimal,
+        lt: Decimal,
+        note: str | None = None,
+    ) -> None:
+        """Create or replace the carryforward override for `year`.
+
+        Amounts are stored as positive magnitudes (loss = positive number);
+        sign is flipped at apply-time inside the planner / after-tax math.
+        Always stamped with ``source="user"`` and a fresh ``updated_at``.
+        """
+        now = datetime.now()
+        with Session(self.engine) as s:
+            existing = s.get(LossCarryforwardRow, year)
+            if existing is None:
+                row = LossCarryforwardRow(
+                    year=year,
+                    st_amount=st,
+                    lt_amount=lt,
+                    source="user",
+                    note=note,
+                    updated_at=now,
+                )
+                s.add(row)
+            else:
+                existing.st_amount = st
+                existing.lt_amount = lt
+                existing.note = note
+                existing.updated_at = now
+                s.add(existing)
+            s.commit()
+
+    def delete_carryforward_override(self, year: int) -> None:
+        """Delete the carryforward override for `year`. No-op if absent."""
+        with Session(self.engine) as s:
+            existing = s.get(LossCarryforwardRow, year)
+            if existing is not None:
+                s.delete(existing)
+                s.commit()
+
+    def all_carryforward_overrides(self) -> list[LossCarryforwardRow]:
+        """Return every carryforward override, sorted ascending by year."""
+        with Session(self.engine) as s:
+            return list(s.exec(select(LossCarryforwardRow).order_by(LossCarryforwardRow.year)).all())
 
 
 # ---------------------------------------------------------------------------
