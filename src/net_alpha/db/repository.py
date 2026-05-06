@@ -1888,7 +1888,7 @@ class Repository:
         sign is flipped at apply-time inside the planner / after-tax math.
         Always stamped with ``source="user"`` and a fresh ``updated_at``.
         """
-        now = datetime.now()
+        now = datetime.now(UTC)
         with Session(self.engine) as s:
             existing = s.get(LossCarryforwardRow, year)
             if existing is None:
