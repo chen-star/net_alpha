@@ -2,6 +2,41 @@
 
 
 
+## v0.52.2 (2026-05-06)
+
+### Chore
+
+* chore: refresh GitNexus index stats and uv.lock to v0.52.1
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3947c37`](https://github.com/chen-star/net_alpha/commit/3947c37804a7407b0cf19f5d17401650e4329523))
+
+### Documentation
+
+* docs(readme): switch pepy badge to lifetime downloads
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5caf6b7`](https://github.com/chen-star/net_alpha/commit/5caf6b7a6dd47723016fe0a4ca532bc6f583ce20))
+
+### Fix
+
+* fix(portfolio): reconcile account-value explainer against external flows
+
+The Account Value explainer 500&#39;d whenever cash held dividends, interest,
+fees, or in-kind share transfers — those move the cash balance and lot
+basis without going through `net_contributed` or `lifetime_realized`,
+breaking the composition vs. source invariant. Add explicit source-side
+terms for non-contribution cash flows and share-transfer basis, and fold
+any remaining gap into a labelled &#34;Other / unattributed&#34; residual row
+with an amber caveat banner so the panel always renders.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fc0f2aa`](https://github.com/chen-star/net_alpha/commit/fc0f2aa0ee346b8c6b7da1cc7af2985ebed5ea46))
+
+### Style
+
+* style: ruff format pass on test_portfolio_explain
+
+Pre-existing formatting drift surfaced by ruff format --check in CI. ([`ee56b93`](https://github.com/chen-star/net_alpha/commit/ee56b934a6158a710df3b0309b574431f5e6a1ab))
+
+
 ## v0.52.1 (2026-05-05)
 
 ### Performance
