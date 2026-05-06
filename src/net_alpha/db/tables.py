@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
+from pydantic import field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
@@ -279,3 +281,44 @@ class DismissedInboxItemRow(SQLModel, table=True):
 
     dismiss_key: str = Field(primary_key=True)
     dismissed_at: str  # ISO 8601 UTC timestamp
+
+
+class LossCarryforwardRow(SQLModel, table=True):
+    """Per-year ST/LT capital-loss carryforward override.
+
+    Only user overrides are persisted. Derived values are computed on read by
+    `portfolio.carryforward.derive_carryforward` and never stored. Aggregated
+    federal-level — not per-account.
+
+    Sign convention: stored as positive magnitudes (loss = positive number);
+    sign is flipped at apply-time inside the planner / after-tax math.
+    """
+
+    __tablename__ = "loss_carryforward"
+    # SQLModel `table=True` models skip pydantic validation by default; opt in
+    # so the field validators below enforce sign / source on construction.
+    model_config = {"validate_assignment": True}  # type: ignore[assignment]
+
+    year: int = Field(primary_key=True)
+    st_amount: Decimal = Field(default=Decimal("0"))
+    lt_amount: Decimal = Field(default=Decimal("0"))
+    # Stored as str (SQLModel can't map typing.Literal to a column); the
+    # validator below pins it to the allowed values.
+    source: str = Field(default="user")
+    note: str | None = None
+    updated_at: datetime
+
+    @field_validator("st_amount", "lt_amount")
+    @classmethod
+    def _non_negative(cls, v: Decimal) -> Decimal:
+        if v < 0:
+            raise ValueError("carryforward amounts are positive magnitudes")
+        return v
+
+    @field_validator("source")
+    @classmethod
+    def _allowed_source(cls, v: str) -> str:
+        allowed: tuple[Literal["user"], ...] = ("user",)
+        if v not in allowed:
+            raise ValueError(f"source must be one of {allowed}, got {v!r}")
+        return v
