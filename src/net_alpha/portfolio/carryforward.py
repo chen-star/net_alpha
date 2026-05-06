@@ -53,26 +53,82 @@ def _roll_one_year(
     st_pnl: Decimal,
     lt_pnl: Decimal,
 ) -> tuple[Decimal, Decimal]:
-    """One-year roll. Stub — full §1212(b) netting added in Task 5; multi-year cases
-    handled then. Single-year cases pass with this simpler implementation.
+    """One-year roll honoring §1212(b) netting and §1211 $3K cap.
 
-    Treat ST and LT independently; apply $3K cap proportionally on net loss across
-    both buckets.
+    Inputs:
+        st_in, lt_in: prior carryforward magnitudes (positive numbers).
+        st_pnl, lt_pnl: this year's signed realized P&L.
+
+    Returns the (st, lt) carryforward magnitudes rolling INTO next year.
+
+    Semantics: the prior carryforward has already had its §1211 cap applied
+    in a prior year, so it is consumed by this year's gains FIRST and any
+    residual rolls forward without re-capping. Only NEW losses originating
+    this year are subject to the $3K cap. Cross-category netting per
+    §1212(b)(1)(B) applies to both the carry-vs-gains and new-loss-vs-gains
+    steps.
     """
-    # st_pnl, lt_pnl are signed; carryforward magnitudes are non-negative.
-    st_after = st_pnl - st_in  # carryforward consumes gains first
-    lt_after = lt_pnl - lt_in
+    # 1) Split this year's P&L into per-bucket gains vs new losses.
+    st_new_loss = max(Decimal("0"), -st_pnl)
+    lt_new_loss = max(Decimal("0"), -lt_pnl)
+    st_gain = max(Decimal("0"), st_pnl)
+    lt_gain = max(Decimal("0"), lt_pnl)
 
-    st_loss_abs = max(Decimal("0"), -st_after)
-    lt_loss_abs = max(Decimal("0"), -lt_after)
-    total_loss = st_loss_abs + lt_loss_abs
+    # 2) Apply prior carryforward against this year's gains, same bucket first,
+    #    then cross-category per §1212(b)(1)(B). Residual carry rolls forward
+    #    without re-capping.
+    st_carry = st_in
+    lt_carry = lt_in
 
-    if total_loss == 0:
-        return Decimal("0"), Decimal("0")
+    # Same-bucket absorption.
+    absorbed = min(st_carry, st_gain)
+    st_carry -= absorbed
+    st_gain -= absorbed
+    absorbed = min(lt_carry, lt_gain)
+    lt_carry -= absorbed
+    lt_gain -= absorbed
 
-    cap_used = min(total_loss, ORDINARY_LOSS_CAP)
-    surplus = total_loss - cap_used
+    # Cross-bucket absorption: ST carry vs LT gain, LT carry vs ST gain.
+    absorbed = min(st_carry, lt_gain)
+    st_carry -= absorbed
+    lt_gain -= absorbed
+    absorbed = min(lt_carry, st_gain)
+    lt_carry -= absorbed
+    st_gain -= absorbed
 
-    st_share = (st_loss_abs / total_loss) * surplus
-    lt_share = (lt_loss_abs / total_loss) * surplus
-    return st_share, lt_share
+    # 3) Apply this year's new losses against any remaining gains (same
+    #    bucket first, then cross-category).
+    absorbed = min(st_new_loss, st_gain)
+    st_new_loss -= absorbed
+    st_gain -= absorbed
+    absorbed = min(lt_new_loss, lt_gain)
+    lt_new_loss -= absorbed
+    lt_gain -= absorbed
+
+    absorbed = min(st_new_loss, lt_gain)
+    st_new_loss -= absorbed
+    lt_gain -= absorbed
+    absorbed = min(lt_new_loss, st_gain)
+    lt_new_loss -= absorbed
+    st_gain -= absorbed
+
+    # 4) §1211 $3K cap on this year's NEW net losses only.
+    new_total = st_new_loss + lt_new_loss
+    if new_total > 0:
+        cap_used = min(new_total, ORDINARY_LOSS_CAP)
+        surplus = new_total - cap_used
+        if surplus > 0:
+            # Per Schedule D Capital Loss Carryover Worksheet, surplus retains
+            # character proportionally. Quantize to whole cents to avoid
+            # repeating-decimal artifacts from Decimal division.
+            st_share = (st_new_loss / new_total * surplus).quantize(Decimal("0.01"))
+            lt_share = surplus - st_share
+        else:
+            st_share = Decimal("0")
+            lt_share = Decimal("0")
+    else:
+        st_share = Decimal("0")
+        lt_share = Decimal("0")
+
+    # 5) Total carry into next year = unconsumed prior carry + new surplus.
+    return st_carry + st_share, lt_carry + lt_share
