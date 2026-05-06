@@ -118,7 +118,15 @@ def select_lots(
         wash_disallowed += d
         if d > 0:
             has_wash = True
-    after_tax = pre_tax  # placeholder until brackets applied in Task 14
+
+    after_tax, notes = _compute_after_tax(
+        st=st,
+        lt=lt,
+        wash_disallowed=wash_disallowed,
+        carryforward=carryforward,
+        brackets=brackets,
+        strategy=strategy,
+    )
 
     return LotPickResult(
         strategy=strategy,
@@ -129,6 +137,7 @@ def select_lots(
         wash_sale_disallowed=wash_disallowed,
         after_tax_pnl=after_tax,
         has_wash_sale_risk=has_wash,
+        notes=notes,
     )
 
 
@@ -234,3 +243,66 @@ def _check_wash_sale(
             return -pnl  # disallowed loss = magnitude of the loss
 
     return Decimal("0")
+
+
+def _compute_after_tax(
+    *,
+    st: Decimal,
+    lt: Decimal,
+    wash_disallowed: Decimal,
+    carryforward,
+    brackets,
+    strategy: Strategy,
+) -> tuple[Decimal, list[str]]:
+    """Apply carryforward absorption + brackets + $3K cap.
+
+    Disallowed losses contribute $0 current-year benefit (the loss is rolled
+    into the replacement lot's basis under §1091, not realized this year).
+    """
+    notes: list[str] = []
+    pre_tax = st + lt
+
+    if brackets is None:
+        if strategy == "MIN_TAX":
+            notes.append("Min Tax disabled — no tax brackets configured")
+        return pre_tax, notes
+
+    # Strip disallowed loss out of the deductible side. Allocate proportionally
+    # to whichever bucket(s) had losses.
+    if wash_disallowed > 0:
+        total_loss = max(Decimal("0"), -st) + max(Decimal("0"), -lt)
+        if total_loss > 0:
+            st_disallow = (max(Decimal("0"), -st) / total_loss) * wash_disallowed
+            lt_disallow = (max(Decimal("0"), -lt) / total_loss) * wash_disallowed
+            st = st + st_disallow  # less negative (closer to 0)
+            lt = lt + lt_disallow
+
+    # Apply carryforward (carryforward magnitudes are positive numbers).
+    cf_st = carryforward.st if carryforward else Decimal("0")
+    cf_lt = carryforward.lt if carryforward else Decimal("0")
+    st_after = st - cf_st
+    lt_after = lt - cf_lt
+
+    # Cross-category netting if one is negative and the other positive.
+    if st_after < 0 and lt_after > 0:
+        absorbed = min(-st_after, lt_after)
+        st_after += absorbed
+        lt_after -= absorbed
+    elif lt_after < 0 and st_after > 0:
+        absorbed = min(-lt_after, st_after)
+        lt_after += absorbed
+        st_after -= absorbed
+
+    # Tax on positive side; losses give tax benefit only via $3K cap.
+    st_tax = max(Decimal("0"), st_after) * brackets.federal_marginal_rate
+    lt_tax = max(Decimal("0"), lt_after) * brackets.ltcg_rate
+    state_tax = max(Decimal("0"), st_after + lt_after) * brackets.state_marginal_rate
+    tax_bill = st_tax + lt_tax + state_tax
+
+    # Loss residue: up to $3K against ordinary saves federal_marginal_rate * $3K.
+    loss_residue = max(Decimal("0"), -(st_after + lt_after))
+    cap_used = min(loss_residue, Decimal("3000"))
+    loss_benefit = cap_used * brackets.federal_marginal_rate
+
+    after_tax = pre_tax - tax_bill + loss_benefit
+    return after_tax, notes

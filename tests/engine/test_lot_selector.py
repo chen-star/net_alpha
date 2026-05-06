@@ -268,3 +268,125 @@ def test_no_wash_sale_when_lot_is_a_gain():
         carryforward=None,
     )
     assert result.has_wash_sale_risk is False
+
+
+def test_after_tax_applies_brackets_and_carryforward():
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.portfolio.carryforward import Carryforward
+    from net_alpha.portfolio.tax_planner import TaxBrackets
+
+    # Lot held > 365 days at $50/sh, sell at $100 → LT gain $5000.
+    # 100 shares × $50/share basis = $5000 total. _lot expects total basis.
+    lots = [_lot(1, 100, 5000.0, D(2023, 1, 1))]
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Dc("0.35"),
+        state_marginal_rate=Dc("0"),
+        ltcg_rate=Dc("0.15"),
+        qualified_div_rate=Dc("0.15"),
+        niit_enabled=False,
+    )
+    cf = Carryforward(st=Dc("0"), lt=Dc("2000"), source="user")
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return []
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("100"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=brackets,
+        carryforward=cf,
+    )
+    # Pre-tax LT gain: 100 * (100 - 50) = 5000
+    # After $2000 LT carryforward: taxable LT = 3000
+    # Tax: 3000 * 0.15 = 450
+    # After-tax: 5000 - 450 = 4550
+    assert result.pre_tax_pnl == Dc("5000")
+    assert result.after_tax_pnl == Dc("4550")
+
+
+def test_after_tax_disallowed_loss_treated_as_zero_benefit():
+    """A wash-sale-disallowed loss provides $0 current-year tax benefit."""
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.models.domain import Trade
+    from net_alpha.portfolio.tax_planner import TaxBrackets
+
+    # 100 shares, $150/sh basis ($15K total), sell at $100 → -$5000 loss.
+    lots = [_lot(1, 100, 15000.0, D(2024, 6, 1))]
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Dc("0.35"),
+        state_marginal_rate=Dc("0"),
+        ltcg_rate=Dc("0.15"),
+        qualified_div_rate=Dc("0.15"),
+        niit_enabled=False,
+    )
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return [
+                Trade(
+                    id="b1",
+                    account="default",
+                    ticker="SPY",
+                    date=D(2026, 4, 25),
+                    action="Buy",
+                    quantity=10,
+                    proceeds=None,
+                    cost_basis=1100.0,
+                )
+            ]
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("100"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=brackets,
+        carryforward=None,
+    )
+    # Pre-tax: -5000. Wash sale disallows the full loss → 0 current-year benefit.
+    # After-tax: pre_tax - tax_bill (0) - loss_benefit (0) = -5000
+    assert result.pre_tax_pnl == Dc("-5000")
+    assert result.wash_sale_disallowed == Dc("5000")
+    assert result.after_tax_pnl == Dc("-5000")
+
+
+def test_after_tax_no_brackets_falls_back_to_pretax_with_note():
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    lots = [_lot(1, 100, 5000.0, D(2023, 1, 1))]
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return []
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("100"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="MIN_TAX",
+        repo=_R(),
+        etf_pairs={},
+        brackets=None,
+        carryforward=None,
+    )
+    assert result.after_tax_pnl == result.pre_tax_pnl
+    assert any("brackets" in n.lower() for n in result.notes)
