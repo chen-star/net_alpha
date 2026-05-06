@@ -1,0 +1,107 @@
+{# 5-strategy lot-picker comparison rendered under the per-account sim cards.
+   `lot_comparison` is None on insufficient lots; `lot_comparison_insufficient`
+   carries the engine error message so we can show a graceful fallback. #}
+{% if lot_comparison_insufficient %}
+  <div class="panel mt-4">
+    <div class="label-uc text-warn">Lot strategy comparison</div>
+    <div class="text-[12px] text-label-2 mt-1">
+      Comparison unavailable: {{ lot_comparison_insufficient }}.
+    </div>
+  </div>
+{% elif lot_comparison %}
+  <section class="mt-4 space-y-3" id="sim-lot-comparison">
+    <header class="flex items-baseline justify-between">
+      <h3 class="text-lg font-semibold">Lot strategy comparison</h3>
+      <span class="text-[12px] text-label-2">
+        Recommended:
+        <strong class="text-text">
+          {{ lot_comparison.results[lot_comparison.recommended_idx].strategy.replace('_', ' ').title() }}
+        </strong>
+      </span>
+    </header>
+
+    <div class="panel" style="padding:0;">
+      <table class="net-table">
+        <thead>
+          <tr>
+            <th>Strategy</th>
+            <th class="r" title="Realized P&L before tax effects.">Pre-tax P&amp;L</th>
+            <th class="r" title="Estimated P&L after applying configured federal/state/LTCG rates and prior-year carryforward.">After-tax P&amp;L</th>
+            <th class="r" title="Loss disallowed under §1091 if a substantially-identical buy fell within ±30 days.">Wash sale</th>
+            <th class="r">Lots</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in lot_comparison.results %}
+          {% set is_rec = loop.index0 == lot_comparison.recommended_idx %}
+          <tr {% if is_rec %}data-recommended="true" style="background-color: rgba(48,209,88,0.08);"{% endif %}>
+            <td class="font-semibold">
+              {{ r.strategy.replace('_', ' ').title() }}
+              {% if is_rec %}
+                <span class="chip-unclear ml-1" style="color: var(--color-pos); background: rgba(48,209,88,0.14);">Recommended</span>
+              {% endif %}
+            </td>
+            <td class="r num {% if r.pre_tax_pnl < 0 %}text-neg{% elif r.pre_tax_pnl > 0 %}text-pos{% endif %}">
+              ${{ "%.2f"|format(r.pre_tax_pnl|float) }}
+            </td>
+            <td class="r num {% if r.after_tax_pnl < 0 %}text-neg{% elif r.after_tax_pnl > 0 %}text-pos{% endif %}">
+              ${{ "%.2f"|format(r.after_tax_pnl|float) }}
+            </td>
+            <td class="r num">
+              {% if r.has_wash_sale_risk %}
+                <span class="text-warn">${{ "%.2f"|format(r.wash_sale_disallowed|float) }} disallowed</span>
+              {% else %}
+                <span class="text-label-3">&mdash;</span>
+              {% endif %}
+            </td>
+            <td class="r">
+              <details>
+                <summary class="cursor-pointer text-[12px] text-label-2">
+                  {{ r.picks|length }} lot{% if r.picks|length != 1 %}s{% endif %}
+                </summary>
+                <table class="net-table text-xs mt-1">
+                  <thead>
+                    <tr>
+                      <th>Acquired</th>
+                      <th class="r">Qty</th>
+                      <th class="r">Basis</th>
+                      <th>LT/ST</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for p in r.picks %}
+                    <tr>
+                      <td class="font-mono">{{ p.acquired_date }}</td>
+                      <td class="r num">{{ p.qty_consumed }}</td>
+                      <td class="r num">${{ "%.2f"|format(p.adjusted_basis|float) }}/sh</td>
+                      <td>
+                        <span class="chip-{% if p.is_long_term %}unclear{% else %}probable{% endif %}">
+                          {{ 'LT' if p.is_long_term else 'ST' }}
+                        </span>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </details>
+            </td>
+          </tr>
+          {% if r.notes %}
+          <tr>
+            <td colspan="5" class="text-[11px] text-label-3 italic">
+              {% for n in r.notes %}{{ n }}{% if not loop.last %}; {% endif %}{% endfor %}
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="text-[11px] text-label-3 leading-[1.55]">
+      Strategy recommendations are estimates based on configured tax brackets
+      and prior-year carryforward. Confirm specific-lot identification with
+      your broker before executing.
+    </footer>
+  </section>
+{% endif %}

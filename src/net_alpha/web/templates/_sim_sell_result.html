@@ -1,6 +1,7 @@
 {% include "_traffic_light.html" with context %}
 {% if not options %}
   <div class="panel text-label-2 text-sm">No holdings of <span class="font-mono">{{ ticker }}</span> in any account.</div>
+  {% include "_sim_lot_comparison.html" with context %}
 {% else %}
   <h2 class="text-xl mb-3">Per-account options for <span class="font-mono text-primary">{{ ticker }}</span></h2>
   <div class="grid grid-cols-2 gap-4">
@@ -36,4 +37,5 @@
       </div>
     {% endfor %}
   </div>
+  {% include "_sim_lot_comparison.html" with context %}
 {% endif %}
