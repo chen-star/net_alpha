@@ -2,6 +2,198 @@
 
 
 
+## v0.53.0 (2026-05-06)
+
+### Chore
+
+* chore: refresh GitNexus index stats and uv.lock to v0.52.2
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3886af6`](https://github.com/chen-star/net_alpha/commit/3886af6942f061904298b8d907cb0dbbfeda5a20))
+
+### Documentation
+
+* docs(readme): rewrite with logo, screenshots, and tighter structure
+
+Replaces the ASCII-art header with a gradient α logo, promotes two UI
+screenshots from the local audit set, and reorganizes the body around
+Overview / Quickstart / Features / Usage / Rules / Architecture so a
+first-time visitor can size up the project in a single scroll.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5637fdc`](https://github.com/chen-star/net_alpha/commit/5637fdca625efc871ef2ee07cd696df18f060ada))
+
+* docs(claude): document carryforward + lot_selector subsystems
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8ccd72a`](https://github.com/chen-star/net_alpha/commit/8ccd72a3e0be2d62529f4aebaf522d0c8d6df500))
+
+### Feature
+
+* feat(sim): 5-strategy lot comparison with recommendation chip
+
+Wires engine.lot_selector into the Sim page. POST /sim with action=Sell
+now runs FIFO, LIFO, HIFO, Min Tax, and Max Loss in parallel and renders
+a comparison table under the per-account result cards. The recommendation
+chip prefers no-wash-sale combos first, then highest after-tax P&amp;L.
+
+Insufficient-lots requests render a graceful &#34;comparison unavailable&#34;
+panel instead of crashing. The Buy path is unchanged.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7f47b05`](https://github.com/chen-star/net_alpha/commit/7f47b0509a66c44b35e2e4c9cc1737c8317e8139))
+
+* feat(lot_selector): MIN_TAX brute-force + greedy fallback
+
+Restructure select_lots so MIN_TAX/MAX_LOSS go through a combo
+enumerator: brute-force every subset that covers the requested qty for
+≤12 lots, fall back to a HIFO-ordered greedy with an &#34;approximate&#34; note
+beyond that. FIFO/LIFO/HIFO continue through the order-then-consume
+path, now sharing a single `_evaluate` composer with the combo branch.
+
+MIN_TAX scores combos by the largest tax saving on the transaction
+(`after_tax_pnl - pre_tax_pnl`), so a tax-aware planner picks the loss
+lot that banks a deduction over a gain lot that nets a higher absolute
+after-tax dollar amount but generates tax owed.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`39d3d40`](https://github.com/chen-star/net_alpha/commit/39d3d40481188e0888e8d21a111bcd629188e857))
+
+* feat(lot_selector): after-tax math with carryforward + brackets ([`7ca607b`](https://github.com/chen-star/net_alpha/commit/7ca607b7664b9aad8bc27309ffa6b6c8f3efd87e))
+
+* feat(lot_selector): wash-sale awareness via trades_for_ticker_in_window
+
+LotPick.adjusted_basis is now per-share (was a copy of the lot&#39;s total
+basis), so partial fills compute correct P&amp;L. Wired _check_wash_sale into
+select_lots: each loss-pick is checked against the trade history for a
+substantially-identical buy in ±30 days, including ETF-pair siblings.
+
+Repository gains a ticker-scoped trades_for_ticker_in_window helper —
+named distinctly from the existing date-only trades_in_window so its 18
+upstream callers stay untouched.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e48e38e`](https://github.com/chen-star/net_alpha/commit/e48e38ef0f6e282a8b319efd0ada01f381616c16))
+
+* feat(engine): lot_selector skeleton with FIFO/LIFO/HIFO ordering
+
+Adds the LotPick / LotPickResult / InsufficientLotsError contract plus the
+select_lots entry point with FIFO/LIFO/HIFO consumption orderings. Wash-sale
+checks, after-tax math, and the MIN_TAX/MAX_LOSS combo strategies land in
+Tasks 12-16. The repo / etf_pairs / brackets / carryforward parameters are
+plumbed through but unused at this stage. ([`c27d3c1`](https://github.com/chen-star/net_alpha/commit/c27d3c1dd33ce47474d40f62e2314edb9356963a))
+
+* feat(tax_planner): offset budget includes incoming carryforward
+
+Thread the prior-year ST/LT capital-loss carryforward through
+``compute_offset_budget`` so the YTD-vs-$3K projection accounts for losses
+rolling in from prior years. Production callers (portfolio, positions,
+wash-sales) now resolve the effective carryforward and pass it through.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5bdb67f`](https://github.com/chen-star/net_alpha/commit/5bdb67fa7194ccb0b2bddde45362fd946dd56a62))
+
+* feat(after_tax): consume carryforward, drop unmodeled caveat
+
+Wire the new Carryforward value through compute_after_tax so the projected
+tax bill correctly accounts for prior-year ST/LT capital-loss carryforwards.
+Carryforward magnitudes absorb same-bucket P&amp;L first; surplus crosses
+categories per §1212(b)(1)(B). Remove the legacy &#34;Capital-loss limitation
+... not modeled&#34; caveat (which existed precisely because we hadn&#39;t modeled
+this) and replace it with a &#34;Carryforward applied&#34; caveat surfaced only
+when a non-zero carryforward is consumed.
+
+Production caller (_build_performance_ctx in /tax?view=performance) now
+resolves the effective carryforward (override-wins) for year-scoped
+periods; Lifetime period passes None. Test-only callers can omit the
+kwarg — default None preserves legacy zero-carryforward behavior.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e3217a2`](https://github.com/chen-star/net_alpha/commit/e3217a262c5cd8ad48a256e89c8eeaf9545ca45d))
+
+* feat(web): settings carryforward upsert + reset endpoints
+
+Adds GET /settings/carryforward/edit (inline edit-row form),
+POST /settings/carryforward/save (upsert with 422 on negative/non-numeric),
+and POST /settings/carryforward/reset (delete override). Save/Reset
+re-render the whole carryforward section by calling the existing GET
+handler. The Edit/Reset buttons wired in Task 7&#39;s _settings_carryforward
+fragment now resolve instead of 404.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d5ceb6a`](https://github.com/chen-star/net_alpha/commit/d5ceb6a7fb1aa658717c1d933a9bd350edaffff9))
+
+* feat(web): settings carryforward GET + template
+
+Adds /settings/carryforward HTMX fragment that lists per-year ST/LT
+carryforward state — derived for years with prior-trade history,
+override-sourced for years the user has set explicitly. Read-only in
+this task; POST endpoints (edit / reset) follow in Task 8.
+
+Adapted from the original plan:
+- Project has no settings.html — mounted the lazy fragment in
+  settings_entry.html (the page body shown beneath the drawer).
+- Substituted plan&#39;s badge/btn-link CSS tokens for the project&#39;s
+  inline-style + bg-surface/hairline conventions used by other
+  drawer tabs.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8a24b19`](https://github.com/chen-star/net_alpha/commit/8a24b190335948fa8b1422e926a9920c6840bda4))
+
+* feat(carryforward): override-wins effective resolver + repo adapters
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`49555e8`](https://github.com/chen-star/net_alpha/commit/49555e82eff88b0709cf7b740f6552bfb5fdf3b1))
+
+* feat(carryforward): §1212(b) cross-category + §1211 cap
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c2fcc83`](https://github.com/chen-star/net_alpha/commit/c2fcc830c0d804176de06a308d93e455c0749915))
+
+* feat(carryforward): single-year derive baseline ([`d69dd15`](https://github.com/chen-star/net_alpha/commit/d69dd15a1282a17ef517cd9dc6ca07299b05f9eb))
+
+* feat(db): repository CRUD for loss carryforward overrides
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4c8fb20`](https://github.com/chen-star/net_alpha/commit/4c8fb20ba8eba82f946e3d1dde692b41219e61a6))
+
+* feat(db): migrate v17-&gt;v18 with loss_carryforward table ([`a8747a1`](https://github.com/chen-star/net_alpha/commit/a8747a12b73d2aab1f072444e9af69448a7d223e))
+
+* feat(db): add LossCarryforwardRow SQLModel ([`37caec8`](https://github.com/chen-star/net_alpha/commit/37caec8039f717e90d3bc2c5a6413acffb17057f))
+
+### Fix
+
+* fix(lot_selector): HIFO sorts on basis-per-share + deterministic tiebreaks ([`b780fe2`](https://github.com/chen-star/net_alpha/commit/b780fe2c8b85f48c544a6aafa4095ee0cf1ae65c))
+
+* fix(db): use UTC for carryforward updated_at timestamp ([`8ced102`](https://github.com/chen-star/net_alpha/commit/8ced1023d146c452325a29c843f513bff7f06efb))
+
+### Test
+
+* test(integration): carryforward + best-lot end-to-end
+
+Capstone smoke test verifying multi-year history rolls into a derived ST
+carryforward at /settings/carryforward, sim Sell renders the 5-strategy
+lot comparison with a recommendation, and a user override at $0/$0 wins
+over the derived value (override-wins semantics).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ce0377e`](https://github.com/chen-star/net_alpha/commit/ce0377eef1216a7ebdb78bbca47d7b943d375ef6))
+
+* test(lot_selector): MAX_LOSS strategy coverage
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3d04306`](https://github.com/chen-star/net_alpha/commit/3d043069e57fac67cb4a850376a2a2ec12293345))
+
+### Unknown
+
+* Merge branch &#39;feat/carryforward-and-best-lot&#39;
+
+Net-loss carryforward tracking + best-lot picker on Sim.
+
+Carryforward subsystem (portfolio/carryforward.py): pure-function ST/LT
+capital-loss carryforward derive with §1212(b) cross-category netting and
+§1211 $3K cap, hybrid auto-derive + user-override resolution. Stored via
+new LossCarryforwardRow / loss_carryforward table (schema v18). Surfaced
+at /settings/carryforward, consumed by compute_after_tax and
+compute_offset_budget.
+
+Lot selector (engine/lot_selector.py): pure-function select_lots() with
+five strategies (FIFO/LIFO/HIFO/MIN_TAX/MAX_LOSS), wash-sale-aware via
+new Repository.trades_for_ticker_in_window. MIN_TAX brute-forces ≤12
+lots, greedy beyond. Surfaced as a comparison table on the Sim page
+Sell action.
+
+Follow-ups: project_year_end_tax not yet wired to carryforward;
+realized_pnl_split (broker G/L) and realized_pnl_split_by_year
+(transactions FIFO) data-source asymmetry; _classify_st_lt_gains
+duplication can be consolidated. ([`87f1eff`](https://github.com/chen-star/net_alpha/commit/87f1eff40c3af910b987dfce80a50cefc8b6c887))
+
+
 ## v0.52.2 (2026-05-06)
 
 ### Chore
