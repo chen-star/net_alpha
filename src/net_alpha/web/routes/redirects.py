@@ -6,8 +6,7 @@ Three permanent (301) redirects keep old URLs working after the §3 IA shift:
   - /imports → /settings/imports
 
 Query strings are preserved on every redirect so per-page filters (period,
-account) and feature flags (e.g. ``?wizard=1`` from the welcome flow) survive
-the hop.
+account) survive the hop.
 """
 
 from __future__ import annotations

@@ -40,4 +40,4 @@ def start_tour(request: Request) -> RedirectResponse:
 
 @router.post("/welcome/start-import")
 def start_import(request: Request) -> RedirectResponse:
-    return RedirectResponse("/imports?wizard=1", status_code=303)
+    return RedirectResponse("/imports", status_code=303)

@@ -31,7 +31,7 @@ def test_start_tour_builds_demo_db_and_flips_mode(client: TestClient, tmp_data_d
     assert client.app.state.demo_mode is True
 
 
-def test_start_import_redirects_with_wizard_flag(client: TestClient) -> None:
+def test_start_import_redirects_to_imports(client: TestClient) -> None:
     resp = client.post("/welcome/start-import", follow_redirects=False)
     assert resp.status_code in (302, 303, 307)
-    assert resp.headers["location"] == "/imports?wizard=1"
+    assert resp.headers["location"] == "/imports"

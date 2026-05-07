@@ -270,6 +270,8 @@ async def upload(
     repo: Repository = Depends(get_repository),
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
+    if request.app.state.demo_mode:
+        return RedirectResponse("/welcome", status_code=303)
     materialized = []
     for f in files:
         raw = await f.read()

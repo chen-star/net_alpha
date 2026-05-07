@@ -1,5 +1,5 @@
 {% set step = request.query_params.get("tour") %}
-{% if step %}
+{% if step and request.url.path != "/welcome" %}
   {% set copy = {
     "1": ("Step 1 of 3", "We found 4 wash sales in your demo portfolio. Scroll to the Wash Sale Watch panel below.", "/tax?tour=2"),
     "2": ("Step 2 of 3", "Harvesting these losses would save approximately $1,247 in taxes this year.", "/?tour=3"),

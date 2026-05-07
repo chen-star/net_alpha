@@ -34,3 +34,9 @@ def test_banner_done_step_shows_replay_and_exit(client_with_data: TestClient) ->
     assert resp.status_code == 200
     assert b"Replay tour" in resp.content
     assert b"Switch to my data" in resp.content
+
+
+def test_no_banner_on_welcome_even_with_tour_query(client: TestClient) -> None:
+    resp = client.get("/welcome?tour=1")
+    assert resp.status_code == 200
+    assert b"data-tour-banner" not in resp.content

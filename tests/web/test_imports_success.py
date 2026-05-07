@@ -24,6 +24,22 @@ def test_post_imports_redirects_to_success(client: TestClient) -> None:
     assert "id=" in location
 
 
+def test_post_imports_blocked_in_demo_mode(client: TestClient) -> None:
+    client.app.state.demo_mode = True
+    try:
+        with _fixture_csv().open("rb") as f:
+            resp = client.post(
+                "/imports",
+                data={"account": "demo"},
+                files={"files": ("schwab_sample.csv", f, "text/csv")},
+                follow_redirects=False,
+            )
+        assert resp.status_code in (302, 303, 307)
+        assert resp.headers["location"] == "/welcome"
+    finally:
+        client.app.state.demo_mode = False
+
+
 def test_imports_success_renders_summary(client: TestClient) -> None:
     """The success page shows trade count and CTAs to /tax and /."""
     with _fixture_csv().open("rb") as f:

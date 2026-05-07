@@ -39,3 +39,12 @@ def test_exit_to_real_clears_demo_mode_and_marks_completed(client: TestClient, r
     assert resp.headers["location"] == "/imports"
     assert client.app.state.demo_mode is False
     assert repo_real.get_tour_completed() is True
+
+
+def test_settings_about_tab_has_replay_tour_form(client_with_data: TestClient) -> None:
+    """The About tab in Settings should expose a replay-tour form."""
+    resp = client_with_data.get("/settings?tab=about")
+    assert resp.status_code == 200, resp.text
+    body = resp.text
+    assert 'action="/tour/replay"' in body
+    assert "Replay onboarding tour" in body
