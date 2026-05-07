@@ -1,0 +1,31 @@
+{# Shared empty-state hero. Parents pass parameters via {% with %}:
+     es_icon            — vendored icon name (without .svg) under /static/icons/
+     es_title           — heading text
+     es_body            — explanation paragraph
+     es_primary_label   — primary CTA label (omit button if empty)
+     es_primary_href    — primary CTA href
+     es_secondary_label — secondary CTA label (omit button if empty)
+     es_secondary_href  — secondary CTA href
+   Matches the project idiom: `.panel`, `.btn`, `.btn-ghost`, vendored SVG
+   icons via the `.icon-mono` filter (no Lucide JS).
+#}
+<div class="panel text-center py-10">
+  {% if es_icon %}
+    <div class="mb-4 flex justify-center">
+      <img src="/static/icons/{{ es_icon }}.svg{% if asset_v is defined %}?v={{ asset_v }}{% endif %}"
+           class="w-10 h-10 icon-mono" alt="" aria-hidden="true">
+    </div>
+  {% endif %}
+  <p class="text-lg mb-2 text-text font-semibold">{{ es_title }}</p>
+  <p class="text-[14px] text-label-2 mb-6 max-w-md mx-auto">{{ es_body }}</p>
+  {% if es_primary_label or es_secondary_label %}
+    <div class="flex justify-center gap-3 flex-wrap">
+      {% if es_primary_label %}
+        <a href="{{ es_primary_href }}" class="btn">{{ es_primary_label }}</a>
+      {% endif %}
+      {% if es_secondary_label %}
+        <a href="{{ es_secondary_href }}" class="btn-ghost">{{ es_secondary_label }}</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>

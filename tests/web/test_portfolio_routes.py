@@ -17,7 +17,10 @@ def test_root_renders_portfolio_when_no_imports(tmp_path):
     response = client.get("/")
     assert response.status_code == 200
     assert "Portfolio" in response.text
-    assert "Import your first CSV" in response.text
+    # New empty-state hero (Tasks 8/9): "No portfolio yet" plus tour + import CTAs.
+    assert "No portfolio yet" in response.text
+    assert "Take a 30s tour" in response.text
+    assert "Import CSV" in response.text
 
 
 def test_root_renders_portfolio_toolbar_when_imports_exist(tmp_path):
