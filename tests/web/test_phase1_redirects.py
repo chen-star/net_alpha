@@ -70,3 +70,15 @@ def test_tax_view_budget_also_redirects_to_positions_at_loss(client: TestClient)
     resp = client.get("/tax?view=budget", follow_redirects=False)
     assert resp.status_code == 301
     assert resp.headers["location"] == "/positions?view=at-loss"
+
+
+def test_imports_redirect_preserves_query(client: TestClient) -> None:
+    resp = client.get("/imports?wizard=1", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/settings/imports?wizard=1"
+
+
+def test_imports_redirect_without_query(client: TestClient) -> None:
+    resp = client.get("/imports", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/settings/imports"

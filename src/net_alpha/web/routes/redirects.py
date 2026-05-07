@@ -5,8 +5,9 @@ Three permanent (301) redirects keep old URLs working after the §3 IA shift:
   - /tax?view=harvest → /positions?view=at-loss
   - /imports → /settings/imports
 
-Query-string preservation is explicit on /holdings since per-page filters
-(period, account) are part of the URL and must survive the redirect.
+Query strings are preserved on every redirect so per-page filters (period,
+account) and feature flags (e.g. ``?wizard=1`` from the welcome flow) survive
+the hop.
 """
 
 from __future__ import annotations
@@ -26,5 +27,8 @@ def holdings_redirect(request: Request) -> RedirectResponse:
 
 
 @router.get("/imports", include_in_schema=False)
-def imports_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/settings/imports", status_code=301)
+def imports_redirect(request: Request) -> RedirectResponse:
+    target = "/settings/imports"
+    if request.url.query:
+        target = f"{target}?{request.url.query}"
+    return RedirectResponse(url=target, status_code=301)
