@@ -1,5 +1,5 @@
-"""Demo data + fixture builder for the onboarding tour.
+"""Demo data + fixture builder for the onboarding tour."""
 
-Public surface:
-    build_demo_db(target: pathlib.Path) -> None  # added in Task 4
-"""
+from net_alpha.web.demo.fixture import build_demo_db
+
+__all__ = ["build_demo_db"]
