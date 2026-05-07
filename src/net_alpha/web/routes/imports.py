@@ -220,6 +220,8 @@ async def preview_upload(
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     detections = []
+    sample_trades: list = []
+    total_parsed = 0
     for f in files:
         raw = await f.read()
         tmp = _save_to_temp(raw, f.filename or "uploaded.csv")
@@ -239,6 +241,13 @@ async def preview_upload(
                 "row_count": len(rows),
             }
         )
+        if isinstance(parser, SchwabParser):
+            parsed = parser.parse_full(rows, account_display="preview/preview")
+            total_parsed += len(parsed.trades)
+            for t in parsed.trades:
+                if len(sample_trades) >= 5:
+                    break
+                sample_trades.append(t)
     accounts = [a.display() for a in repo.list_accounts()]
     return request.app.state.templates.TemplateResponse(
         request,
@@ -247,6 +256,8 @@ async def preview_upload(
             "detections": detections,
             "accounts": accounts,
             "any_recognized": any(d["parser_name"] for d in detections),
+            "sample_trades": sample_trades,
+            "total_parsed": total_parsed,
         },
     )
 
@@ -284,6 +295,7 @@ async def upload(
     new_gl_count = 0
     affected_dates: list = []
     new_symbols: set[str] = set()
+    last_import_id: int | None = None
 
     for filename, raw, _headers, rows, parser in materialized:
         if parser is None:
@@ -317,6 +329,7 @@ async def upload(
             result = repo.add_import(acct, record, new_trades, cash_events=import_result.cash_events)
             new_trade_count += result.new_trades
             dup_trade_count += pre_filtered_dups
+            last_import_id = result.import_id
             for t in new_trades:
                 affected_dates.append(t.date)
                 if t.option_details is None:
@@ -344,6 +357,7 @@ async def upload(
             empty_result = repo.add_import(acct, record, [])
             inserted = repo.add_gl_lots(acct, empty_result.import_id, lots)
             new_gl_count += inserted
+            last_import_id = empty_result.import_id
             for lot in lots:
                 affected_dates.append(lot.closed_date)
 
@@ -354,4 +368,35 @@ async def upload(
 
     _post_import_autosync_splits(repo, new_symbols=new_symbols, existing_symbols=existing_symbols)
 
+    if last_import_id is not None:
+        return RedirectResponse(url=f"/imports/success?id={last_import_id}", status_code=303)
     return RedirectResponse(url="/settings/imports", status_code=303)
+
+
+@router.get("/imports/success", response_class=HTMLResponse)
+def imports_success(
+    request: Request,
+    id: int,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    record = repo.get_import(id)
+    if record is None:
+        return RedirectResponse(url="/settings/imports", status_code=303)
+
+    trades_in_import = repo.trades_for_import(id)
+    trade_ids_in_import = {t.id for t in trades_in_import}
+    violations_in_import = [
+        v for v in repo.all_violations() if v.loss_trade_id in trade_ids_in_import
+    ]
+    disallowed_total = sum(v.disallowed_loss for v in violations_in_import)
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "imports_success.html",
+        {
+            "trade_count": len(trades_in_import),
+            "wash_sale_count": len(violations_in_import),
+            "disallowed_total": disallowed_total,
+            "import_id": id,
+        },
+    )
