@@ -385,9 +385,7 @@ def imports_success(
 
     trades_in_import = repo.trades_for_import(id)
     trade_ids_in_import = {t.id for t in trades_in_import}
-    violations_in_import = [
-        v for v in repo.all_violations() if v.loss_trade_id in trade_ids_in_import
-    ]
+    violations_in_import = [v for v in repo.all_violations() if v.loss_trade_id in trade_ids_in_import]
     disallowed_total = sum(v.disallowed_loss for v in violations_in_import)
 
     return request.app.state.templates.TemplateResponse(

@@ -59,6 +59,7 @@ def test_performance_tab_renders_with_config(tmp_path):
     from net_alpha.db.connection import init_db
     from net_alpha.db.repository import Repository
     from net_alpha.models.domain import ImportRecord, Trade
+
     init_db(engine)
     repo = Repository(engine)
     acct = repo.get_or_create_account("schwab", "personal")

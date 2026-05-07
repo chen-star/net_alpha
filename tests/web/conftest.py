@@ -39,6 +39,7 @@ def repo(engine) -> Repository:
 def repo_real(settings):
     from net_alpha.db.connection import get_engine
     from net_alpha.db.repository import Repository
+
     return Repository(get_engine(settings.db_path))
 
 

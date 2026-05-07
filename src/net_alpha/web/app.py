@@ -19,7 +19,18 @@ from net_alpha.pricing.cache import PriceCache
 from net_alpha.pricing.yahoo import YahooPriceProvider
 from net_alpha.web.dependencies import effective_db_path
 from net_alpha.web.format import fmt_currency, fmt_date, fmt_percent, fmt_quantity
-from net_alpha.web.routes import audit_routes, positions, redirects, sim, system, ticker, tour, trades, wash_sales, welcome
+from net_alpha.web.routes import (
+    audit_routes,
+    positions,
+    redirects,
+    sim,
+    system,
+    ticker,
+    tour,
+    trades,
+    wash_sales,
+    welcome,
+)
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
 from net_alpha.web.routes import preferences as preferences_routes

@@ -135,9 +135,7 @@ class Repository:
 
     def get_tour_completed(self) -> bool:
         with Session(self.engine) as s:
-            row = s.exec(
-                text("SELECT value FROM meta WHERE key='onboarding.tour_completed'")
-            ).first()
+            row = s.exec(text("SELECT value FROM meta WHERE key='onboarding.tour_completed'")).first()
         return bool(row and str(row[0]) == "1")
 
     def set_tour_completed(self, value: bool) -> None:
