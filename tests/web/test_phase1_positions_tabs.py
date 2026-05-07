@@ -66,7 +66,17 @@ def test_view_all_renders_existing_positions_table(client: TestClient):
     assert "/portfolio/positions" in html or "no data" in html.lower() or "import" in html.lower()
 
 
-def test_tax_page_no_longer_has_harvest_tab(client: TestClient):
+def test_tax_page_no_longer_has_harvest_tab(client: TestClient, repo, builders):
+    from datetime import date
+
+    # Seed a no-violation import so the page-level empty hero on /tax does
+    # not suppress the tab nav we're asserting on.
+    builders.seed_import(
+        repo,
+        "schwab",
+        "personal",
+        [builders.make_buy("schwab/personal", "AAPL", date(2024, 5, 1))],
+    )
     resp = client.get("/tax")
     html = resp.text
     assert ">Harvest<" not in html, "Tax page still has Harvest tab"

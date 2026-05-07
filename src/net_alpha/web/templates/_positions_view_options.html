@@ -2,7 +2,17 @@
    /holdings/short-options is a backwards-compat alias for /holdings/options
    so we only render one fragment here to avoid duplicate tables. #}
 {% if not imports %}
-  {% include "_portfolio_empty_state.html" %}
+  {% with
+     es_icon="database",
+     es_title="No positions to show",
+     es_body="Import a Schwab CSV to see your holdings, or take the tour with sample data.",
+     es_primary_label="Take the tour",
+     es_primary_href="/welcome",
+     es_secondary_label="Import CSV",
+     es_secondary_href="/imports"
+  %}
+    {% include "_empty_state_hero.html" %}
+  {% endwith %}
 {% else %}
   <div id="holdings-options" class="panel"
        hx-get="/holdings/options?account={{ selected_account }}"

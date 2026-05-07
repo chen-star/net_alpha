@@ -3,7 +3,15 @@ from datetime import date
 from net_alpha.models.domain import WashSaleViolation
 
 
-def test_detail_empty_state(client):
+def test_detail_empty_state(client, repo, builders):
+    # Seed a no-violation import so the page-level empty hero doesn't suppress
+    # the tab body — we're asserting the in-tab affirmative copy.
+    builders.seed_import(
+        repo,
+        "schwab",
+        "personal",
+        [builders.make_buy("schwab/personal", "AAPL", date(2024, 5, 1))],
+    )
     resp = client.get("/wash-sales")
     assert resp.status_code == 200
     assert "Wash sales" in resp.text

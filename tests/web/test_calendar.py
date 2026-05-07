@@ -1,8 +1,16 @@
 from datetime import date, timedelta
 
 
-def test_calendar_empty_state(client):
+def test_calendar_empty_state(client, repo, builders):
     # Calendar is now a sub-view of the wash-sales tab at /tax.
+    # Seed a no-violation import so the page-level empty hero doesn't suppress
+    # the tab body — we're asserting the in-tab "No wash sales" copy.
+    builders.seed_import(
+        repo,
+        "schwab",
+        "personal",
+        [builders.make_buy("schwab/personal", "AAPL", date(2024, 5, 1))],
+    )
     resp = client.get("/tax?view=calendar")
     assert resp.status_code == 200
     assert "calendar" in resp.text.lower()

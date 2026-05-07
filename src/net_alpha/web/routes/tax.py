@@ -98,6 +98,9 @@ def get_tax(
         "profile": profile,
         "page_key": "/tax",
         "account_id": filter_id,
+        "has_any_tax_data": bool(
+            repo.list_imports() or repo.all_violations() or repo.list_all_gl_lots()
+        ),
     }
 
     if tab_view == "wash-sales":

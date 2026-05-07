@@ -4,30 +4,44 @@
 {% block content %}
 <div class="tax-page" data-active-tab="{{ tab_view if tab_view is defined else view }}">
   <h1 class="text-2xl mb-4">Tax</h1>
-  <nav class="tabs mb-4" role="tablist">
-    {% set tabs = [
-      ("wash-sales", "Wash sales"),
-      ("projection", "Projection"),
-      ("performance", "Performance"),
-    ] %}
-    {% set _active_tab = tab_view if tab_view is defined else view %}
-    {% for slug, label in tabs %}
-      <a role="tab"
-         class="tab {% if _active_tab == slug %}tab--active{% endif %}"
-         href="/tax?view={{ slug }}{% if selected_account %}&account={{ selected_account }}{% endif %}">
-        {{ label }}
-      </a>
-    {% endfor %}
-  </nav>
-  <div id="tab-content" class="tab-content" role="tabpanel">
-    {% set _active_tab = tab_view if tab_view is defined else view %}
-    {% if _active_tab == "wash-sales" %}
-      {% include "_tax_wash_sales_tab.html" with context %}
-    {% elif _active_tab == "projection" %}
-      {% include "_projection_tab.html" with context %}
-    {% elif _active_tab == "performance" %}
-      {% include "_tax_performance_panel.html" with context %}
-    {% endif %}
-  </div>
+  {% if not has_any_tax_data %}
+    {% with
+       es_icon="landmark",
+       es_title="No tax data yet",
+       es_body="Realized P&L, wash sales, and the harvest planner light up after your first import.",
+       es_primary_label="Take the tour",
+       es_primary_href="/welcome",
+       es_secondary_label="Import CSV",
+       es_secondary_href="/imports"
+    %}
+      {% include "_empty_state_hero.html" %}
+    {% endwith %}
+  {% else %}
+    <nav class="tabs mb-4" role="tablist">
+      {% set tabs = [
+        ("wash-sales", "Wash sales"),
+        ("projection", "Projection"),
+        ("performance", "Performance"),
+      ] %}
+      {% set _active_tab = tab_view if tab_view is defined else view %}
+      {% for slug, label in tabs %}
+        <a role="tab"
+           class="tab {% if _active_tab == slug %}tab--active{% endif %}"
+           href="/tax?view={{ slug }}{% if selected_account %}&account={{ selected_account }}{% endif %}">
+          {{ label }}
+        </a>
+      {% endfor %}
+    </nav>
+    <div id="tab-content" class="tab-content" role="tabpanel">
+      {% set _active_tab = tab_view if tab_view is defined else view %}
+      {% if _active_tab == "wash-sales" %}
+        {% include "_tax_wash_sales_tab.html" with context %}
+      {% elif _active_tab == "projection" %}
+        {% include "_projection_tab.html" with context %}
+      {% elif _active_tab == "performance" %}
+        {% include "_tax_performance_panel.html" with context %}
+      {% endif %}
+    </div>
+  {% endif %}
 </div>
 {% endblock %}

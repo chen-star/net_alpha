@@ -1,5 +1,13 @@
 {% if not imports %}
-  <div class="panel text-label-2 text-sm">No imports yet.</div>
+  {% with
+     es_icon="download",
+     es_title="No imports yet",
+     es_body="Drop a Schwab Transactions or Realized G/L CSV in the zone above.",
+     es_primary_label="",
+     es_secondary_label=""
+  %}
+    {% include "_empty_state_hero.html" %}
+  {% endwith %}
 {% else %}
   <form id="bulk-imports-form"
         hx-post="/imports/bulk-delete?page={{ page or 1 }}"

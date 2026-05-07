@@ -52,7 +52,38 @@ def test_performance_tab_renders_with_config(tmp_path):
     )
 
     engine = get_engine(settings.db_path)
-    SQLModel.metadata.create_all(engine)
+    # Use init_db so all hand-written migration tables exist (matches conftest).
+    from datetime import date as _d
+    from datetime import datetime as _dt
+
+    from net_alpha.db.connection import init_db
+    from net_alpha.db.repository import Repository
+    from net_alpha.models.domain import ImportRecord, Trade
+    init_db(engine)
+    repo = Repository(engine)
+    acct = repo.get_or_create_account("schwab", "personal")
+    repo.add_import(
+        acct,
+        ImportRecord(
+            account_id=acct.id,
+            csv_filename="seed.csv",
+            csv_sha256="sha-seed",
+            imported_at=_dt.now(),
+            trade_count=1,
+        ),
+        [
+            Trade(
+                account=acct.display(),
+                date=_d(2024, 5, 1),
+                ticker="AAPL",
+                action="Buy",
+                quantity=10.0,
+                proceeds=None,
+                cost_basis=1700.0,
+            )
+        ],
+    )
+
     app = create_app(settings)
     client = TestClient(app, raise_server_exceptions=False)
 
