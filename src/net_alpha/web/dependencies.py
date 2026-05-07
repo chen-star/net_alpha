@@ -12,11 +12,7 @@ from net_alpha.pricing.service import PricingService
 
 
 def effective_db_path(settings: Settings, demo_mode: bool) -> Path:
-    """Return the SQLite path for the current request.
-
-    When demo_mode is True, route to <data_dir>/demo.db so the tour can
-    operate on isolated fixture data without touching the user's real DB.
-    """
+    """SQLite path for this request; demo_mode routes to <data_dir>/demo.db."""
     if demo_mode:
         return settings.data_dir / "demo.db"
     return settings.db_path
@@ -28,7 +24,7 @@ def get_settings(request: Request) -> Settings:
 
 def get_repository(request: Request) -> Repository:
     settings: Settings = request.app.state.settings
-    demo_mode: bool = bool(getattr(request.app.state, "demo_mode", False))
+    demo_mode: bool = request.app.state.demo_mode
     engine = get_engine(effective_db_path(settings, demo_mode))
     return Repository(engine)
 
@@ -56,7 +52,7 @@ def get_profile_settings(
     `resolve_effective_profile`.
     """
     settings: Settings = request.app.state.settings
-    demo_mode: bool = bool(getattr(request.app.state, "demo_mode", False))
+    demo_mode: bool = request.app.state.demo_mode
     engine = get_engine(effective_db_path(settings, demo_mode))
     repo = Repository(engine)
     prefs = repo.list_user_preferences()

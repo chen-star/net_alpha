@@ -19,6 +19,7 @@ def _bootstrap_app(tmp_path) -> tuple[FastAPI, Repository]:
     SQLModel.metadata.create_all(engine)
     app = FastAPI()
     app.state.settings = settings
+    app.state.demo_mode = False
     repo = Repository(engine)
 
     @app.get("/test")
