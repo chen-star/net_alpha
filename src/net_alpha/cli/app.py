@@ -82,8 +82,9 @@ def ui(
     port: int | None = typer.Option(None, "--port", help="Override port (default: pick free in 8765-8775)."),
     no_browser: bool = typer.Option(False, "--no-browser", help="Don't auto-open browser."),
     reload: bool = typer.Option(False, "--reload", help="Enable uvicorn auto-reload (dev)."),
+    demo: bool = typer.Option(False, "--demo", help="Boot in demo mode and open the tour."),
 ):
-    raise typer.Exit(ui_cmd.run(port=port, no_browser=no_browser, reload=reload))
+    raise typer.Exit(ui_cmd.run(port=port, no_browser=no_browser, reload=reload, demo=demo))
 
 
 # ---------------------------------------------------------------------------

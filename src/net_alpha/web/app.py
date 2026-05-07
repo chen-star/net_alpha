@@ -27,10 +27,10 @@ from net_alpha.web.routes import settings as settings_routes
 from net_alpha.web.routes import tax as tax_routes
 
 
-def create_app(settings: Settings) -> FastAPI:
+def create_app(settings: Settings, demo_mode: bool = False) -> FastAPI:
     app = FastAPI(title="net-alpha")
     app.state.settings = settings
-    app.state.demo_mode = False
+    app.state.demo_mode = demo_mode
     app.state.etf_pairs = load_etf_pairs(user_path=str(settings.user_etf_pairs_path))
     app.state.etf_replacements = load_etf_replacements(
         user_path=settings.data_dir / "etf_replacements.yaml",
