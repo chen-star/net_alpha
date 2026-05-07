@@ -133,6 +133,25 @@ class Repository:
                 row.updated_at = pref.updated_at
             s.commit()
 
+    def get_tour_completed(self) -> bool:
+        with Session(self.engine) as s:
+            row = s.exec(
+                text("SELECT value FROM meta WHERE key='onboarding.tour_completed'")
+            ).first()
+        return bool(row and str(row[0]) == "1")
+
+    def set_tour_completed(self, value: bool) -> None:
+        with Session(self.engine) as s:
+            s.exec(
+                text(
+                    "INSERT INTO meta(key, value) VALUES "
+                    "('onboarding.tour_completed', :v) "
+                    "ON CONFLICT(key) DO UPDATE SET value=:v"
+                ),
+                params={"v": "1" if value else "0"},
+            )
+            s.commit()
+
     def list_imports(self) -> list[ImportSummary]:
         with Session(self.engine) as s:
             stmt = (
