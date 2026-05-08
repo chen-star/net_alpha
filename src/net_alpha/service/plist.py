@@ -8,6 +8,7 @@ from net_alpha.service.paths import PLIST_LABEL
 
 
 def render(*, wrapper_path: str, log_path: str) -> bytes:
+    """Return the launchd plist XML bytes for the always-on service."""
     body = {
         "Label": PLIST_LABEL,
         "ProgramArguments": [wrapper_path],
