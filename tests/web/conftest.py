@@ -35,11 +35,37 @@ def repo(engine) -> Repository:
     return Repository(engine)
 
 
+@pytest.fixture()
+def repo_real(settings):
+    from net_alpha.db.connection import get_engine
+    from net_alpha.db.repository import Repository
+
+    return Repository(get_engine(settings.db_path))
+
+
 @pytest.fixture
 def client(settings: Settings, engine) -> TestClient:
     """TestClient with the app pointed at the temp DB."""
     app = create_app(settings)
     return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.fixture
+def tmp_data_dir(settings: Settings) -> Path:
+    """Path to the per-test data dir (alias for ``settings.data_dir``)."""
+    return settings.data_dir
+
+
+@pytest.fixture
+def client_with_data(client: TestClient, settings: Settings) -> TestClient:
+    """TestClient with the real DB pre-seeded by the demo fixture builder.
+
+    Used in tests that need 'imports already exist' state in the real DB.
+    """
+    from net_alpha.web.demo import build_demo_db
+
+    build_demo_db(settings.db_path)
+    return client
 
 
 # --- Trade builders ---------------------------------------------------------

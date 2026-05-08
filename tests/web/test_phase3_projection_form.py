@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi.testclient import TestClient
 
 
-def test_projection_tab_renders_inline_form_not_yaml_snippet(client: TestClient):
+def test_projection_tab_renders_inline_form_not_yaml_snippet(client: TestClient, repo, builders):
+    # Seed a no-violation import so the page-level empty hero on /tax does
+    # not suppress the projection tab body.
+    builders.seed_import(
+        repo,
+        "schwab",
+        "personal",
+        [builders.make_buy("schwab/personal", "AAPL", date(2024, 5, 1))],
+    )
     resp = client.get("/tax?view=projection")
     html = resp.text
     # The inline form is present (Pr1).

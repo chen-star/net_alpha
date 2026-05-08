@@ -17,8 +17,20 @@ from net_alpha.output.disclaimer import price_source_line
 from net_alpha.output.disclaimer import render as disclaimer_render
 from net_alpha.pricing.cache import PriceCache
 from net_alpha.pricing.yahoo import YahooPriceProvider
+from net_alpha.web.dependencies import effective_db_path
 from net_alpha.web.format import fmt_currency, fmt_date, fmt_percent, fmt_quantity
-from net_alpha.web.routes import audit_routes, positions, redirects, sim, system, ticker, trades, wash_sales
+from net_alpha.web.routes import (
+    audit_routes,
+    positions,
+    redirects,
+    sim,
+    system,
+    ticker,
+    tour,
+    trades,
+    wash_sales,
+    welcome,
+)
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
 from net_alpha.web.routes import preferences as preferences_routes
@@ -26,9 +38,10 @@ from net_alpha.web.routes import settings as settings_routes
 from net_alpha.web.routes import tax as tax_routes
 
 
-def create_app(settings: Settings) -> FastAPI:
+def create_app(settings: Settings, demo_mode: bool = False) -> FastAPI:
     app = FastAPI(title="net-alpha")
     app.state.settings = settings
+    app.state.demo_mode = demo_mode
     app.state.etf_pairs = load_etf_pairs(user_path=str(settings.user_etf_pairs_path))
     app.state.etf_replacements = load_etf_replacements(
         user_path=settings.data_dir / "etf_replacements.yaml",
@@ -63,7 +76,7 @@ def create_app(settings: Settings) -> FastAPI:
         from net_alpha.audit._badge_cache import get_imports_badge_count
         from net_alpha.db.repository import Repository as _Repository
 
-        _engine = get_engine(settings.db_path)
+        _engine = get_engine(effective_db_path(settings, app.state.demo_mode))
         return get_imports_badge_count(_Repository(_engine), settings=settings)
 
     templates.env.globals["imports_badge_count"] = _imports_badge_count
@@ -81,7 +94,7 @@ def create_app(settings: Settings) -> FastAPI:
         if request is not None:
             account = request.query_params.get("account")
 
-        _engine = get_engine(settings.db_path)
+        _engine = get_engine(effective_db_path(settings, app.state.demo_mode))
         _repo = _Repository(_engine)
         accounts = _repo.list_accounts()
         prefs = _repo.list_user_preferences()
@@ -109,7 +122,7 @@ def create_app(settings: Settings) -> FastAPI:
     def _first_visit_modal_data() -> dict[str, object]:
         from net_alpha.db.repository import Repository as _Repository
 
-        _engine = get_engine(settings.db_path)
+        _engine = get_engine(effective_db_path(settings, app.state.demo_mode))
         _repo = _Repository(_engine)
         accounts = _repo.list_accounts()
         prefs = _repo.list_user_preferences()
@@ -145,6 +158,8 @@ def create_app(settings: Settings) -> FastAPI:
     app.include_router(audit_routes.router)
     app.include_router(preferences_routes.router)
     app.include_router(redirects.router)
+    app.include_router(welcome.router)
+    app.include_router(tour.router)
     app.include_router(settings_routes.router)
     app.include_router(tax_routes.router)
     app.include_router(wash_sales.router)

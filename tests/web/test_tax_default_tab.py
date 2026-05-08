@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from fastapi.testclient import TestClient
 
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.repository import Repository
+from net_alpha.models.domain import ImportRecord, Trade
 from net_alpha.models.preferences import AccountPreference
 from net_alpha.web.app import create_app
 
@@ -27,6 +28,25 @@ def _seed(tmp_path, profile_label):
             updated_at=datetime(2026, 4, 27, tzinfo=UTC),
         )
     )
+    # Seed a no-violation import so the page-level empty hero on /tax does
+    # not suppress the wash-sales tab content these tests assert on.
+    trade = Trade(
+        account=a.display(),
+        date=date(2024, 5, 1),
+        ticker="AAPL",
+        action="Buy",
+        quantity=10.0,
+        proceeds=None,
+        cost_basis=1700.0,
+    )
+    record = ImportRecord(
+        account_id=a.id,
+        csv_filename="seed.csv",
+        csv_sha256="sha-seed",
+        imported_at=datetime.now(),
+        trade_count=1,
+    )
+    repo.add_import(a, record, [trade])
     app = create_app(settings)
     return TestClient(app)
 

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Import complete &middot; net-alpha{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto py-16 text-center">
+  <h1 class="text-2xl font-semibold mb-2">Import complete</h1>
+  <p class="text-label-2 mb-8">
+    Imported {{ trade_count }} trade{{ "s" if trade_count != 1 else "" }}.
+  </p>
+
+  {% if wash_sale_count %}
+    <div class="rounded p-4 mb-6 text-left"
+         style="border:0.5px solid var(--color-hairline); background: var(--color-warn-tint);">
+      <div class="font-medium text-warn">
+        {{ wash_sale_count }} wash sale{{ "s" if wash_sale_count != 1 else "" }} found
+      </div>
+      <div class="text-sm text-label-2 mt-1">
+        ${{ "%.2f"|format(disallowed_total) }} of losses are disallowed under &sect;1091 and rolled into replacement-lot basis.
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="flex justify-center gap-3">
+    <a href="/tax" class="btn">See my wash sales &rarr;</a>
+    <a href="/" class="btn-ghost">See my portfolio &rarr;</a>
+  </div>
+</div>
+{% endblock %}

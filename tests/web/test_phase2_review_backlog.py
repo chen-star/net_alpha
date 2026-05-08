@@ -5,17 +5,18 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 
-def test_empty_state_cta_targets_settings_imports(client: TestClient):
-    """The empty-state CTA links to /settings/imports directly so users
-    don't pay an extra 301 hop. The /imports redirect still exists for
-    bookmarks (Phase 1 A3)."""
+def test_empty_state_cta_targets_imports(client: TestClient):
+    """The portfolio empty-state hero (Tasks 8/9) renders an 'Import CSV'
+    secondary CTA pointing at /imports. The /imports route still 301s to
+    /settings/imports for now (Phase 1 A3); when the imports page lifts to
+    a top-level surface the redirect goes away."""
     resp = client.get("/")
     html = resp.text
     if 'href="/settings/imports"' not in html and 'href="/imports"' not in html:
         # Account-set users don't see the empty state — skip
         return
-    # If the CTA is rendered, it should be the new URL
-    assert 'href="/settings/imports"' in html
+    # The new shared empty-state hero links to the canonical /imports URL.
+    assert 'href="/imports"' in html
 
 
 def test_legacy_imports_page_does_not_highlight_overview(client: TestClient):

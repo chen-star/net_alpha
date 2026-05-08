@@ -2,16 +2,47 @@
 
 import pathlib
 import tempfile
+from datetime import date, datetime
 
 from fastapi.testclient import TestClient
 
 from net_alpha.config import Settings
+from net_alpha.db.connection import get_engine, init_db
+from net_alpha.db.repository import Repository
+from net_alpha.models.domain import ImportRecord, Trade
 from net_alpha.web.app import create_app
 
 
 def _client():
     d = tempfile.mkdtemp()
     s = Settings(data_dir=pathlib.Path(d))
+    # Seed a no-violation import so the page-level empty hero on /tax does
+    # not suppress the wash-sales tab body these tests assert on.
+    engine = get_engine(s.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+    acct = repo.get_or_create_account("schwab", "personal")
+    repo.add_import(
+        acct,
+        ImportRecord(
+            account_id=acct.id,
+            csv_filename="seed.csv",
+            csv_sha256="sha-seed",
+            imported_at=datetime.now(),
+            trade_count=1,
+        ),
+        [
+            Trade(
+                account=acct.display(),
+                date=date(2024, 5, 1),
+                ticker="AAPL",
+                action="Buy",
+                quantity=10.0,
+                proceeds=None,
+                cost_basis=1700.0,
+            )
+        ],
+    )
     app = create_app(s)
     return TestClient(app)
 

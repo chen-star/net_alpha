@@ -26,7 +26,8 @@ def test_portfolio_page_full_render(tmp_path):
         # Empty state: page renders with CTA.
         r = client.get("/")
         assert r.status_code == 200
-        assert "No imports yet" in r.text
+        # Updated copy from the shared empty-state hero (Tasks 8/9).
+        assert "No portfolio yet" in r.text
 
         # Insert a stub trade + lot directly to exercise the populated path.
         engine = get_engine(settings.db_path)

@@ -30,17 +30,27 @@ def run(
     port: int | None = None,
     no_browser: bool = False,
     reload: bool = False,
+    demo: bool = False,
 ) -> int:
     """Boot the local UI server. Blocks until SIGINT."""
     settings = Settings()
     chosen_port = port or pick_free_port()
     url = f"http://127.0.0.1:{chosen_port}"
 
+    if demo:
+        from net_alpha.web.demo import build_demo_db
+
+        demo_path = settings.data_dir / "demo.db"
+        if not demo_path.exists():
+            build_demo_db(demo_path)
+
+    target_path = "/?tour=1" if demo else "/"
+
     typer.echo(f"net-alpha ui — {url}")
     typer.echo("Press Ctrl-C to stop.")
 
     if not no_browser:
-        webbrowser.open(url)
+        webbrowser.open(url + target_path)
 
     if reload:
         uvicorn.run(
@@ -51,6 +61,6 @@ def run(
             factory=True,
         )
     else:
-        app = create_app(settings)
+        app = create_app(settings, demo_mode=demo)
         uvicorn.run(app, host="127.0.0.1", port=chosen_port, log_level="info")
     return 0

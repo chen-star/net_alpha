@@ -1,0 +1,29 @@
+{% if sample_trades %}
+<div data-trade-preview class="mt-4 rounded p-3" style="border:0.5px solid var(--color-hairline); background: var(--color-surface-alt, var(--color-surface));">
+  <div class="text-xs uppercase tracking-wider text-label-2 mb-2">
+    Preview &middot; first {{ sample_trades|length }} of {{ total_parsed }} trade{{ "s" if total_parsed != 1 else "" }}
+  </div>
+  <table class="w-full text-xs">
+    <thead class="text-label-2">
+      <tr>
+        <th class="text-left font-normal py-1">Date</th>
+        <th class="text-left font-normal py-1">Action</th>
+        <th class="text-left font-normal py-1">Ticker</th>
+        <th class="text-right font-normal py-1">Qty</th>
+        <th class="text-right font-normal py-1">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for t in sample_trades %}
+      <tr style="border-top:0.5px solid var(--color-hairline);">
+        <td class="py-1">{{ t.date }}</td>
+        <td class="py-1">{{ t.action }}</td>
+        <td class="py-1">{{ t.ticker }}</td>
+        <td class="py-1 text-right">{{ "%g"|format(t.quantity) }}</td>
+        <td class="py-1 text-right">{{ "%.2f"|format(t.proceeds if t.proceeds is not none else (t.cost_basis if t.cost_basis is not none else 0.0)) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}

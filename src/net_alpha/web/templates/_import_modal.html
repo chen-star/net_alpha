@@ -30,6 +30,8 @@
     {% endfor %}
   </div>
 
+  {% include "_imports_preview_table.html" %}
+
   {% if any_recognized %}
     <form id="import-form" action="/imports" method="post" enctype="multipart/form-data" class="space-y-4">
       <div>

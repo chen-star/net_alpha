@@ -1,4 +1,4 @@
-.PHONY: test lint format check release build-css vendor-fonts vendor-apex vendor-lucide vendor-sortable snapshot-test snapshot-update
+.PHONY: test lint format check release build-css vendor-fonts vendor-apex vendor-lucide vendor-sortable snapshot-test snapshot-update demo-fixture
 
 test:
 	uv run pytest
@@ -73,3 +73,6 @@ snapshot-test:
 
 snapshot-update:
 	uv run pytest tests/web/snapshots --update-snapshots -v
+
+demo-fixture:
+	uv run python -c "from pathlib import Path; from net_alpha.web.demo import build_demo_db; build_demo_db(Path.home() / '.net_alpha' / 'demo.db'); print('demo.db rebuilt')"
