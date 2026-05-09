@@ -1,0 +1,52 @@
+"""APScheduler bootstrap — registers the v2 background jobs.
+
+NOTE: build_scheduler intentionally does NOT start the scheduler. Starting
+requires a running asyncio event loop (AsyncIOScheduler), which is not
+available in sync test environments or at module-import time. The FastAPI
+lifespan in Task 2.8 is responsible for calling sched.start() / sched.shutdown()
+at the right moment. This also means the disabled-flag check is advisory here:
+when the flag is set the scheduler is returned un-started, and the lifespan
+should respect that by not calling start() either.
+"""
+
+from __future__ import annotations
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+from net_alpha.service import disabled_flag
+from net_alpha.service.jobs.price_refresh import run_price_refresh
+from net_alpha.service.jobs.runner import run_job
+
+
+def build_scheduler(*, repo, pricing, state) -> AsyncIOScheduler:
+    """Build (but do NOT start) the AsyncIOScheduler with the v2 jobs.
+
+    Callers (e.g. FastAPI lifespan) are responsible for calling
+    ``sched.start()`` and ``sched.shutdown()``. The disabled_flag check is
+    exposed via ``disabled_flag.is_set()`` so the caller can skip start when
+    the service is latched off.
+    """
+    sched = AsyncIOScheduler(timezone="UTC")
+
+    sched.add_job(
+        func=run_job,
+        kwargs={
+            "job_name": "price_refresh",
+            "fn": lambda: run_price_refresh(repo=repo, pricing=pricing),
+            "state": state,
+            "repo": repo,
+        },
+        id="price_refresh",
+        trigger=CronTrigger(hour="*/4"),
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=600,
+    )
+
+    return sched
+
+
+def is_disabled() -> bool:
+    """Return True when the disabled flag latch is set (service should not run)."""
+    return disabled_flag.is_set()
