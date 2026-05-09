@@ -21,6 +21,12 @@
           <span class="text-label-2"> &mdash; {{ d.row_count }} lot rows</span>
           <div class="text-xs text-label-2 mt-1">{{ d.filename }}</div>
         </div>
+      {% elif d.parser_name == "robinhood" %}
+        <div class="rounded p-2 text-sm" style="border:0.5px solid var(--color-hairline); background: var(--color-pos-tint);">
+          <span class="font-medium text-pos">&#10003; Transaction History</span>
+          <span class="text-label-2"> &mdash; {{ d.row_count }} rows</span>
+          <div class="text-xs text-label-2 mt-1">{{ d.filename }}</div>
+        </div>
       {% else %}
         <div class="rounded p-2 text-sm" style="border:0.5px solid var(--color-hairline); background: var(--color-warn-tint);">
           <span class="font-medium text-warn">&#9888; Unrecognized format</span>
