@@ -260,3 +260,45 @@ def test_rec_zero_quantity_is_skipped():
     )]
     trades = _parse(rows)
     assert trades == []
+
+
+def test_crypto_buy_is_skipped_with_warning():
+    rows = [_row(
+        **{"Activity Date": "10/15/2024", "Instrument": "BTC", "Trans Code": "Buy",
+           "Quantity": "0.001", "Price": "60000", "Amount": "-60.00"}
+    )]
+    result = RobinhoodParser().parse_full(rows, "robinhood/personal")
+    assert result.trades == []
+    assert any("BTC" in w and "crypto" in w.lower() for w in result.parse_warnings)
+
+
+def test_crypto_sell_is_skipped():
+    rows = [_row(
+        **{"Activity Date": "10/15/2024", "Instrument": "ETH", "Trans Code": "Sell",
+           "Quantity": "0.5", "Price": "3000", "Amount": "1500.00"}
+    )]
+    result = RobinhoodParser().parse_full(rows, "robinhood/personal")
+    assert result.trades == []
+    assert any("ETH" in w for w in result.parse_warnings)
+
+
+def test_unknown_trans_code_emits_warning_and_no_trade():
+    rows = [_row(
+        **{"Activity Date": "10/15/2024", "Instrument": "AAPL", "Trans Code": "XYZQ",
+           "Quantity": "1", "Price": "100", "Amount": "100.00"}
+    )]
+    result = RobinhoodParser().parse_full(rows, "robinhood/personal")
+    assert result.trades == []
+    assert any("XYZQ" in w for w in result.parse_warnings)
+
+
+def test_oexp_still_does_not_warn_after_unknown_warning_added():
+    """Regression guard: OEXP should remain in _NON_TRADE_KNOWN_CODES so it
+    doesn't fall into the unknown-warning path."""
+    rows = [_row(
+        **{"Activity Date": "12/20/2024", "Instrument": "TSLA $300 Call 12/20/2024",
+           "Trans Code": "OEXP", "Quantity": "1", "Price": "0", "Amount": "0"}
+    )]
+    result = RobinhoodParser().parse_full(rows, "robinhood/personal")
+    assert result.trades == []
+    assert result.parse_warnings == []

@@ -42,6 +42,11 @@ _SHORT_OPTION_CLOSE_CODES = {"BTC"}
 _NON_TRADE_KNOWN_CODES = {"OEXP", "OASGN"}
 _TRANSFER_CODES = {"REC"}
 
+_CRYPTO_TICKERS = {
+    "BTC", "ETH", "DOGE", "LTC", "BCH", "ETC", "BSV",
+    "AVAX", "MATIC", "SOL", "ADA", "SHIB", "UNI", "LINK", "COMP",
+}
+
 # Codes the trade-side `parse(...)` already handles. Used by parse_full(...)
 # to skip these in its own row walk (they're already in `trades`).
 _TRADE_SIDE_CODES = (
@@ -209,6 +214,8 @@ class RobinhoodParser:
                 ) from e
 
             symbol = row["Instrument"].strip()
+            if symbol in _CRYPTO_TICKERS:
+                continue
             opt = parse_option_symbol(symbol)
             ticker = opt[0] if opt else symbol
 
@@ -285,6 +292,13 @@ class RobinhoodParser:
         warnings: list[str] = []
         for row in rows:
             code = row.get("Trans Code", "").strip()
+            symbol = row.get("Instrument", "").strip()
+            if symbol in _CRYPTO_TICKERS:
+                warnings.append(
+                    f"Skipped {code!r} row for crypto symbol {symbol!r} on "
+                    f"{row.get('Activity Date', '')!r} — crypto not supported"
+                )
+                continue
             if code in _TRADE_SIDE_CODES:
                 continue
             if code in _WARN_ONLY_CODES:
@@ -300,5 +314,7 @@ class RobinhoodParser:
                 if warn is not None:
                     warnings.append(warn)
                 continue
-            # Unknown code — Task 12.
+            warnings.append(
+                f"Unknown trans code {code!r} on {row.get('Activity Date', '')!r} (row skipped)"
+            )
         return ImportResult(trades=trades, cash_events=cash_events, parse_warnings=warnings)
