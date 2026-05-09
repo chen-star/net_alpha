@@ -68,3 +68,22 @@ def test_uninstall_leaves_data_alone(tmp_path, monkeypatch):
         control.uninstall()
     assert db.exists()
     assert db.read_text() == "DATA"
+
+
+def test_start_clears_disabled_flag_and_calls_bootstrap(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    paths.disabled_flag().write_text("x")
+    paths.plist_file().write_text("<plist/>")
+    with patch.object(control, "_launchctl_bootstrap") as bs:
+        control.start()
+    assert not paths.disabled_flag().exists()
+    bs.assert_called_once()
+
+
+def test_start_raises_if_not_installed(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    import pytest
+    with pytest.raises(control.NotInstalled):
+        control.start()

@@ -67,6 +67,10 @@ def _launchctl_print() -> str:
 # ---------------------------------------------------------------------------
 
 
+class NotInstalled(RuntimeError):
+    """Raised when a control verb requires an installed plist but none is found."""
+
+
 def install(*, port: int = 8765) -> None:
     paths.ensure_dirs()
     binary = _resolve_binary()
@@ -101,7 +105,12 @@ def uninstall() -> None:
 
 
 def start() -> None:
-    raise NotImplementedError  # Task 1.10
+    if not paths.plist_file().exists():
+        raise NotInstalled(
+            "Service is not installed. Run `net-alpha service install` first."
+        )
+    disabled_flag.clear()
+    _launchctl_bootstrap()
 
 
 def stop() -> None:
