@@ -87,3 +87,13 @@ def test_start_raises_if_not_installed(tmp_path, monkeypatch):
     import pytest
     with pytest.raises(control.NotInstalled):
         control.start()
+
+
+def test_stop_writes_disabled_flag_and_calls_bootout(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    with patch.object(control, "_launchctl_bootout") as bo:
+        control.stop(reason="user requested")
+    assert paths.disabled_flag().exists()
+    assert "user requested" in paths.disabled_flag().read_text()
+    bo.assert_called_once()

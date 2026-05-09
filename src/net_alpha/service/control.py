@@ -113,8 +113,9 @@ def start() -> None:
     _launchctl_bootstrap()
 
 
-def stop() -> None:
-    raise NotImplementedError  # Task 1.11
+def stop(*, reason: str = "manual stop") -> None:
+    disabled_flag.set(reason)
+    _launchctl_bootout()
 
 
 def pause() -> None:
