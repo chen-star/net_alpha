@@ -36,6 +36,8 @@ def _parse_date(s: str) -> date | None:
 
 _BUY_CODES = {"Buy", "BTO"}
 _SELL_CODES = {"Sell", "STC"}
+_SHORT_OPTION_OPEN_CODES = {"STO"}
+_SHORT_OPTION_CLOSE_CODES = {"BTC"}
 
 
 class RobinhoodParser:
@@ -49,10 +51,18 @@ class RobinhoodParser:
         trades: list[Trade] = []
         for i, row in enumerate(rows, start=1):
             code = row.get("Trans Code", "").strip()
+            short_open = False
+            short_close = False
             if code in _BUY_CODES:
                 action = "Buy"
             elif code in _SELL_CODES:
                 action = "Sell"
+            elif code in _SHORT_OPTION_OPEN_CODES:
+                action = "Sell"
+                short_open = True
+            elif code in _SHORT_OPTION_CLOSE_CODES:
+                action = "Buy"
+                short_close = True
             else:
                 continue
 
@@ -73,17 +83,26 @@ class RobinhoodParser:
             cost_basis = abs(amount) if action == "Buy" else None
             proceeds = abs(amount) if action == "Sell" else None
 
-            trades.append(Trade(
-                account=account_display,
-                date=trade_date,
-                ticker=ticker,
-                action=action,
-                quantity=qty,
-                proceeds=proceeds,
-                cost_basis=cost_basis,
-                option_details=opt[1] if opt else None,
-                gross_cash_impact=amount,
-            ))
+            basis_source: str | None = None
+            if short_open:
+                basis_source = "option_short_open"
+            elif short_close:
+                basis_source = "option_short_close"
+
+            kwargs: dict[str, object] = {
+                "account": account_display,
+                "date": trade_date,
+                "ticker": ticker,
+                "action": action,
+                "quantity": qty,
+                "proceeds": proceeds,
+                "cost_basis": cost_basis,
+                "option_details": opt[1] if opt else None,
+                "gross_cash_impact": amount,
+            }
+            if basis_source is not None:
+                kwargs["basis_source"] = basis_source
+            trades.append(Trade(**kwargs))
         return trades
 
     def parse_full(self, rows: list[dict[str, str]], account_display: str) -> ImportResult:

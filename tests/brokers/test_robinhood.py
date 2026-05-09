@@ -87,3 +87,27 @@ def test_stc_parses_as_sell_with_option_details():
     assert trades[0].action == "Sell"
     assert trades[0].proceeds == 800.0
     assert trades[0].option_details is not None
+
+
+def test_sto_parses_as_sell_with_short_open_marker():
+    rows = [_row(
+        **{"Activity Date": "10/25/2024", "Instrument": "TSLA $250 Put 12/20/2024",
+           "Trans Code": "STO", "Quantity": "1", "Price": "3.00", "Amount": "300.00"}
+    )]
+    trades = _parse(rows)
+    assert len(trades) == 1
+    assert trades[0].action == "Sell"
+    assert trades[0].proceeds == 300.0
+    assert trades[0].basis_source == "option_short_open"
+
+
+def test_btc_parses_as_buy_with_short_close_marker():
+    rows = [_row(
+        **{"Activity Date": "11/01/2024", "Instrument": "TSLA $250 Put 12/20/2024",
+           "Trans Code": "BTC", "Quantity": "1", "Price": "1.00", "Amount": "-100.00"}
+    )]
+    trades = _parse(rows)
+    assert len(trades) == 1
+    assert trades[0].action == "Buy"
+    assert trades[0].cost_basis == 100.0
+    assert trades[0].basis_source == "option_short_close"
