@@ -52,6 +52,67 @@ _TRADE_SIDE_CODES = (
 # Codes that are known but not trades and not cash events — warn-only.
 _WARN_ONLY_CODES = {"SPL"}
 
+# (kind_root, sign_source). sign_source = "amount" → suffix _in/_out from sign;
+# "always_positive" → kind fixed; "always_negative" → kind fixed (fee).
+_CASH_EVENT_CODES: dict[str, tuple[str, str]] = {
+    "DIV":    ("dividend", "always_positive"),
+    "DIVNRA": ("dividend", "always_positive"),
+    "CDIV":   ("dividend", "always_positive"),
+    "INT":    ("interest", "always_positive"),
+    "GOLD":   ("fee",      "always_negative"),
+    "MFEE":   ("fee",      "always_negative"),
+    "MINT":   ("fee",      "always_negative"),
+    "DTAX":   ("fee",      "always_negative"),
+    "DFEE":   ("fee",      "always_negative"),
+    "ACH":    ("transfer", "amount"),
+    "ACATS":  ("transfer", "amount"),
+}
+
+
+def _to_cash_event(
+    row: dict[str, str], account_display: str
+) -> tuple[CashEvent | None, str | None]:
+    """Try to convert a non-trade row to a CashEvent.
+
+    Returns (event, warning):
+      - (event, None) on a recognised cash-event row
+      - (None, warning_text) on a recognised cash-event row that can't be emitted
+        (zero amount, invalid date)
+
+    Caller is responsible for routing rows whose Trans Code is in
+    `_CASH_EVENT_CODES`; this helper assumes the code is a known cash event.
+    """
+    code = row.get("Trans Code", "").strip()
+    kind_root, sign_source = _CASH_EVENT_CODES[code]
+    amount = _money(row.get("Amount", ""))
+    if amount == 0.0:
+        return None, (
+            f"Skipped {code!r} row with empty/zero Amount on "
+            f"{row.get('Activity Date', '')!r}"
+        )
+    if sign_source == "amount":
+        kind = f"{kind_root}_in" if amount > 0 else f"{kind_root}_out"
+    else:
+        kind = kind_root
+    d = _parse_date(row.get("Activity Date", ""))
+    if d is None:
+        return None, (
+            f"Skipped {code!r} row with invalid Activity Date "
+            f"{row.get('Activity Date', '')!r}"
+        )
+    symbol = row.get("Instrument", "").strip() or None
+    return (
+        CashEvent(
+            account=account_display,
+            event_date=d,
+            kind=kind,
+            amount=abs(amount),
+            ticker=symbol,
+            description=row.get("Description", "").strip(),
+        ),
+        None,
+    )
+
 
 def _put_assignment_basis_offsets(rows: list[dict[str, str]]) -> dict[tuple[str, date], float]:
     """For each assigned short put, compute the premium that should reduce the
@@ -206,5 +267,13 @@ class RobinhoodParser:
                     f"Skipped {code!r} row on {row.get('Activity Date', '')!r} — "
                     f"corporate-action handled by splits subsystem"
                 )
-            # Cash events + unknown codes filled in by Tasks 10 and 12.
+                continue
+            if code in _CASH_EVENT_CODES:
+                ev, warn = _to_cash_event(row, account_display)
+                if ev is not None:
+                    cash_events.append(ev)
+                if warn is not None:
+                    warnings.append(warn)
+                continue
+            # Unknown code — Task 12.
         return ImportResult(trades=trades, cash_events=cash_events, parse_warnings=warnings)
