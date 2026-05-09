@@ -129,3 +129,17 @@ def test_oexp_does_not_warn():
     )]
     result = RobinhoodParser().parse_full(rows, "robinhood/personal")
     assert result.parse_warnings == []
+
+
+def test_same_day_identical_fills_get_distinct_occurrence_index():
+    rows = [
+        _row(**{"Activity Date": "07/29/2024", "Instrument": "GPRO", "Trans Code": "Sell",
+                "Quantity": "100", "Price": "2.00", "Amount": "200.00"}),
+        _row(**{"Activity Date": "07/29/2024", "Instrument": "GPRO", "Trans Code": "Sell",
+                "Quantity": "100", "Price": "2.00", "Amount": "200.00"}),
+    ]
+    trades = _parse(rows)
+    assert len(trades) == 2
+    assert trades[0].occurrence_index == 0
+    assert trades[1].occurrence_index == 1
+    assert trades[0].compute_natural_key() != trades[1].compute_natural_key()

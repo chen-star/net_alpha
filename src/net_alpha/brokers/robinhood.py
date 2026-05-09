@@ -106,6 +106,13 @@ class RobinhoodParser:
             if basis_source is not None:
                 kwargs["basis_source"] = basis_source
             trades.append(Trade(**kwargs))
+
+        seen: dict[str, int] = {}
+        for t in trades:
+            base = t.compute_natural_key()
+            seen[base] = seen.get(base, -1) + 1
+            if seen[base] > 0:
+                t.occurrence_index = seen[base]
         return trades
 
     def parse_full(self, rows: list[dict[str, str]], account_display: str) -> ImportResult:
