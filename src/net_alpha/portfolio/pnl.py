@@ -219,9 +219,12 @@ def realized_pl_from_trades(
        contributing trade-side P&L.
     """
     return sum(
-        (c.amount for c in realized_pl_contributions(
-            trades, period, gl_lots=gl_lots, include_disallowed_loss=include_disallowed_loss
-        )),
+        (
+            c.amount
+            for c in realized_pl_contributions(
+                trades, period, gl_lots=gl_lots, include_disallowed_loss=include_disallowed_loss
+            )
+        ),
         start=Decimal("0"),
     )
 
