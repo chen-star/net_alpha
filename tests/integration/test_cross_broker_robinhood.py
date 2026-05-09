@@ -5,6 +5,7 @@ covers the pure-function path). This test confirms the *ingest plumbing* — CSV
 parse, Repository.add_import, recompute_all_violations — works for a cross-broker
 scenario via the same seam users hit through the web upload + CLI.
 """
+
 from __future__ import annotations
 
 import csv
@@ -78,14 +79,8 @@ def test_loss_on_schwab_then_rebuy_on_robinhood_triggers_wash_sale(repo):
     recompute_all_violations(repo, load_etf_pairs())
 
     violations = repo.all_violations()
-    assert len(violations) == 1, (
-        f"Expected exactly 1 wash-sale violation, got {len(violations)}: {violations}"
-    )
+    assert len(violations) == 1, f"Expected exactly 1 wash-sale violation, got {len(violations)}: {violations}"
     v = violations[0]
     assert v.disallowed_loss > 0, f"disallowed_loss should be positive, got {v.disallowed_loss}"
-    assert "schwab" in v.loss_account.lower(), (
-        f"loss_account should reference 'schwab', got {v.loss_account!r}"
-    )
-    assert "robinhood" in v.buy_account.lower(), (
-        f"buy_account should reference 'robinhood', got {v.buy_account!r}"
-    )
+    assert "schwab" in v.loss_account.lower(), f"loss_account should reference 'schwab', got {v.loss_account!r}"
+    assert "robinhood" in v.buy_account.lower(), f"buy_account should reference 'robinhood', got {v.buy_account!r}"

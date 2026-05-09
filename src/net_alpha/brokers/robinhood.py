@@ -43,16 +43,32 @@ _NON_TRADE_KNOWN_CODES = {"OEXP", "OASGN"}
 _TRANSFER_CODES = {"REC"}
 
 _CRYPTO_TICKERS = {
-    "BTC", "ETH", "DOGE", "LTC", "BCH", "ETC", "BSV",
-    "AVAX", "MATIC", "SOL", "ADA", "SHIB", "UNI", "LINK", "COMP",
+    "BTC",
+    "ETH",
+    "DOGE",
+    "LTC",
+    "BCH",
+    "ETC",
+    "BSV",
+    "AVAX",
+    "MATIC",
+    "SOL",
+    "ADA",
+    "SHIB",
+    "UNI",
+    "LINK",
+    "COMP",
 }
 
 # Codes the trade-side `parse(...)` already handles. Used by parse_full(...)
 # to skip these in its own row walk (they're already in `trades`).
 _TRADE_SIDE_CODES = (
-    _BUY_CODES | _SELL_CODES
-    | _SHORT_OPTION_OPEN_CODES | _SHORT_OPTION_CLOSE_CODES
-    | _NON_TRADE_KNOWN_CODES | _TRANSFER_CODES
+    _BUY_CODES
+    | _SELL_CODES
+    | _SHORT_OPTION_OPEN_CODES
+    | _SHORT_OPTION_CLOSE_CODES
+    | _NON_TRADE_KNOWN_CODES
+    | _TRANSFER_CODES
 )
 
 # Codes that are known but not trades and not cash events — warn-only.
@@ -61,23 +77,21 @@ _WARN_ONLY_CODES = {"SPL"}
 # (kind_root, sign_source). sign_source = "amount" → suffix _in/_out from sign;
 # "always_positive" → kind fixed; "always_negative" → kind fixed (fee).
 _CASH_EVENT_CODES: dict[str, tuple[str, str]] = {
-    "DIV":    ("dividend", "always_positive"),
+    "DIV": ("dividend", "always_positive"),
     "DIVNRA": ("dividend", "always_positive"),
-    "CDIV":   ("dividend", "always_positive"),
-    "INT":    ("interest", "always_positive"),
-    "GOLD":   ("fee",      "always_negative"),
-    "MFEE":   ("fee",      "always_negative"),
-    "MINT":   ("fee",      "always_negative"),
-    "DTAX":   ("fee",      "always_negative"),
-    "DFEE":   ("fee",      "always_negative"),
-    "ACH":    ("transfer", "amount"),
-    "ACATS":  ("transfer", "amount"),
+    "CDIV": ("dividend", "always_positive"),
+    "INT": ("interest", "always_positive"),
+    "GOLD": ("fee", "always_negative"),
+    "MFEE": ("fee", "always_negative"),
+    "MINT": ("fee", "always_negative"),
+    "DTAX": ("fee", "always_negative"),
+    "DFEE": ("fee", "always_negative"),
+    "ACH": ("transfer", "amount"),
+    "ACATS": ("transfer", "amount"),
 }
 
 
-def _to_cash_event(
-    row: dict[str, str], account_display: str
-) -> tuple[CashEvent | None, str | None]:
+def _to_cash_event(row: dict[str, str], account_display: str) -> tuple[CashEvent | None, str | None]:
     """Try to convert a non-trade row to a CashEvent.
 
     Returns (event, warning):
@@ -92,20 +106,14 @@ def _to_cash_event(
     kind_root, sign_source = _CASH_EVENT_CODES[code]
     amount = _money(row.get("Amount", ""))
     if amount == 0.0:
-        return None, (
-            f"Skipped {code!r} row with empty/zero Amount on "
-            f"{row.get('Activity Date', '')!r}"
-        )
+        return None, (f"Skipped {code!r} row with empty/zero Amount on {row.get('Activity Date', '')!r}")
     if sign_source == "amount":
         kind = f"{kind_root}_in" if amount > 0 else f"{kind_root}_out"
     else:
         kind = kind_root
     d = _parse_date(row.get("Activity Date", ""))
     if d is None:
-        return None, (
-            f"Skipped {code!r} row with invalid Activity Date "
-            f"{row.get('Activity Date', '')!r}"
-        )
+        return None, (f"Skipped {code!r} row with invalid Activity Date {row.get('Activity Date', '')!r}")
     symbol = row.get("Instrument", "").strip() or None
     return (
         CashEvent(
@@ -209,9 +217,7 @@ class RobinhoodParser:
             try:
                 trade_date = datetime.strptime(row["Activity Date"].strip()[:10], "%m/%d/%Y").date()
             except ValueError as e:
-                raise ValueError(
-                    f"Row {i}: 'Activity Date' value {row['Activity Date']!r} is not a valid date"
-                ) from e
+                raise ValueError(f"Row {i}: 'Activity Date' value {row['Activity Date']!r} is not a valid date") from e
 
             symbol = row["Instrument"].strip()
             if symbol in _CRYPTO_TICKERS:
@@ -228,18 +234,20 @@ class RobinhoodParser:
                 action = "Buy" if qty > 0 else "Sell"
                 basis_source_xfer = "transfer_in" if qty > 0 else "transfer_out"
                 qty = abs(qty)
-                trades.append(Trade(
-                    account=account_display,
-                    date=trade_date,
-                    ticker=ticker,
-                    action=action,
-                    quantity=qty,
-                    proceeds=None,
-                    cost_basis=None,
-                    basis_unknown=True,
-                    basis_source=basis_source_xfer,
-                    option_details=opt[1] if opt else None,
-                ))
+                trades.append(
+                    Trade(
+                        account=account_display,
+                        date=trade_date,
+                        ticker=ticker,
+                        action=action,
+                        quantity=qty,
+                        proceeds=None,
+                        cost_basis=None,
+                        basis_unknown=True,
+                        basis_source=basis_source_xfer,
+                        option_details=opt[1] if opt else None,
+                    )
+                )
                 continue
 
             cost_basis = abs(amount) if action == "Buy" else None
@@ -314,7 +322,5 @@ class RobinhoodParser:
                 if warn is not None:
                     warnings.append(warn)
                 continue
-            warnings.append(
-                f"Unknown trans code {code!r} on {row.get('Activity Date', '')!r} (row skipped)"
-            )
+            warnings.append(f"Unknown trans code {code!r} on {row.get('Activity Date', '')!r} (row skipped)")
         return ImportResult(trades=trades, cash_events=cash_events, parse_warnings=warnings)

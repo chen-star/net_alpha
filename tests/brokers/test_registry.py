@@ -15,15 +15,33 @@ def test_detect_returns_none_for_unknown_headers():
 
 
 def test_detect_robinhood_from_headers():
-    headers = ["Activity Date", "Process Date", "Settle Date", "Instrument",
-               "Description", "Trans Code", "Quantity", "Price", "Amount"]
+    headers = [
+        "Activity Date",
+        "Process Date",
+        "Settle Date",
+        "Instrument",
+        "Description",
+        "Trans Code",
+        "Quantity",
+        "Price",
+        "Amount",
+    ]
     parser = detect_broker(headers)
     assert isinstance(parser, RobinhoodParser)
 
 
 def test_robinhood_headers_do_not_false_match_schwab():
-    headers = ["Activity Date", "Process Date", "Settle Date", "Instrument",
-               "Description", "Trans Code", "Quantity", "Price", "Amount"]
+    headers = [
+        "Activity Date",
+        "Process Date",
+        "Settle Date",
+        "Instrument",
+        "Description",
+        "Trans Code",
+        "Quantity",
+        "Price",
+        "Amount",
+    ]
     parser = detect_broker(headers)
     assert not isinstance(parser, SchwabParser)
 

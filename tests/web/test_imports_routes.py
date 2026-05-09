@@ -220,10 +220,7 @@ def test_upload_robinhood_csv_creates_robinhood_account(client, repo):
 
 def test_mixed_broker_upload_creates_separate_accounts(client, repo):
     """Schwab + Robinhood CSVs in one batch with the same label create distinct accounts."""
-    schwab_csv = (
-        "Date,Action,Symbol,Description,Quantity,Price,Amount\n"
-        "06/01/2024,Buy,GPRO,GoPro,100,5.00,$-500.00\n"
-    )
+    schwab_csv = "Date,Action,Symbol,Description,Quantity,Price,Amount\n06/01/2024,Buy,GPRO,GoPro,100,5.00,$-500.00\n"
     robinhood_csv = (
         "Activity Date,Process Date,Settle Date,Instrument,Description,"
         "Trans Code,Quantity,Price,Amount\n"
