@@ -149,3 +149,30 @@ def test_status_after_lifecycle(tmp_path, monkeypatch):
         assert s.installed is False
         assert s.running is False
         assert s.disabled is False
+
+
+def test_scheduler_starts_and_runs_price_refresh_synchronously(tmp_path, monkeypatch):
+    """Run price_refresh through the runner, end-to-end, in a sync test."""
+    from unittest.mock import MagicMock as MM
+
+    from net_alpha.service.jobs.price_refresh import run_price_refresh
+    from net_alpha.service.jobs.runner import run_job
+    from net_alpha.service.state import ServiceState
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    repo = MM()
+    repo.distinct_held_tickers.return_value = ["AAPL"]
+    repo.distinct_target_tickers.return_value = []
+    pricing = MM()
+    state = ServiceState()
+
+    payload = run_job(
+        job_name="price_refresh",
+        fn=lambda: run_price_refresh(repo=repo, pricing=pricing),
+        state=state,
+        repo=repo,
+    )
+    assert payload == {"symbols": 1}
+    assert state.last_run("price_refresh").status == "ok"
+    pricing.refresh.assert_called_once_with(["AAPL"])
