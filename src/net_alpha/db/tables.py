@@ -322,3 +322,27 @@ class LossCarryforwardRow(SQLModel, table=True):
         if v not in allowed:
             raise ValueError(f"source must be one of {allowed}, got {v!r}")
         return v
+
+
+class ServiceRunRow(SQLModel, table=True):
+    __tablename__ = "service_run"
+
+    id: int | None = Field(default=None, primary_key=True)
+    job_name: str
+    started_at: str
+    finished_at: str | None = None
+    status: str
+    duration_ms: int | None = None
+    error_msg: str | None = None
+    payload: str | None = None  # JSON-encoded
+
+
+class WashSaleWatchResultRow(SQLModel, table=True):
+    __tablename__ = "washsale_watch_result"
+
+    target_id: int = Field(primary_key=True)
+    status: str
+    severity: str
+    reason: str | None = None
+    triggering: str | None = None  # JSON-encoded
+    computed_at: str
