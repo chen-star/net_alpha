@@ -2,6 +2,56 @@
 
 
 
+## v0.55.2 (2026-05-09)
+
+### Chore
+
+* chore: sync GitNexus index counts in AGENTS.md/CLAUDE.md
+
+Auto-managed gitnexus blocks were out of date with the current index
+(symbols/relationships/flows numbers re-counted, plus debugging and
+refactoring playbook sections that the latest gitnexus template emits).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c4c6d21`](https://github.com/chen-star/net_alpha/commit/c4c6d21b18b6fbcc1ca63e0a7b388662a46b696d))
+
+### Fix
+
+* fix(service): unblock listen() + multiprocessing under launchd sandbox
+
+Three more bugs surfaced after the TCC-clear venv landed; the service
+process started but never accepted connections. Root causes:
+
+1. macOS 26 (Darwin 25) gates TCP `listen()` behind `network-inbound`,
+   separately from `network-bind`. With only the bind allow, uvicorn
+   would log &#34;Uvicorn running on http://127.0.0.1:8765&#34; but the listen
+   syscall was silently denied — no listener, no connection. Added
+   `(allow network-inbound (local ip &#34;localhost:PORT&#34;))` alongside the
+   existing bind rule.
+
+2. loguru&#39;s enqueue=True path uses `multiprocessing.SimpleQueue`, which
+   creates a POSIX named semaphore via `sem_open()`. Sandbox-exec gates
+   that under `ipc-posix-sem` — not covered by the existing
+   `ipc-posix-shm` rule. Added `(allow ipc-posix-sem)`.
+
+3. `_provision_service_venv` installed wash-alpha without extras, so
+   `yfinance`, `fastapi`, `uvicorn`, `apscheduler`, `jinja2`, and
+   `python-multipart` (all in the [ui] optional-deps group) were
+   missing — the service crashed during import. Switched the install
+   target to `&lt;project&gt;[ui]`.
+
+Plus two install-flow gaps: `uv venv` rejects an existing target so
+re-running install failed with `A virtual environment already exists`
+— added `--clear`. Dropped `capture_output=True` on the uv subprocess
+calls so the actual stderr is visible to the user instead of being
+buried in CalledProcessError.
+
+Tests cover all of: posix-sem rule, network-inbound rule with the
+pinned port, [ui] extras in the install command, and `--clear` on the
+venv command.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a519b24`](https://github.com/chen-star/net_alpha/commit/a519b249431ebafd6f318b7759c279d3c30b8e9f))
+
+
 ## v0.55.1 (2026-05-09)
 
 ### Fix
