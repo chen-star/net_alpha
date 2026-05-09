@@ -87,6 +87,7 @@ def test_stc_parses_as_sell_with_option_details():
     assert trades[0].action == "Sell"
     assert trades[0].proceeds == 800.0
     assert trades[0].option_details is not None
+    assert trades[0].basis_source == "unknown"
 
 
 def test_sto_parses_as_sell_with_short_open_marker():
