@@ -85,8 +85,30 @@ class Repository:
 
     def list_accounts(self) -> list[Account]:
         with Session(self.engine) as s:
-            rows = s.exec(select(AccountRow)).all()
-            return [Account(id=r.id, broker=r.broker, label=r.label) for r in rows]
+            rows = s.exec(select(AccountRow).order_by(AccountRow.broker, AccountRow.label)).all()
+            return [Account(id=r.id, broker=r.broker, label=r.label, type=r.type) for r in rows]
+
+    def get_account_type(self, *, broker: str, label: str) -> str:
+        with Session(self.engine) as s:
+            row = s.exec(
+                select(AccountRow).where(
+                    AccountRow.broker == broker, AccountRow.label == label
+                )
+            ).first()
+            return row.type if row else "taxable"
+
+    def set_account_type(self, *, broker: str, label: str, type_: str) -> None:
+        with Session(self.engine) as s:
+            row = s.exec(
+                select(AccountRow).where(
+                    AccountRow.broker == broker, AccountRow.label == label
+                )
+            ).first()
+            if row is None:
+                return  # caller should ensure account exists first
+            row.type = type_
+            s.add(row)
+            s.commit()
 
     def get_user_preference(self, account_id: int) -> AccountPreference | None:
         with Session(self.engine) as s:

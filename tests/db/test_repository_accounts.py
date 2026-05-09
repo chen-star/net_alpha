@@ -46,3 +46,18 @@ def test_list_imports_empty(repo):
 
 def test_get_import_returns_none_when_missing(repo):
     assert repo.get_import(999) is None
+
+
+def test_list_accounts_returns_existing_rows(repo):
+    rows = repo.list_accounts()
+    assert isinstance(rows, list)
+
+
+def test_set_and_get_account_type(repo):
+    repo.get_or_create_account(broker="schwab", label="ira-test")
+    repo.set_account_type(broker="schwab", label="ira-test", type_="trad_ira")
+    assert repo.get_account_type(broker="schwab", label="ira-test") == "trad_ira"
+
+
+def test_get_account_type_default_taxable_for_unknown(repo):
+    assert repo.get_account_type(broker="nonexistent", label="x") == "taxable"
