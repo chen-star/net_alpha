@@ -37,6 +37,7 @@ from net_alpha.web.routes import (
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
 from net_alpha.web.routes import preferences as preferences_routes
+from net_alpha.web.routes import service as service_routes
 from net_alpha.web.routes import settings as settings_routes
 from net_alpha.web.routes import tax as tax_routes
 
@@ -212,6 +213,7 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
     app.include_router(redirects.router)
     app.include_router(welcome.router)
     app.include_router(tour.router)
+    app.include_router(service_routes.router)
     app.include_router(settings_routes.router)
     app.include_router(tax_routes.router)
     app.include_router(wash_sales.router)
