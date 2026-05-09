@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 
 from net_alpha.db.repository import Repository
@@ -77,3 +77,28 @@ async def status_pill(request: Request) -> HTMLResponse:
             "last_watch": last_watch,
         },
     )
+
+
+@router.post("/control", response_class=HTMLResponse)
+async def control_post(request: Request, action: str = Form(...)):
+    state = getattr(request.app.state, "service_state", None)
+    sched = getattr(request.app.state, "scheduler", None)
+
+    if action == "pause":
+        if state is not None and sched is not None:
+            control.pause_in_process(state=state, scheduler=sched)
+    elif action == "resume":
+        if state is not None and sched is not None:
+            control.resume_in_process(state=state, scheduler=sched)
+    elif action == "restart":
+        try:
+            control.restart()
+        except (control.NotInstalled, control.ServiceStopped) as e:
+            return HTMLResponse(str(e), status_code=409)
+    elif action == "stop":
+        control.stop(reason="user clicked Stop in UI")
+    else:
+        return HTMLResponse(f"unknown action: {action}", status_code=400)
+
+    # Return the updated pill so HTMX can swap it in immediately.
+    return await status_pill(request)

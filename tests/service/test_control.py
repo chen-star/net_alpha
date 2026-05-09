@@ -86,6 +86,7 @@ def test_start_raises_if_not_installed(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     paths.ensure_dirs()
     import pytest
+
     with pytest.raises(control.NotInstalled):
         control.start()
 
@@ -104,8 +105,7 @@ def test_restart_when_running_bootouts_then_bootstraps(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     paths.ensure_dirs()
     paths.plist_file().write_text("<plist/>")
-    with patch.object(control, "_launchctl_bootout") as bo, \
-         patch.object(control, "_launchctl_bootstrap") as bs:
+    with patch.object(control, "_launchctl_bootout") as bo, patch.object(control, "_launchctl_bootstrap") as bs:
         control.restart()
     bo.assert_called_once()
     bs.assert_called_once()
@@ -117,6 +117,7 @@ def test_restart_refuses_when_disabled_flag_present(tmp_path, monkeypatch):
     paths.plist_file().write_text("<plist/>")
     paths.disabled_flag().write_text("x")
     import pytest
+
     with pytest.raises(control.ServiceStopped):
         control.restart()
 
@@ -154,3 +155,28 @@ def test_status_installed_and_running(tmp_path, monkeypatch):
     assert s.installed is True
     assert s.running is True
     assert s.pid == 12345
+
+
+def test_pause_in_process_marks_state_and_pauses_scheduler():
+    from unittest.mock import MagicMock as MM
+
+    from net_alpha.service.state import ServiceState
+
+    state = ServiceState()
+    sched = MM()
+    control.pause_in_process(state=state, scheduler=sched)
+    assert state.paused is True
+    sched.pause.assert_called_once()
+
+
+def test_resume_in_process_unmarks_state_and_resumes_scheduler():
+    from unittest.mock import MagicMock as MM
+
+    from net_alpha.service.state import ServiceState
+
+    state = ServiceState()
+    state.pause()
+    sched = MM()
+    control.resume_in_process(state=state, scheduler=sched)
+    assert state.paused is False
+    sched.resume.assert_called_once()

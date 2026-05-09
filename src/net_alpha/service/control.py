@@ -129,6 +129,22 @@ def resume() -> None:
     raise NotImplementedError  # Task 2.x
 
 
+def pause_in_process(*, state, scheduler) -> None:
+    """In-process pause: flip ServiceState.paused and pause the scheduler.
+
+    Called by the web `/settings/service/control` POST endpoint. CLI
+    pause/resume are different code paths that reach this via HTTP.
+    """
+    state.pause()
+    scheduler.pause()
+
+
+def resume_in_process(*, state, scheduler) -> None:
+    """In-process resume: flip ServiceState.paused and resume the scheduler."""
+    state.resume()
+    scheduler.resume()
+
+
 def restart() -> None:
     if not paths.plist_file().exists():
         raise NotInstalled("Service is not installed.")
