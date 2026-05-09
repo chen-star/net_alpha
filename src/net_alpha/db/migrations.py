@@ -561,25 +561,16 @@ def _migrate_v18_to_v19(session: Session) -> None:
         """)
         )
 
-    if not _table_exists(session, "accounts"):
-        session.exec(
-            text("""
-            CREATE TABLE accounts (
-                label      TEXT PRIMARY KEY,
-                type       TEXT NOT NULL DEFAULT 'taxable',
-                created_at TEXT NOT NULL
-            )
-        """)
-        )
-        if _table_exists(session, "trades"):
-            session.exec(
-                text("""
-                INSERT OR IGNORE INTO accounts (label, type, created_at)
-                SELECT DISTINCT account, 'taxable', datetime('now')
-                FROM trades
-                WHERE account IS NOT NULL AND account != ''
-            """)
-            )
+    # accounts table — pre-exists (from SQLModel auto-create or older schema).
+    # Add per-account type metadata (for §1091 IRA-trap detection).
+    if _table_exists(session, "accounts"):
+        if not _column_exists(session, "accounts", "type"):
+            session.exec(text("ALTER TABLE accounts ADD COLUMN type TEXT NOT NULL DEFAULT 'taxable'"))
+        if not _column_exists(session, "accounts", "created_at"):
+            session.exec(text("ALTER TABLE accounts ADD COLUMN created_at TEXT"))
+        # Backfill any NULL created_at regardless of whether the column was just
+        # added (handles rows inserted before the column existed).
+        session.exec(text("UPDATE accounts SET created_at = datetime('now') WHERE created_at IS NULL"))
 
     session.commit()
 

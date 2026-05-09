@@ -23,13 +23,30 @@ def test_v19_creates_washsale_watch_result_table():
         assert len(rows) == 1
 
 
-def test_v19_creates_accounts_table():
+def test_v19_adds_type_and_created_at_columns_to_accounts():
     engine = create_engine("sqlite:///:memory:")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as s:
         migrate(s)
-        rows = s.exec(text("SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'")).all()
+        cols = list(s.exec(text("PRAGMA table_info(accounts)")).all())
+        names = {c[1] for c in cols}
+        assert "type" in names
+        assert "created_at" in names
+
+
+def test_v19_backfills_existing_accounts_with_taxable_type():
+    engine = create_engine("sqlite:///:memory:")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as s:
+        # Insert a pre-existing account row; type has a DEFAULT so omitting it
+        # would fail NOT NULL — include a value to simulate a row that existed
+        # before created_at was added, then verify migration backfills created_at.
+        s.exec(text("INSERT INTO accounts(broker, label, type) VALUES('schwab', 'personal', 'taxable')"))
+        migrate(s)
+        rows = list(s.exec(text("SELECT broker, label, type, created_at FROM accounts WHERE label='personal'")).all())
         assert len(rows) == 1
+        assert rows[0][2] == "taxable"
+        assert rows[0][3] is not None  # created_at backfilled by migration
 
 
 def test_v19_idempotent():

@@ -17,6 +17,8 @@ class AccountRow(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     broker: str = Field(index=True)
     label: str = Field(index=True)
+    type: str = Field(default="taxable", sa_column_kwargs={"server_default": "taxable"})
+    created_at: str | None = None
 
 
 class ImportRecordRow(SQLModel, table=True):
