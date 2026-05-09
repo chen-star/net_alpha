@@ -43,3 +43,22 @@ def test_build_scheduler_does_not_start_when_disabled_flag_present(tmp_path, mon
     finally:
         if sched.running:
             sched.shutdown(wait=False)
+
+
+def test_build_scheduler_registers_washsale_watch_daily_at_4am():
+    repo = MagicMock()
+    pricing = MagicMock()
+    state = MagicMock()
+    state.paused = False
+    sched = build_scheduler(repo=repo, pricing=pricing, state=state)
+    try:
+        job = sched.get_job("washsale_watch")
+        assert job is not None
+        assert isinstance(job.trigger, CronTrigger)
+        # CronTrigger should fire daily at 04:00 — hour=4, minute=0
+        hour_field = next(f for f in job.trigger.fields if f.name == "hour")
+        rendered = str(hour_field)
+        assert "4" in rendered
+    finally:
+        if sched.running:
+            sched.shutdown(wait=False)
