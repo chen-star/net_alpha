@@ -71,6 +71,10 @@ class NotInstalled(RuntimeError):
     """Raised when a control verb requires an installed plist but none is found."""
 
 
+class ServiceStopped(RuntimeError):
+    """Raised when a control verb assumes a running service but the disabled flag is set."""
+
+
 def install(*, port: int = 8765) -> None:
     paths.ensure_dirs()
     binary = _resolve_binary()
@@ -127,7 +131,15 @@ def resume() -> None:
 
 
 def restart() -> None:
-    raise NotImplementedError  # Task 1.12
+    if not paths.plist_file().exists():
+        raise NotInstalled("Service is not installed.")
+    if disabled_flag.is_set():
+        raise ServiceStopped(
+            "Service is stopped. Run `net-alpha service start` instead — "
+            "restart is a no-op on a stopped service."
+        )
+    _launchctl_bootout()
+    _launchctl_bootstrap()
 
 
 @dataclass

@@ -97,3 +97,24 @@ def test_stop_writes_disabled_flag_and_calls_bootout(tmp_path, monkeypatch):
     assert paths.disabled_flag().exists()
     assert "user requested" in paths.disabled_flag().read_text()
     bo.assert_called_once()
+
+
+def test_restart_when_running_bootouts_then_bootstraps(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    paths.plist_file().write_text("<plist/>")
+    with patch.object(control, "_launchctl_bootout") as bo, \
+         patch.object(control, "_launchctl_bootstrap") as bs:
+        control.restart()
+    bo.assert_called_once()
+    bs.assert_called_once()
+
+
+def test_restart_refuses_when_disabled_flag_present(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    paths.plist_file().write_text("<plist/>")
+    paths.disabled_flag().write_text("x")
+    import pytest
+    with pytest.raises(control.ServiceStopped):
+        control.restart()
