@@ -2,6 +2,41 @@
 
 
 
+## v0.55.1 (2026-05-09)
+
+### Fix
+
+* fix(service): unblock launchd install — TCC-clear venv + idempotent reload
+
+Three bugs prevented `net-alpha service install` / `start` from
+producing a running service:
+
+1. sandbox-exec rejected `(local ip &#34;127.0.0.1:PORT&#34;)` — the host must
+   be `*` or `localhost`. The wrapped Python crashed with EX_DATAERR on
+   every launchd respawn. Switched the rule to `localhost:PORT`.
+
+2. `install`/`start` called `launchctl bootstrap` directly, which exits
+   5 if the agent is already loaded. Added `_launchctl_reload()` (bootout
+   + bootstrap) and routed `install`, `start`, and `restart` through it,
+   so re-running any of them is safe.
+
+3. The wrapper pointed at `~/Documents/project/net_alpha/.venv/bin/net-alpha`,
+   but launchd-spawned processes have a TCC identity that cannot read
+   `~/Documents/`. Added `_provision_service_venv()` which uses `uv` to
+   create a dedicated runtime venv at `~/.net_alpha/venv/` and installs
+   wash-alpha from the local project source. The runtime now lives
+   entirely inside the sandbox profile&#39;s writable subpath.
+
+`uninstall` now also removes the runtime venv. Project data at
+`~/.net_alpha/net_alpha.db` is still preserved.
+
+README service-management section updated to document the new
+`~/.net_alpha/` layout, idempotency, and the non-editable-snapshot
+re-install requirement after code changes.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6a6646b`](https://github.com/chen-star/net_alpha/commit/6a6646b244d205b56ba45622f61b39683f98924d))
+
+
 ## v0.55.0 (2026-05-09)
 
 ### Feature
