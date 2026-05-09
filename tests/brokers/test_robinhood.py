@@ -144,3 +144,73 @@ def test_same_day_identical_fills_get_distinct_occurrence_index():
     assert trades[0].occurrence_index == 0
     assert trades[1].occurrence_index == 1
     assert trades[0].compute_natural_key() != trades[1].compute_natural_key()
+
+
+def test_oasgn_short_put_offsets_underlying_buy_basis():
+    rows = [
+        # Short put opened — premium received $300.
+        _row(**{"Activity Date": "10/01/2024", "Instrument": "AAPL $150 Put 11/15/2024",
+                "Trans Code": "STO", "Quantity": "1", "Price": "3.00", "Amount": "300.00"}),
+        # Assigned: option leg (no trade emitted, premium folded via pre-pass).
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL $150 Put 11/15/2024",
+                "Trans Code": "OASGN", "Quantity": "1", "Price": "0", "Amount": "0"}),
+        # Underlying buy at strike on assignment date — Robinhood Path A.
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL", "Trans Code": "Buy",
+                "Quantity": "100", "Price": "150.00", "Amount": "-15000.00"}),
+    ]
+    trades = _parse(rows)
+    underlying = [t for t in trades if t.ticker == "AAPL" and t.option_details is None]
+    assert len(underlying) == 1
+    # 15000 (strike × 100) − 300 (premium) = 14700.
+    assert underlying[0].cost_basis == 14700.0
+    assert underlying[0].basis_source == "put_assignment"
+
+
+def test_oasgn_does_not_emit_a_trade_for_the_option_leg():
+    rows = [
+        _row(**{"Activity Date": "10/01/2024", "Instrument": "AAPL $150 Put 11/15/2024",
+                "Trans Code": "STO", "Quantity": "1", "Price": "3.00", "Amount": "300.00"}),
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL $150 Put 11/15/2024",
+                "Trans Code": "OASGN", "Quantity": "1", "Price": "0", "Amount": "0"}),
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL", "Trans Code": "Buy",
+                "Quantity": "100", "Price": "150.00", "Amount": "-15000.00"}),
+    ]
+    trades = _parse(rows)
+    # Two trades total: STO (the option Sell) + the underlying Buy. OASGN itself does not emit anything.
+    assert len(trades) == 2
+    option_trades = [t for t in trades if t.option_details is not None]
+    assert len(option_trades) == 1  # just the STO
+
+
+def test_oasgn_with_no_prior_sto_does_not_offset():
+    """Defensive: an OASGN row without any prior STO leaves the underlying Buy basis untouched."""
+    rows = [
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL $150 Put 11/15/2024",
+                "Trans Code": "OASGN", "Quantity": "1", "Price": "0", "Amount": "0"}),
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL", "Trans Code": "Buy",
+                "Quantity": "100", "Price": "150.00", "Amount": "-15000.00"}),
+    ]
+    trades = _parse(rows)
+    underlying = [t for t in trades if t.ticker == "AAPL" and t.option_details is None]
+    assert len(underlying) == 1
+    assert underlying[0].cost_basis == 15000.0  # unchanged
+    assert underlying[0].basis_source == "unknown"
+
+
+def test_oasgn_call_assignment_does_not_offset_underlying():
+    """Calls are out of scope for the v1 helper — only puts get basis-offset."""
+    rows = [
+        _row(**{"Activity Date": "10/01/2024", "Instrument": "AAPL $200 Call 11/15/2024",
+                "Trans Code": "STO", "Quantity": "1", "Price": "5.00", "Amount": "500.00"}),
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL $200 Call 11/15/2024",
+                "Trans Code": "OASGN", "Quantity": "1", "Price": "0", "Amount": "0"}),
+        # For a sold call assignment, AAPL would be SOLD at strike (not bought). But even if
+        # there were a Buy row by mistake, the helper should not touch it.
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL", "Trans Code": "Buy",
+                "Quantity": "100", "Price": "200.00", "Amount": "-20000.00"}),
+    ]
+    trades = _parse(rows)
+    underlying = [t for t in trades if t.ticker == "AAPL" and t.option_details is None]
+    assert len(underlying) == 1
+    assert underlying[0].cost_basis == 20000.0  # call premium NOT folded in
+    assert underlying[0].basis_source == "unknown"
