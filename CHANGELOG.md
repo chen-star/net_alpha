@@ -2,6 +2,27 @@
 
 
 
+## v0.55.3 (2026-05-09)
+
+### Fix
+
+* fix: realized P/L provenance ties out + Linux CI launchctl patch
+
+The provenance modal&#39;s headline total was computed via
+realized_pl_from_trades (which sums Sells, BTC option closes, and broker
+GL lots), but the contributing-trades list only iterated raw Sell rows
+with gross proceeds in `amount`. With GL lots or BTC closures in scope,
+rows didn&#39;t sum to the headline. Add realized_pl_contributions() so the
+total and breakdown share one decomposition; per-row amount is now signed
+realized P/L.
+
+Also patch test_install_port_embedded_in_artifacts to mock
+_launchctl_bootout (called via _launchctl_reload), which was failing on
+Linux CI with FileNotFoundError: &#39;launchctl&#39;.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c187f49`](https://github.com/chen-star/net_alpha/commit/c187f493b0d514da6145cc8c0c30dd5fd8b8c9c6))
+
+
 ## v0.55.2 (2026-05-09)
 
 ### Chore
