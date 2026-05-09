@@ -185,8 +185,10 @@ def test_resume_in_process_unmarks_state_and_resumes_scheduler():
 def test_pause_via_http_when_service_running(monkeypatch):
     """When the service is running, control.pause() POSTs to /settings/service/control."""
     from unittest.mock import MagicMock as MM
+
     fake_post = MM(return_value=MM(status_code=200))
     import urllib.request
+
     monkeypatch.setattr(urllib.request, "urlopen", fake_post)
     monkeypatch.setattr(control, "_status_running", lambda: True)
     control.pause()
@@ -195,8 +197,10 @@ def test_pause_via_http_when_service_running(monkeypatch):
 
 def test_resume_via_http_when_service_running(monkeypatch):
     from unittest.mock import MagicMock as MM
+
     fake_post = MM(return_value=MM(status_code=200))
     import urllib.request
+
     monkeypatch.setattr(urllib.request, "urlopen", fake_post)
     monkeypatch.setattr(control, "_status_running", lambda: True)
     control.resume()
@@ -205,6 +209,18 @@ def test_resume_via_http_when_service_running(monkeypatch):
 
 def test_pause_raises_not_installed_when_service_not_running(monkeypatch):
     import pytest
+
     monkeypatch.setattr(control, "_status_running", lambda: False)
     with pytest.raises(control.NotInstalled):
         control.pause()
+
+
+def test_install_raises_helpful_error_when_uv_missing(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    binary = _stub_binary(tmp_path)
+    monkeypatch.setattr(control, "_resolve_binary", lambda: str(binary))
+    monkeypatch.setattr(control, "_uv_available", lambda: False)
+    import pytest
+
+    with pytest.raises(control.MissingUv):
+        control.install(port=8765)

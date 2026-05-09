@@ -35,6 +35,11 @@ def _resolve_binary() -> str:
     raise RuntimeError("Could not resolve the net-alpha binary path. Is wash-alpha installed in this environment?")
 
 
+def _uv_available() -> bool:
+    """Return True iff the ``uv`` tool is on PATH."""
+    return shutil.which("uv") is not None
+
+
 def _gui_domain() -> str:
     return f"gui/{os.getuid()}"
 
@@ -93,7 +98,16 @@ class ServiceStopped(RuntimeError):
     """Raised when a control verb assumes a running service but the disabled flag is set."""
 
 
+class MissingUv(RuntimeError):
+    """Raised when service install is requested but uv is not on PATH."""
+
+
 def install(*, port: int = 8765) -> None:
+    if not _uv_available():
+        raise MissingUv(
+            "The always-on service requires uv. Install it from "
+            "https://docs.astral.sh/uv/ and re-run `net-alpha service install`."
+        )
     paths.ensure_dirs()
     binary = _resolve_binary()
 
