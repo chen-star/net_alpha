@@ -2,13 +2,154 @@
 
 
 
+## v0.54.0 (2026-05-08)
+
+### Documentation
+
+* docs(readme): drop portfolio screenshots
+
+Removes assets/screenshot-portfolio.png and assets/screenshot-tax-wash.png
+along with their README references — they showed real account values.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4479c58`](https://github.com/chen-star/net_alpha/commit/4479c588730afcf00d0dec877515833d31e586f5))
+
+### Feature
+
+* feat(cli): --demo flag on net-alpha ui builds demo.db and opens tour ([`550d585`](https://github.com/chen-star/net_alpha/commit/550d585b5480e297202d66804e36dfa4242e680b))
+
+* feat(imports): preview parsed-trade sample + post-commit success page
+
+Task 11: /imports/preview now parses the uploaded Schwab transaction file
+and surfaces the first 5 trades in a small table inside the import modal,
+so users see exactly what they&#39;re about to commit (date, action, ticker,
+qty, amount) along with the total parsed count.
+
+Task 12: POST /imports redirects to a new /imports/success?id=N page
+that shows the trade count, wash-sale count + disallowed-loss total,
+and clear CTAs to /tax and /. The previous post-commit destination
+(/settings/imports) is kept as a fallback when no import_id is recorded.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b5d4954`](https://github.com/chen-star/net_alpha/commit/b5d4954d389cf1e00bf9558371da034605cc1825))
+
+* feat(ui): empty-state hero on positions, tax, imports pages
+
+Replaces the legacy empty-state copy on /positions tabs, /tax, and the
+imports table fragment with calls to the shared `_empty_state_hero.html`
+partial (Tasks 8/9). /imports keeps no CTAs because the drop zone above
+is the action; /positions and /tax both surface &#34;Take the tour&#34; + &#34;Import
+CSV&#34;. Stale tab-content tests that asserted on rendered tax content with
+an empty DB now seed a no-violation import so the page-level hero does
+not suppress the body they assert on.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`77ddc1e`](https://github.com/chen-star/net_alpha/commit/77ddc1ee077936a575d999f34a630cbcc4e02583))
+
+* feat(ui): shared empty-state hero partial; apply to portfolio
+
+Adds `_empty_state_hero.html` — a parameterized partial that takes
+title, body, icon, and up to two CTAs (each suppressed if its label
+is empty). Matches the project&#39;s existing idiom: `.panel`, `.btn` /
+`.btn-ghost`, vendored SVG icons under `/static/icons/` with the
+`.icon-mono` filter (no Lucide JS dependency).
+
+Replaces `_portfolio_empty_state.html` with a `{% with %}` block that
+includes the new partial. Copy: &#34;No portfolio yet&#34; / &#34;Import a Schwab
+CSV or take a 30-second tour with sample data.&#34; Primary CTA → /welcome
+(&#34;Take a 30s tour&#34;), secondary → /imports (&#34;Import CSV&#34;).
+
+Tasks 10+ will propagate the partial to /positions, /tax, /imports.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e6a1e43`](https://github.com/chen-star/net_alpha/commit/e6a1e4323c469d26606d44960b198392c76a7f90))
+
+* feat(tour): dismiss, replay, exit-to-real state mutations
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0762ff4`](https://github.com/chen-star/net_alpha/commit/0762ff41124bbc51af90e62ba0e05f77466a8869))
+
+* feat(tour): sticky tour banner rendered when ?tour=N in URL ([`bb29d27`](https://github.com/chen-star/net_alpha/commit/bb29d27e5e4a3aac1e8054929e2f45a45c9e2cd2))
+
+* feat(welcome): splash route with start-tour and start-import handlers
+
+Adds GET /welcome (renders splash; 303 -&gt; / when real imports already
+exist; ?replay=1 always renders) and POST /welcome/start-tour (builds
+demo.db on first call, flips app.state.demo_mode, 303 -&gt; /?tour=1) and
+POST /welcome/start-import (303 -&gt; /imports?wizard=1).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`af25325`](https://github.com/chen-star/net_alpha/commit/af25325fcaee26dfaeb93f945c2aeca24c4898c4))
+
+* feat(demo): build_demo_db ingests fixture rows via existing import seams
+
+Renders DEMO_TAXABLE/DEMO_IRA to Schwab-format CSV in memory, runs them
+through SchwabParser + Repository.add_import, then stitch_account +
+recompute_all_violations — the same path /imports and the CLI use.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0c0f3dc`](https://github.com/chen-star/net_alpha/commit/0c0f3dc8b20c0e670ebff67fa19b62a7f52414f5))
+
+* feat(demo): add hand-curated demo trade rows for taxable + IRA ([`481d5ee`](https://github.com/chen-star/net_alpha/commit/481d5eedb854ebfaaae48dda3a46436685a9a539))
+
+* feat(db): add get/set tour_completed meta helpers ([`6135946`](https://github.com/chen-star/net_alpha/commit/6135946904b421eed0582ac882b89ea37ddfaaae))
+
+* feat(web): add effective_db_path helper and app.state.demo_mode flag
+
+Foundation for the onboarding tour: when demo_mode is True, requests route
+to &lt;data_dir&gt;/demo.db so the tour can operate on isolated fixture data
+without touching the user&#39;s real DB. Default behavior (demo_mode=False)
+is unchanged.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8bbe747`](https://github.com/chen-star/net_alpha/commit/8bbe747adc125d53a4dd645b4f86192e872fa636))
+
+### Fix
+
+* fix(onboarding): block imports in demo mode; add replay button; hide banner on welcome; drop dead wizard param
+
+- /welcome/start-import now redirects to /imports (the ?wizard=1 flag was
+  never consumed). Test renamed accordingly.
+- POST /imports now early-returns to /welcome when app.state.demo_mode is
+  set, preventing accidental writes to the real DB while in tour mode.
+- Settings &gt; About now exposes a &#34;Replay onboarding tour&#34; form posting to
+  /tour/replay so the tour is reachable from inside the app.
+- _tour_banner.html no longer renders on /welcome even with ?tour=N — the
+  splash already owns the start-tour CTA, and the banner duplicates it.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9c894ce`](https://github.com/chen-star/net_alpha/commit/9c894ce0cc74fc04e189b4a96d76b7eeae7512ce))
+
+* fix(web): preserve query string on /imports → /settings/imports redirect ([`35ab078`](https://github.com/chen-star/net_alpha/commit/35ab0789844d9d3e0c07f3234b35e83e3ffd9233))
+
+### Refactor
+
+* refactor(web): use direct app.state access; tighten docstring ([`d5eac5d`](https://github.com/chen-star/net_alpha/commit/d5eac5d22bd419c650d0c97ad99372db8a5dba1a))
+
+### Style
+
+* style: ruff format pass after onboarding feature work ([`15dc8f2`](https://github.com/chen-star/net_alpha/commit/15dc8f2acd8625e10a178271173cb5f5931eab45))
+
+### Unknown
+
+* Merge branch &#39;worktree-onboarding-first-60s&#39;
+
+First-60-seconds onboarding overhaul:
+
+- Welcome splash at /welcome with two doors (tour | import)
+- Staged 3-step tour banner over isolated demo.db (~/.net_alpha/demo.db),
+  built deterministically from in-code Schwab-format trade rows
+- effective_db_path helper + app.state.demo_mode flag for mode switching
+- Tour state mutations: dismiss/replay/exit-to-real (real-DB pinned)
+- Shared empty-state hero partial applied to /, /positions, /tax, /imports
+- Imports preview: sample of 5 parsed trades before commit
+- Imports success page summarizing trade + wash-sale counts
+- net-alpha ui --demo flag for landing-page entry
+- /imports POST guarded against demo-mode pollution
+- &#34;Replay onboarding tour&#34; entry in Settings → About
+
+Tests: 1526 passed (+ 41 new across 11 test files), 1 pre-existing skip.
+Lint: clean. Format: clean. ([`76db5b6`](https://github.com/chen-star/net_alpha/commit/76db5b651e2938b553b57bb473fe0dc9f6cd3dbe))
+
+
 ## v0.53.0 (2026-05-06)
 
 ### Chore
 
 * chore: refresh GitNexus index stats and uv.lock to v0.52.2
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3886af6`](https://github.com/chen-star/net_alpha/commit/3886af6942f061904298b8d907cb0dbbfeda5a20))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5f46245`](https://github.com/chen-star/net_alpha/commit/5f462454f4bb4ab04aee162ef88b041ce5e48fb4))
 
 ### Documentation
 
@@ -19,7 +160,7 @@ screenshots from the local audit set, and reorganizes the body around
 Overview / Quickstart / Features / Usage / Rules / Architecture so a
 first-time visitor can size up the project in a single scroll.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5637fdc`](https://github.com/chen-star/net_alpha/commit/5637fdca625efc871ef2ee07cd696df18f060ada))
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5e03b10`](https://github.com/chen-star/net_alpha/commit/5e03b10e18e159b229faafc27c9f30c4a3b786a4))
 
 * docs(claude): document carryforward + lot_selector subsystems
 
