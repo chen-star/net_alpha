@@ -2,6 +2,198 @@
 
 
 
+## v0.54.1 (2026-05-09)
+
+### Fix
+
+* fix(lint): drop unused WatchResult import + ruff format pass ([`b266360`](https://github.com/chen-star/net_alpha/commit/b266360b5b55c65f5003b19000336981b32056ea))
+
+### Unknown
+
+* Merge remote-tracking branch &#39;origin/master&#39;
+
+# Conflicts:
+#	pyproject.toml ([`acf50f3`](https://github.com/chen-star/net_alpha/commit/acf50f3790549508a943248911635b6c8165a049))
+
+* Merge branch &#39;worktree-feat-v2-always-on-service&#39; — v2.0.0 always-on service ([`41c5fa2`](https://github.com/chen-star/net_alpha/commit/41c5fa216334a776164773c530c40ba7cbc29594))
+
+
+## v2.0.0 (2026-05-09)
+
+### Chore
+
+* chore(deps): add apscheduler to [ui] extra ([`030ac4c`](https://github.com/chen-star/net_alpha/commit/030ac4cb09520dc2605f19ff47b821114b8500d2))
+
+### Documentation
+
+* docs(v2): document always-on service install + management
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0f7e48a`](https://github.com/chen-star/net_alpha/commit/0f7e48a23c77f40a0321c600932429be09777a00))
+
+### Feature
+
+* feat(service): rotate log at 10 MB / 7-day retention
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`11cabbb`](https://github.com/chen-star/net_alpha/commit/11cabbb3c2899f4fe668e97115c553102d062587))
+
+* feat(service): control.logs (tail + follow)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2217cad`](https://github.com/chen-star/net_alpha/commit/2217cad06fa017bbd04b482013c8171855becca1))
+
+* feat(service): install requires uv on PATH; clear error if missing
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a02f80b`](https://github.com/chen-star/net_alpha/commit/a02f80b6ca8986ca60667b49597fb45cf32634e6))
+
+* feat(onboarding): install-offer screen when no service is detected
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8f1b29e`](https://github.com/chen-star/net_alpha/commit/8f1b29e6258e7c63b6ceadbd702886e6cc853c04))
+
+* feat(web): plan-row watch pill (clean / wash-sale / IRA trap with severity)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`083ccd6`](https://github.com/chen-star/net_alpha/commit/083ccd6227cc0c44b9c1b3f56e9a65c3525a9de5))
+
+* feat(imports): enqueue one-shot washsale_watch after each commit
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`23b5ccc`](https://github.com/chen-star/net_alpha/commit/23b5ccc290eb87293cb346a12c370256b494b50e))
+
+* feat(scheduler): register washsale_watch daily at 04:00 ([`ea3718e`](https://github.com/chen-star/net_alpha/commit/ea3718e70448d48d7634c2ba60a193f001a05761))
+
+* feat(jobs): washsale_watch iterates targets and upserts watch_result ([`8f97bfb`](https://github.com/chen-star/net_alpha/commit/8f97bfb2ed681221c4fa1a72d68c034a81e73bf7))
+
+* feat(engine): forward-looking washsale_watch with §1091 IRA-trap detection
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ae3d3e8`](https://github.com/chen-star/net_alpha/commit/ae3d3e845546fae0bbbff2d68e36cf09931d4e96))
+
+* feat(web): /settings/accounts editor (taxable / IRA / Roth / 401k / HSA / other)
+
+Add /settings/accounts GET+POST route backed by repo.set_account_type;
+renders a fragment with per-account type dropdowns that submit via HTMX.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7d13ae0`](https://github.com/chen-star/net_alpha/commit/7d13ae01d32257e3cea2d90654e5ff9a631ab83c))
+
+* feat(repo): list/get/set account types
+
+Add get_account_type/set_account_type methods to Repository; update
+list_accounts() to include the type field from AccountRow.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9a6a4d8`](https://github.com/chen-star/net_alpha/commit/9a6a4d8a93de2eab479872720ba65439fd121bdc))
+
+* feat(models): AccountType enum (with is_tax_advantaged) + Account ([`cce6bf6`](https://github.com/chen-star/net_alpha/commit/cce6bf6ea8d7836673c5b0439f83848c1e1bea00))
+
+* feat(service): CLI pause/resume reach running process via HTTP
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`dc4dbb9`](https://github.com/chen-star/net_alpha/commit/dc4dbb9f561ade8fab92f5650713502ab05a255e))
+
+* feat(web): pause/resume/restart/stop control POST endpoint
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`36cd36c`](https://github.com/chen-star/net_alpha/commit/36cd36c7884153da84a7f503160cadd5e275b969))
+
+* feat(web): site-header status pill (HTMX fragment, polls every 30s)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`096b0af`](https://github.com/chen-star/net_alpha/commit/096b0af6c6c183d898d4d3e43bc2ac33f6884141))
+
+* feat(web): /settings/service health page
+
+Add /settings/service route with status panel (state, PID, schedules)
+and /settings/service/runs HTMX fragment backed by repo.list_service_runs.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`68a4841`](https://github.com/chen-star/net_alpha/commit/68a484113cc2761dc235ea02675393fb4e22ebb2))
+
+* feat(service): service run starts FastAPI + scheduler under uvicorn
+
+Wire AsyncIOScheduler into the create_app() factory lifespan; add
+`net-alpha service run` hidden subcommand that acquires the pid lock
+and boots uvicorn via the factory entry-point.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`488bc15`](https://github.com/chen-star/net_alpha/commit/488bc15b8e988d972ce6aeaf37a76721f657fbb7))
+
+* feat(service): APScheduler bootstrap with price_refresh every 4h ([`5bc103c`](https://github.com/chen-star/net_alpha/commit/5bc103c5d28aa24b2a4a1162be9e49aa3393346d))
+
+* feat(jobs): price_refresh collects ticker universe and calls PricingService
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9afc607`](https://github.com/chen-star/net_alpha/commit/9afc60778370244bb142ed8696f50f42870c5da2))
+
+* feat(jobs): runner wraps job calls in audit + uniform error handling ([`8d3b1a9`](https://github.com/chen-star/net_alpha/commit/8d3b1a908e70088a17fabbbda712363fef43b2a3))
+
+* feat(service): in-memory ServiceState ([`0bdb7a2`](https://github.com/chen-star/net_alpha/commit/0bdb7a298987c539519d972d4ed58f8045d62e40))
+
+* feat(repo): record_service_run + list_service_runs
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c6493e9`](https://github.com/chen-star/net_alpha/commit/c6493e9c3a456035e58b2343294abe073913859a))
+
+* feat(db): SQLModel rows for service_run, washsale_watch_result ([`624f610`](https://github.com/chen-star/net_alpha/commit/624f610d01c5864b899a0767e79d3458585e3977))
+
+* feat(db): migration v19 adds accounts, service_run, washsale_watch_result tables
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`524fec8`](https://github.com/chen-star/net_alpha/commit/524fec8a8c2380ca8c52445cf788b96df6e0c3b6))
+
+* feat(cli): net-alpha service subcommand group wired to control module
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`193908e`](https://github.com/chen-star/net_alpha/commit/193908e69f64b1d8c3a5fb296afcc767434f0f15))
+
+* feat(service): control.status combines plist + launchctl + disabled flag ([`8370442`](https://github.com/chen-star/net_alpha/commit/837044283d137b67dcfdad9e1e472b99f6599c56))
+
+* feat(service): control.restart guards against stopped state ([`f560f5e`](https://github.com/chen-star/net_alpha/commit/f560f5eed36c0f003a0ff7cf5bd256a47a7af9f7))
+
+* feat(service): control.stop sets disabled flag + bootouts launchd ([`f88e456`](https://github.com/chen-star/net_alpha/commit/f88e456bf5ff3d0a8a1f2ca106b0a035bd7ace44))
+
+* feat(service): control.start clears disabled flag and bootstraps ([`f9e8d39`](https://github.com/chen-star/net_alpha/commit/f9e8d397c020389c07769a40ef312cb0661386f6))
+
+* feat(service): control.uninstall removes plist+wrapper+sandbox, leaves DB ([`ae14563`](https://github.com/chen-star/net_alpha/commit/ae14563bc5ce25d084f5d8b31f78be981953687e))
+
+* feat(service): control.install renders plist+wrapper+sandbox and bootstraps launchd
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`96eb7d7`](https://github.com/chen-star/net_alpha/commit/96eb7d7822a78247e05d1cf1cc4389efdafa47b1))
+
+* feat(service): sandbox-exec profile renderer ([`3b26775`](https://github.com/chen-star/net_alpha/commit/3b26775309b91cee6583a8fb7d148144d124995f))
+
+* feat(service): launchd wrapper script renderer ([`a546399`](https://github.com/chen-star/net_alpha/commit/a546399121a9e1fb5b622ff7aa4448e779003728))
+
+* feat(service): disabled-flag latch (the kill switch) ([`de18df5`](https://github.com/chen-star/net_alpha/commit/de18df55a81a56b5f725481c2ab76848da4d9a98))
+
+* feat(service): launchd plist renderer ([`16b8c4e`](https://github.com/chen-star/net_alpha/commit/16b8c4e63281d4105702842c15d3b88fd8ad7a73))
+
+* feat(service): single-instance pid lock ([`4bd32f6`](https://github.com/chen-star/net_alpha/commit/4bd32f609bd53816cc80b58785440af6ddce6a57))
+
+* feat(service): canonical filesystem paths module ([`f865fb8`](https://github.com/chen-star/net_alpha/commit/f865fb801386e13bce54b15c7d326453437bef02))
+
+### Fix
+
+* fix(db): v19 ALTERs existing accounts table instead of CREATEing a new one
+
+The first v19 attempt (524fec8) tried to CREATE TABLE accounts with a
+fresh (label PK, type, created_at) schema, but the codebase already has
+an AccountRow SQLModel with (id PK, broker, label, UNIQUE(broker,label))
+that ~15 call sites depend on. This rev adds the v2 type/created_at
+columns to the existing table via ALTER, and extends AccountRow to
+expose them. ([`2ecd1a9`](https://github.com/chen-star/net_alpha/commit/2ecd1a975a24a104c47a17a82a4a6d4f2d9e2938))
+
+* fix(deps): actually add apscheduler line to pyproject.toml [ui] extras ([`9f7784d`](https://github.com/chen-star/net_alpha/commit/9f7784d061d0e4c7694586194e911ca5685e1d80))
+
+### Style
+
+* style(service): add render() docstring per code review ([`4327eb6`](https://github.com/chen-star/net_alpha/commit/4327eb6a7fcedcc0026c9f2605028d7e0a219df1))
+
+### Test
+
+* test(integration): full v2 service smoke (both jobs, both record) ([`dc109c0`](https://github.com/chen-star/net_alpha/commit/dc109c06f1fff3fa0b74c1321c22c4ad17d336d7))
+
+* test(integration): v19 migration preserves accounts with taxable default
+
+Phase 3 integration test verifying that v19 migration adds type and created_at
+columns to existing accounts table. Test simulates upgrading from v18 to v19:
+- Creates a v18-schema DB with legacy account rows
+- Runs migrate() to apply v19 changes
+- Verifies type=&#39;taxable&#39; is set and created_at is backfilled
+- Verifies migration is idempotent
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`be668b0`](https://github.com/chen-star/net_alpha/commit/be668b0c198af152131fa2de6e9709068ef04aae))
+
+* test(integration): phase-2 scheduler+price-refresh smoke ([`82cde59`](https://github.com/chen-star/net_alpha/commit/82cde59360e1170237dd989443a1dc217ee5bed9))
+
+* test(integration): phase-1 service lifecycle artifacts ([`74cba82`](https://github.com/chen-star/net_alpha/commit/74cba8280d9da808aaaa8297942a0c3da70071fb))
+
+
 ## v0.54.0 (2026-05-08)
 
 ### Documentation
