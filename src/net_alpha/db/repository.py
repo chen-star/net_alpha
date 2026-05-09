@@ -23,6 +23,7 @@ from net_alpha.db.tables import (
     PositionTargetRow,
     RealizedGLLotRow,
     Section1256ClassificationRow,
+    ServiceRunRow,
     SplitRow,
     TradeRow,
     UserPreferenceRow,
@@ -2009,6 +2010,53 @@ class Repository:
         """Return every carryforward override, sorted ascending by year."""
         with Session(self.engine) as s:
             return list(s.exec(select(LossCarryforwardRow).order_by(LossCarryforwardRow.year)).all())
+
+    # --- Service run history ---
+
+    def record_service_run(
+        self,
+        *,
+        job_name: str,
+        started_at: str,
+        finished_at: str | None,
+        status: str,
+        duration_ms: int | None,
+        error_msg: str | None,
+        payload: str | None,
+    ) -> ServiceRunRow:
+        """Insert one service-run audit row and return it with its assigned id."""
+        with Session(self.engine) as s:
+            row = ServiceRunRow(
+                job_name=job_name,
+                started_at=started_at,
+                finished_at=finished_at,
+                status=status,
+                duration_ms=duration_ms,
+                error_msg=error_msg,
+                payload=payload,
+            )
+            s.add(row)
+            s.commit()
+            s.refresh(row)
+            return row
+
+    def list_service_runs(
+        self,
+        *,
+        limit: int = 50,
+        job_name: str | None = None,
+    ) -> list[ServiceRunRow]:
+        """Return recent service-run rows, newest first.
+
+        Args:
+            limit: Maximum number of rows to return (default 50).
+            job_name: If given, restrict to rows with this job name.
+        """
+        with Session(self.engine) as s:
+            stmt = select(ServiceRunRow).order_by(ServiceRunRow.id.desc()).limit(limit)
+            if job_name is not None:
+                stmt = stmt.where(ServiceRunRow.job_name == job_name)
+            return list(s.exec(stmt).all())
 
 
 # ---------------------------------------------------------------------------
