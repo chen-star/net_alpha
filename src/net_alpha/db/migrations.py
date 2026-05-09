@@ -46,7 +46,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 18
+CURRENT_SCHEMA_VERSION = 19
 
 
 def get_schema_version(session: Session) -> int:
@@ -525,6 +525,65 @@ def _migrate_v17_to_v18(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v18_to_v19(session: Session) -> None:
+    """Add service_run, washsale_watch_result, and accounts tables for the
+    always-on background service. Idempotent.
+    """
+    if not _table_exists(session, "service_run"):
+        session.exec(
+            text("""
+            CREATE TABLE service_run (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_name     TEXT NOT NULL,
+                started_at   TEXT NOT NULL,
+                finished_at  TEXT,
+                status       TEXT NOT NULL,
+                duration_ms  INTEGER,
+                error_msg    TEXT,
+                payload      TEXT
+            )
+        """)
+        )
+        session.exec(text("CREATE INDEX idx_service_run_started_at ON service_run(started_at)"))
+        session.exec(text("CREATE INDEX idx_service_run_job_name ON service_run(job_name)"))
+
+    if not _table_exists(session, "washsale_watch_result"):
+        session.exec(
+            text("""
+            CREATE TABLE washsale_watch_result (
+                target_id    INTEGER PRIMARY KEY,
+                status       TEXT NOT NULL,
+                severity     TEXT NOT NULL,
+                reason       TEXT,
+                triggering   TEXT,
+                computed_at  TEXT NOT NULL
+            )
+        """)
+        )
+
+    if not _table_exists(session, "accounts"):
+        session.exec(
+            text("""
+            CREATE TABLE accounts (
+                label      TEXT PRIMARY KEY,
+                type       TEXT NOT NULL DEFAULT 'taxable',
+                created_at TEXT NOT NULL
+            )
+        """)
+        )
+        if _table_exists(session, "trades"):
+            session.exec(
+                text("""
+                INSERT OR IGNORE INTO accounts (label, type, created_at)
+                SELECT DISTINCT account, 'taxable', datetime('now')
+                FROM trades
+                WHERE account IS NOT NULL AND account != ''
+            """)
+            )
+
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -536,9 +595,11 @@ def migrate(session: Session) -> None:
     current = get_schema_version(session)
     if current == 0:
         # Fresh DB: SQLModel.metadata.create_all has already produced the
-        # current-shape tables. Just stamp the version and meta rows.
+        # current-shape tables. Stamp the version and meta rows, then create
+        # any tables that are not SQLModel models (raw SQL only).
         set_schema_version(session, CURRENT_SCHEMA_VERSION)
         _stamp_section_1256_meta(session)
+        _migrate_v18_to_v19(session)
         session.commit()
         return
     if current == 1:
@@ -609,6 +670,10 @@ def migrate(session: Session) -> None:
         _migrate_v17_to_v18(session)
         set_schema_version(session, 18)
         current = 18
+    if current < 19:
+        _migrate_v18_to_v19(session)
+        set_schema_version(session, 19)
+        current = 19
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "
