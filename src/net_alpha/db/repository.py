@@ -2183,6 +2183,34 @@ class Repository:
 
             return [_BuyRow(r[0], r[1], r[2], r[3]) for r in rows]
 
+    def upsert_watch_result(
+        self,
+        *,
+        target_id: int,
+        status: str,
+        severity: str,
+        reason: str | None,
+        triggering: str | None,
+        computed_at: str,
+    ) -> None:
+        with Session(self.engine) as s:
+            s.exec(
+                text(
+                    """
+                    INSERT INTO washsale_watch_result(
+                        target_id, status, severity, reason, triggering, computed_at
+                    ) VALUES (:tid, :st, :sv, :r, :tg, :ts)
+                    ON CONFLICT(target_id) DO UPDATE SET
+                        status=:st, severity=:sv, reason=:r, triggering=:tg, computed_at=:ts
+                    """
+                ),
+                params={
+                    "tid": target_id, "st": status, "sv": severity,
+                    "r": reason, "tg": triggering, "ts": computed_at,
+                },
+            )
+            s.commit()
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility
