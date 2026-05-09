@@ -180,3 +180,31 @@ def test_resume_in_process_unmarks_state_and_resumes_scheduler():
     control.resume_in_process(state=state, scheduler=sched)
     assert state.paused is False
     sched.resume.assert_called_once()
+
+
+def test_pause_via_http_when_service_running(monkeypatch):
+    """When the service is running, control.pause() POSTs to /settings/service/control."""
+    from unittest.mock import MagicMock as MM
+    fake_post = MM(return_value=MM(status_code=200))
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", fake_post)
+    monkeypatch.setattr(control, "_status_running", lambda: True)
+    control.pause()
+    fake_post.assert_called_once()
+
+
+def test_resume_via_http_when_service_running(monkeypatch):
+    from unittest.mock import MagicMock as MM
+    fake_post = MM(return_value=MM(status_code=200))
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", fake_post)
+    monkeypatch.setattr(control, "_status_running", lambda: True)
+    control.resume()
+    fake_post.assert_called_once()
+
+
+def test_pause_raises_not_installed_when_service_not_running(monkeypatch):
+    import pytest
+    monkeypatch.setattr(control, "_status_running", lambda: False)
+    with pytest.raises(control.NotInstalled):
+        control.pause()

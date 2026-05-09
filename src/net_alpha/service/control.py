@@ -11,6 +11,8 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -61,6 +63,21 @@ def _launchctl_print() -> str:
         text=True,
     )
     return p.stdout
+
+
+def _status_running() -> bool:
+    """True iff the installed service is up and not disabled."""
+    s = status()
+    return s.installed and s.running and not s.disabled
+
+
+def _post_control(action: str, port: int = 8765) -> None:
+    data = urllib.parse.urlencode({"action": action}).encode()
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}/settings/service/control",
+        data=data,
+    )
+    urllib.request.urlopen(req, timeout=5)
 
 
 # ---------------------------------------------------------------------------
@@ -122,11 +139,15 @@ def stop(*, reason: str = "manual stop") -> None:
 
 
 def pause() -> None:
-    raise NotImplementedError  # Task 2.x
+    if not _status_running():
+        raise NotInstalled("Service is not running.")
+    _post_control("pause")
 
 
 def resume() -> None:
-    raise NotImplementedError  # Task 2.x
+    if not _status_running():
+        raise NotInstalled("Service is not running.")
+    _post_control("resume")
 
 
 def pause_in_process(*, state, scheduler) -> None:
