@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import date, datetime
 
 from net_alpha.ingest.option_parser import parse_option_symbol
-from net_alpha.models.domain import ImportResult, Trade
+from net_alpha.models.domain import CashEvent, ImportResult, Trade
 
 
 def _money(s: str) -> float:
@@ -40,6 +40,17 @@ _SELL_CODES = {"Sell", "STC"}
 _SHORT_OPTION_OPEN_CODES = {"STO"}
 _SHORT_OPTION_CLOSE_CODES = {"BTC"}
 _NON_TRADE_KNOWN_CODES = {"OEXP", "OASGN"}
+
+# Codes the trade-side `parse(...)` already handles. Used by parse_full(...)
+# to skip these in its own row walk (they're already in `trades`).
+_TRADE_SIDE_CODES = (
+    _BUY_CODES | _SELL_CODES
+    | _SHORT_OPTION_OPEN_CODES | _SHORT_OPTION_CLOSE_CODES
+    | _NON_TRADE_KNOWN_CODES
+)
+
+# Codes that are known but not trades and not cash events — warn-only.
+_WARN_ONLY_CODES = {"SPL"}
 
 
 def _put_assignment_basis_offsets(rows: list[dict[str, str]]) -> dict[tuple[str, date], float]:
@@ -183,4 +194,17 @@ class RobinhoodParser:
         return trades
 
     def parse_full(self, rows: list[dict[str, str]], account_display: str) -> ImportResult:
-        return ImportResult(trades=self.parse(rows, account_display), cash_events=[], parse_warnings=[])
+        trades = self.parse(rows, account_display)
+        cash_events: list[CashEvent] = []
+        warnings: list[str] = []
+        for row in rows:
+            code = row.get("Trans Code", "").strip()
+            if code in _TRADE_SIDE_CODES:
+                continue
+            if code in _WARN_ONLY_CODES:
+                warnings.append(
+                    f"Skipped {code!r} row on {row.get('Activity Date', '')!r} — "
+                    f"corporate-action handled by splits subsystem"
+                )
+            # Cash events + unknown codes filled in by Tasks 10 and 12.
+        return ImportResult(trades=trades, cash_events=cash_events, parse_warnings=warnings)

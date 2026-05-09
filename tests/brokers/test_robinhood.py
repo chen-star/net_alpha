@@ -214,3 +214,14 @@ def test_oasgn_call_assignment_does_not_offset_underlying():
     assert len(underlying) == 1
     assert underlying[0].cost_basis == 20000.0  # call premium NOT folded in
     assert underlying[0].basis_source == "unknown"
+
+
+def test_spl_emits_no_trade_and_logs_warning():
+    rows = [_row(
+        **{"Activity Date": "08/25/2024", "Instrument": "NVDA", "Trans Code": "SPL",
+           "Quantity": "10", "Price": "0", "Amount": "0",
+           "Description": "Stock Split 10:1"}
+    )]
+    result = RobinhoodParser().parse_full(rows, "robinhood/personal")
+    assert result.trades == []
+    assert any("SPL" in w for w in result.parse_warnings)
