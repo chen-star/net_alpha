@@ -10,7 +10,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.audit.hygiene import collect_issues, collect_missing_basis_rows
 from net_alpha.brokers.registry import detect_broker
-from net_alpha.brokers.schwab import SchwabParser
 from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
 from net_alpha.db.repository import Repository
 from net_alpha.engine.recompute import recompute_all_violations
@@ -18,7 +17,7 @@ from net_alpha.engine.stitch import stitch_account
 from net_alpha.import_.aggregations import compute_import_aggregates
 from net_alpha.ingest.csv_loader import load_csv
 from net_alpha.ingest.dedup import filter_new
-from net_alpha.models.domain import ImportRecord
+from net_alpha.models.domain import Account, ImportRecord
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.service.jobs.runner import run_job
 from net_alpha.service.jobs.washsale_watch import run_washsale_watch
@@ -269,7 +268,7 @@ async def preview_upload(
                 "row_count": len(rows),
             }
         )
-        if isinstance(parser, SchwabParser):
+        if hasattr(parser, "parse_full"):
             parsed = parser.parse_full(rows, account_display="preview/preview")
             total_parsed += len(parsed.trades)
             for t in parsed.trades:
@@ -317,7 +316,7 @@ async def upload(
     if not any(p for *_, p in materialized):
         raise HTTPException(status_code=400, detail="No recognized broker formats among uploaded files")
 
-    acct = repo.get_or_create_account("schwab", account)
+    accounts: dict[str, Account] = {}
 
     existing_symbols = {lot.ticker for lot in repo.all_lots() if lot.option_details is None}
     new_trade_count = 0
@@ -330,8 +329,14 @@ async def upload(
     for filename, raw, _headers, rows, parser in materialized:
         if parser is None:
             continue
+        # SchwabRealizedGLParser stores GL lots under the same "schwab" broker account
+        # as SchwabParser — use parser.name unless it's the GL variant.
+        broker_key = "schwab" if isinstance(parser, SchwabRealizedGLParser) else parser.name
+        if broker_key not in accounts:
+            accounts[broker_key] = repo.get_or_create_account(broker_key, account)
+        acct = accounts[broker_key]
         sha = _sha256_bytes(raw)
-        if isinstance(parser, SchwabParser):
+        if hasattr(parser, "parse_full"):
             import_result = parser.parse_full(rows, account_display=acct.display())
             trades = import_result.trades
             existing = repo.existing_natural_keys(acct.id)
@@ -391,7 +396,8 @@ async def upload(
             for lot in lots:
                 affected_dates.append(lot.closed_date)
 
-    stitch_account(repo, acct.id)
+    for a in accounts.values():
+        stitch_account(repo, a.id)
 
     if affected_dates:
         recompute_all_violations(repo, etf_pairs)

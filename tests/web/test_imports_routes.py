@@ -199,3 +199,43 @@ def test_imports_page_paginates_when_many_imports(client, repo, builders, monkey
     # Out-of-range page clamps to last page rather than 404ing.
     clamped = client.get("/imports/_legacy_page?page=99").text
     assert "Page 3 / 3" in clamped
+
+
+def test_upload_robinhood_csv_creates_robinhood_account(client, repo):
+    """A Robinhood CSV upload creates an account under broker 'robinhood', not 'schwab'."""
+    csv_content = (
+        "Activity Date,Process Date,Settle Date,Instrument,Description,"
+        "Trans Code,Quantity,Price,Amount\n"
+        "10/15/2024,10/15/2024,10/17/2024,TSLA,Tesla,Buy,10,240.00,-2400.00\n"
+    )
+    response = client.post(
+        "/imports",
+        files={"files": ("robinhood.csv", csv_content.encode(), "text/csv")},
+        data={"account": "personal"},
+    )
+    assert response.status_code in (200, 303)
+    accts = repo.list_accounts()
+    assert any(a.broker == "robinhood" and a.label == "personal" for a in accts)
+
+
+def test_mixed_broker_upload_creates_separate_accounts(client, repo):
+    """Schwab + Robinhood CSVs in one batch with the same label create distinct accounts."""
+    schwab_csv = "Date,Action,Symbol,Description,Quantity,Price,Amount\n06/01/2024,Buy,GPRO,GoPro,100,5.00,$-500.00\n"
+    robinhood_csv = (
+        "Activity Date,Process Date,Settle Date,Instrument,Description,"
+        "Trans Code,Quantity,Price,Amount\n"
+        "06/01/2024,06/01/2024,06/03/2024,TSLA,Tesla,Buy,10,240.00,-2400.00\n"
+    )
+    response = client.post(
+        "/imports",
+        files=[
+            ("files", ("schwab.csv", schwab_csv.encode(), "text/csv")),
+            ("files", ("robinhood.csv", robinhood_csv.encode(), "text/csv")),
+        ],
+        data={"account": "personal"},
+    )
+    assert response.status_code in (200, 303)
+    accts = repo.list_accounts()
+    brokers = {(a.broker, a.label) for a in accts}
+    assert ("schwab", "personal") in brokers
+    assert ("robinhood", "personal") in brokers

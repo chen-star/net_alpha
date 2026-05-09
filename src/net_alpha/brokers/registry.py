@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 from net_alpha.brokers.base import BrokerParser
+from net_alpha.brokers.robinhood import RobinhoodParser
 from net_alpha.brokers.schwab import SchwabParser
 from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
 
-PARSERS: list[BrokerParser] = [SchwabParser(), SchwabRealizedGLParser()]
+PARSERS: list[BrokerParser] = [
+    SchwabParser(),
+    SchwabRealizedGLParser(),
+    RobinhoodParser(),
+]
 
 
 def detect_broker(headers: list[str]) -> BrokerParser | None:

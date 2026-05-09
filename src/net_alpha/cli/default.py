@@ -8,7 +8,6 @@ import typer
 from sqlmodel import create_engine
 
 from net_alpha.brokers.registry import detect_broker
-from net_alpha.brokers.schwab import SchwabParser
 from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
 from net_alpha.db.connection import init_db
 from net_alpha.db.repository import Repository
@@ -69,7 +68,7 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
     repo = Repository(_engine())
 
     affected_dates: list = []
-    account = None
+    accounts: dict[str, object] = {}
     new_trade_total = 0
     dup_trade_total = 0
     new_gl_total = 0
@@ -82,17 +81,20 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
         if parser is None:
             typer.echo(
                 f"Error: Could not detect broker from CSV headers in {csv_path}.\n"
-                f"       Supported parsers: schwab (transactions), schwab_realized_gl\n"
+                f"       Supported parsers: schwab (transactions), schwab_realized_gl,\n"
+                f"                          robinhood (transactions)\n"
                 f"       To request support: open an issue with an anonymized sample.",
                 err=True,
             )
             return 2
 
-        # Schwab account label is shared across all files in this invocation.
-        if account is None:
-            account = repo.get_or_create_account("schwab", account_label)
+        # SchwabRealizedGLParser stores GL lots under the same "schwab" broker account.
+        broker_key = "schwab" if isinstance(parser, SchwabRealizedGLParser) else parser.name
+        if broker_key not in accounts:
+            accounts[broker_key] = repo.get_or_create_account(broker_key, account_label)
+        account = accounts[broker_key]
 
-        if isinstance(parser, SchwabParser):
+        if hasattr(parser, "parse_full"):
             try:
                 import_result = parser.parse_full(rows, account_display=account.display())
             except ValueError as e:
@@ -147,11 +149,11 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
             return 4
 
     # Stitch + recompute, scoped to the affected ±30-day window
-    if account is not None:
-        stitched = stitch_account(repo, account.id)
+    for a in accounts.values():
+        stitched = stitch_account(repo, a.id)
         if stitched.from_gl or stitched.from_fifo or stitched.unknown:
             typer.echo(
-                f"Stitched: {stitched.from_gl} sells from G/L · "
+                f"Stitched ({a.display()}): {stitched.from_gl} sells from G/L · "
                 f"{stitched.from_fifo} via FIFO · {stitched.unknown} unknown"
             )
         for w in stitched.warnings:
@@ -159,7 +161,7 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
 
     _post_import_autosync_splits(repo, new_symbols=new_symbols, existing_symbols=existing_symbols)
 
-    if account is not None and affected_dates:
+    if accounts and affected_dates:
         recompute_all_violations(repo, ETF_PAIRS)
 
     today = date.today()
