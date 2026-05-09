@@ -58,3 +58,32 @@ def test_invalid_date_raises_with_row_number():
     )]
     with pytest.raises(ValueError, match="Row 1"):
         _parse(rows)
+
+
+def test_bto_parses_as_buy_with_option_details():
+    rows = [_row(
+        **{"Activity Date": "10/25/2024", "Instrument": "TSLA $250 Call 12/20/2024",
+           "Trans Code": "BTO", "Quantity": "1", "Price": "5.00", "Amount": "-500.00"}
+    )]
+    trades = _parse(rows)
+    assert len(trades) == 1
+    assert trades[0].action == "Buy"
+    assert trades[0].ticker == "TSLA"
+    assert trades[0].cost_basis == 500.0
+    assert trades[0].option_details is not None
+    assert trades[0].option_details.strike == 250.0
+    assert trades[0].option_details.call_put == "C"
+    assert trades[0].option_details.expiry == date(2024, 12, 20)
+    assert trades[0].basis_source == "unknown"
+
+
+def test_stc_parses_as_sell_with_option_details():
+    rows = [_row(
+        **{"Activity Date": "11/01/2024", "Instrument": "TSLA $250 Call 12/20/2024",
+           "Trans Code": "STC", "Quantity": "1", "Price": "8.00", "Amount": "800.00"}
+    )]
+    trades = _parse(rows)
+    assert len(trades) == 1
+    assert trades[0].action == "Sell"
+    assert trades[0].proceeds == 800.0
+    assert trades[0].option_details is not None

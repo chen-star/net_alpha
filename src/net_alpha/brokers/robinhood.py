@@ -34,8 +34,8 @@ def _parse_date(s: str) -> date | None:
         return None
 
 
-_BUY_CODES = {"Buy"}
-_SELL_CODES = {"Sell"}
+_BUY_CODES = {"Buy", "BTO"}
+_SELL_CODES = {"Sell", "STC"}
 
 
 class RobinhoodParser:
