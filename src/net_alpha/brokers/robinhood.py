@@ -38,6 +38,7 @@ _BUY_CODES = {"Buy", "BTO"}
 _SELL_CODES = {"Sell", "STC"}
 _SHORT_OPTION_OPEN_CODES = {"STO"}
 _SHORT_OPTION_CLOSE_CODES = {"BTC"}
+_NON_TRADE_KNOWN_CODES = {"OEXP"}
 
 
 class RobinhoodParser:
@@ -63,6 +64,8 @@ class RobinhoodParser:
             elif code in _SHORT_OPTION_CLOSE_CODES:
                 action = "Buy"
                 short_close = True
+            elif code in _NON_TRADE_KNOWN_CODES:
+                continue
             else:
                 continue
 

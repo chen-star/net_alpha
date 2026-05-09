@@ -111,3 +111,21 @@ def test_btc_parses_as_buy_with_short_close_marker():
     assert trades[0].action == "Buy"
     assert trades[0].cost_basis == 100.0
     assert trades[0].basis_source == "option_short_close"
+
+
+def test_oexp_emits_no_trade():
+    rows = [_row(
+        **{"Activity Date": "12/20/2024", "Instrument": "TSLA $300 Call 12/20/2024",
+           "Trans Code": "OEXP", "Quantity": "1", "Price": "0", "Amount": "0"}
+    )]
+    trades = _parse(rows)
+    assert trades == []
+
+
+def test_oexp_does_not_warn():
+    rows = [_row(
+        **{"Activity Date": "12/20/2024", "Instrument": "TSLA $300 Call 12/20/2024",
+           "Trans Code": "OEXP", "Quantity": "1", "Price": "0", "Amount": "0"}
+    )]
+    result = RobinhoodParser().parse_full(rows, "robinhood/personal")
+    assert result.parse_warnings == []
