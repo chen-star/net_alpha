@@ -176,3 +176,42 @@ def test_scheduler_starts_and_runs_price_refresh_synchronously(tmp_path, monkeyp
     assert payload == {"symbols": 1}
     assert state.last_run("price_refresh").status == "ok"
     pricing.refresh.assert_called_once_with(["AAPL"])
+
+
+def test_full_phase4_sync_smoke(tmp_path, monkeypatch):
+    """End-to-end smoke: run both jobs once each via the runner, verify they record."""
+    from datetime import date
+    from unittest.mock import MagicMock as MM
+
+    from net_alpha.service.jobs.price_refresh import run_price_refresh
+    from net_alpha.service.jobs.runner import run_job
+    from net_alpha.service.jobs.washsale_watch import run_washsale_watch
+    from net_alpha.service.state import ServiceState
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    repo = MM()
+    repo.distinct_held_tickers.return_value = ["SPY"]
+    repo.distinct_target_tickers.return_value = []
+    repo.list_position_targets.return_value = []
+    pricing = MM()
+    state = ServiceState()
+
+    # price_refresh
+    run_job(
+        job_name="price_refresh",
+        fn=lambda: run_price_refresh(repo=repo, pricing=pricing),
+        state=state,
+        repo=repo,
+    )
+    # washsale_watch
+    run_job(
+        job_name="washsale_watch",
+        fn=lambda: run_washsale_watch(repo=repo, today=date(2026, 5, 1)),
+        state=state,
+        repo=repo,
+    )
+
+    assert state.last_run("price_refresh").status == "ok"
+    assert state.last_run("washsale_watch").status == "ok"
+    assert repo.record_service_run.call_count == 2
