@@ -40,6 +40,7 @@ from net_alpha.web.routes import preferences as preferences_routes
 from net_alpha.web.routes import service as service_routes
 from net_alpha.web.routes import settings as settings_routes
 from net_alpha.web.routes import tax as tax_routes
+from net_alpha.web.routes.accounts import router as accounts_router
 
 
 def create_app(settings: Settings | None = None, demo_mode: bool = False) -> FastAPI:
@@ -215,6 +216,7 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
     app.include_router(tour.router)
     app.include_router(service_routes.router)
     app.include_router(settings_routes.router)
+    app.include_router(accounts_router)
     app.include_router(tax_routes.router)
     app.include_router(wash_sales.router)
     app.include_router(positions.router)

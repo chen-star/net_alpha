@@ -1,0 +1,55 @@
+{# Settings → Account types section.
+
+   Lists every account with a dropdown to classify it as taxable / IRA /
+   Roth / 401k / HSA / other.  Tagging IRA-family accounts unlocks the
+   §1091 IRA-trap detector (a purchase inside a 30-day window of a wash-sale
+   loss in a *different* account is still disallowed when the replacement
+   account is an IRA).
+
+   Rendered as a standalone fragment (no base.html extends) so it can be
+   lazy-loaded via HTMX into the Settings drawer.
+#}
+<section id="settings-accounts">
+  <h2 class="text-[15px] font-semibold mb-1">Account types</h2>
+  <p class="text-[13px] text-label-2 mb-3">
+    Tagging IRA / Roth / 401k accounts unlocks §1091 IRA-trap detection.
+  </p>
+
+  {% if accounts %}
+  <table class="w-full text-[13px] border-collapse">
+    <thead>
+      <tr class="text-left text-label-2 border-b border-separator">
+        <th class="py-1 pr-4 font-medium">Broker</th>
+        <th class="py-1 pr-4 font-medium">Label</th>
+        <th class="py-1 font-medium">Type</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for a in accounts %}
+      <tr class="border-b border-separator last:border-0">
+        <td class="py-1.5 pr-4">{{ a.broker }}</td>
+        <td class="py-1.5 pr-4">{{ a.label }}</td>
+        <td class="py-1.5">
+          <form method="post"
+                hx-post="/settings/accounts"
+                hx-target="#settings-accounts"
+                hx-swap="outerHTML">
+            <input type="hidden" name="broker" value="{{ a.broker }}">
+            <input type="hidden" name="label" value="{{ a.label }}">
+            <select name="type"
+                    onchange="this.form.requestSubmit()"
+                    class="text-[13px] rounded border border-separator bg-transparent px-1 py-0.5">
+              {% for t in types %}
+                <option value="{{ t }}" {% if t == a.type %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-[13px] text-label-2 italic">No accounts imported yet.</p>
+  {% endif %}
+</section>

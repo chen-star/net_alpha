@@ -90,20 +90,12 @@ class Repository:
 
     def get_account_type(self, *, broker: str, label: str) -> str:
         with Session(self.engine) as s:
-            row = s.exec(
-                select(AccountRow).where(
-                    AccountRow.broker == broker, AccountRow.label == label
-                )
-            ).first()
+            row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
             return row.type if row else "taxable"
 
     def set_account_type(self, *, broker: str, label: str, type_: str) -> None:
         with Session(self.engine) as s:
-            row = s.exec(
-                select(AccountRow).where(
-                    AccountRow.broker == broker, AccountRow.label == label
-                )
-            ).first()
+            row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
             if row is None:
                 return  # caller should ensure account exists first
             row.type = type_
