@@ -7,6 +7,7 @@ clients on top of this module. No surface has its own logic.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -152,4 +153,21 @@ class Status:
 
 
 def status() -> Status:
-    raise NotImplementedError  # Task 1.13
+    installed = paths.plist_file().exists()
+    is_disabled = disabled_flag.is_set()
+
+    if not installed:
+        return Status(installed=False, running=False, paused=False, pid=None, disabled=False)
+
+    out = _launchctl_print()
+    match = re.search(r"\bpid\s*=\s*(\d+)", out)
+    pid = int(match.group(1)) if match else None
+    running = "state = running" in out and pid is not None
+
+    return Status(
+        installed=True,
+        running=running,
+        paused=False,        # paused state lives in-process; populated by Task 2.x
+        pid=pid,
+        disabled=is_disabled,
+    )

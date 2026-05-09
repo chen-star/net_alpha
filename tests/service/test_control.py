@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -118,3 +119,38 @@ def test_restart_refuses_when_disabled_flag_present(tmp_path, monkeypatch):
     import pytest
     with pytest.raises(control.ServiceStopped):
         control.restart()
+
+
+def test_status_uninstalled(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    s = control.status()
+    assert s.installed is False
+    assert s.running is False
+    assert s.disabled is False
+    assert s.pid is None
+
+
+def test_status_installed_but_disabled(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    paths.plist_file().write_text("<plist/>")
+    paths.disabled_flag().write_text("x")
+    with patch.object(control, "_launchctl_print", return_value=""):
+        s = control.status()
+    assert s.installed is True
+    assert s.disabled is True
+    assert s.running is False
+
+
+def test_status_installed_and_running(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    paths.plist_file().write_text("<plist/>")
+    paths.pid_file().write_text(str(os.getpid()))
+    fake_print = "state = running\n\tpid = 12345\n"
+    with patch.object(control, "_launchctl_print", return_value=fake_print):
+        s = control.status()
+    assert s.installed is True
+    assert s.running is True
+    assert s.pid == 12345
