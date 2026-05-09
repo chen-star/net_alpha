@@ -33,6 +33,20 @@ def run(
     demo: bool = False,
 ) -> int:
     """Boot the local UI server. Blocks until SIGINT."""
+    from net_alpha.service import control as _ctrl
+
+    _s = _ctrl.status()
+    if _s.installed and _s.running and not _s.disabled:
+        # Service already running — just open the browser at the running endpoint
+        url = f"http://127.0.0.1:{port or 8765}/"
+        typer.echo(f"net-alpha service is already running — opening {url}")
+        if not no_browser:
+            webbrowser.open(url)
+        return 0
+    if _s.installed and _s.disabled:
+        typer.echo("net-alpha service is installed but stopped. Run `net-alpha service start` to start it,")
+        typer.echo("or continue in ephemeral mode below.")
+
     settings = Settings()
     chosen_port = port or pick_free_port()
     url = f"http://127.0.0.1:{chosen_port}"

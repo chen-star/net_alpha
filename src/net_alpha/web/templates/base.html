@@ -80,6 +80,7 @@
           {% include "_profile_switcher.html" %}
         {% endwith %}
       {% endif %}
+      <div hx-get="/settings/service/pill" hx-trigger="load, every 30s" class="status-pill-host"></div>
       {% block topbar_right %}{% endblock %}
       <button
         data-testid="settings-gear"

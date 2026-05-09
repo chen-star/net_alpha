@@ -23,10 +23,12 @@ from net_alpha.db.tables import (
     PositionTargetRow,
     RealizedGLLotRow,
     Section1256ClassificationRow,
+    ServiceRunRow,
     SplitRow,
     TradeRow,
     UserPreferenceRow,
     WashSaleViolationRow,
+    WashSaleWatchResultRow,
 )
 from net_alpha.models.domain import (
     Account,
@@ -84,8 +86,22 @@ class Repository:
 
     def list_accounts(self) -> list[Account]:
         with Session(self.engine) as s:
-            rows = s.exec(select(AccountRow)).all()
-            return [Account(id=r.id, broker=r.broker, label=r.label) for r in rows]
+            rows = s.exec(select(AccountRow).order_by(AccountRow.broker, AccountRow.label)).all()
+            return [Account(id=r.id, broker=r.broker, label=r.label, type=r.type) for r in rows]
+
+    def get_account_type(self, *, broker: str, label: str) -> str:
+        with Session(self.engine) as s:
+            row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
+            return row.type if row else "taxable"
+
+    def set_account_type(self, *, broker: str, label: str, type_: str) -> None:
+        with Session(self.engine) as s:
+            row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
+            if row is None:
+                return  # caller should ensure account exists first
+            row.type = type_
+            s.add(row)
+            s.commit()
 
     def get_user_preference(self, account_id: int) -> AccountPreference | None:
         with Session(self.engine) as s:
@@ -540,6 +556,18 @@ class Repository:
         with Session(self.engine) as s:
             rows = s.exec(select(TradeRow.ticker).distinct().order_by(TradeRow.ticker)).all()
             return list(rows)
+
+    def distinct_held_tickers(self) -> list[str]:
+        """Tickers ever traded across all accounts (Buy or Sell)."""
+        with Session(self.engine) as s:
+            rows = s.exec(text("SELECT DISTINCT ticker FROM trades WHERE action IN ('Buy', 'Sell')")).all()
+            return [r[0] for r in rows]
+
+    def distinct_target_tickers(self) -> list[str]:
+        """Tickers declared in PositionTargets."""
+        with Session(self.engine) as s:
+            rows = s.exec(text("SELECT DISTINCT symbol FROM position_targets")).all()
+            return [r[0] for r in rows]
 
     def get_trades_for_ticker(self, ticker: str) -> list[Trade]:
         """All trades for a ticker, sorted by trade_date ascending."""
@@ -2009,6 +2037,196 @@ class Repository:
         """Return every carryforward override, sorted ascending by year."""
         with Session(self.engine) as s:
             return list(s.exec(select(LossCarryforwardRow).order_by(LossCarryforwardRow.year)).all())
+
+    # --- Service run history ---
+
+    def record_service_run(
+        self,
+        *,
+        job_name: str,
+        started_at: str,
+        finished_at: str | None,
+        status: str,
+        duration_ms: int | None,
+        error_msg: str | None,
+        payload: str | None,
+    ) -> ServiceRunRow:
+        """Insert one service-run audit row and return it with its assigned id."""
+        with Session(self.engine) as s:
+            row = ServiceRunRow(
+                job_name=job_name,
+                started_at=started_at,
+                finished_at=finished_at,
+                status=status,
+                duration_ms=duration_ms,
+                error_msg=error_msg,
+                payload=payload,
+            )
+            s.add(row)
+            s.commit()
+            s.refresh(row)
+            return row
+
+    def list_service_runs(
+        self,
+        *,
+        limit: int = 50,
+        job_name: str | None = None,
+    ) -> list[ServiceRunRow]:
+        """Return recent service-run rows, newest first.
+
+        Args:
+            limit: Maximum number of rows to return (default 50).
+            job_name: If given, restrict to rows with this job name.
+        """
+        with Session(self.engine) as s:
+            stmt = select(ServiceRunRow).order_by(ServiceRunRow.id.desc()).limit(limit)
+            if job_name is not None:
+                stmt = stmt.where(ServiceRunRow.job_name == job_name)
+            return list(s.exec(stmt).all())
+
+    # -----------------------------------------------------------------------
+    # Forward-looking watch helpers (used by engine.washsale_watch)
+    # -----------------------------------------------------------------------
+
+    def latest_price(self, ticker: str) -> Decimal | None:
+        """Return the latest cached price for *ticker*, or None if unknown."""
+        from net_alpha.db.tables import PriceCacheRow
+
+        with Session(self.engine) as s:
+            row = s.get(PriceCacheRow, ticker)
+            return Decimal(str(row.price)) if row is not None else None
+
+    def position_quantity(self, *, ticker: str, broker: str | None = None, account: str) -> Decimal:
+        """Net share quantity held in *account* for *ticker* (Buy minus Sell).
+
+        Keyed by (broker, account label) to resolve the correct AccountRow.
+        If *broker* is None, falls back to matching by label only (returns
+        the first matching account — suitable for single-broker setups).
+        """
+        with Session(self.engine) as s:
+            if broker is not None:
+                acct_row = s.exec(
+                    select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == account)
+                ).first()
+            else:
+                acct_row = s.exec(select(AccountRow).where(AccountRow.label == account)).first()
+            if acct_row is None:
+                return Decimal("0")
+            rows = s.exec(select(TradeRow).where(TradeRow.account_id == acct_row.id, TradeRow.ticker == ticker)).all()
+            total = Decimal("0")
+            for r in rows:
+                if r.action == "Buy":
+                    total += Decimal(str(r.quantity))
+                elif r.action == "Sell":
+                    total -= Decimal(str(r.quantity))
+            return total
+
+    def average_basis(self, *, ticker: str, broker: str | None = None, account: str) -> Decimal | None:
+        """Weighted-average cost basis per share for *ticker* in *account*.
+
+        Returns None if no buy trades exist (cannot compute a basis).
+        Keyed by (broker, account label) — same convention as position_quantity.
+        """
+        with Session(self.engine) as s:
+            if broker is not None:
+                acct_row = s.exec(
+                    select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == account)
+                ).first()
+            else:
+                acct_row = s.exec(select(AccountRow).where(AccountRow.label == account)).first()
+            if acct_row is None:
+                return None
+            rows = s.exec(
+                select(TradeRow).where(
+                    TradeRow.account_id == acct_row.id,
+                    TradeRow.ticker == ticker,
+                    TradeRow.action == "Buy",
+                )
+            ).all()
+            if not rows:
+                return None
+            total_cost = sum(Decimal(str(r.cost_basis or 0)) for r in rows)
+            total_qty = sum(Decimal(str(r.quantity)) for r in rows)
+            if total_qty == 0:
+                return None
+            return total_cost / total_qty
+
+    def buys_in_window_non_taxable(self, *, start: date, end: date) -> list:
+        """Return Buy rows from tax-advantaged accounts within [start, end].
+
+        Each returned object exposes .id, .ticker, .account (label), .trade_date.
+        Only accounts whose ``type != 'taxable'`` are included so callers can
+        detect §1091 IRA-trap risk without filtering themselves.
+        """
+        with Session(self.engine) as s:
+            rows = s.exec(
+                text("""
+                    SELECT t.id, t.ticker, a.label AS account, t.trade_date
+                    FROM trades t
+                    JOIN accounts a ON a.id = t.account_id
+                    WHERE t.action = 'Buy'
+                      AND a.type != 'taxable'
+                      AND date(t.trade_date) BETWEEN date(:start) AND date(:end)
+                    ORDER BY t.trade_date
+                """),
+                params={"start": start.isoformat(), "end": end.isoformat()},
+            ).all()
+
+            class _BuyRow:
+                __slots__ = ("id", "ticker", "account", "trade_date")
+
+                def __init__(self, id_: int, ticker: str, account: str, trade_date: str) -> None:
+                    self.id = id_
+                    self.ticker = ticker
+                    self.account = account
+                    self.trade_date = trade_date
+
+            return [_BuyRow(r[0], r[1], r[2], r[3]) for r in rows]
+
+    def upsert_watch_result(
+        self,
+        *,
+        target_id: int,
+        status: str,
+        severity: str,
+        reason: str | None,
+        triggering: str | None,
+        computed_at: str,
+    ) -> None:
+        with Session(self.engine) as s:
+            s.exec(
+                text(
+                    """
+                    INSERT INTO washsale_watch_result(
+                        target_id, status, severity, reason, triggering, computed_at
+                    ) VALUES (:tid, :st, :sv, :r, :tg, :ts)
+                    ON CONFLICT(target_id) DO UPDATE SET
+                        status=:st, severity=:sv, reason=:r, triggering=:tg, computed_at=:ts
+                    """
+                ),
+                params={
+                    "tid": target_id, "st": status, "sv": severity,
+                    "r": reason, "tg": triggering, "ts": computed_at,
+                },
+            )
+            s.commit()
+
+    def watch_results_by_target(self) -> dict[str, WashSaleWatchResultRow]:
+        """Return latest watch_result keyed by symbol, for fast plan-row rendering.
+
+        Joins washsale_watch_result with position_targets on target_id so the
+        template can look up results by the PlanRow.symbol field directly.
+        """
+        with Session(self.engine) as s:
+            stmt = (
+                select(WashSaleWatchResultRow, PositionTargetRow.symbol)
+                .join(
+                    PositionTargetRow,
+                    WashSaleWatchResultRow.target_id == PositionTargetRow.id,
+                )
+            )
+            return {symbol: row for row, symbol in s.exec(stmt).all()}
 
 
 # ---------------------------------------------------------------------------

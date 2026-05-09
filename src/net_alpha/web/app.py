@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
 import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from importlib.resources import files
 
 from fastapi import FastAPI
@@ -34,12 +37,63 @@ from net_alpha.web.routes import (
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
 from net_alpha.web.routes import preferences as preferences_routes
+from net_alpha.web.routes import service as service_routes
 from net_alpha.web.routes import settings as settings_routes
 from net_alpha.web.routes import tax as tax_routes
+from net_alpha.web.routes.accounts import router as accounts_router
 
 
-def create_app(settings: Settings, demo_mode: bool = False) -> FastAPI:
-    app = FastAPI(title="net-alpha")
+def create_app(settings: Settings | None = None, demo_mode: bool = False) -> FastAPI:
+    if settings is None:
+        settings = Settings()
+
+    @asynccontextmanager
+    async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+        """Start the background scheduler on boot; shut it down cleanly on exit.
+
+        Skipped when NETALPHA_SKIP_SCHEDULER=1 (test environments).
+        """
+        if os.environ.get("NETALPHA_SKIP_SCHEDULER") != "1":
+            try:
+                from net_alpha.db.connection import get_engine
+                from net_alpha.db.repository import Repository
+                from net_alpha.service import disabled_flag
+                from net_alpha.service.scheduler import build_scheduler
+                from net_alpha.service.state import ServiceState
+
+                state = ServiceState()
+                # Repository is not stored on app.state in this factory — each
+                # request creates its own engine via effective_db_path.  We build
+                # a dedicated repo for the scheduler using the canonical db_path.
+                repo = getattr(app.state, "repository", None)
+                if repo is None:
+                    _sched_engine = get_engine(app.state.settings.db_path)
+                    repo = Repository(_sched_engine)
+                # pricing is not wired onto app.state in this factory; pass None
+                # so the price_refresh job fails fast on the actual fetch call
+                # rather than crashing at scheduler registration time.
+                pricing = getattr(app.state, "pricing", None)
+                sched = build_scheduler(repo=repo, pricing=pricing, state=state)
+                if not disabled_flag.is_set():
+                    sched.start()
+                app.state.scheduler = sched
+                app.state.service_state = state
+            except Exception:
+                # Never crash the web UI because the scheduler failed to start.
+                import logging
+
+                logging.getLogger(__name__).exception(
+                    "Scheduler startup failed — web UI will continue without background jobs."
+                )
+
+        yield
+
+        # Shutdown phase: stop the scheduler if it was started.
+        sched = getattr(app.state, "scheduler", None)
+        if sched is not None and getattr(sched, "running", False):
+            sched.shutdown(wait=False)
+
+    app = FastAPI(title="net-alpha", lifespan=_lifespan)
     app.state.settings = settings
     app.state.demo_mode = demo_mode
     app.state.etf_pairs = load_etf_pairs(user_path=str(settings.user_etf_pairs_path))
@@ -160,7 +214,9 @@ def create_app(settings: Settings, demo_mode: bool = False) -> FastAPI:
     app.include_router(redirects.router)
     app.include_router(welcome.router)
     app.include_router(tour.router)
+    app.include_router(service_routes.router)
     app.include_router(settings_routes.router)
+    app.include_router(accounts_router)
     app.include_router(tax_routes.router)
     app.include_router(wash_sales.router)
     app.include_router(positions.router)

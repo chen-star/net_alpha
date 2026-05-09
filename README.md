@@ -13,6 +13,7 @@
 
 [Overview](#overview) ·
 [Quickstart](#quickstart) ·
+[Service management](#service-management) ·
 [Features](#features) ·
 [Usage](#usage) ·
 [How the rules work](#how-the-rules-work) ·
@@ -35,24 +36,49 @@ The problem compounds when you trade **options** alongside the underlying, or **
 
 ## Quickstart
 
-`net-alpha` requires Python 3.11+ and works best with [`uv`](https://github.com/astral-sh/uv).
+`net-alpha` requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-# Install with the local web UI (recommended)
-pip install 'wash-alpha[ui]'
+# Install with the local web UI
+uv tool install 'wash-alpha[ui]'
 
-# Launch the dashboard in your browser
+# One-time: install the always-on background service
+net-alpha service install
+
+# Open the dashboard (browser opens automatically)
 net-alpha ui
 ```
 
-That boots an ephemeral local server on `127.0.0.1` (free port in 8765–8775), opens your default browser, and exits on Ctrl-C. Drag broker CSVs into the drop-zone, drill into any ticker, build a harvest plan, hand-enter trades, or run a pre-trade sim — no cloud, no account, no telemetry.
+The service runs locally at http://127.0.0.1:8765. It refreshes prices every 4 hours
+and re-runs forward-looking wash-sale + §1091 detection daily. Stop it any time with
+`net-alpha service stop` (data at `~/.net_alpha/` is left untouched).
+
+Prefer a one-shot launch without the background service? `net-alpha ui` still works in
+ephemeral mode (Ctrl-C to stop). The service is opt-in.
 
 Prefer the terminal? The CLI works without UI extras:
 
 ```bash
-pip install wash-alpha
+uv tool install wash-alpha
 net-alpha schwab.csv --account personal --detail
 ```
+
+## Service management
+
+| Command | Effect |
+|---|---|
+| `net-alpha service install` | One-time install (writes plist + sandbox profile, bootstraps launchd) |
+| `net-alpha service start` | Start the service |
+| `net-alpha service stop` | Stop the service. Survives reboots until `start` |
+| `net-alpha service restart` | Restart |
+| `net-alpha service pause` | Freeze background jobs but keep the dashboard reachable |
+| `net-alpha service resume` | Unfreeze jobs |
+| `net-alpha service status` | Health report (also `--json` for scripting) |
+| `net-alpha service logs -f` | Tail the service log |
+| `net-alpha service uninstall` | Remove plist + sandbox profile (data preserved) |
+
+The dashboard at `/settings/service` exposes the same controls in a UI surface, plus
+recent-runs history and a status pill in the site header.
 
 ## Features
 

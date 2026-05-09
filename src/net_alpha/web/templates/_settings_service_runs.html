@@ -1,0 +1,16 @@
+<table class="runs">
+  <thead>
+    <tr><th>Time</th><th>Job</th><th>Status</th><th>Duration</th><th>Error</th></tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr class="run run--{{ r.status }}">
+      <td>{{ r.started_at }}</td>
+      <td>{{ r.job_name }}</td>
+      <td>{{ r.status }}</td>
+      <td>{{ r.duration_ms }} ms</td>
+      <td>{{ r.error_msg or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>

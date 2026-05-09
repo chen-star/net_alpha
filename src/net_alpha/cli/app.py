@@ -13,6 +13,7 @@ from net_alpha.cli import migrate as migrate_cmd
 from net_alpha.cli import refresh_cache as refresh_cache_cmd
 from net_alpha.cli import sim as sim_cmd
 from net_alpha.cli import ui as ui_cmd
+from net_alpha.cli.service import service_app
 
 
 class _FileFirstGroup(TyperGroup):
@@ -37,6 +38,7 @@ app = typer.Typer(
 )
 imports_app = typer.Typer(no_args_is_help=False)
 app.add_typer(imports_app, name="imports", help="List or remove past imports.")
+app.add_typer(service_app, name="service", help="Manage the always-on local service.")
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-service">
+  <h1>Service status</h1>
+  <dl>
+    <dt>State</dt>
+    <dd>
+      {% if status.disabled %}Stopped
+      {% elif status.running %}Running
+      {% else %}Idle
+      {% endif %}
+    </dd>
+    <dt>PID</dt><dd>{{ status.pid or "—" }}</dd>
+    <dt>Port</dt><dd>127.0.0.1:8765 (pinned)</dd>
+  </dl>
+
+  <h2>Schedules</h2>
+  <ul>
+    <li>Price refresh — every 4 hours</li>
+    <li>Wash-sale watch — daily 04:00 + on every import</li>
+  </ul>
+
+  <h2>Recent runs</h2>
+  <div hx-get="/settings/service/runs" hx-trigger="load, every 30s"></div>
+</section>
+{% endblock %}

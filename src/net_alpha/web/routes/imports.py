@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
@@ -20,10 +20,38 @@ from net_alpha.ingest.csv_loader import load_csv
 from net_alpha.ingest.dedup import filter_new
 from net_alpha.models.domain import ImportRecord
 from net_alpha.prefs.profile import resolve_effective_profile
+from net_alpha.service.jobs.runner import run_job
+from net_alpha.service.jobs.washsale_watch import run_washsale_watch
 from net_alpha.splits.sync import _post_import_autosync_splits
 from net_alpha.web.dependencies import get_etf_pairs, get_repository
 
 router = APIRouter()
+
+
+def _enqueue_washsale_watch(request) -> None:
+    """Add a one-shot washsale_watch job to the running scheduler.
+
+    No-op when running in ephemeral mode (no scheduler on app.state).
+    """
+    sched = getattr(request.app.state, "scheduler", None)
+    if sched is None:
+        return
+    state = getattr(request.app.state, "service_state", None)
+    repo = getattr(request.app.state, "repository", None)
+    if state is None or repo is None:
+        return
+    sched.add_job(
+        func=run_job,
+        kwargs={
+            "job_name": "washsale_watch",
+            "fn": lambda: run_washsale_watch(repo=repo),
+            "state": state,
+            "repo": repo,
+        },
+        id=f"washsale_watch_oneshot_{datetime.now(UTC).timestamp()}",
+        run_date=datetime.now(UTC),
+        misfire_grace_time=60,
+    )
 
 
 _IMPORTS_PAGE_SIZE = 25
@@ -369,6 +397,8 @@ async def upload(
         recompute_all_violations(repo, etf_pairs)
 
     _post_import_autosync_splits(repo, new_symbols=new_symbols, existing_symbols=existing_symbols)
+
+    _enqueue_washsale_watch(request)
 
     if last_import_id is not None:
         return RedirectResponse(url=f"/imports/success?id={last_import_id}", status_code=303)

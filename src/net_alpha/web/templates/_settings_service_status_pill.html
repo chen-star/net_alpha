@@ -1,0 +1,10 @@
+<a href="/settings/service" class="status-pill {{ css }}" title="Service status">
+  <span class="status-dot"></span>
+  {% if css == "pill--running" %}Running
+  {% elif css == "pill--paused" %}Paused
+  {% elif css == "pill--stale" %}Stale
+  {% elif css == "pill--stopped" %}Stopped
+  {% else %}—
+  {% endif %}
+  {% if last_price %} · prices recent{% endif %}
+</a>
