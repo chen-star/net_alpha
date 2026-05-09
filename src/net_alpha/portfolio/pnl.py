@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import date as _date
 from decimal import Decimal
 
@@ -35,6 +36,148 @@ _STO_PAIRABLE_SOURCES = frozenset({"option_short_open"})
 # days) and a Friday trade before a Monday market holiday settles Tuesday
 # (4 days). 4 days covers both without paying for a holiday calendar.
 _GL_PAIR_DAY_TOLERANCE = 4
+
+
+@dataclass(frozen=True)
+class RealizedContribution:
+    """One row of the realized-P&L decomposition.
+
+    ``amount`` is the signed realized P&L from this row; the sum of all
+    contributions equals the headline ``realized_pl_from_trades`` total.
+    Provenance modal renders these as the "Contributing trades" list so the
+    breakdown ties out to the headline number.
+    """
+
+    kind: str  # "sell" | "btc" | "gl_lot"
+    date: _date
+    account: str
+    ticker: str
+    action: str  # display label e.g. "Sell", "BTC", "Sell (GL)"
+    quantity: float
+    amount: Decimal  # signed realized P&L
+    trade_id: str | None = None  # set for kind in ("sell", "btc")
+    gl_natural_key: str | None = None  # set for kind == "gl_lot"
+
+
+def realized_pl_contributions(
+    trades: Iterable[Trade],
+    period: tuple[int, int] | None,
+    *,
+    gl_lots: Iterable[RealizedGLLot] | None = None,
+    include_disallowed_loss: bool = True,
+) -> list[RealizedContribution]:
+    """Per-row decomposition of realized P&L. See ``realized_pl_from_trades``
+    for the math; this helper exposes the components so the provenance modal
+    can show a breakdown that sums to the headline total."""
+    trades = list(trades)
+    rows: list[RealizedContribution] = []
+
+    sto_premium: dict[tuple, Decimal] = defaultdict(lambda: Decimal("0"))
+    sto_qty: dict[tuple, Decimal] = defaultdict(lambda: Decimal("0"))
+    for t in trades:
+        if not t.is_sell():
+            continue
+        if t.basis_source not in _STO_PAIRABLE_SOURCES:
+            continue
+        if t.option_details is None:
+            continue
+        opt = t.option_details
+        key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
+        sto_premium[key] += Decimal(str(t.proceeds or 0))
+        sto_qty[key] += Decimal(str(t.quantity))
+
+    gl_close_dates_by_key = _index_gl_close_dates(gl_lots) if gl_lots is not None else None
+
+    def _gl_covers(t: Trade) -> bool:
+        if gl_close_dates_by_key is None:
+            return False
+        if t.option_details is not None:
+            opt = t.option_details
+            key: tuple = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
+        else:
+            key = (t.account, t.ticker, None, None, None)
+        for cd in gl_close_dates_by_key.get(key, ()):
+            if abs((t.date - cd).days) <= _GL_PAIR_DAY_TOLERANCE:
+                return True
+        return False
+
+    for t in trades:
+        if t.is_sell():
+            if t.basis_source.startswith("option_short_open"):
+                continue
+            if period is not None and not (period[0] <= t.date.year < period[1]):
+                continue
+            if _gl_covers(t):
+                continue
+            amount = Decimal(str((t.proceeds or 0) - (t.cost_basis or 0)))
+            rows.append(
+                RealizedContribution(
+                    kind="sell",
+                    date=t.date,
+                    account=t.account,
+                    ticker=t.ticker,
+                    action="Sell",
+                    quantity=float(t.quantity),
+                    amount=amount,
+                    trade_id=t.id,
+                )
+            )
+        elif t.is_buy():
+            if t.basis_source not in _BTC_REALIZE_SOURCES:
+                continue
+            if t.option_details is None:
+                continue
+            if period is not None and not (period[0] <= t.date.year < period[1]):
+                continue
+            if _gl_covers(t):
+                continue
+            opt = t.option_details
+            key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
+            total_sto_qty = sto_qty.get(key, Decimal("0"))
+            btc_qty = Decimal(str(t.quantity))
+            if total_sto_qty > 0:
+                premium_share = sto_premium.get(key, Decimal("0")) * btc_qty / total_sto_qty
+            else:
+                premium_share = Decimal("0")
+            amount = premium_share - Decimal(str(t.cost_basis or 0))
+            rows.append(
+                RealizedContribution(
+                    kind="btc",
+                    date=t.date,
+                    account=t.account,
+                    ticker=t.ticker,
+                    action="BTC",
+                    quantity=float(t.quantity),
+                    amount=amount,
+                    trade_id=t.id,
+                )
+            )
+
+    if gl_lots is not None:
+        for gl in gl_lots:
+            if period is not None and not (period[0] <= gl.closed_date.year < period[1]):
+                continue
+            # Tax-recognized P&L: wash-sale disallowed losses are added back
+            # because the loss is rolled into the replacement lot's basis
+            # rather than reducing this lot's recognized P&L. Pass
+            # ``include_disallowed_loss=False`` for economic (cash) P&L.
+            lot_pl = Decimal(str(gl.proceeds)) - Decimal(str(gl.cost_basis))
+            if include_disallowed_loss:
+                lot_pl += Decimal(str(gl.disallowed_loss))
+            rows.append(
+                RealizedContribution(
+                    kind="gl_lot",
+                    date=gl.closed_date,
+                    account=gl.account_display,
+                    ticker=gl.ticker,
+                    action="Sell (GL)",
+                    quantity=float(gl.quantity),
+                    amount=lot_pl,
+                    gl_natural_key=gl.compute_natural_key(),
+                )
+            )
+
+    return rows
 
 
 def realized_pl_from_trades(
@@ -75,85 +218,12 @@ def realized_pl_from_trades(
        GL coverage (e.g., closures from before the user's GL CSV starts) keep
        contributing trade-side P&L.
     """
-    trades = list(trades)
-    total = Decimal("0")
-
-    sto_premium: dict[tuple, Decimal] = defaultdict(lambda: Decimal("0"))
-    sto_qty: dict[tuple, Decimal] = defaultdict(lambda: Decimal("0"))
-    for t in trades:
-        if not t.is_sell():
-            continue
-        if t.basis_source not in _STO_PAIRABLE_SOURCES:
-            continue
-        if t.option_details is None:
-            continue
-        opt = t.option_details
-        key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
-        sto_premium[key] += Decimal(str(t.proceeds or 0))
-        sto_qty[key] += Decimal(str(t.quantity))
-
-    gl_close_dates_by_key = _index_gl_close_dates(gl_lots) if gl_lots is not None else None
-
-    def _gl_covers(t: Trade) -> bool:
-        if gl_close_dates_by_key is None:
-            return False
-        if t.option_details is not None:
-            opt = t.option_details
-            key: tuple = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
-        else:
-            key = (t.account, t.ticker, None, None, None)
-        for cd in gl_close_dates_by_key.get(key, ()):
-            if abs((t.date - cd).days) <= _GL_PAIR_DAY_TOLERANCE:
-                return True
-        return False
-
-    for t in trades:
-        if t.is_sell():
-            # STOs and the assigned-STO variant are *not* realized at open —
-            # their realization is folded into the matching close (BTC, expiry
-            # synth, or rolled into stock basis on assignment).
-            if t.basis_source.startswith("option_short_open"):
-                continue
-            if period is not None and not (period[0] <= t.date.year < period[1]):
-                continue
-            if _gl_covers(t):
-                continue
-            total += Decimal(str((t.proceeds or 0) - (t.cost_basis or 0)))
-        elif t.is_buy():
-            if t.basis_source not in _BTC_REALIZE_SOURCES:
-                continue
-            if t.option_details is None:
-                continue
-            if period is not None and not (period[0] <= t.date.year < period[1]):
-                continue
-            if _gl_covers(t):
-                continue
-            opt = t.option_details
-            key = (t.account, t.ticker, opt.strike, opt.expiry, opt.call_put)
-            total_sto_qty = sto_qty.get(key, Decimal("0"))
-            btc_qty = Decimal(str(t.quantity))
-            if total_sto_qty > 0:
-                premium_share = sto_premium.get(key, Decimal("0")) * btc_qty / total_sto_qty
-            else:
-                premium_share = Decimal("0")
-            total += premium_share - Decimal(str(t.cost_basis or 0))
-
-    if gl_lots is not None:
-        for gl in gl_lots:
-            if period is not None and not (period[0] <= gl.closed_date.year < period[1]):
-                continue
-            # Tax-recognized realized P&L: a wash-sale-disallowed loss is added
-            # to the replacement lot's basis instead of reducing this lot's P&L,
-            # so the period total is ``proceeds - cost_basis + disallowed_loss``.
-            # Schwab's UI and Form 8949 show this recognized figure. Pass
-            # ``include_disallowed_loss=False`` to get the *economic* P&L
-            # instead — the actual cash netted, ignoring the basis shift.
-            lot_pl = Decimal(str(gl.proceeds)) - Decimal(str(gl.cost_basis))
-            if include_disallowed_loss:
-                lot_pl += Decimal(str(gl.disallowed_loss))
-            total += lot_pl
-
-    return total
+    return sum(
+        (c.amount for c in realized_pl_contributions(
+            trades, period, gl_lots=gl_lots, include_disallowed_loss=include_disallowed_loss
+        )),
+        start=Decimal("0"),
+    )
 
 
 def _index_gl_close_dates(

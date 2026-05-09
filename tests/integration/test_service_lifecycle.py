@@ -71,7 +71,7 @@ def test_install_port_embedded_in_artifacts(tmp_path, monkeypatch):
     binary = _stub_binary(tmp_path)
     monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
 
-    with patch.object(control, "_launchctl_bootstrap"):
+    with patch.object(control, "_launchctl_bootstrap"), patch.object(control, "_launchctl_bootout"):
         control.install(port=9999)
 
     # Port should appear in sandbox profile (allows network access on that port)

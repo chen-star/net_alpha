@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 from datetime import date
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
@@ -157,30 +158,16 @@ def _accounts_by_id(repo: Repository) -> dict[int, str]:
     return {a.id: f"{a.broker}/{a.label}" if a.label else a.broker for a in repo.list_accounts()}
 
 
-def _to_contributing(t: Trade, import_id: int | None) -> ContributingTrade:
-    amount = (t.proceeds or 0.0) if t.action.lower() == "sell" else -(t.cost_basis or 0.0)
-    return ContributingTrade(
-        trade_id=t.id,
-        trade_date=t.date,
-        account=t.account,
-        action=t.action,
-        quantity=t.quantity,
-        amount=amount,
-        symbol=t.ticker,
-        import_id=import_id,
-    )
-
-
 def _realized_pl(metric: RealizedPLRef, repo: Repository) -> ProvenanceTrace:
     """Provenance trace for realized P&L.
 
-    Iterates the same Sell rows the user sees, but the displayed `total` uses
-    the canonical realized helper so STO/BTC option pairing is honored. The
-    contributing-trades list still surfaces every Sell that touched the
-    metric scope so the user can audit raw inputs; only the headline number
-    reflects the corrected math.
+    Total and contributing list both come from
+    ``realized_pl_contributions`` so the per-row amounts sum to the headline
+    number. Each row's ``amount`` is its signed realized P&L contribution
+    (proceeds − cost for trade Sells, premium share − cost for BTCs,
+    proceeds − cost + disallowed-loss for GL lots), so a Sell trade that
+    cleared $1500 against $1000 cost basis shows ``$500`` here, not ``$1500``.
     """
-    contributing: list[ContributingTrade] = []
     accounts = _accounts_by_id(repo)
     target_display = accounts.get(metric.account_id) if metric.account_id is not None else None
     scoped: list[Trade] = []
@@ -190,28 +177,40 @@ def _realized_pl(metric: RealizedPLRef, repo: Repository) -> ProvenanceTrace:
         if target_display is not None and t.account != target_display:
             continue
         scoped.append(t)
-        if t.action.lower() != "sell":
-            continue
-        if not _trade_in_period(t, metric.period):
-            continue
-        contributing.append(_to_contributing(t, import_id=None))
 
-    from net_alpha.portfolio.pnl import realized_pl_from_trades
+    from net_alpha.portfolio.pnl import realized_pl_contributions
 
     # Period.end is exclusive; pnl helper expects (year_start, year_end_excl).
-    # When end > Dec 31 of start.year (e.g. Lifetime spanning multi-year), the
-    # helper period filter is permissive enough — we only need the year bounds.
-    period_tuple = (metric.period.start.year, metric.period.end.year + 1)
+    # Treat very-wide windows ("Lifetime") as no filter.
+    period_tuple: tuple[int, int] | None = (
+        metric.period.start.year,
+        metric.period.end.year + 1,
+    )
     if metric.period.end.year - metric.period.start.year > 50:
-        period_tuple = None  # treat very-wide windows ("Lifetime") as no filter
-    # Pull GL lots for the same scope so synthesized expirations land in the
-    # provenance total (matches what the user sees on the Portfolio/Ticker pages).
+        period_tuple = None
     gl_lots_scoped = repo.list_all_gl_lots()
     if metric.symbol is not None:
         gl_lots_scoped = [g for g in gl_lots_scoped if g.ticker == metric.symbol]
     if target_display is not None:
         gl_lots_scoped = [g for g in gl_lots_scoped if g.account_display == target_display]
-    total = float(realized_pl_from_trades(scoped, period=period_tuple, gl_lots=gl_lots_scoped))
+
+    contribs = realized_pl_contributions(scoped, period=period_tuple, gl_lots=gl_lots_scoped)
+    contribs.sort(key=lambda c: (c.date, c.ticker, c.kind))
+    total = float(sum((c.amount for c in contribs), start=Decimal("0")))
+
+    contributing: list[ContributingTrade] = [
+        ContributingTrade(
+            trade_id=c.trade_id or f"gl:{(c.gl_natural_key or '')[:12]}",
+            trade_date=c.date,
+            account=c.account,
+            action=c.action,
+            quantity=c.quantity,
+            amount=float(c.amount),
+            symbol=c.ticker,
+            import_id=None,
+        )
+        for c in contribs
+    ]
 
     label_bits = [metric.period.label, "Realized P/L"]
     if metric.symbol:
