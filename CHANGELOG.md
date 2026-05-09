@@ -2,6 +2,165 @@
 
 
 
+## v0.55.0 (2026-05-09)
+
+### Feature
+
+* feat(web): import preview modal renders robinhood branch
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`16edd88`](https://github.com/chen-star/net_alpha/commit/16edd88340c01bc7930bffcc19c68ebd880f557f))
+
+* feat(cli): default-run route routes per-broker via parser.name
+
+- supported-parsers error message includes robinhood
+- per-(broker, label) cache pattern mirrors web upload route
+- duck-typed dispatch on hasattr(parser, &#39;parse_full&#39;)
+- post-loop stitch iterates touched accounts
+- SchwabRealizedGLParser maps to &#39;schwab&#39; broker key (shares the Schwab account)
+- removed now-unused SchwabParser import
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1e43599`](https://github.com/chen-star/net_alpha/commit/1e435992fccd89557cd9c3ff1b4387f6420a77bf))
+
+* feat(web): upload route routes per-broker via parser.name
+
+- preview_upload + upload now duck-type on hasattr(parser, &#39;parse_full&#39;)
+- Account creation moves inside the per-file loop with a per-(broker, label) cache
+- Mixed-broker batches resolve to distinct schwab/&lt;label&gt; + robinhood/&lt;label&gt; accounts
+- SchwabRealizedGLParser maps to the &#39;schwab&#39; broker key (GL lots share the same account)
+- Post-loop stitch iterates over all touched accounts
+- Remove now-unused SchwabParser import
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`86ecf70`](https://github.com/chen-star/net_alpha/commit/86ecf70361a306628434f7ee794242dde3778f23))
+
+* feat(robinhood): skip crypto + warn on unknown trans codes
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`689f05d`](https://github.com/chen-star/net_alpha/commit/689f05de1bceec26d29a396bc7e5e9f19424fe69))
+
+* feat(robinhood): REC share-transfer rows with basis_unknown
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f50a640`](https://github.com/chen-star/net_alpha/commit/f50a640aca0ca42e216b36a1a3e03f03898a02e4))
+
+* feat(robinhood): cash events (DIV/INT/fees/transfers)
+
+Mirrors SchwabParser cash-event mapping. Sign-source semantics:
+- always_positive: dividends, interest
+- always_negative: GOLD/MFEE/MINT/DTAX/DFEE → fee
+- amount-signed: ACH/ACATS → transfer_in/transfer_out
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7b04b53`](https://github.com/chen-star/net_alpha/commit/7b04b533fdedf9e7bda884cd7ccaaba1718c6442))
+
+* feat(robinhood): SPL split rows emit warning, no trade
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`84d834f`](https://github.com/chen-star/net_alpha/commit/84d834f707b2aa7a559bf8035bc5e82ff48d593e))
+
+* feat(robinhood): short-put assignment folds premium into underlying basis
+
+Mirrors SchwabParser put-assignment basis-offset logic per IRS Pub 550.
+Path A: Robinhood emits both an OASGN option row and a separate underlying
+Buy row on assignment date — the Buy&#39;s cost basis is reduced by the prior
+STO premium.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`494cdbd`](https://github.com/chen-star/net_alpha/commit/494cdbd08d87cc1df0a0d42ce380df2dc6203dae))
+
+* feat(robinhood): same-day duplicate fills get distinct occurrence_index
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f75312d`](https://github.com/chen-star/net_alpha/commit/f75312d793a84a540a2164bb0738aa631bae003b))
+
+* feat(robinhood): OEXP option-expiration silent skip
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7db2f50`](https://github.com/chen-star/net_alpha/commit/7db2f505b74ff5699f159037f33539dbfe0cf2b5))
+
+* feat(robinhood): short-option open/close (STO/BTC)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ec6d2db`](https://github.com/chen-star/net_alpha/commit/ec6d2db8e5f36d99c1a1c39ba93f860966bd5f77))
+
+* feat(robinhood): long-option open/close (BTO/STC)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cdbc39e`](https://github.com/chen-star/net_alpha/commit/cdbc39ee5becefe403e0f1041fefcc4f1c56431f))
+
+* feat(robinhood): equity buy/sell parsing
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5d9a210`](https://github.com/chen-star/net_alpha/commit/5d9a210669a6f9aea93854e4e8ed69525de4871a))
+
+* feat(robinhood): add parser scaffold + register in detection
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`dc692f2`](https://github.com/chen-star/net_alpha/commit/dc692f24ddf16fa5c7d7efaf8095a70da048c70c))
+
+### Style
+
+* style: ruff format Robinhood-related sources and tests
+
+Cosmetic-only — dict/kwargs alignment per ruff format. No behavior change.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`76fd349`](https://github.com/chen-star/net_alpha/commit/76fd349f6346f6a8c679c80804ab51df63de009b))
+
+### Test
+
+* test(integration): cross-broker wash sale (Schwab loss → Robinhood rebuy)
+
+Confirms the ingest plumbing handles cross-broker scenarios end-to-end.
+The wash-sale engine has been cross-broker since v1; this test guards the
+ingest seam (parse → add_import → recompute) on a realistic scenario.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`996a81d`](https://github.com/chen-star/net_alpha/commit/996a81d1820db8327172dacfc4acca43b2f3438e))
+
+* test(robinhood): close Phase B coverage gaps
+
+- Parametrize over all dividend aliases (DIV/DIVNRA/CDIV)
+- Parametrize over all fee aliases (GOLD/MFEE/MINT/DTAX/DFEE)
+- Cover invalid-date cash event warning path
+- Cover multi-contract OASGN partial-close (net premium calculation)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a170a16`](https://github.com/chen-star/net_alpha/commit/a170a16db4233f4288fe2afe236971804b5e6246))
+
+* test(robinhood): assert STC leaves basis_source unchanged
+
+Mirrors the BTO test at line 77 — both long-option codes should leave
+basis_source at the model default of &#34;unknown&#34;.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a18ef00`](https://github.com/chen-star/net_alpha/commit/a18ef002db472354589117ffc33c7f4f3a476acc))
+
+### Unknown
+
+* Merge branch &#39;worktree-feat-robinhood-broker&#39; — Robinhood broker support
+
+Adds Robinhood as the second supported broker. Parity with Schwab on trades
++ cash events. Reconciliation is out of scope (Robinhood does not export a
+Realized G/L CSV).
+
+Highlights
+- New parser: src/net_alpha/brokers/robinhood.py (~330 LOC)
+- Trans-code coverage: Buy / Sell / BTO / STC / STO / BTC / OEXP / OASGN /
+  REC / SPL / DIV / DIVNRA / CDIV / INT / GOLD / MFEE / MINT / DTAX / DFEE /
+  ACH / ACATS, plus crypto skip and unknown-trans-code warnings.
+- §5.2 OASGN short-put assignment folds STO premium into the underlying-stock
+  Buy basis (IRS Pub 550). Path A: Robinhood emits a separate underlying
+  Buy on the assignment date.
+- Web upload route + CLI default route switch from hard-coded &#34;schwab&#34;
+  broker key to per-(broker, label) account cache. Mixed-broker batches
+  now resolve to distinct schwab/&lt;label&gt; + robinhood/&lt;label&gt; accounts.
+- Dispatch sites use hasattr(parser, &#34;parse_full&#34;) instead of
+  isinstance(parser, SchwabParser); SchwabRealizedGLParser keeps its
+  existing branch and is mapped to the &#34;schwab&#34; broker key (the GL CSV
+  shares the Schwab account).
+- Import preview modal renders a Robinhood branch.
+- Cross-broker integration smoke: Schwab loss + Robinhood rebuy within
+  30 days triggers a wash-sale violation end-to-end.
+
+Hard constraint preserved: zero edits to existing Schwab files
+(brokers/schwab.py, brokers/schwab_realized_gl.py,
+audit/brokers/schwab.py, and all Schwab test files).
+
+Deferred to a follow-up PR (awaiting real Robinhood CSV from the user):
+Task 1 (discovery + lock canonical Trans Code list), Task 13 (real-fixture
+golden test), Task 18 (placeholder fixture cleanup).
+
+Branch: 18 commits.
+Tests: 1696 passed, 1 skipped (baseline + 49 new).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`505558c`](https://github.com/chen-star/net_alpha/commit/505558cd4a1f4aafb0627fbeb06a2deb59f2cdeb))
+
+
 ## v0.54.1 (2026-05-09)
 
 ### Fix
