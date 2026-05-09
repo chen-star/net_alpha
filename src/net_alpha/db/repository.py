@@ -2084,6 +2084,105 @@ class Repository:
                 stmt = stmt.where(ServiceRunRow.job_name == job_name)
             return list(s.exec(stmt).all())
 
+    # -----------------------------------------------------------------------
+    # Forward-looking watch helpers (used by engine.washsale_watch)
+    # -----------------------------------------------------------------------
+
+    def latest_price(self, ticker: str) -> Decimal | None:
+        """Return the latest cached price for *ticker*, or None if unknown."""
+        from net_alpha.db.tables import PriceCacheRow
+
+        with Session(self.engine) as s:
+            row = s.get(PriceCacheRow, ticker)
+            return Decimal(str(row.price)) if row is not None else None
+
+    def position_quantity(self, *, ticker: str, broker: str | None = None, account: str) -> Decimal:
+        """Net share quantity held in *account* for *ticker* (Buy minus Sell).
+
+        Keyed by (broker, account label) to resolve the correct AccountRow.
+        If *broker* is None, falls back to matching by label only (returns
+        the first matching account — suitable for single-broker setups).
+        """
+        with Session(self.engine) as s:
+            if broker is not None:
+                acct_row = s.exec(
+                    select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == account)
+                ).first()
+            else:
+                acct_row = s.exec(select(AccountRow).where(AccountRow.label == account)).first()
+            if acct_row is None:
+                return Decimal("0")
+            rows = s.exec(select(TradeRow).where(TradeRow.account_id == acct_row.id, TradeRow.ticker == ticker)).all()
+            total = Decimal("0")
+            for r in rows:
+                if r.action == "Buy":
+                    total += Decimal(str(r.quantity))
+                elif r.action == "Sell":
+                    total -= Decimal(str(r.quantity))
+            return total
+
+    def average_basis(self, *, ticker: str, broker: str | None = None, account: str) -> Decimal | None:
+        """Weighted-average cost basis per share for *ticker* in *account*.
+
+        Returns None if no buy trades exist (cannot compute a basis).
+        Keyed by (broker, account label) — same convention as position_quantity.
+        """
+        with Session(self.engine) as s:
+            if broker is not None:
+                acct_row = s.exec(
+                    select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == account)
+                ).first()
+            else:
+                acct_row = s.exec(select(AccountRow).where(AccountRow.label == account)).first()
+            if acct_row is None:
+                return None
+            rows = s.exec(
+                select(TradeRow).where(
+                    TradeRow.account_id == acct_row.id,
+                    TradeRow.ticker == ticker,
+                    TradeRow.action == "Buy",
+                )
+            ).all()
+            if not rows:
+                return None
+            total_cost = sum(Decimal(str(r.cost_basis or 0)) for r in rows)
+            total_qty = sum(Decimal(str(r.quantity)) for r in rows)
+            if total_qty == 0:
+                return None
+            return total_cost / total_qty
+
+    def buys_in_window_non_taxable(self, *, start: date, end: date) -> list:
+        """Return Buy rows from tax-advantaged accounts within [start, end].
+
+        Each returned object exposes .id, .ticker, .account (label), .trade_date.
+        Only accounts whose ``type != 'taxable'`` are included so callers can
+        detect §1091 IRA-trap risk without filtering themselves.
+        """
+        with Session(self.engine) as s:
+            rows = s.exec(
+                text("""
+                    SELECT t.id, t.ticker, a.label AS account, t.trade_date
+                    FROM trades t
+                    JOIN accounts a ON a.id = t.account_id
+                    WHERE t.action = 'Buy'
+                      AND a.type != 'taxable'
+                      AND date(t.trade_date) BETWEEN date(:start) AND date(:end)
+                    ORDER BY t.trade_date
+                """),
+                params={"start": start.isoformat(), "end": end.isoformat()},
+            ).all()
+
+            class _BuyRow:
+                __slots__ = ("id", "ticker", "account", "trade_date")
+
+                def __init__(self, id_: int, ticker: str, account: str, trade_date: str) -> None:
+                    self.id = id_
+                    self.ticker = ticker
+                    self.account = account
+                    self.trade_date = trade_date
+
+            return [_BuyRow(r[0], r[1], r[2], r[3]) for r in rows]
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility

@@ -35,6 +35,23 @@ def load_etf_pairs(user_path: str | Path | None = None) -> dict[str, list[str]]:
     return pairs
 
 
+def are_substantially_identical(ticker_a: str, ticker_b: str, user_path: str | Path | None = None) -> bool:
+    """Return True if *ticker_a* and *ticker_b* are in the same ETF pair group.
+
+    Loads bundled pairs (and optionally user-extended pairs) on each call.
+    Intended for single-symbol forward-looking checks (e.g. washsale_watch);
+    for bulk detection use the dict returned by :func:`load_etf_pairs` with
+    ``engine.matcher._are_substantially_identical`` directly.
+    """
+    if ticker_a == ticker_b:
+        return False
+    pairs = load_etf_pairs(user_path=user_path)
+    for group in pairs.values():
+        if ticker_a in group and ticker_b in group:
+            return True
+    return False
+
+
 class ReplacementsConflictWarning(UserWarning):
     """Raised when a replacement appears in the source's substantially-identical pairs."""
 
