@@ -22,6 +22,7 @@ _TEMPLATE = """(version 1)
 (allow sysctl-read)
 (allow mach-lookup)
 (allow ipc-posix-shm)
+(allow ipc-posix-sem)                                         ;; loguru enqueue=True / multiprocessing locks
 
 ;; ----------------------------------------------------------------------
 ;; Filesystem
@@ -42,6 +43,7 @@ _TEMPLATE = """(version 1)
 ;;   the real security boundary; this is belt-and-suspenders.
 ;; ----------------------------------------------------------------------
 (allow network-bind (local ip "localhost:{port}"))
+(allow network-inbound (local ip "localhost:{port}"))         ;; macOS 26+: listen() is gated separately from bind()
 (allow network-outbound (remote tcp "*:443"))
 (allow network-outbound (remote tcp "*:80"))                  ;; redirect chains
 (allow network-outbound (remote unix-socket))                 ;; DNS, log

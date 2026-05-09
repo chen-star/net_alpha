@@ -69,6 +69,44 @@ def test_install_wraps_entry_point_inside_service_venv(tmp_path, monkeypatch):
     assert str(binary) in text
 
 
+def test_provision_service_venv_installs_with_ui_extras(tmp_path, monkeypatch):
+    """The runtime venv must include the [ui] extras (yfinance, fastapi, …) —
+    they live in pyproject.toml's optional-dependencies, but the always-on
+    service is a web app and won't import without them."""
+    from unittest.mock import MagicMock
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    project_source = tmp_path / "wash-alpha"
+    project_source.mkdir()
+    (project_source / "pyproject.toml").write_text("[project]\nname = 'wash-alpha'\n")
+    monkeypatch.setattr(control, "_resolve_project_source", lambda: project_source)
+    fake_run = MagicMock()
+    monkeypatch.setattr(control.subprocess, "run", fake_run)
+    control._provision_service_venv()
+    pip_install_args = fake_run.call_args_list[1].args[0]
+    assert pip_install_args[-1] == f"{project_source}[ui]"
+
+
+def test_provision_service_venv_clears_existing_venv(tmp_path, monkeypatch):
+    """`uv venv` refuses to overwrite an existing venv — re-running install
+    must pass --clear so the second invocation doesn't fail with
+    `A virtual environment already exists at ...`."""
+    from unittest.mock import MagicMock
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    project_source = tmp_path / "wash-alpha"
+    project_source.mkdir()
+    (project_source / "pyproject.toml").write_text("[project]\nname = 'wash-alpha'\n")
+    monkeypatch.setattr(control, "_resolve_project_source", lambda: project_source)
+    fake_run = MagicMock()
+    monkeypatch.setattr(control.subprocess, "run", fake_run)
+    control._provision_service_venv()
+    venv_args = fake_run.call_args_list[0].args[0]
+    assert "--clear" in venv_args
+
+
 def test_uninstall_removes_plist_wrapper_sandbox_and_venv(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     paths.ensure_dirs()

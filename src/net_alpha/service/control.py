@@ -68,11 +68,12 @@ def _provision_service_venv() -> str:
     """
     venv = paths.service_venv()
     project_source = _resolve_project_source()
+    # --clear ensures re-running install gets a deterministic venv (no stale
+    # deps from a previous broken install). uv's stdout/stderr streams to the
+    # user so progress is visible and errors aren't buried in CalledProcessError.
     subprocess.run(
-        ["uv", "venv", "--python", "3.11", str(venv)],
+        ["uv", "venv", "--clear", "--python", "3.11", str(venv)],
         check=True,
-        capture_output=True,
-        text=True,
     )
     subprocess.run(
         [
@@ -81,13 +82,9 @@ def _provision_service_venv() -> str:
             "install",
             "--python",
             str(venv / "bin" / "python"),
-            "--reinstall-package",
-            DIST_NAME,
-            str(project_source),
+            f"{project_source}[ui]",
         ],
         check=True,
-        capture_output=True,
-        text=True,
     )
     return str(venv / "bin" / "net-alpha")
 
