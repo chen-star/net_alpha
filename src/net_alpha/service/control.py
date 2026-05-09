@@ -111,9 +111,7 @@ def uninstall() -> None:
 
 def start() -> None:
     if not paths.plist_file().exists():
-        raise NotInstalled(
-            "Service is not installed. Run `net-alpha service install` first."
-        )
+        raise NotInstalled("Service is not installed. Run `net-alpha service install` first.")
     disabled_flag.clear()
     _launchctl_bootstrap()
 
@@ -136,8 +134,7 @@ def restart() -> None:
         raise NotInstalled("Service is not installed.")
     if disabled_flag.is_set():
         raise ServiceStopped(
-            "Service is stopped. Run `net-alpha service start` instead — "
-            "restart is a no-op on a stopped service."
+            "Service is stopped. Run `net-alpha service start` instead — restart is a no-op on a stopped service."
         )
     _launchctl_bootout()
     _launchctl_bootstrap()
@@ -167,7 +164,11 @@ def status() -> Status:
     return Status(
         installed=True,
         running=running,
-        paused=False,        # paused state lives in-process; populated by Task 2.x
+        paused=False,  # paused state lives in-process; populated by Task 2.x
         pid=pid,
         disabled=is_disabled,
     )
+
+
+def logs(*, follow: bool, lines: int) -> None:
+    raise NotImplementedError  # Task 6.x
