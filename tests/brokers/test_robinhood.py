@@ -216,6 +216,27 @@ def test_oasgn_call_assignment_does_not_offset_underlying():
     assert underlying[0].basis_source == "unknown"
 
 
+def test_oasgn_partial_close_before_assignment_uses_net_premium():
+    """STO 2 contracts at $600, BTC 1 contract at $100, 1 contract assigned.
+    Net premium = (600 − 100) / 2 contracts × 1 assigned = $250 offset."""
+    rows = [
+        _row(**{"Activity Date": "09/01/2024", "Instrument": "AAPL $150 Put 11/15/2024",
+                "Trans Code": "STO", "Quantity": "2", "Price": "3.00", "Amount": "600.00"}),
+        _row(**{"Activity Date": "10/01/2024", "Instrument": "AAPL $150 Put 11/15/2024",
+                "Trans Code": "BTC", "Quantity": "1", "Price": "1.00", "Amount": "-100.00"}),
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL $150 Put 11/15/2024",
+                "Trans Code": "OASGN", "Quantity": "1", "Price": "0", "Amount": "0"}),
+        _row(**{"Activity Date": "11/15/2024", "Instrument": "AAPL", "Trans Code": "Buy",
+                "Quantity": "100", "Price": "150.00", "Amount": "-15000.00"}),
+    ]
+    trades = _parse(rows)
+    underlying = [t for t in trades if t.ticker == "AAPL" and t.option_details is None]
+    assert len(underlying) == 1
+    # 15000 − 250 = 14750.
+    assert underlying[0].cost_basis == 14750.0
+    assert underlying[0].basis_source == "put_assignment"
+
+
 def test_spl_emits_no_trade_and_logs_warning():
     rows = [_row(
         **{"Activity Date": "08/25/2024", "Instrument": "NVDA", "Trans Code": "SPL",

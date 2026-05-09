@@ -1,5 +1,7 @@
 from datetime import date
 
+import pytest
+
 from net_alpha.brokers.robinhood import RobinhoodParser
 
 
@@ -110,3 +112,36 @@ def test_dividend_ticker_can_be_empty():
     )]
     result = _parse(rows)
     assert result.cash_events[0].ticker is None
+
+
+@pytest.mark.parametrize("code", ["DIV", "DIVNRA", "CDIV"])
+def test_all_dividend_aliases_route_to_dividend(code):
+    rows = [_row(
+        **{"Activity Date": "10/15/2024", "Instrument": "AAPL", "Trans Code": code,
+           "Amount": "10.00"}
+    )]
+    result = _parse(rows)
+    assert len(result.cash_events) == 1
+    assert result.cash_events[0].kind == "dividend"
+    assert result.cash_events[0].amount == 10.00
+
+
+@pytest.mark.parametrize("code", ["GOLD", "MFEE", "MINT", "DTAX", "DFEE"])
+def test_all_fee_aliases_route_to_fee(code):
+    rows = [_row(
+        **{"Activity Date": "10/01/2024", "Trans Code": code, "Amount": "-3.00"}
+    )]
+    result = _parse(rows)
+    assert len(result.cash_events) == 1
+    assert result.cash_events[0].kind == "fee"
+    assert result.cash_events[0].amount == 3.00
+
+
+def test_invalid_date_cash_event_is_skipped_with_warning():
+    rows = [_row(
+        **{"Activity Date": "BADDATE", "Instrument": "AAPL", "Trans Code": "DIV",
+           "Amount": "12.50"}
+    )]
+    result = _parse(rows)
+    assert result.cash_events == []
+    assert any("DIV" in w and "Activity Date" in w for w in result.parse_warnings)
