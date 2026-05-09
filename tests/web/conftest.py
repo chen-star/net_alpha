@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import date, datetime
 from pathlib import Path
 
@@ -11,6 +12,11 @@ from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.repository import Repository
 from net_alpha.models.domain import Account, ImportRecord, Trade
 from net_alpha.web.app import create_app
+
+# Skip scheduler startup in all web tests — it requires a running asyncio
+# event loop (AsyncIOScheduler) and service infrastructure not available in
+# sync test environments.
+os.environ.setdefault("NETALPHA_SKIP_SCHEDULER", "1")
 
 
 @pytest.fixture

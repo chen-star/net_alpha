@@ -80,6 +80,14 @@ def status_cmd(json: bool = typer.Option(False, "--json", help="Emit JSON for sc
     typer.echo(f"{state}{pid_str}")
 
 
+@service_app.command("run", hidden=True)
+def run_cmd(port: int = typer.Option(8765, "--port", help="Port to bind on (default 8765).")):
+    """Internal entry-point invoked by the launchd wrapper. Not for direct use."""
+    from net_alpha.cli.service_run import run
+
+    run(port=port)
+
+
 @service_app.command("logs")
 def logs_cmd(
     follow: bool = typer.Option(False, "-f", "--follow", help="Tail the log."),
