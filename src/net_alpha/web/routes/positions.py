@@ -193,6 +193,7 @@ def positions_page(
         plan_view = _dc.replace(plan_view, rows=list(plan_view.rows)[start_idx:end_idx])
 
         ctx["plan_view"] = plan_view
+        ctx["watch_by_target_id"] = repo.watch_results_by_target()
         ctx["pagination"] = {
             "page": page_norm,
             "page_size": page_size_norm,
@@ -454,6 +455,7 @@ def _render_plan_body(
             "plan_view": plan_view,
             "selected_account": account or "",
             "selected_period": "ytd",
+            "watch_by_target_id": repo.watch_results_by_target(),
             "pagination": {
                 "page": page_norm,
                 "page_size": page_size_norm,

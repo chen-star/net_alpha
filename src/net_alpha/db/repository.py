@@ -28,6 +28,7 @@ from net_alpha.db.tables import (
     TradeRow,
     UserPreferenceRow,
     WashSaleViolationRow,
+    WashSaleWatchResultRow,
 )
 from net_alpha.models.domain import (
     Account,
@@ -2210,6 +2211,22 @@ class Repository:
                 },
             )
             s.commit()
+
+    def watch_results_by_target(self) -> dict[str, WashSaleWatchResultRow]:
+        """Return latest watch_result keyed by symbol, for fast plan-row rendering.
+
+        Joins washsale_watch_result with position_targets on target_id so the
+        template can look up results by the PlanRow.symbol field directly.
+        """
+        with Session(self.engine) as s:
+            stmt = (
+                select(WashSaleWatchResultRow, PositionTargetRow.symbol)
+                .join(
+                    PositionTargetRow,
+                    WashSaleWatchResultRow.target_id == PositionTargetRow.id,
+                )
+            )
+            return {symbol: row for row, symbol in s.exec(stmt).all()}
 
 
 # ---------------------------------------------------------------------------

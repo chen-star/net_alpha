@@ -1,0 +1,14 @@
+{% set _wr = watch_by_target_id.get(r.symbol) if watch_by_target_id else None %}
+{% if _wr is none %}
+  <span class="watch-pill watch-pill--unknown" title="Not yet evaluated">—</span>
+{% elif _wr.status == "clean" %}
+  <span class="watch-pill watch-pill--clean" title="No wash-sale risk detected">Clean</span>
+{% elif _wr.status == "wash_sale_risk" %}
+  <span class="watch-pill watch-pill--wash" title="{{ _wr.reason }}">Wash-sale risk</span>
+{% elif _wr.status == "ira_trap_risk" %}
+  <span class="watch-pill watch-pill--ira-trap watch-pill--{{ _wr.severity }}" title="{{ _wr.reason }}">
+    IRA trap{% if _wr.severity == "hard" %} (hard){% endif %}
+  </span>
+{% else %}
+  <span class="watch-pill watch-pill--unknown" title="Cannot evaluate">—</span>
+{% endif %}
