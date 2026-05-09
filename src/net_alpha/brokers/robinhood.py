@@ -40,13 +40,14 @@ _SELL_CODES = {"Sell", "STC"}
 _SHORT_OPTION_OPEN_CODES = {"STO"}
 _SHORT_OPTION_CLOSE_CODES = {"BTC"}
 _NON_TRADE_KNOWN_CODES = {"OEXP", "OASGN"}
+_TRANSFER_CODES = {"REC"}
 
 # Codes the trade-side `parse(...)` already handles. Used by parse_full(...)
 # to skip these in its own row walk (they're already in `trades`).
 _TRADE_SIDE_CODES = (
     _BUY_CODES | _SELL_CODES
     | _SHORT_OPTION_OPEN_CODES | _SHORT_OPTION_CLOSE_CODES
-    | _NON_TRADE_KNOWN_CODES
+    | _NON_TRADE_KNOWN_CODES | _TRANSFER_CODES
 )
 
 # Codes that are known but not trades and not cash events — warn-only.
@@ -181,6 +182,7 @@ class RobinhoodParser:
             code = row.get("Trans Code", "").strip()
             short_open = False
             short_close = False
+            is_transfer = False
             if code in _BUY_CODES:
                 action = "Buy"
             elif code in _SELL_CODES:
@@ -191,6 +193,9 @@ class RobinhoodParser:
             elif code in _SHORT_OPTION_CLOSE_CODES:
                 action = "Buy"
                 short_close = True
+            elif code in _TRANSFER_CODES:
+                action = None  # decided below from sign of quantity
+                is_transfer = True
             elif code in _NON_TRADE_KNOWN_CODES:
                 continue
             else:
@@ -209,6 +214,26 @@ class RobinhoodParser:
 
             qty = _qty(row.get("Quantity", ""))
             amount = _money(row.get("Amount", ""))
+
+            if is_transfer:
+                if qty == 0:
+                    continue
+                action = "Buy" if qty > 0 else "Sell"
+                basis_source_xfer = "transfer_in" if qty > 0 else "transfer_out"
+                qty = abs(qty)
+                trades.append(Trade(
+                    account=account_display,
+                    date=trade_date,
+                    ticker=ticker,
+                    action=action,
+                    quantity=qty,
+                    proceeds=None,
+                    cost_basis=None,
+                    basis_unknown=True,
+                    basis_source=basis_source_xfer,
+                    option_details=opt[1] if opt else None,
+                ))
+                continue
 
             cost_basis = abs(amount) if action == "Buy" else None
             proceeds = abs(amount) if action == "Sell" else None

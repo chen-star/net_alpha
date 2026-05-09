@@ -225,3 +225,38 @@ def test_spl_emits_no_trade_and_logs_warning():
     result = RobinhoodParser().parse_full(rows, "robinhood/personal")
     assert result.trades == []
     assert any("SPL" in w for w in result.parse_warnings)
+
+
+def test_rec_share_transfer_in_marks_transfer_in_with_basis_unknown():
+    rows = [_row(
+        **{"Activity Date": "08/01/2024", "Instrument": "AAPL", "Trans Code": "REC",
+           "Quantity": "50", "Price": "", "Amount": ""}
+    )]
+    trades = _parse(rows)
+    assert len(trades) == 1
+    assert trades[0].action == "Buy"
+    assert trades[0].quantity == 50.0
+    assert trades[0].basis_source == "transfer_in"
+    assert trades[0].basis_unknown is True
+    assert trades[0].cost_basis is None
+
+
+def test_rec_share_transfer_out_marks_transfer_out():
+    rows = [_row(
+        **{"Activity Date": "08/01/2024", "Instrument": "AAPL", "Trans Code": "REC",
+           "Quantity": "-50", "Price": "", "Amount": ""}
+    )]
+    trades = _parse(rows)
+    assert len(trades) == 1
+    assert trades[0].action == "Sell"
+    assert trades[0].quantity == 50.0
+    assert trades[0].basis_source == "transfer_out"
+
+
+def test_rec_zero_quantity_is_skipped():
+    rows = [_row(
+        **{"Activity Date": "08/01/2024", "Instrument": "AAPL", "Trans Code": "REC",
+           "Quantity": "0", "Price": "", "Amount": ""}
+    )]
+    trades = _parse(rows)
+    assert trades == []
