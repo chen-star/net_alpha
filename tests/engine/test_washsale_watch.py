@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock as MM
 
-from net_alpha.engine.washsale_watch import WatchResult, evaluate_target
+from net_alpha.engine.washsale_watch import evaluate_target
 
 
 def _make_target(symbol="SPY", broker="schwab", account="personal", target_shares=10):
@@ -44,7 +44,7 @@ def test_ira_trap_hard_when_exact_ticker_buy_in_ira_within_window():
     repo = MM()
     repo.latest_price.return_value = Decimal("100")
     repo.position_quantity.return_value = Decimal("10")  # holding 10
-    repo.average_basis.return_value = Decimal("150")     # bought at 150 → loss at 100
+    repo.average_basis.return_value = Decimal("150")  # bought at 150 → loss at 100
     repo.get_account_type.return_value = "taxable"
 
     ira_buy = MM()

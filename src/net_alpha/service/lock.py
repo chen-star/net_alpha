@@ -3,6 +3,7 @@
 Keeps the user from accidentally booting two service processes that
 fight over port 8765.
 """
+
 from __future__ import annotations
 
 import errno
@@ -38,9 +39,7 @@ def acquire() -> None:
         except ValueError:
             existing = -1
         if _pid_alive(existing):
-            raise AlreadyRunning(
-                f"Another net-alpha service is already running (pid {existing})."
-            )
+            raise AlreadyRunning(f"Another net-alpha service is already running (pid {existing}).")
     p.write_text(str(os.getpid()))
 
 

@@ -2206,8 +2206,12 @@ class Repository:
                     """
                 ),
                 params={
-                    "tid": target_id, "st": status, "sv": severity,
-                    "r": reason, "tg": triggering, "ts": computed_at,
+                    "tid": target_id,
+                    "st": status,
+                    "sv": severity,
+                    "r": reason,
+                    "tg": triggering,
+                    "ts": computed_at,
                 },
             )
             s.commit()
@@ -2219,12 +2223,9 @@ class Repository:
         template can look up results by the PlanRow.symbol field directly.
         """
         with Session(self.engine) as s:
-            stmt = (
-                select(WashSaleWatchResultRow, PositionTargetRow.symbol)
-                .join(
-                    PositionTargetRow,
-                    WashSaleWatchResultRow.target_id == PositionTargetRow.id,
-                )
+            stmt = select(WashSaleWatchResultRow, PositionTargetRow.symbol).join(
+                PositionTargetRow,
+                WashSaleWatchResultRow.target_id == PositionTargetRow.id,
             )
             return {symbol: row for row, symbol in s.exec(stmt).all()}
 

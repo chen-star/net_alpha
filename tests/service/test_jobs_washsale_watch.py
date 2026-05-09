@@ -18,9 +18,7 @@ def test_run_washsale_watch_iterates_targets_and_persists_results(monkeypatch):
         1: ws_mod.WatchResult(status="clean", severity="none"),
         2: ws_mod.WatchResult(status="ira_trap_risk", severity="hard", reason="x", triggering_trade_ids=[42]),
     }
-    monkeypatch.setattr(
-        ws_mod, "evaluate_target", lambda **kw: fake_results[kw["target"].id]
-    )
+    monkeypatch.setattr(ws_mod, "evaluate_target", lambda **kw: fake_results[kw["target"].id])
 
     payload = run_washsale_watch(repo=repo, today=date(2026, 5, 1))
     assert payload == {"targets": 2, "risk": 1}
