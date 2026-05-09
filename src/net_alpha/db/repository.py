@@ -542,6 +542,18 @@ class Repository:
             rows = s.exec(select(TradeRow.ticker).distinct().order_by(TradeRow.ticker)).all()
             return list(rows)
 
+    def distinct_held_tickers(self) -> list[str]:
+        """Tickers ever traded across all accounts (Buy or Sell)."""
+        with Session(self.engine) as s:
+            rows = s.exec(text("SELECT DISTINCT ticker FROM trades WHERE action IN ('Buy', 'Sell')")).all()
+            return [r[0] for r in rows]
+
+    def distinct_target_tickers(self) -> list[str]:
+        """Tickers declared in PositionTargets."""
+        with Session(self.engine) as s:
+            rows = s.exec(text("SELECT DISTINCT symbol FROM position_targets")).all()
+            return [r[0] for r in rows]
+
     def get_trades_for_ticker(self, ticker: str) -> list[Trade]:
         """All trades for a ticker, sorted by trade_date ascending."""
         with Session(self.engine) as s:
