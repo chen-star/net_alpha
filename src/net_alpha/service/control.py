@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time as _time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
@@ -222,4 +223,23 @@ def status() -> Status:
 
 
 def logs(*, follow: bool, lines: int) -> None:
-    raise NotImplementedError  # Task 6.x
+    """Tail the service log; --follow streams new lines indefinitely."""
+    p = paths.log_file()
+    if not p.exists():
+        sys.stderr.write("No service log yet.\n")
+        return
+    with p.open("r") as f:
+        all_lines = f.readlines()
+    for line in all_lines[-lines:]:
+        sys.stdout.write(line)
+    if not follow:
+        return
+    with p.open("r") as f:
+        f.seek(0, 2)  # seek to end
+        while True:
+            line = f.readline()
+            if line:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+            else:
+                _time.sleep(0.5)

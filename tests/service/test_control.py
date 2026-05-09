@@ -224,3 +224,22 @@ def test_install_raises_helpful_error_when_uv_missing(tmp_path, monkeypatch):
 
     with pytest.raises(control.MissingUv):
         control.install(port=8765)
+
+
+def test_logs_prints_last_n_lines(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    paths.log_file().write_text("\n".join(f"line {i}" for i in range(100)) + "\n")
+    control.logs(follow=False, lines=5)
+    out = capsys.readouterr().out
+    assert "line 95" in out
+    assert "line 99" in out
+
+
+def test_logs_when_no_log_file_prints_friendly_message(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    # no log file
+    control.logs(follow=False, lines=5)
+    err = capsys.readouterr().err
+    assert "No service log" in err
