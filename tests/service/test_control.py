@@ -43,3 +43,28 @@ def test_install_clears_disabled_flag(tmp_path, monkeypatch):
     with patch.object(control, "_launchctl_bootstrap"):
         control.install(port=8765)
     assert not paths.disabled_flag().exists()
+
+
+def test_uninstall_removes_plist_wrapper_and_sandbox(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    paths.plist_file().write_text("<plist/>")
+    paths.wrapper_script().write_text("#!/bin/bash\n")
+    paths.sandbox_profile().write_text("(version 1)")
+    with patch.object(control, "_launchctl_bootout") as bo:
+        control.uninstall()
+    bo.assert_called_once()
+    assert not paths.plist_file().exists()
+    assert not paths.wrapper_script().exists()
+    assert not paths.sandbox_profile().exists()
+
+
+def test_uninstall_leaves_data_alone(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    paths.ensure_dirs()
+    db = paths.net_alpha_home() / "net_alpha.db"
+    db.write_text("DATA")
+    with patch.object(control, "_launchctl_bootout"):
+        control.uninstall()
+    assert db.exists()
+    assert db.read_text() == "DATA"

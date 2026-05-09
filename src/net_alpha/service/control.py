@@ -94,7 +94,10 @@ def install(*, port: int = 8765) -> None:
 
 
 def uninstall() -> None:
-    raise NotImplementedError  # Task 1.9
+    _launchctl_bootout()
+    for p in (paths.plist_file(), paths.wrapper_script(), paths.sandbox_profile()):
+        if p.exists():
+            p.unlink()
 
 
 def start() -> None:
