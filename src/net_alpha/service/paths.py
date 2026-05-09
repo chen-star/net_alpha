@@ -52,6 +52,10 @@ def sandbox_profile() -> Path:
     return run_dir() / "sandbox.sb"
 
 
+def service_venv() -> Path:
+    return net_alpha_home() / "venv"
+
+
 def log_file() -> Path:
     return logs_dir() / "service.log"
 

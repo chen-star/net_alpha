@@ -16,8 +16,8 @@ def _stub_binary(tmp_path: Path) -> Path:
 def test_install_writes_plist_wrapper_and_sandbox(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     binary = _stub_binary(tmp_path)
-    monkeypatch.setattr(control, "_resolve_binary", lambda: str(binary))
-    with patch.object(control, "_launchctl_bootstrap") as load:
+    monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
+    with patch.object(control, "_launchctl_reload") as load:
         control.install(port=8765)
     assert paths.plist_file().exists()
     assert paths.wrapper_script().exists()
@@ -28,8 +28,8 @@ def test_install_writes_plist_wrapper_and_sandbox(tmp_path, monkeypatch):
 def test_install_makes_wrapper_executable(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     binary = _stub_binary(tmp_path)
-    monkeypatch.setattr(control, "_resolve_binary", lambda: str(binary))
-    with patch.object(control, "_launchctl_bootstrap"):
+    monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
+    with patch.object(control, "_launchctl_reload"):
         control.install(port=8765)
     mode = paths.wrapper_script().stat().st_mode
     assert mode & 0o111  # executable bit set
@@ -40,24 +40,50 @@ def test_install_clears_disabled_flag(tmp_path, monkeypatch):
     paths.ensure_dirs()
     paths.disabled_flag().write_text("stale")
     binary = _stub_binary(tmp_path)
-    monkeypatch.setattr(control, "_resolve_binary", lambda: str(binary))
-    with patch.object(control, "_launchctl_bootstrap"):
+    monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
+    with patch.object(control, "_launchctl_reload"):
         control.install(port=8765)
     assert not paths.disabled_flag().exists()
 
 
-def test_uninstall_removes_plist_wrapper_and_sandbox(tmp_path, monkeypatch):
+def test_install_is_idempotent_when_service_already_loaded(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    binary = _stub_binary(tmp_path)
+    monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
+    with patch.object(control, "_launchctl_bootout") as bo, patch.object(control, "_launchctl_bootstrap") as bs:
+        control.install(port=8765)
+    # Reload bootouts first so a stale plist doesn't make bootstrap exit 5.
+    bo.assert_called_once()
+    bs.assert_called_once()
+
+
+def test_install_wraps_entry_point_inside_service_venv(tmp_path, monkeypatch):
+    """The wrapper script must point at ~/.net_alpha/venv/bin/net-alpha — the
+    runtime venv lives outside ~/Documents so launchd's TCC identity can read it."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    binary = _stub_binary(tmp_path)
+    monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
+    with patch.object(control, "_launchctl_reload"):
+        control.install(port=8765)
+    text = paths.wrapper_script().read_text()
+    assert str(binary) in text
+
+
+def test_uninstall_removes_plist_wrapper_sandbox_and_venv(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     paths.ensure_dirs()
     paths.plist_file().write_text("<plist/>")
     paths.wrapper_script().write_text("#!/bin/bash\n")
     paths.sandbox_profile().write_text("(version 1)")
+    paths.service_venv().mkdir(parents=True, exist_ok=True)
+    (paths.service_venv() / "marker").write_text("x")
     with patch.object(control, "_launchctl_bootout") as bo:
         control.uninstall()
     bo.assert_called_once()
     assert not paths.plist_file().exists()
     assert not paths.wrapper_script().exists()
     assert not paths.sandbox_profile().exists()
+    assert not paths.service_venv().exists()
 
 
 def test_uninstall_leaves_data_alone(tmp_path, monkeypatch):
@@ -71,15 +97,15 @@ def test_uninstall_leaves_data_alone(tmp_path, monkeypatch):
     assert db.read_text() == "DATA"
 
 
-def test_start_clears_disabled_flag_and_calls_bootstrap(tmp_path, monkeypatch):
+def test_start_clears_disabled_flag_and_reloads(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     paths.ensure_dirs()
     paths.disabled_flag().write_text("x")
     paths.plist_file().write_text("<plist/>")
-    with patch.object(control, "_launchctl_bootstrap") as bs:
+    with patch.object(control, "_launchctl_reload") as load:
         control.start()
     assert not paths.disabled_flag().exists()
-    bs.assert_called_once()
+    load.assert_called_once()
 
 
 def test_start_raises_if_not_installed(tmp_path, monkeypatch):
@@ -107,6 +133,13 @@ def test_restart_when_running_bootouts_then_bootstraps(tmp_path, monkeypatch):
     paths.plist_file().write_text("<plist/>")
     with patch.object(control, "_launchctl_bootout") as bo, patch.object(control, "_launchctl_bootstrap") as bs:
         control.restart()
+    bo.assert_called_once()
+    bs.assert_called_once()
+
+
+def test_launchctl_reload_bootouts_then_bootstraps():
+    with patch.object(control, "_launchctl_bootout") as bo, patch.object(control, "_launchctl_bootstrap") as bs:
+        control._launchctl_reload()
     bo.assert_called_once()
     bs.assert_called_once()
 
@@ -218,7 +251,7 @@ def test_pause_raises_not_installed_when_service_not_running(monkeypatch):
 def test_install_raises_helpful_error_when_uv_missing(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     binary = _stub_binary(tmp_path)
-    monkeypatch.setattr(control, "_resolve_binary", lambda: str(binary))
+    monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
     monkeypatch.setattr(control, "_uv_available", lambda: False)
     import pytest
 

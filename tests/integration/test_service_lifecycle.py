@@ -22,7 +22,7 @@ def test_full_lifecycle_artifacts(tmp_path, monkeypatch):
     """Test the complete service lifecycle: install → stop → start → restart → uninstall."""
     monkeypatch.setenv("HOME", str(tmp_path))
     binary = _stub_binary(tmp_path)
-    monkeypatch.setattr(control, "_resolve_binary", lambda: str(binary))
+    monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
 
     with patch.object(control, "_launchctl_bootstrap"), patch.object(control, "_launchctl_bootout"):
         # Step 1: install
@@ -69,7 +69,7 @@ def test_install_port_embedded_in_artifacts(tmp_path, monkeypatch):
     """Verify that the specified port is embedded in sandbox profile."""
     monkeypatch.setenv("HOME", str(tmp_path))
     binary = _stub_binary(tmp_path)
-    monkeypatch.setattr(control, "_resolve_binary", lambda: str(binary))
+    monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
 
     with patch.object(control, "_launchctl_bootstrap"):
         control.install(port=9999)
@@ -110,7 +110,7 @@ def test_status_after_lifecycle(tmp_path, monkeypatch):
     """Verify status reports are accurate through lifecycle transitions."""
     monkeypatch.setenv("HOME", str(tmp_path))
     binary = _stub_binary(tmp_path)
-    monkeypatch.setattr(control, "_resolve_binary", lambda: str(binary))
+    monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
 
     # Before install: uninstalled
     s = control.status()

@@ -67,18 +67,46 @@ net-alpha schwab.csv --account personal --detail
 
 | Command | Effect |
 |---|---|
-| `net-alpha service install` | One-time install (writes plist + sandbox profile, bootstraps launchd) |
-| `net-alpha service start` | Start the service |
+| `net-alpha service install` | Provision the runtime venv at `~/.net_alpha/venv/`, write the launchd plist + sandbox profile, and (re)load the agent. Idempotent — safe to re-run. |
+| `net-alpha service start` | Start (or reload) the service |
 | `net-alpha service stop` | Stop the service. Survives reboots until `start` |
 | `net-alpha service restart` | Restart |
 | `net-alpha service pause` | Freeze background jobs but keep the dashboard reachable |
 | `net-alpha service resume` | Unfreeze jobs |
 | `net-alpha service status` | Health report (also `--json` for scripting) |
 | `net-alpha service logs -f` | Tail the service log |
-| `net-alpha service uninstall` | Remove plist + sandbox profile (data preserved) |
+| `net-alpha service uninstall` | Remove plist, sandbox profile, and runtime venv. Your data at `~/.net_alpha/net_alpha.db` is preserved. |
 
 The dashboard at `/settings/service` exposes the same controls in a UI surface, plus
 recent-runs history and a status pill in the site header.
+
+### What `install` does
+
+Everything the running service needs lives inside `~/.net_alpha/`, the only path
+the sandbox profile allows the service to write to:
+
+- `~/.net_alpha/venv/` — a dedicated runtime venv (homebrew Python 3.11 via `uv`) with `wash-alpha` installed from your local project source.
+- `~/.net_alpha/bin/net-alpha-wrap` — the launchd wrapper script.
+- `~/.net_alpha/run/sandbox.sb` — the sandbox-exec profile applied to the running service.
+- `~/Library/LaunchAgents/com.netalpha.service.plist` — the LaunchAgent registration.
+
+The runtime venv intentionally lives outside `~/Documents/`. Under launchd, the
+service runs with a TCC identity that can't read user-data folders, so the
+project's own `.venv/` is unreadable; `~/.net_alpha/` is TCC-clear.
+
+Re-running `install` is safe — it bootouts a stale plist before re-bootstrapping
+and reinstalls `wash-alpha` with `uv pip install --reinstall-package wash-alpha`
+(deps stay cached, so the refresh is fast).
+
+### Re-installing after code changes
+
+The runtime venv is a non-editable snapshot of your project source at install
+time. To make the running service reflect new code or `pyproject.toml` changes,
+re-run `net-alpha service install`.
+
+For active development, run `net-alpha …` directly from your project's editable
+`.venv` — the LaunchAgent is for the always-on background service, not for the
+dev edit-run loop.
 
 ## Features
 

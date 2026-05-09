@@ -20,7 +20,7 @@ def test_render_allows_writes_only_to_net_alpha_home():
 def test_render_allows_loopback_bind_on_pinned_port():
     text = sandbox.render(net_alpha_home="/u/.net_alpha", port=8765)
     assert "(allow network-bind" in text
-    assert '"127.0.0.1:8765"' in text
+    assert '"localhost:8765"' in text
 
 
 def test_render_permissive_outbound_443():

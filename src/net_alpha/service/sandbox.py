@@ -41,7 +41,7 @@ _TEMPLATE = """(version 1)
 ;;   resolves hostnames at rule-load time only. The filesystem sandbox is
 ;;   the real security boundary; this is belt-and-suspenders.
 ;; ----------------------------------------------------------------------
-(allow network-bind (local ip "127.0.0.1:{port}"))
+(allow network-bind (local ip "localhost:{port}"))
 (allow network-outbound (remote tcp "*:443"))
 (allow network-outbound (remote tcp "*:80"))                  ;; redirect chains
 (allow network-outbound (remote unix-socket))                 ;; DNS, log

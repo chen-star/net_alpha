@@ -6,6 +6,7 @@ clients on top of this module. No surface has its own logic.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -15,25 +16,80 @@ import time as _time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 
 from net_alpha.service import disabled_flag, paths, plist, sandbox, wrapper
 from net_alpha.service.paths import PLIST_LABEL
+
+DIST_NAME = "wash-alpha"
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
 
-def _resolve_binary() -> str:
-    """Locate the absolute path to the net-alpha entry-point script."""
-    found = shutil.which("net-alpha")
-    if found:
-        return found
-    candidate = Path(sys.prefix) / "bin" / "net-alpha"
-    if candidate.exists():
-        return str(candidate)
-    raise RuntimeError("Could not resolve the net-alpha binary path. Is wash-alpha installed in this environment?")
+def _resolve_project_source() -> Path:
+    """Find the wash-alpha project root that holds pyproject.toml.
+
+    Why: install() builds a fresh runtime venv from this source. Editable
+    installs expose the source via direct_url.json; non-editable installs
+    fall back to walking up from the package's __file__.
+    """
+    try:
+        dist = distribution(DIST_NAME)
+    except PackageNotFoundError as e:
+        raise RuntimeError(f"{DIST_NAME} is not installed in this environment.") from e
+
+    raw = dist.read_text("direct_url.json")
+    if raw:
+        url = json.loads(raw).get("url", "")
+        if url.startswith("file://"):
+            candidate = Path(url[len("file://") :])
+            if (candidate / "pyproject.toml").exists():
+                return candidate
+
+    import net_alpha
+
+    if net_alpha.__file__:
+        for parent in Path(net_alpha.__file__).parents:
+            if (parent / "pyproject.toml").exists():
+                return parent
+    raise RuntimeError(f"Could not locate the {DIST_NAME} project source for service install.")
+
+
+def _provision_service_venv() -> str:
+    """Create ~/.net_alpha/venv and install wash-alpha into it.
+
+    The LaunchAgent runs under launchd's TCC identity and cannot read
+    paths under ~/Documents, so the runtime venv must live inside the
+    sandbox-allowed home (~/.net_alpha/). Returns the absolute path to
+    the net-alpha entry-point inside the new venv.
+    """
+    venv = paths.service_venv()
+    project_source = _resolve_project_source()
+    subprocess.run(
+        ["uv", "venv", "--python", "3.11", str(venv)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            str(venv / "bin" / "python"),
+            "--reinstall-package",
+            DIST_NAME,
+            str(project_source),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return str(venv / "bin" / "net-alpha")
 
 
 def _uv_available() -> bool:
@@ -60,6 +116,12 @@ def _launchctl_bootout() -> None:
         capture_output=True,
         text=True,
     )
+
+
+def _launchctl_reload() -> None:
+    """Bootout (best-effort) then bootstrap. Idempotent if already loaded."""
+    _launchctl_bootout()
+    _launchctl_bootstrap()
 
 
 def _launchctl_print() -> str:
@@ -110,7 +172,7 @@ def install(*, port: int = 8765) -> None:
             "https://docs.astral.sh/uv/ and re-run `net-alpha service install`."
         )
     paths.ensure_dirs()
-    binary = _resolve_binary()
+    binary = _provision_service_venv()
 
     paths.sandbox_profile().write_text(sandbox.render(net_alpha_home=str(paths.net_alpha_home()), port=port))
 
@@ -131,7 +193,7 @@ def install(*, port: int = 8765) -> None:
     )
 
     disabled_flag.clear()
-    _launchctl_bootstrap()
+    _launchctl_reload()
 
 
 def uninstall() -> None:
@@ -139,13 +201,15 @@ def uninstall() -> None:
     for p in (paths.plist_file(), paths.wrapper_script(), paths.sandbox_profile()):
         if p.exists():
             p.unlink()
+    if paths.service_venv().exists():
+        shutil.rmtree(paths.service_venv())
 
 
 def start() -> None:
     if not paths.plist_file().exists():
         raise NotInstalled("Service is not installed. Run `net-alpha service install` first.")
     disabled_flag.clear()
-    _launchctl_bootstrap()
+    _launchctl_reload()
 
 
 def stop(*, reason: str = "manual stop") -> None:
@@ -188,8 +252,7 @@ def restart() -> None:
         raise ServiceStopped(
             "Service is stopped. Run `net-alpha service start` instead — restart is a no-op on a stopped service."
         )
-    _launchctl_bootout()
-    _launchctl_bootstrap()
+    _launchctl_reload()
 
 
 @dataclass
