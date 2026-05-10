@@ -180,8 +180,6 @@ def positions_page(
     if selected_view == "plan":
         import dataclasses as _dc
 
-        from net_alpha.portfolio.plan_diff import PlanDiffRow, compute_pl_bucket, diff_plan
-
         selected_tag_param = request.query_params.get("tag") or None
         sort_key_param = request.query_params.get("sort") or "alpha"
         plan_view, _pos_by_sym = _build_plan_view_for_request(
@@ -197,25 +195,7 @@ def positions_page(
         end_idx = start_idx + page_size_norm
         plan_view = _dc.replace(plan_view, rows=list(plan_view.rows)[start_idx:end_idx])
 
-        watch_results = repo.watch_results_by_target()
-        current_diff_rows: list[PlanDiffRow] = []
-        for r in plan_view.rows:
-            pos = _pos_by_sym.get(r.symbol)
-            unrealized = float(pos.unrealized_pl) if pos and pos.unrealized_pl is not None else 0.0
-            basis = float(pos.open_cost) if pos else 0.0
-            watch = watch_results.get(r.symbol)
-            severity = watch.severity if watch else "green"
-            current_diff_rows.append(
-                PlanDiffRow(
-                    ticker=r.symbol,
-                    target_kind=str(r.target_unit),
-                    target_value=float(r.target_amount),
-                    risk_pill=severity,
-                    pl_bucket=compute_pl_bucket(unrealized, basis),
-                )
-            )
-        snapshot = repo.read_plan_snapshot()
-        change_states = diff_plan(current_diff_rows, snapshot)
+        change_states, watch_results = _compute_change_states(plan_view, _pos_by_sym, repo)
 
         ctx["plan_view"] = plan_view
         ctx["watch_by_target_id"] = watch_results
@@ -370,6 +350,50 @@ def positions_pane(
 # ---------------------------------------------------------------------------
 
 
+def _compute_change_states(
+    plan_view: PlanView,
+    pos_by_sym: dict[str, PositionRow],
+    repo: Repository,
+) -> tuple[dict[str, str | None], dict]:
+    """Per-ticker change_state + the watch_results dict (returned for template
+    reuse so callers don't query watch_results_by_target() twice).
+
+    Returns a tuple of (change_states, watch_results) where:
+    - change_states: dict keyed by symbol; values are "new" / "changed" / None.
+    - watch_results: raw dict from repo.watch_results_by_target().
+
+    Operates on the rows currently in plan_view (call after pagination so only
+    visible rows are diffed).
+    """
+    from net_alpha.portfolio.plan_diff import (
+        PlanDiffRow,
+        compute_pl_bucket,
+        diff_plan,
+    )
+
+    watch_results = repo.watch_results_by_target()
+    current_diff_rows: list[PlanDiffRow] = []
+    for r in plan_view.rows:
+        pos = pos_by_sym.get(r.symbol)
+        unrealized = float(pos.unrealized_pl) if pos and pos.unrealized_pl is not None else 0.0
+        basis = float(pos.open_cost) if pos else 0.0
+        watch = watch_results.get(r.symbol)
+        severity = watch.severity if watch else "green"
+        current_diff_rows.append(
+            PlanDiffRow(
+                ticker=r.symbol,
+                target_kind=str(r.target_unit),
+                target_value=float(r.target_amount),
+                risk_pill=severity,
+                pl_bucket=compute_pl_bucket(unrealized, basis),
+            )
+        )
+
+    snapshot = repo.read_plan_snapshot()
+    change_states = diff_plan(current_diff_rows, snapshot)
+    return change_states, watch_results
+
+
 def _build_plan_view_for_request(
     repo: Repository,
     pricing: PricingService,
@@ -464,8 +488,6 @@ def _render_plan_body(
 ) -> HTMLResponse:
     import dataclasses as _dc
 
-    from net_alpha.portfolio.plan_diff import PlanDiffRow, compute_pl_bucket, diff_plan
-
     plan_view, pos_by_sym = _build_plan_view_for_request(repo, pricing, account, selected_tag, sort_key)
 
     page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
@@ -477,26 +499,7 @@ def _render_plan_body(
     end_idx = start_idx + page_size_norm
     plan_view = _dc.replace(plan_view, rows=list(plan_view.rows)[start_idx:end_idx])
 
-    watch_results = repo.watch_results_by_target()
-    current_diff_rows: list[PlanDiffRow] = []
-    for r in plan_view.rows:
-        pos = pos_by_sym.get(r.symbol)
-        unrealized = float(pos.unrealized_pl) if pos and pos.unrealized_pl is not None else 0.0
-        basis = float(pos.open_cost) if pos else 0.0
-        watch = watch_results.get(r.symbol)
-        severity = watch.severity if watch else "green"
-        current_diff_rows.append(
-            PlanDiffRow(
-                ticker=r.symbol,
-                target_kind=str(r.target_unit),
-                target_value=float(r.target_amount),
-                risk_pill=severity,
-                pl_bucket=compute_pl_bucket(unrealized, basis),
-            )
-        )
-
-    snapshot = repo.read_plan_snapshot()
-    change_states = diff_plan(current_diff_rows, snapshot)
+    change_states, watch_results = _compute_change_states(plan_view, pos_by_sym, repo)
 
     return request.app.state.templates.TemplateResponse(
         request,
