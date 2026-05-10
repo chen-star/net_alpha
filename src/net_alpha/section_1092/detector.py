@@ -130,31 +130,101 @@ def _open_long_stock(
     return positions
 
 
+def _open_short_options(trades: list[Trade]) -> list[OffsettingPosition]:
+    """Return one OffsettingPosition per short option contract still open.
+
+    Short option contracts have no Lot row; lot_id stays None and trade_id
+    points to the most recent STO that still has open contracts.
+    """
+    Key = tuple[str, str, float, str, str]  # (account, ticker, strike, expiry_iso, cp)
+    net: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
+    latest_sto: dict[Key, Trade] = {}
+
+    for t in trades:
+        if t.option_details is None:
+            continue
+        opt = t.option_details
+        key: Key = (t.account, t.ticker, float(opt.strike), opt.expiry.isoformat(), opt.call_put)
+        delta = Decimal(str(t.quantity))
+        if t.action.lower() == "buy":
+            net[key] += delta  # BTC closes short
+        else:
+            net[key] -= delta  # STO opens short
+            prior = latest_sto.get(key)
+            if prior is None or t.date > prior.date:
+                latest_sto[key] = t
+
+    positions: list[OffsettingPosition] = []
+    for key, qty in net.items():
+        if qty >= 0:
+            continue  # not net short
+        account, ticker, strike, expiry_iso, cp = key
+        sto = latest_sto.get(key)
+        if sto is None:
+            continue
+        positions.append(
+            OffsettingPosition(
+                kind="short_call" if cp == "C" else "short_put",
+                trade_id=sto.id,
+                lot_id=None,
+                ticker=ticker,
+                quantity=-qty,
+                opened_at=sto.date,
+                side="short",
+                option_strike=Decimal(str(strike)),
+                option_expiry=sto.option_details.expiry,
+                option_call_put=cp,
+            )
+        )
+    return positions
+
+
 def detect_offsetting_groups(
     *,
     trades: Iterable[Trade],
     lots: Iterable[Lot],
+    underlying_prices: dict[str, Decimal] | None = None,
 ) -> list[OffsettingGroup]:
-    """Return all 🟢-tier same-underlying offsetting groups currently open."""
+    """Return all 🟢-tier same-underlying offsetting groups currently open.
+
+    *underlying_prices*: optional ticker → current price map. Required for the
+    QCC test on covered calls; if absent or missing for a ticker, covered-call
+    groups are still emitted (with "QCC test skipped" in the reasoning) so
+    the user is warned conservatively.
+    """
+    from net_alpha.section_1092.qcc import is_qualified_covered_call
+
     trades_list = list(trades)
     lots_list = list(lots)
+    prices = underlying_prices or {}
 
     long_options = _open_long_options(trades_list, lots_list)
     long_stock = _open_long_stock(trades_list, lots_list)
+    short_options = _open_short_options(trades_list)
     by_lot_id: dict[str | None, Lot] = {lot.id: lot for lot in lots_list}
 
+    # Build (account, ticker) → legs map. Long-side legs derive their account
+    # from their lot; short-option legs carry account on trade_id, so we look
+    # them up from the trades list.
+    trade_by_id: dict[str, Trade] = {t.id: t for t in trades_list}
     by_ak: dict[tuple[str, str], list[OffsettingPosition]] = defaultdict(list)
     for p in long_options + long_stock:
         lot = by_lot_id.get(p.lot_id)
         if lot is None:
             continue
         by_ak[(lot.account, p.ticker)].append(p)
+    for p in short_options:
+        sto = trade_by_id.get(p.trade_id)
+        if sto is None:
+            continue
+        by_ak[(sto.account, p.ticker)].append(p)
 
     groups: list[OffsettingGroup] = []
     for (account, ticker), legs in by_ak.items():
         long_calls = [p for p in legs if p.kind == "long_call"]
         long_puts = [p for p in legs if p.kind == "long_put"]
         long_stk = [p for p in legs if p.kind == "long_stock"]
+        short_calls = [p for p in legs if p.kind == "short_call"]
 
         # Rule 1 — literal straddle.
         if long_calls and long_puts:
@@ -185,5 +255,42 @@ def detect_offsetting_groups(
                     "substantially diminishes the stock's loss risk, so the pair is an §1092 straddle.",
                 )
             )
+
+        # Rule 3 — covered call (only when QCC test FAILS, or skipped).
+        if long_stk and short_calls:
+            for sc in short_calls:
+                price = prices.get(ticker)
+                if price is None:
+                    reasoning = (
+                        "Long stock + short call — QCC test skipped (no underlying price available); "
+                        "if the call is non-qualified, this is an §1092 straddle. Verify with current price."
+                    )
+                else:
+                    sto = trade_by_id.get(sc.trade_id)
+                    if sto is None or sc.option_strike is None or sc.option_expiry is None:
+                        continue
+                    dte = (sc.option_expiry - sto.date).days
+                    qualifies, reason = is_qualified_covered_call(
+                        underlying_price_at_write=price,
+                        strike=sc.option_strike,
+                        days_to_expiry_at_write=dte,
+                    )
+                    if qualifies:
+                        continue  # QCC → exempt from §1092
+                    reasoning = (
+                        f"Long stock + short call that fails QCC: {reason}. "
+                        "Pair is an §1092 straddle; LT clock on the stock is suspended (§1092(f))."
+                    )
+                groups.append(
+                    OffsettingGroup(
+                        account=account,
+                        ticker=ticker,
+                        positions=long_stk + [sc],
+                        kind="covered_call",
+                        confidence="Confirmed",
+                        rule_citation="IRC §1092(c)(4)",
+                        reasoning=reasoning,
+                    )
+                )
 
     return groups

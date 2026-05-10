@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from net_alpha.models.domain import Lot, OptionDetails, Trade
 from net_alpha.section_1092.detector import detect_offsetting_groups
@@ -134,3 +135,99 @@ def test_long_stock_alone_no_married_put():
     )
     lots = [Lot.from_trade(stock_buy)]
     assert detect_offsetting_groups(trades=[stock_buy], lots=lots) == []
+
+
+def _short_call_sto(*, ticker="AAPL", strike=200.0, expiry=date(2026, 6, 19), proceeds=300.0) -> Trade:
+    return Trade(
+        id=f"sto-call-{ticker}-{strike}",
+        date=date(2026, 1, 15),
+        account="schwab/personal",
+        ticker=ticker,
+        action="Sell",
+        quantity=1,
+        proceeds=proceeds,
+        cost_basis=None,
+        option_details=OptionDetails(strike=strike, expiry=expiry, call_put="C"),
+        basis_source="option_short_open",
+    )
+
+
+def test_covered_call_failing_qcc_emits_group():
+    # Stock at 180 (per cost_basis 18000 / 100 shares). Short call deep ITM
+    # at strike 150 with 60 DTE → fails QCC (ITM, short-dated, no cushion).
+    stock_buy = Trade(
+        id="stk-1",
+        date=date(2026, 1, 3),
+        account="schwab/personal",
+        ticker="AAPL",
+        action="Buy",
+        quantity=100,
+        proceeds=None,
+        cost_basis=18000.0,
+        option_details=None,
+    )
+    sto = _short_call_sto(strike=150.0, expiry=date(2026, 3, 20), proceeds=3500.0)
+    lots = [Lot.from_trade(stock_buy)]  # short calls do not produce lots
+
+    groups = detect_offsetting_groups(
+        trades=[stock_buy, sto],
+        lots=lots,
+        underlying_prices={"AAPL": Decimal("180")},
+    )
+    cc_groups = [g for g in groups if g.kind == "covered_call"]
+    assert len(cc_groups) == 1
+    g = cc_groups[0]
+    assert {p.kind for p in g.positions} == {"long_stock", "short_call"}
+    assert "QCC" in g.reasoning or "qualified" in g.reasoning.lower()
+
+
+def test_covered_call_passing_qcc_does_not_emit_group():
+    # Stock at 180. Short call OTM at 200 with 180 DTE → passes QCC → no group.
+    stock_buy = Trade(
+        id="stk-1",
+        date=date(2026, 1, 3),
+        account="schwab/personal",
+        ticker="AAPL",
+        action="Buy",
+        quantity=100,
+        proceeds=None,
+        cost_basis=18000.0,
+        option_details=None,
+    )
+    sto = _short_call_sto(strike=200.0, expiry=date(2026, 7, 14), proceeds=400.0)
+    lots = [Lot.from_trade(stock_buy)]
+
+    groups = detect_offsetting_groups(
+        trades=[stock_buy, sto],
+        lots=lots,
+        underlying_prices={"AAPL": Decimal("180")},
+    )
+    assert [g for g in groups if g.kind == "covered_call"] == []
+
+
+def test_covered_call_without_underlying_price_falls_back_to_strike_only():
+    # When no underlying price is supplied (e.g. price cache miss) the detector
+    # cannot run the QCC test; it conservatively emits a covered_call group with
+    # a "QCC test skipped" reasoning so the user is at least warned.
+    stock_buy = Trade(
+        id="stk-1",
+        date=date(2026, 1, 3),
+        account="schwab/personal",
+        ticker="AAPL",
+        action="Buy",
+        quantity=100,
+        proceeds=None,
+        cost_basis=18000.0,
+        option_details=None,
+    )
+    sto = _short_call_sto(strike=200.0, expiry=date(2026, 3, 20), proceeds=400.0)
+    lots = [Lot.from_trade(stock_buy)]
+
+    groups = detect_offsetting_groups(
+        trades=[stock_buy, sto],
+        lots=lots,
+        underlying_prices=None,
+    )
+    cc_groups = [g for g in groups if g.kind == "covered_call"]
+    assert len(cc_groups) == 1
+    assert "QCC" in cc_groups[0].reasoning and "skipped" in cc_groups[0].reasoning.lower()
