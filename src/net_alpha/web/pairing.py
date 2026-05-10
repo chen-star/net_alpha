@@ -9,6 +9,7 @@ Spec: docs/superpowers/specs/2026-05-10-ticker-trade-pairings-design.md
 """
 from __future__ import annotations
 
+import hashlib
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Iterable, Literal
@@ -37,6 +38,16 @@ class PairFields:
     roll_from_pair_key: str | None = None
     assignment_link: dict | None = None
     multi_lot_overflow: int = 0  # SELLs spanning multiple lots: count of extra lots
+
+
+PALETTE_SIZE = 8
+
+
+def _color_idx(pair_key: str) -> int:
+    """Stable 0..PALETTE_SIZE-1 from a pair_key. SHA-1 truncated for stability
+    across Python versions (Python's built-in hash() is randomized per run)."""
+    digest = hashlib.sha1(pair_key.encode("utf-8")).digest()
+    return digest[0] % PALETTE_SIZE
 
 
 _OPEN_OPT_SOURCES = {"option_short_open", "option_short_open_assigned"}
@@ -332,4 +343,21 @@ def compute_pair_fields(
             multi_lot_overflow=prev_buy.multi_lot_overflow,
         )
 
-    return out
+    # --- Assign colors deterministically (skipped for still_open lots). ---
+    out_with_colors: dict[str, PairFields] = {}
+    for trade_id, pf in out.items():
+        if pf.pair_role == "still_open" or pf.pair_key is None:
+            out_with_colors[trade_id] = pf
+            continue
+        out_with_colors[trade_id] = PairFields(
+            pair_key=pf.pair_key,
+            pair_role=pf.pair_role,
+            pair_color_idx=_color_idx(pf.pair_key),
+            pair_position=pf.pair_position,
+            pair_cap=pf.pair_cap,
+            partner_trade_id=pf.partner_trade_id,
+            roll_from_pair_key=pf.roll_from_pair_key,
+            assignment_link=pf.assignment_link,
+            multi_lot_overflow=pf.multi_lot_overflow,
+        )
+    return out_with_colors

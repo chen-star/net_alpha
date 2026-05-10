@@ -275,3 +275,19 @@ def test_assignment_link_bidirectional():
     assert fields["t-pa"].assignment_link == {"direction": "from_option", "target_trade_id": "t-sto"}
     # Stock lot is still open (no SELL yet).
     assert fields["t-pa"].pair_role == "still_open"
+
+
+def test_color_idx_stable_across_calls():
+    sto = Trade(
+        id="t-sto", account="Schwab/main", date=date(2026, 1, 3), ticker="AAPL",
+        action="Sell", quantity=1.0, proceeds=215.0, cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=150.0, expiry=date(2026, 2, 15), call_put="P"),
+    )
+    rows = [FakeTimelineRow(trade=sto)]
+
+    f1 = compute_pair_fields(timeline_rows=rows, lots=[], open_lot_ids=set())
+    f2 = compute_pair_fields(timeline_rows=rows, lots=[], open_lot_ids=set())
+
+    assert f1["t-sto"].pair_color_idx == f2["t-sto"].pair_color_idx
+    assert 0 <= f1["t-sto"].pair_color_idx <= 7
