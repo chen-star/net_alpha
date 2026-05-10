@@ -85,6 +85,51 @@ def _open_long_options(
     return positions
 
 
+def _open_long_stock(
+    trades: list[Trade], lots: list[Lot]
+) -> list[OffsettingPosition]:
+    """Return one OffsettingPosition per (account, ticker) with net long equity."""
+    qty: dict[tuple[str, str], Decimal] = defaultdict(lambda: Decimal("0"))
+    earliest_lot: dict[tuple[str, str], Lot] = {}
+
+    for t in trades:
+        if t.option_details is not None:
+            continue
+        delta = Decimal(str(t.quantity))
+        if t.action.lower() == "buy":
+            qty[(t.account, t.ticker)] += delta
+        else:
+            qty[(t.account, t.ticker)] -= delta
+
+    for lot in lots:
+        if lot.option_details is not None:
+            continue
+        key = (lot.account, lot.ticker)
+        prior = earliest_lot.get(key)
+        if prior is None or lot.date < prior.date:
+            earliest_lot[key] = lot
+
+    positions: list[OffsettingPosition] = []
+    for (account, ticker), q in qty.items():
+        if q <= 0:
+            continue
+        lot = earliest_lot.get((account, ticker))
+        if lot is None:
+            continue
+        positions.append(
+            OffsettingPosition(
+                kind="long_stock",
+                trade_id=lot.trade_id,
+                lot_id=lot.id,
+                ticker=ticker,
+                quantity=q,
+                opened_at=lot.date,
+                side="long",
+            )
+        )
+    return positions
+
+
 def detect_offsetting_groups(
     *,
     trades: Iterable[Trade],
@@ -95,10 +140,11 @@ def detect_offsetting_groups(
     lots_list = list(lots)
 
     long_options = _open_long_options(trades_list, lots_list)
+    long_stock = _open_long_stock(trades_list, lots_list)
     by_lot_id: dict[str | None, Lot] = {lot.id: lot for lot in lots_list}
 
     by_ak: dict[tuple[str, str], list[OffsettingPosition]] = defaultdict(list)
-    for p in long_options:
+    for p in long_options + long_stock:
         lot = by_lot_id.get(p.lot_id)
         if lot is None:
             continue
@@ -108,6 +154,9 @@ def detect_offsetting_groups(
     for (account, ticker), legs in by_ak.items():
         long_calls = [p for p in legs if p.kind == "long_call"]
         long_puts = [p for p in legs if p.kind == "long_put"]
+        long_stk = [p for p in legs if p.kind == "long_stock"]
+
+        # Rule 1 — literal straddle.
         if long_calls and long_puts:
             groups.append(
                 OffsettingGroup(
@@ -119,6 +168,21 @@ def detect_offsetting_groups(
                     rule_citation="IRC §1092(c)(2)(A)",
                     reasoning="Long call and long put open simultaneously on the same underlying — "
                     "textbook straddle; loss on either leg may be deferred under §1092(a)(1).",
+                )
+            )
+
+        # Rule 2 — married put.
+        if long_stk and long_puts:
+            groups.append(
+                OffsettingGroup(
+                    account=account,
+                    ticker=ticker,
+                    positions=long_stk + long_puts,
+                    kind="married_put",
+                    confidence="Confirmed",
+                    rule_citation="IRC §1092(c)(2)(A)",
+                    reasoning="Long stock paired with long put on the same underlying — the put "
+                    "substantially diminishes the stock's loss risk, so the pair is an §1092 straddle.",
                 )
             )
 

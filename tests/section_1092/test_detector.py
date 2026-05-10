@@ -95,3 +95,42 @@ def test_closed_call_does_not_form_group():
     # Call has been sold-to-close — only the put remains open.
     groups = detect_offsetting_groups(trades=[call, sell_call, put], lots=lots)
     assert groups == []
+
+
+def test_long_stock_and_long_put_emits_married_put():
+    stock_buy = Trade(
+        id="stk-1",
+        date=date(2026, 1, 3),
+        account="schwab/personal",
+        ticker="AAPL",
+        action="Buy",
+        quantity=100,
+        proceeds=None,
+        cost_basis=18000.0,
+        option_details=None,
+    )
+    put = _long_put_trade()  # AAPL put
+    lots = [Lot.from_trade(stock_buy), Lot.from_trade(put)]
+
+    groups = detect_offsetting_groups(trades=[stock_buy, put], lots=lots)
+    kinds = {g.kind for g in groups}
+    assert "married_put" in kinds
+    married = next(g for g in groups if g.kind == "married_put")
+    assert {p.kind for p in married.positions} == {"long_stock", "long_put"}
+    assert married.rule_citation.startswith("IRC §1092")
+
+
+def test_long_stock_alone_no_married_put():
+    stock_buy = Trade(
+        id="stk-1",
+        date=date(2026, 1, 3),
+        account="schwab/personal",
+        ticker="AAPL",
+        action="Buy",
+        quantity=100,
+        proceeds=None,
+        cost_basis=18000.0,
+        option_details=None,
+    )
+    lots = [Lot.from_trade(stock_buy)]
+    assert detect_offsetting_groups(trades=[stock_buy], lots=lots) == []
