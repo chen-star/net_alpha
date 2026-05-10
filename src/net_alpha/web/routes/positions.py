@@ -634,8 +634,7 @@ def plan_mark_seen(
     snapshot = [SnapshotRow(**asdict(r)) for r in diff_rows]
 
     now_iso = dt.datetime.now(dt.UTC).isoformat()
-    repo.write_plan_snapshot(snapshot, taken_at=now_iso)
-    repo.set_plan_last_seen_at(now_iso)
+    repo.mark_plan_seen(snapshot, when=now_iso)
     return Response(status_code=204)
 
 

@@ -645,6 +645,43 @@ class Repository:
             )
             s.commit()
 
+    def mark_plan_seen(
+        self,
+        rows: list[SnapshotRow],
+        *,
+        when: str,
+    ) -> None:
+        """Atomically rewrite plan_view_snapshot AND set plan_last_seen_at.
+
+        Replaces two sequential commits (write_plan_snapshot + set_plan_last_seen_at)
+        with a single transaction so a crash between the snapshot write and the
+        timestamp update can never leave the state inconsistent.
+        """
+        with Session(self.engine) as s:
+            s.exec(text("DELETE FROM plan_view_snapshot"))
+            for r in rows:
+                s.exec(
+                    text(
+                        "INSERT INTO plan_view_snapshot "
+                        "(ticker, target_kind, target_value, risk_pill, pl_bucket, snapshot_taken_at) "
+                        "VALUES (:tk, :kind, :val, :pill, :bucket, :ts)"
+                    ).bindparams(
+                        tk=r.ticker,
+                        kind=r.target_kind,
+                        val=r.target_value,
+                        pill=r.risk_pill,
+                        bucket=r.pl_bucket,
+                        ts=when,
+                    )
+                )
+            s.exec(
+                text(
+                    "INSERT INTO meta (key, value) VALUES ('plan_last_seen_at', :v) "
+                    "ON CONFLICT(key) DO UPDATE SET value = :v"
+                ).bindparams(v=when)
+            )
+            s.commit()
+
     def get_trades_for_ticker(self, ticker: str) -> list[Trade]:
         """All trades for a ticker, sorted by trade_date ascending."""
         with Session(self.engine) as s:

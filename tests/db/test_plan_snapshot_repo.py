@@ -63,3 +63,45 @@ def test_plan_last_seen_at_round_trips(repo):
     assert repo.get_plan_last_seen_at() == "2026-05-10T12:00:00Z"
     repo.set_plan_last_seen_at("2026-05-10T13:00:00Z")  # overwrite
     assert repo.get_plan_last_seen_at() == "2026-05-10T13:00:00Z"
+
+
+def test_mark_plan_seen_writes_snapshot_and_timestamp_atomically(repo):
+    """mark_plan_seen replaces the snapshot AND sets plan_last_seen_at in a
+    single transaction. Replaces the two-step write_plan_snapshot +
+    set_plan_last_seen_at sequence so a crash between the steps cannot leave
+    the state inconsistent."""
+    assert repo.get_plan_last_seen_at() is None
+    assert repo.read_plan_snapshot() == {}
+
+    repo.mark_plan_seen(
+        [
+            SnapshotRow(
+                ticker="NVDA",
+                target_kind="shares",
+                target_value=10.0,
+                risk_pill="green",
+                pl_bucket=0,
+            )
+        ],
+        when="2026-05-11T09:00:00Z",
+    )
+
+    assert repo.get_plan_last_seen_at() == "2026-05-11T09:00:00Z"
+    snap = repo.read_plan_snapshot()
+    assert set(snap.keys()) == {"NVDA"}
+    assert snap["NVDA"].pl_bucket == 0
+
+
+def test_mark_plan_seen_replaces_prior_snapshot(repo):
+    """Subsequent mark_plan_seen calls fully replace the prior snapshot."""
+    repo.mark_plan_seen(
+        [SnapshotRow("OLD", "shares", 1.0, "green", 0)],
+        when="2026-05-11T09:00:00Z",
+    )
+    repo.mark_plan_seen(
+        [SnapshotRow("NEW", "shares", 1.0, "green", 0)],
+        when="2026-05-11T10:00:00Z",
+    )
+    snap = repo.read_plan_snapshot()
+    assert set(snap.keys()) == {"NEW"}
+    assert repo.get_plan_last_seen_at() == "2026-05-11T10:00:00Z"
