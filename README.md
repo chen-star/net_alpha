@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.svg" alt="net-alpha" width="420">
+<img src="https://raw.githubusercontent.com/chen-star/net_alpha/v0.56.1/assets/logo.svg" alt="net-alpha" width="420">
 
 **Cross-account wash sale detection for stocks, options, and ETFs — local-first, IRS Pub 550 rules, with a tax-harvest planner and pre-trade simulator.**
 
