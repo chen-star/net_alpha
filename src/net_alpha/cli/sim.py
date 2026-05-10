@@ -38,8 +38,12 @@ def run(ticker: str, qty: Decimal, price: Decimal, account_label: str | None) ->
     # straddle? We don't simulate the post-sell state in v1 — we surface what
     # already exists so the user sees it on the same screen as the sim output.
     from net_alpha.section_1092.detector import detect_offsetting_groups
+    from net_alpha.section_1092.prices import cached_underlying_prices
 
-    groups = detect_offsetting_groups(trades=repo.all_trades(), lots=repo.all_lots())
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    prices = cached_underlying_prices(repo, (t.ticker for t in trades))
+    groups = detect_offsetting_groups(trades=trades, lots=lots, underlying_prices=prices)
     relevant = [g for g in groups if g.ticker == ticker]
     if relevant:
         typer.echo("")
