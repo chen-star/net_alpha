@@ -16,10 +16,11 @@
     </label>
   </div>
   {% if rows %}
+  <div class="overflow-x-auto">
   <table class="net-table">
-    <thead>
+    <thead class="sticky top-0 z-10 bg-bg">
       <tr>
-        <th>Symbol</th>
+        <th class="sticky top-0 left-0 z-20 bg-bg shadow-[2px_0_0_0_var(--hairline)]">Symbol</th>
         <th class="r" title="Unrealized loss the position would realize if sold today.">Loss</th>
         <th title="Long-term (held > 1y) loss is more valuable for offsetting LT gains; short-term loss offsets ordinary-rate STCG.">LT/ST</th>
         <th>Account</th>
@@ -31,7 +32,7 @@
     <tbody>
       {% for row in rows %}
       <tr data-symbol="{{ row.symbol|upper }}">
-        <td class="font-semibold">{{ row.symbol }}</td>
+        <td class="sticky left-0 z-[1] bg-inherit shadow-[2px_0_0_0_var(--hairline)] font-semibold">{{ row.symbol }}</td>
         <td class="r num text-neg">−${{ "%.2f"|format(row.loss|abs) }}</td>
         <td><span class="chip-{% if row.lt_st|lower == 'lt' %}unclear{% else %}probable{% endif %}">{{ row.lt_st }}</span></td>
         <td class="text-[12px]">{{ row.account_label }}</td>
@@ -70,6 +71,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
   <p class="text-label-2 text-[13px]">No harvest opportunities &#8212; all open positions are at gain or flat.</p>
   {% endif %}

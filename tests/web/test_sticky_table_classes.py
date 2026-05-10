@@ -33,6 +33,7 @@ STICKY_HEADER_TEMPLATES = [
     "_imports_table.html",
     "_detail_table.html",
     "_reconciliation_diff.html",
+    "_harvest_queue.html",
 ]
 
 REQUIRED_TOKENS = frozenset({"sticky", "top-0"})
@@ -90,6 +91,7 @@ STICKY_LEFT_TEMPLATES = [
     "_detail_table.html",
     "_ticker_view_timeline.html",
     "_ticker_view_lots.html",
+    "_harvest_queue.html",
 ]
 
 REQUIRED_LEFT_TOKENS = frozenset({"sticky", "left-0"})
