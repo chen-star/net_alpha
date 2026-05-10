@@ -53,7 +53,7 @@ def _build_timeline_rows(
     trades: list[Trade],
     gl_lots: list[RealizedGLLot],
     *,
-    lots: list,
+    lots: list[Lot],
     open_lot_ids: set[str],
 ) -> list[TimelineRow]:
     """Assemble the ticker-page Timeline rows.
@@ -164,9 +164,7 @@ def _build_timeline_rows(
     # --- Pairing pass: compute PairFields and rebuild rows with `pair` set. ---
     from net_alpha.web.pairing import compute_pair_fields
 
-    assignment_closes = [
-        t for t in trades if t.basis_source == "option_short_close_assigned"
-    ]
+    assignment_closes = [t for t in trades if t.basis_source == "option_short_close_assigned"]
     pair_fields = compute_pair_fields(
         timeline_rows=rows,
         lots=lots,
