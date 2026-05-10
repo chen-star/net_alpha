@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.repository import Repository
-from net_alpha.models.domain import Account, ImportRecord, Trade
+from net_alpha.models.domain import Account, ImportRecord, OptionDetails, Trade
 from net_alpha.web.app import create_app
 
 # Skip scheduler startup in all web tests — it requires a running asyncio
@@ -114,6 +114,152 @@ def make_sell(
     )
 
 
+def make_sto(
+    account_display: str,
+    ticker: str,
+    day: date,
+    *,
+    strike: float,
+    expiry: date,
+    call_put: str,
+    qty: float = 1.0,
+    proceeds: float = 100.0,
+) -> Trade:
+    """Sell-To-Open of a short option (premium received)."""
+    return Trade(
+        account=account_display,
+        date=day,
+        ticker=ticker,
+        action="Sell",
+        quantity=qty,
+        proceeds=proceeds,
+        cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=strike, expiry=expiry, call_put=call_put),
+    )
+
+
+def make_btc(
+    account_display: str,
+    ticker: str,
+    day: date,
+    *,
+    strike: float,
+    expiry: date,
+    call_put: str,
+    qty: float = 1.0,
+    cost: float = 5.0,
+) -> Trade:
+    """Buy-To-Close of a short option."""
+    return Trade(
+        account=account_display,
+        date=day,
+        ticker=ticker,
+        action="Buy",
+        quantity=qty,
+        proceeds=None,
+        cost_basis=cost,
+        basis_source="option_short_close",
+        option_details=OptionDetails(strike=strike, expiry=expiry, call_put=call_put),
+    )
+
+
+def make_bto(
+    account_display: str,
+    ticker: str,
+    day: date,
+    *,
+    strike: float,
+    expiry: date,
+    call_put: str,
+    qty: float = 1.0,
+    cost: float = 100.0,
+) -> Trade:
+    """Buy-To-Open a long option. Pairing ignores long options in v1."""
+    return Trade(
+        account=account_display,
+        date=day,
+        ticker=ticker,
+        action="Buy",
+        quantity=qty,
+        proceeds=None,
+        cost_basis=cost,
+        basis_source="long_option_open",
+        option_details=OptionDetails(strike=strike, expiry=expiry, call_put=call_put),
+    )
+
+
+def make_stc(
+    account_display: str,
+    ticker: str,
+    day: date,
+    *,
+    strike: float,
+    expiry: date,
+    call_put: str,
+    qty: float = 1.0,
+    proceeds: float = 80.0,
+    cost: float = 100.0,
+) -> Trade:
+    """Sell-To-Close a long option. Pairing ignores long options in v1."""
+    return Trade(
+        account=account_display,
+        date=day,
+        ticker=ticker,
+        action="Sell",
+        quantity=qty,
+        proceeds=proceeds,
+        cost_basis=cost,
+        basis_source="long_option_close",
+        option_details=OptionDetails(strike=strike, expiry=expiry, call_put=call_put),
+    )
+
+
+def make_assigned_close(
+    account_display: str,
+    ticker: str,
+    day: date,
+    *,
+    strike: float,
+    expiry: date,
+    call_put: str,
+    qty: float = 1.0,
+) -> Trade:
+    """The synthetic 'option_short_close_assigned' close paired with put_assignment."""
+    return Trade(
+        account=account_display,
+        date=day,
+        ticker=ticker,
+        action="Buy",
+        quantity=qty,
+        proceeds=None,
+        cost_basis=0.0,
+        basis_source="option_short_close_assigned",
+        option_details=OptionDetails(strike=strike, expiry=expiry, call_put=call_put),
+    )
+
+
+def make_put_assignment(
+    account_display: str,
+    ticker: str,
+    day: date,
+    *,
+    qty: float,
+    cost: float,
+) -> Trade:
+    """Stock BUY produced by a put assignment."""
+    return Trade(
+        account=account_display,
+        date=day,
+        ticker=ticker,
+        action="Buy",
+        quantity=qty,
+        proceeds=None,
+        cost_basis=cost,
+        basis_source="put_assignment",
+    )
+
+
 def seed_import(
     repo: Repository,
     broker: str,
@@ -146,6 +292,12 @@ def builders():
         {
             "make_buy": staticmethod(make_buy),
             "make_sell": staticmethod(make_sell),
+            "make_sto": staticmethod(make_sto),
+            "make_btc": staticmethod(make_btc),
+            "make_bto": staticmethod(make_bto),
+            "make_stc": staticmethod(make_stc),
+            "make_assigned_close": staticmethod(make_assigned_close),
+            "make_put_assignment": staticmethod(make_put_assignment),
             "seed_import": staticmethod(seed_import),
         },
     )

@@ -2,6 +2,7 @@
   <table class="net-table text-sm min-w-[960px]">
     <thead>
       <tr>
+        <th class="rail-col"></th>
         <th>Date</th>
         <th>Account</th>
         <th>Provenance</th>
@@ -10,6 +11,7 @@
         <th>Basis</th>
         <th>Proceeds</th>
         <th class="r" title="Realized P&L attributable to this row. Long-lot sells use proceeds−basis; short-option closes pair the close cost against the matching opening premium.">G/L</th>
+        <th>Pairing</th>
         <th></th>
       </tr>
     </thead>
@@ -18,7 +20,13 @@
         {% set t = row.trade %}
         {% set is_synth = t.basis_source == 'option_short_close_expiry' %}
         {% set is_transfer = t.basis_source in ('transfer_in', 'transfer_out') %}
-        <tr {% if is_synth %}class="text-label-2"{% endif %}>
+        <tr id="trade-{{ t.id }}"{% if is_synth %} class="text-label-2"{% endif %}>
+          <td class="rail-col px-0 py-0">
+            {% if row.pair and row.pair.pair_role %}
+              <span class="rail rail-{{ row.pair.pair_role }} rail-cap-{{ row.pair.pair_cap or 'none' }}"
+                    {% if row.pair.pair_role != 'still_open' %}style="--c: var(--pair-c{{ row.pair.pair_color_idx or 0 }});"{% endif %}></span>
+            {% endif %}
+          </td>
           <td class="px-2 py-1 font-mono">
             {% if is_transfer %}
               <span class="text-[10px] text-label-2 uppercase tracking-tightish">Acq</span>
@@ -60,6 +68,34 @@
               <span class="text-label-3">—</span>
             {% endif %}
           </td>
+          <td class="px-2 py-1 text-[11px]">
+            {% if row.pair %}
+              {% set pf = row.pair %}
+              {% if pf.pair_role == 'still_open' %}
+                <span class="pair-chip pair-chip--still">still open</span>
+              {% elif pf.pair_role == 'closed_via_assignment' %}
+                <a class="pair-chip" href="?view=timeline&jump=trade-{{ pf.partner_trade_id }}">closed via assignment ↓</a>
+              {% elif pf.pair_role == 'open' %}
+                <a class="pair-chip" href="?view=timeline&jump=trade-{{ pf.partner_trade_id }}">
+                  open{% if pf.pair_position and pf.pair_position[1] > 1 %} {{ pf.pair_position[0] }} of {{ pf.pair_position[1] }}{% endif %} ↓
+                </a>
+              {% elif pf.pair_role == 'close' %}
+                <a class="pair-chip" href="?view=timeline&jump=trade-{{ pf.partner_trade_id }}">
+                  close{% if pf.pair_position and pf.pair_position[1] > 1 %} {{ pf.pair_position[0] }} of {{ pf.pair_position[1] }}{% endif %}{% if pf.multi_lot_overflow %} +{{ pf.multi_lot_overflow }} more lot{% if pf.multi_lot_overflow > 1 %}s{% endif %}{% endif %} ↑
+                </a>
+              {% endif %}
+              {% if pf.roll_from_pair_key %}
+                <span class="pair-annot pair-annot--roll" title="Same-day BTC + STO of a different strike or expiry">↻ rolled from prev</span>
+              {% endif %}
+              {% if pf.assignment_link %}
+                {% if pf.assignment_link.direction == 'to_stock' %}
+                  <span class="pair-annot pair-annot--assign">→ became stock lot</span>
+                {% else %}
+                  <a class="pair-annot pair-annot--assign" href="?view=timeline&jump=trade-{{ pf.assignment_link.target_trade_id }}">← from put assignment</a>
+                {% endif %}
+              {% endif %}
+            {% endif %}
+          </td>
           <td class="px-2 py-1 text-[11px] r" id="trade-affordance-{{ t.id }}">
             {% if t.is_manual %}
               <a href="#" class="text-label-2 hover:text-text mr-2"
@@ -86,7 +122,7 @@
         </tr>
       {% endfor %}
       {% if not timeline_rows %}
-        <tr><td colspan="9" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
+        <tr><td colspan="11" class="px-2 py-4 text-center text-label-2">No trades for {{ symbol }} yet.</td></tr>
       {% endif %}
     </tbody>
   </table>

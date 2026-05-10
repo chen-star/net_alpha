@@ -2,6 +2,12 @@
 
 
 
+## v0.56.1 (2026-05-10)
+
+### Documentation
+
+* docs: use absolute raw-GitHub URL for README logo so it renders on PyPI
+
 ## v0.56.0 (2026-05-10)
 
 ### Documentation
