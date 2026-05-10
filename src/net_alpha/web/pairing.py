@@ -121,10 +121,12 @@ def compute_pair_fields(
     timeline_rows: Iterable,
     lots: Iterable[Lot],
     open_lot_ids: set[str],
+    assignment_closes: Iterable | None = None,
 ) -> dict[str, PairFields]:
     """Return per-trade pairing metadata keyed by trade.id."""
     rows = list(timeline_rows)
-    if not rows:
+    assignment_closes = list(assignment_closes or [])
+    if not rows and not assignment_closes:
         return {}
 
     out: dict[str, PairFields] = {}
@@ -270,6 +272,64 @@ def compute_pair_fields(
             roll_from_pair_key=candidates[0],
             assignment_link=prev.assignment_link,
             multi_lot_overflow=prev.multi_lot_overflow,
+        )
+
+    # --- Assignment cross-reference ---
+    # Index: option pair-key -> list of put_assignment / call-stock-sell trade rows.
+    pa_rows_by_key: dict[str, list] = defaultdict(list)
+    for r in rows:
+        t = r.trade
+        if t.basis_source == "put_assignment" and r.assigned_from is not None:
+            af = r.assigned_from
+            key = f"OPT|{t.account}|{t.ticker}|{af.strike}|{af.expiry.isoformat()}|{af.call_put}"
+            pa_rows_by_key[key].append(r)
+
+    # For each dropped assignment-close, find the matching STO and the
+    # matching stock BUY and link them.
+    for ac in assignment_closes:
+        if ac.option_details is None:
+            continue
+        opt = ac.option_details
+        key = f"OPT|{ac.account}|{ac.ticker}|{opt.strike}|{opt.expiry.isoformat()}|{opt.call_put}"
+        sto_rows = [r for r in rows if _option_pair_key(r.trade) == key and _is_option_open(r.trade)]
+        if not sto_rows:
+            continue
+        sto_row = sto_rows[0]
+        target_buy_rows = pa_rows_by_key.get(key, [])
+        if not target_buy_rows:
+            continue
+        target_id = target_buy_rows[0].trade.id
+
+        prev = out.get(sto_row.trade.id)
+        if prev is None:
+            continue
+        out[sto_row.trade.id] = PairFields(
+            pair_key=prev.pair_key,
+            pair_role="closed_via_assignment",
+            pair_color_idx=prev.pair_color_idx,
+            pair_position=prev.pair_position,
+            pair_cap="top",  # close has no visible row, so only cap-top
+            partner_trade_id=target_id,
+            roll_from_pair_key=prev.roll_from_pair_key,
+            assignment_link={"direction": "to_stock", "target_trade_id": target_id},
+            multi_lot_overflow=prev.multi_lot_overflow,
+        )
+
+        # Annotate the stock BUY (overrides only assignment_link; preserves
+        # whatever still_open / open / role the stock-lot block already set).
+        prev_buy = out.get(target_id)
+        if prev_buy is None:
+            continue
+        out[target_id] = PairFields(
+            pair_key=prev_buy.pair_key,
+            pair_role=prev_buy.pair_role,
+            pair_color_idx=prev_buy.pair_color_idx,
+            pair_position=prev_buy.pair_position,
+            pair_cap=prev_buy.pair_cap,
+            partner_trade_id=prev_buy.partner_trade_id,
+            roll_from_pair_key=prev_buy.roll_from_pair_key,
+            assignment_link={"direction": "from_option", "target_trade_id": sto_row.trade.id},
+            multi_lot_overflow=prev_buy.multi_lot_overflow,
         )
 
     return out

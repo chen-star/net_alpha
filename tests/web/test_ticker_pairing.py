@@ -226,3 +226,52 @@ def test_no_roll_for_same_key_scale_in():
     assert fields["t-sto1"].roll_from_pair_key is None
     assert fields["t-sto2"].roll_from_pair_key is None
     assert fields["t-sto1"].pair_key == fields["t-sto2"].pair_key
+
+
+def test_assignment_link_bidirectional():
+    sto = Trade(
+        id="t-sto", account="Schwab/main", date=date(2026, 1, 3), ticker="AAPL",
+        action="Sell", quantity=1.0, proceeds=215.0, cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=150.0, expiry=date(2026, 2, 28), call_put="P"),
+    )
+    # The assigned-close is dropped from the visible row list by
+    # _build_timeline_rows, so it is NOT in `rows`. We pass it via
+    # `assignment_closes` so the pairing pass can credit the option pair
+    # as closed-by-assignment and link to the resulting BUY.
+    assigned_close = Trade(
+        id="t-ac", account="Schwab/main", date=date(2026, 2, 28), ticker="AAPL",
+        action="Buy", quantity=1.0, proceeds=None, cost_basis=0.0,
+        basis_source="option_short_close_assigned",
+        option_details=OptionDetails(strike=150.0, expiry=date(2026, 2, 28), call_put="P"),
+    )
+    put_assign_buy = Trade(
+        id="t-pa", account="Schwab/main", date=date(2026, 2, 28), ticker="AAPL",
+        action="Buy", quantity=100.0, proceeds=None, cost_basis=15000.0,
+        basis_source="put_assignment",
+    )
+    lot = Lot(
+        id="L-pa", trade_id="t-pa", account="Schwab/main", date=date(2026, 2, 28),
+        ticker="AAPL", quantity=100.0, cost_basis=15000.0, adjusted_basis=15000.0,
+    )
+    # The route's _build_timeline_rows sets assigned_from on the put_assignment
+    # Buy row by indexing the dropped option_short_close_assigned trade.
+    pa_row = FakeTimelineRow(
+        trade=put_assign_buy,
+        assigned_from=assigned_close.option_details,
+    )
+    rows = [FakeTimelineRow(trade=sto), pa_row]
+
+    fields = compute_pair_fields(
+        timeline_rows=rows,
+        lots=[lot],
+        open_lot_ids={"L-pa"},
+        assignment_closes=[assigned_close],
+    )
+
+    assert fields["t-sto"].pair_role == "closed_via_assignment"
+    assert fields["t-sto"].assignment_link == {"direction": "to_stock", "target_trade_id": "t-pa"}
+    assert fields["t-sto"].partner_trade_id == "t-pa"
+    assert fields["t-pa"].assignment_link == {"direction": "from_option", "target_trade_id": "t-sto"}
+    # Stock lot is still open (no SELL yet).
+    assert fields["t-pa"].pair_role == "still_open"
