@@ -2,19 +2,77 @@
 
 
 
-## [Unreleased]
+## v0.56.0 (2026-05-10)
 
-### Added
-- `net-alpha straddles` — list currently-open §1092 offsetting groups
-  (literal straddles, married puts, non-qualified covered calls, vertical
-  spreads) with optional `--detail` for rule citations and per-leg breakdown.
-- Qualified Covered Call test (§1092(c)(4)) gates whether a long-stock /
-  short-call pair is flagged as a straddle. v1 ships a conservative
-  approximation of the IRS Notice 2003-31 LQB step table.
-- Holding-period suspension warnings (§1092(f)) attached to long-stock and
-  long-option lots that are currently part of an offsetting group.
-- `sim` now appends a §1092 straddle warning when the queried ticker has any
-  active offsetting group.
+### Documentation
+
+* docs(1092): document straddle detection in README and CHANGELOG ([`a54c7cb`](https://github.com/chen-star/net_alpha/commit/a54c7cb41cee0e922b4dbf68a4b18ec50d4c41dd))
+
+### Feature
+
+* feat(1092): surface §1092 straddle warning in sim output ([`d503473`](https://github.com/chen-star/net_alpha/commit/d5034736b8fdaba666db582cb27f1d87df7b0883))
+
+* feat(1092): add &#39;net-alpha straddles&#39; CLI command ([`0aee643`](https://github.com/chen-star/net_alpha/commit/0aee643e05fd1097a1a2ff90b9cf47c811a50ed0))
+
+* feat(1092): plain-text renderer for straddles command ([`639dbc4`](https://github.com/chen-star/net_alpha/commit/639dbc42fb7259ccbd6366bbea9668a57651cedb))
+
+* feat(1092): compute holding-period suspension warnings (§1092(f)) ([`4742c93`](https://github.com/chen-star/net_alpha/commit/4742c932fb028ee3b887e6e857ab97a3b7fbf3ee))
+
+* feat(1092): detect vertical spreads (same expiry, opposite legs) ([`b1ff3b5`](https://github.com/chen-star/net_alpha/commit/b1ff3b58e9544bb732b025fdf6ebf9772f0ab10b))
+
+* feat(1092): detect non-qualified covered calls (QCC-gated) ([`39f5472`](https://github.com/chen-star/net_alpha/commit/39f5472d02492ba1cd2e4ac36cd75f4a9282bd28))
+
+* feat(1092): detect married put (long stock + long put) ([`24789c2`](https://github.com/chen-star/net_alpha/commit/24789c27beff03322b380562e73946775022f12f))
+
+* feat(1092): detect literal straddle (long call + long put) ([`ad57e40`](https://github.com/chen-star/net_alpha/commit/ad57e40338cb65542e27f256b855673d207b1977))
+
+* feat(1092): add qualified covered call test ([`99722c8`](https://github.com/chen-star/net_alpha/commit/99722c886615e05b3c536b62202062fbd044a4ee))
+
+* feat(1092): add OffsettingPosition, OffsettingGroup, HoldingPeriodSuspension domain models ([`74d227c`](https://github.com/chen-star/net_alpha/commit/74d227c721409326872af4c90e83019924174fbf))
+
+### Fix
+
+* fix(1092): wire QCC test to live PriceCache via shared helper
+
+The CLI surfaces (`straddles`, `sim`) called a non-existent `PriceCache.snapshot()`
+method, which was silently swallowed by a bare `except Exception` and caused every
+covered-call group to fall through to the &#34;QCC test skipped&#34; branch. Replaced with
+a shared `cached_underlying_prices(repo, tickers)` helper that uses the actual
+`PriceCache.get_many()` API. Manual smoke confirms HOOD&#39;s covered call (which passes
+QCC) is now correctly suppressed instead of emitting a false-positive warning.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`baadb4d`](https://github.com/chen-star/net_alpha/commit/baadb4dbfd2eb29e250be4e0addb56b6c3ce4e6e))
+
+### Style
+
+* style(1092): ruff format detector.py for CI
+
+Two helper signatures collapsed to single-line by ruff format under the
+project&#39;s 120-char line-length. CI&#39;s `ruff format --check .` flagged them.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9f4572a`](https://github.com/chen-star/net_alpha/commit/9f4572a22be6c84e5bbc5b9866b30ef2acdae3f9))
+
+### Unknown
+
+* Merge pull request #2 from chen-star/fix/ui-three-issues
+
+feat: add §1092 straddle detection v1 ([`dff0503`](https://github.com/chen-star/net_alpha/commit/dff0503eadba6cb0a232bcec88e5a011247fdf5c))
+
+* Merge remote-tracking branch &#39;origin/master&#39; into fix/ui-three-issues
+
+# Conflicts:
+#	CHANGELOG.md ([`94e867f`](https://github.com/chen-star/net_alpha/commit/94e867f1c632a924c2d3973e8cbb9bc185f0c8b7))
+
+* ui(web): style topbar service status pill
+
+The .status-pill / .pill--* classes never had CSS rules, so the
+topbar fell through to default link styling and rendered &#34;Running&#34;
+as oversized white text next to the profile chip. Add a proper
+compact pill: surface chrome, hairline border, 7px state dot with
+a colored glow per state (running=green, paused/stale=warn,
+stopped=red, unknown=label-3).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d1a6cee`](https://github.com/chen-star/net_alpha/commit/d1a6ceeb37588f4d4f98de0b8db98e3f48fd659a))
 
 
 ## v0.55.5 (2026-05-10)
