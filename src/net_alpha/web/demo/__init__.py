@@ -22,9 +22,7 @@ def ensure_demo_db(target: Path) -> None:
         return
     try:
         with sqlite3.connect(target) as conn:
-            row = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'"
-            ).fetchone()
+            row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'").fetchone()
         if row is None:
             build_demo_db(target)
     except sqlite3.DatabaseError:
