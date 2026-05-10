@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 
 from net_alpha.audit import Period, RealizedPLRef
 from net_alpha.db.repository import Repository
-from net_alpha.models.domain import OptionDetails, Trade
+from net_alpha.models.domain import Lot, OptionDetails, Trade
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.portfolio.pnl import realized_pl_from_trades
 from net_alpha.portfolio.positions import compute_open_short_option_positions, open_lots_view
@@ -36,16 +36,25 @@ class TimelineRow:
       paired STO premium minus the BTC cost. Assigned-close folds into the
       stock buy basis instead and is intentionally ``None`` here so the user
       sees the realization only on the eventual stock sale.
+
+    The ``pair`` field carries presentation-layer pairing metadata computed
+    by :mod:`net_alpha.web.pairing`. None for transfer rows / unpaired trades.
+    Typed as ``object`` to keep this dataclass independent of the pairing
+    module (avoids an import cycle).
     """
 
     trade: Trade
     assigned_from: OptionDetails | None = None  # set on put_assignment Buy rows
     gain_loss: float | None = None
+    pair: object | None = None
 
 
 def _build_timeline_rows(
     trades: list[Trade],
     gl_lots: list[RealizedGLLot],
+    *,
+    lots: list,
+    open_lot_ids: set[str],
 ) -> list[TimelineRow]:
     """Assemble the ticker-page Timeline rows.
 
@@ -151,6 +160,28 @@ def _build_timeline_rows(
         rows.append(TimelineRow(trade=synth, gain_loss=_row_gain_loss(synth)))
 
     rows.sort(key=lambda r: (r.trade.date, r.trade.id))
+
+    # --- Pairing pass: compute PairFields and rebuild rows with `pair` set. ---
+    from net_alpha.web.pairing import compute_pair_fields
+
+    assignment_closes = [
+        t for t in trades if t.basis_source == "option_short_close_assigned"
+    ]
+    pair_fields = compute_pair_fields(
+        timeline_rows=rows,
+        lots=lots,
+        open_lot_ids=open_lot_ids,
+        assignment_closes=assignment_closes,
+    )
+    rows = [
+        TimelineRow(
+            trade=r.trade,
+            assigned_from=r.assigned_from,
+            gain_loss=r.gain_loss,
+            pair=pair_fields.get(r.trade.id),
+        )
+        for r in rows
+    ]
     return rows
 
 
@@ -219,7 +250,13 @@ def ticker_drilldown(
             account_ids.append(a.id)
     account_ids.sort()
 
-    timeline_rows = _build_timeline_rows(list(trades), gl_lots)
+    open_lot_ids = {lot.id for lot in lots}
+    timeline_rows = _build_timeline_rows(
+        list(trades),
+        gl_lots,
+        lots=raw_lots,
+        open_lot_ids=open_lot_ids,
+    )
 
     # Independent pagination for the Timeline and Open-lots tabs. Each tab
     # uses a single shared `page` query param; switching tabs (full <a> nav
