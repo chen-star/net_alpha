@@ -33,6 +33,34 @@ When you trade across multiple brokerages, each platform tracks wash sales **onl
 > [!NOTE]
 > The package is published to PyPI as **`wash-alpha`** but the CLI command is **`net-alpha`**. Both names refer to the same project.
 
+## See it in action
+
+> Screenshots below use the built-in demo dataset — TSLA, NVDA, AAPL, SPY puts, an SPX §1256 call, plus a handful of open holdings (MSFT, AMZN, GOOGL, META, AMD, …). Pick **"Try the demo"** on the welcome screen to play with the same scenarios live.
+
+**Wash-sale ledger** — every match across accounts, with confidence label and rule citation. The **NVDA** row is the case no single broker would ever flag: a loss closed in `schwab/taxable` is silently neutralized by a buy in `schwab/ira` 14 days later. **TSLA** and **AAPL** are confirmed same-account round-trips. **SPY** is an exact-strike-and-expiry options match — the lag is `-8d` because the *replacement* leg was opened 8 days *before* the loss close.
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/wash-sales.png" alt="Wash-sale ledger across accounts" width="900">
+</p>
+
+**Per-symbol drilldown** — NVDA's timeline pulls lots from both accounts into one view, with realized / disallowed KPIs and the cross-account violation pinned underneath. Every row links back to the source trade so the chain is always auditable.
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/ticker-nvda.png" alt="NVDA per-symbol drilldown" width="900">
+</p>
+
+**Pre-trade simulator** — propose `Sell 20 AAPL @ $170` and see realized P&L, FIFO lot consumption, and the wash-sale verdict *before* you place the order. The lot-strategy table compares FIFO / LIFO / HIFO / MIN_TAX / MAX_LOSS side-by-side, with each strategy's wash-sale verdict computed independently. Suggestion chips at the top surface the largest unrealized loss (`NVDA −$3,098`) and gain (`AMD +$4,503`) for one-click sims.
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/sim.png" alt="Pre-trade simulator with lot-strategy comparison" width="900">
+</p>
+
+**Portfolio dashboard** — KPIs, equity curve, cash & contributions overlay, monthly realized P&L bars, allocation rollup, and top movers — every account combined in one view, with toggles to drill in per-account.
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/portfolio.png" alt="Portfolio dashboard" width="900">
+</p>
+
 ## Quickstart
 
 `net-alpha` requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
