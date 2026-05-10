@@ -194,6 +194,22 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
 
     templates.env.globals["first_visit_modal_data"] = _first_visit_modal_data
 
+    def _palette_index() -> dict:
+        """Bootstrap blob for the ⌘K palette. Re-built on every render so new
+        imports / targets appear immediately on the next navigation.
+
+        Returns the raw dict; the template uses Jinja's `tojson` filter to
+        serialize it. `tojson` unicode-escapes `<`/`>`/`&`, preventing
+        `</script>` injection from a malicious ticker string in CSV input.
+        """
+        from net_alpha.db.repository import Repository as _Repository
+        from net_alpha.web.palette import build_palette_index
+
+        _engine = get_engine(effective_db_path(settings, app.state.demo_mode))
+        return build_palette_index(_Repository(_engine))
+
+    templates.env.globals["palette_index"] = _palette_index
+
     templates.env.globals["app_version"] = _app_version
     templates.env.globals["data_dir_path"] = str(settings.data_dir)
     templates.env.globals["pricing_remote_enabled"] = pricing_config.enable_remote

@@ -2,12 +2,12 @@
    sort/filter toolbar above a table of bullet-chart rows with inline tag
    chips. #}
 <div id="plan-body">
+  {% include "_positions_plan_toolbar.html" %}
   {% if plan_view is defined and plan_view and plan_view.rows %}
     {% include "_positions_plan_kpi_strip.html" %}
     {% if plan_view.tag_summaries %}
       {% include "_positions_plan_tag_strip.html" %}
     {% endif %}
-    {% include "_positions_plan_toolbar.html" %}
 
     <div class="panel">
       <div class="text-[11px] text-label-2 mb-2">

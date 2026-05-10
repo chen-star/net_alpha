@@ -39,6 +39,10 @@ Schema versions:
         Idempotent: the ALTER and the backfill are both gated on column
         absence, so subsequent runs are no-ops and never clobber a
         user-set order.
+  v20 — Adds plan_view_snapshot table for the Plan-view "what changed"
+        diff. The plan_last_seen_at value lives in the existing `meta`
+        table as a single row keyed `plan_last_seen_at`; no schema
+        change needed for that.
 """
 
 from __future__ import annotations
@@ -46,7 +50,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 19
+CURRENT_SCHEMA_VERSION = 20
 
 
 def get_schema_version(session: Session) -> int:
@@ -575,6 +579,27 @@ def _migrate_v18_to_v19(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v19_to_v20(session: Session) -> None:
+    """v19 → v20: add plan_view_snapshot table.
+
+    The plan_last_seen_at value lives in the existing `meta` table as a
+    single row keyed `plan_last_seen_at`; no schema change for that — the
+    `meta` table is already (key, value) text/text.
+    """
+    session.exec(
+        text("""
+        CREATE TABLE IF NOT EXISTS plan_view_snapshot (
+            ticker TEXT PRIMARY KEY,
+            target_kind TEXT NOT NULL,
+            target_value REAL NOT NULL,
+            risk_pill TEXT NOT NULL,
+            pl_bucket INTEGER NOT NULL,
+            snapshot_taken_at TEXT NOT NULL
+        )
+    """)
+    )
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -591,6 +616,7 @@ def migrate(session: Session) -> None:
         set_schema_version(session, CURRENT_SCHEMA_VERSION)
         _stamp_section_1256_meta(session)
         _migrate_v18_to_v19(session)
+        _migrate_v19_to_v20(session)
         session.commit()
         return
     if current == 1:
@@ -665,8 +691,16 @@ def migrate(session: Session) -> None:
         _migrate_v18_to_v19(session)
         set_schema_version(session, 19)
         current = 19
+    if current < 20:
+        _migrate_v19_to_v20(session)
+        set_schema_version(session, 20)
+        current = 20
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "
             f"(supports {CURRENT_SCHEMA_VERSION}). Upgrade net-alpha."
         )
+
+
+# Alias used by tests and future callers that prefer the more descriptive name.
+ensure_schema = migrate

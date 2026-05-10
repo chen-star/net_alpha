@@ -1,0 +1,64 @@
+{# ⌘K palette overlay — top-aligned modal anchored ~80px from the top.
+   Driven by the `paletteOverlay()` Alpine component in static/palette.js.
+   Reads its index from <script id="palette-index"> emitted by base.html.
+#}
+<div
+  x-data="paletteOverlay()"
+  x-cloak
+  x-show="open"
+  @keydown.escape.window="close()"
+  class="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/40"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Command palette"
+>
+  <div
+    @click.outside="close()"
+    class="w-[560px] rounded-lg bg-bg shadow-xl border border-hairline overflow-hidden"
+  >
+    <input
+      x-ref="input"
+      x-model="query"
+      @input="onInput()"
+      @keydown.arrow-down.prevent="move(1)"
+      @keydown.arrow-up.prevent="move(-1)"
+      @keydown.enter.prevent="commit($event)"
+      type="text"
+      placeholder="Jump to page or ticker…"
+      class="w-full px-4 py-3 bg-transparent border-b border-hairline outline-none text-text placeholder:text-label-3"
+      autocomplete="off"
+      spellcheck="false"
+      aria-controls="palette-results"
+      :aria-activedescendant="results.length ? `palette-row-${activeIndex}` : null"
+    />
+    <ul id="palette-results" class="max-h-[360px] overflow-auto py-1">
+      <template x-for="(item, i) in results" :key="`${item.kind}-${item.id}`">
+        <li
+          :id="`palette-row-${i}`"
+          role="option"
+          :aria-selected="i === activeIndex"
+          @click="commit({metaKey: false}, item)"
+          @mouseenter="activeIndex = i"
+          :class="[
+            'flex items-center gap-3 px-4 py-2 cursor-pointer text-sm',
+            i === activeIndex ? 'bg-surface-2 text-text' : 'text-label-2'
+          ]"
+        >
+          <span
+            class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-hairline"
+            x-text="item.kind"
+          ></span>
+          <span class="flex-1" x-text="item.label"></span>
+          <span x-show="i === activeIndex" class="text-label-3" aria-hidden="true">↵</span>
+        </li>
+      </template>
+      <li x-show="results.length === 0" class="px-4 py-6 text-center text-label-3 text-sm">
+        No matches.
+      </li>
+    </ul>
+    <div class="px-4 py-2 border-t border-hairline text-[11px] text-label-3 flex justify-between">
+      <span><kbd>↑↓</kbd> navigate · <kbd>↵</kbd> open · <kbd>⌘↵</kbd> new tab · <kbd>esc</kbd> close</span>
+      <span x-show="!query && recents.length > 0">Recents</span>
+    </div>
+  </div>
+</div>

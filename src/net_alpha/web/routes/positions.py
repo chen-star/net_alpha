@@ -6,10 +6,12 @@ from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
+from starlette.responses import Response
 
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.cash_flow import compute_cash_kpis
+from net_alpha.portfolio.models import PositionRow
 from net_alpha.portfolio.positions import (
     compute_closed_lots,
     compute_open_positions,
@@ -20,7 +22,7 @@ from net_alpha.portfolio.tax_planner import compute_harvest_queue, compute_offse
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
 from net_alpha.targets.models import TargetUnit
-from net_alpha.targets.view import build_plan_view
+from net_alpha.targets.view import PlanView, build_plan_view
 from net_alpha.web.dependencies import (
     get_etf_pairs,
     get_pricing_service,
@@ -181,7 +183,9 @@ def positions_page(
 
         selected_tag_param = request.query_params.get("tag") or None
         sort_key_param = request.query_params.get("sort") or "alpha"
-        plan_view = _build_plan_view_for_request(repo, pricing, account, selected_tag_param, sort_key_param)
+        plan_view, _pos_by_sym = _build_plan_view_for_request(
+            repo, pricing, account, selected_tag_param, sort_key_param
+        )
 
         page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
         page_norm = max(1, page)
@@ -192,8 +196,11 @@ def positions_page(
         end_idx = start_idx + page_size_norm
         plan_view = _dc.replace(plan_view, rows=list(plan_view.rows)[start_idx:end_idx])
 
+        change_states, watch_results = _compute_change_states(plan_view, _pos_by_sym, repo)
+
         ctx["plan_view"] = plan_view
-        ctx["watch_by_target_id"] = repo.watch_results_by_target()
+        ctx["watch_by_target_id"] = watch_results
+        ctx["change_states"] = change_states
         ctx["pagination"] = {
             "page": page_norm,
             "page_size": page_size_norm,
@@ -344,16 +351,72 @@ def positions_pane(
 # ---------------------------------------------------------------------------
 
 
+def _build_plan_diff_rows(
+    plan_view: PlanView,
+    pos_by_sym: dict[str, PositionRow],
+    watch_results: dict,
+) -> list:
+    """Build PlanDiffRow per visible plan-view row.
+
+    Extracted so both the diff path (_compute_change_states) and the snapshot
+    path (plan_mark_seen) can reuse the field mapping. PlanDiffRow and
+    SnapshotRow have identical fields; SnapshotRow can be constructed from a
+    PlanDiffRow via SnapshotRow(**asdict(r)).
+    """
+    from net_alpha.portfolio.plan_diff import PlanDiffRow, compute_pl_bucket
+
+    out: list[PlanDiffRow] = []
+    for r in plan_view.rows:
+        pos = pos_by_sym.get(r.symbol)
+        unrealized = float(pos.unrealized_pl) if pos and pos.unrealized_pl is not None else 0.0
+        basis = float(pos.open_cost) if pos else 0.0
+        watch = watch_results.get(r.symbol)
+        severity = watch.severity if watch else "green"
+        out.append(
+            PlanDiffRow(
+                ticker=r.symbol,
+                target_kind=str(r.target_unit),
+                target_value=float(r.target_amount),
+                risk_pill=severity,
+                pl_bucket=compute_pl_bucket(unrealized, basis),
+            )
+        )
+    return out
+
+
+def _compute_change_states(
+    plan_view: PlanView,
+    pos_by_sym: dict[str, PositionRow],
+    repo: Repository,
+) -> tuple[dict[str, str | None], dict]:
+    """Per-ticker change_state + the watch_results dict (returned for template
+    reuse so callers don't query watch_results_by_target() twice).
+
+    Returns a tuple of (change_states, watch_results) where:
+    - change_states: dict keyed by symbol; values are "new" / "changed" / None.
+    - watch_results: raw dict from repo.watch_results_by_target().
+
+    Operates on the rows currently in plan_view (call after pagination so only
+    visible rows are diffed).
+    """
+    from net_alpha.portfolio.plan_diff import diff_plan
+
+    watch_results = repo.watch_results_by_target()
+    diff_rows = _build_plan_diff_rows(plan_view, pos_by_sym, watch_results)
+    snapshot = repo.read_plan_snapshot()
+    return diff_plan(diff_rows, snapshot), watch_results
+
+
 def _build_plan_view_for_request(
     repo: Repository,
     pricing: PricingService,
     account: str | None,
     selected_tag: str | None = None,
     sort_key: str = "alpha",
-):
+) -> tuple[PlanView, dict[str, PositionRow]]:
     """Compute the PlanView used by both GET ?view=plan and the POST/DELETE
     fragment refreshes. Pulls trades, lots, prices, cash events, CSP collateral,
-    free cash, then calls build_plan_view."""
+    free cash, then calls build_plan_view. Returns (plan_view, pos_by_sym)."""
     if sort_key == "manual":
         targets = repo.list_targets_by_manual_order()
     else:
@@ -403,7 +466,7 @@ def _build_plan_view_for_request(
     cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
     free_cash = cash_kpis.cash_balance - cash_secured_total
 
-    return build_plan_view(
+    plan_view = build_plan_view(
         targets=targets,
         positions_by_symbol=pos_by_sym,
         quotes_by_symbol=quotes_by_sym,
@@ -411,6 +474,7 @@ def _build_plan_view_for_request(
         selected_tag=selected_tag,
         sort_key=sort_key,
     )
+    return plan_view, pos_by_sym
 
 
 def _modal_error(request: Request, msg: str, status: int) -> HTMLResponse:
@@ -437,7 +501,7 @@ def _render_plan_body(
 ) -> HTMLResponse:
     import dataclasses as _dc
 
-    plan_view = _build_plan_view_for_request(repo, pricing, account, selected_tag, sort_key)
+    plan_view, pos_by_sym = _build_plan_view_for_request(repo, pricing, account, selected_tag, sort_key)
 
     page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
     page_norm = max(1, page)
@@ -448,6 +512,8 @@ def _render_plan_body(
     end_idx = start_idx + page_size_norm
     plan_view = _dc.replace(plan_view, rows=list(plan_view.rows)[start_idx:end_idx])
 
+    change_states, watch_results = _compute_change_states(plan_view, pos_by_sym, repo)
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_positions_view_plan.html",
@@ -455,7 +521,8 @@ def _render_plan_body(
             "plan_view": plan_view,
             "selected_account": account or "",
             "selected_period": "ytd",
-            "watch_by_target_id": repo.watch_results_by_target(),
+            "watch_by_target_id": watch_results,
+            "change_states": change_states,
             "pagination": {
                 "page": page_norm,
                 "page_size": page_size_norm,
@@ -538,6 +605,38 @@ def plan_target_delete(
 ) -> HTMLResponse:
     repo.delete_target(symbol)
     return _render_plan_body(request, repo, pricing)
+
+
+@router.post("/positions/plan/mark-seen")
+def plan_mark_seen(
+    request: Request,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> Response:
+    """Persist the current Plan view as the new 'last seen' snapshot.
+
+    Snapshot is always global (cross-account) — the `account` filter on
+    GET routes does not apply here. The current Plan view is built with
+    all positions, all targets, all watch results, then written in full.
+
+    Returns 204 No Content; the toolbar button reloads the page after
+    success.
+    """
+    from dataclasses import asdict
+
+    from net_alpha.portfolio.plan_diff import SnapshotRow
+
+    plan_view, pos_by_sym = _build_plan_view_for_request(
+        repo, pricing, account=None, selected_tag=None, sort_key="alpha"
+    )
+    watch_results = repo.watch_results_by_target()
+    diff_rows = _build_plan_diff_rows(plan_view, pos_by_sym, watch_results)
+    snapshot = [SnapshotRow(**asdict(r)) for r in diff_rows]
+
+    now_iso = dt.datetime.now(dt.UTC).isoformat()
+    repo.write_plan_snapshot(snapshot, taken_at=now_iso)
+    repo.set_plan_last_seen_at(now_iso)
+    return Response(status_code=204)
 
 
 @router.post("/positions/plan/target/{symbol}/tag", response_class=HTMLResponse)

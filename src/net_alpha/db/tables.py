@@ -164,6 +164,23 @@ class MetaRow(SQLModel, table=True):
     value: str
 
 
+class PlanViewSnapshotRow(SQLModel, table=True):
+    """One row per ticker present on the user's last-seen Plan view.
+
+    Used by the diff that drives `● new` / `▲ changed` badges. Rewritten in
+    full on every "Mark as seen" click; never updated incrementally.
+    """
+
+    __tablename__ = "plan_view_snapshot"
+
+    ticker: str = Field(primary_key=True)
+    target_kind: str  # "shares" | "usd"
+    target_value: float
+    risk_pill: str  # "green" | "yellow" | "red"
+    pl_bucket: int  # signed bin; see portfolio/plan_diff.py
+    snapshot_taken_at: str  # ISO 8601
+
+
 class RealizedGLLotRow(SQLModel, table=True):
     __tablename__ = "realized_gl_lots"
 

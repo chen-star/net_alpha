@@ -5,7 +5,11 @@ import json
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from net_alpha.portfolio.plan_diff import SnapshotRow
 
 from sqlalchemy import func, text
 from sqlalchemy.engine import Engine
@@ -568,6 +572,78 @@ class Repository:
         with Session(self.engine) as s:
             rows = s.exec(text("SELECT DISTINCT symbol FROM position_targets")).all()
             return [r[0] for r in rows]
+
+    def tickers_with_open_lots(self) -> set[str]:
+        """Tickers that have at least one lot row with quantity > 0.
+
+        Approximates "currently held" for palette tier ranking. Cheap;
+        a single SELECT DISTINCT against an indexed column.
+        """
+        with Session(self.engine) as s:
+            rows = s.exec(text("SELECT DISTINCT ticker FROM lots WHERE quantity > 0")).all()
+            return {r[0] for r in rows}
+
+    def read_plan_snapshot(self) -> dict[str, SnapshotRow]:
+        """Return the persisted Plan-view snapshot as a dict keyed by ticker."""
+        from net_alpha.portfolio.plan_diff import SnapshotRow
+
+        with Session(self.engine) as s:
+            rows = s.exec(
+                text("SELECT ticker, target_kind, target_value, risk_pill, pl_bucket FROM plan_view_snapshot")
+            ).all()
+            return {
+                r[0]: SnapshotRow(
+                    ticker=r[0],
+                    target_kind=r[1],
+                    target_value=r[2],
+                    risk_pill=r[3],
+                    pl_bucket=r[4],
+                )
+                for r in rows
+            }
+
+    def write_plan_snapshot(
+        self,
+        rows: list[SnapshotRow],
+        *,
+        taken_at: str,
+    ) -> None:
+        """Replace the Plan-view snapshot in full. Always wipes prior rows."""
+        with Session(self.engine) as s:
+            s.exec(text("DELETE FROM plan_view_snapshot"))
+            for r in rows:
+                s.exec(
+                    text(
+                        "INSERT INTO plan_view_snapshot "
+                        "(ticker, target_kind, target_value, risk_pill, pl_bucket, snapshot_taken_at) "
+                        "VALUES (:tk, :kind, :val, :pill, :bucket, :ts)"
+                    ).bindparams(
+                        tk=r.ticker,
+                        kind=r.target_kind,
+                        val=r.target_value,
+                        pill=r.risk_pill,
+                        bucket=r.pl_bucket,
+                        ts=taken_at,
+                    )
+                )
+            s.commit()
+
+    def get_plan_last_seen_at(self) -> str | None:
+        """Return the ISO 8601 timestamp of the user's last 'Mark as seen' click."""
+        with Session(self.engine) as s:
+            row = s.exec(text("SELECT value FROM meta WHERE key='plan_last_seen_at'")).first()
+            return row[0] if row else None
+
+    def set_plan_last_seen_at(self, when: str) -> None:
+        """Upsert the plan_last_seen_at row in `meta`."""
+        with Session(self.engine) as s:
+            s.exec(
+                text(
+                    "INSERT INTO meta (key, value) VALUES ('plan_last_seen_at', :v) "
+                    "ON CONFLICT(key) DO UPDATE SET value = :v"
+                ).bindparams(v=when)
+            )
+            s.commit()
 
     def get_trades_for_ticker(self, ticker: str) -> list[Trade]:
         """All trades for a ticker, sorted by trade_date ascending."""

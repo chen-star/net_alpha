@@ -59,9 +59,9 @@ def test_v19_idempotent():
         assert get_schema_version(s) == first_version
 
 
-def test_v19_advances_version_to_19():
+def test_v19_advances_version_to_20():
     engine = create_engine("sqlite:///:memory:")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as s:
         migrate(s)
-        assert get_schema_version(s) == 19
+        assert get_schema_version(s) == 20

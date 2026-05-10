@@ -10,6 +10,21 @@
     </td>
   {% endif %}
   <td class="p-[7px]">
+    {% set _cs = change_states.get(r.symbol) %}
+    {% if _cs == "new" %}
+      <span class="inline-block w-2 h-2 rounded-full bg-info mr-1.5 align-middle"
+            data-change-state="new"
+            title="New since last open"
+            aria-label="new"></span>
+    {% elif _cs == "changed" %}
+      <span class="inline-block w-0 h-0 align-middle mr-1.5
+                   border-l-[5px] border-l-transparent
+                   border-r-[5px] border-r-transparent
+                   border-b-[8px] border-b-warn"
+            data-change-state="changed"
+            title="Changed since last open"
+            aria-label="changed"></span>
+    {% endif %}
     <div class="font-semibold">{{ r.symbol }}</div>
     {% include "_positions_plan_tag_chip_editor.html" %}
   </td>
