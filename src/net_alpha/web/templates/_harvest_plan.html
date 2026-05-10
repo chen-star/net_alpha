@@ -20,9 +20,10 @@
       <label class="inline-flex items-center gap-1">
         <input type="radio" name="mode" value="auto"
                {% if mode == 'auto' %}checked{% endif %}> Auto
-        <span class="text-label-2 text-[11px]">
-          (${{ "{:,.0f}".format(plan.realized_gains_ytd|float|abs) }} realized gains
-          + $3,000 ordinary)
+        <span class="text-label-2 text-[11px]"
+              title="Gross YTD gains (winners only, before losses). Used to size the harvest budget — not net realized P/L.">
+          (${{ "{:,.0f}".format(plan.realized_gains_ytd|float|abs) }} YTD gross gains
+          + $3,000 ordinary cap)
         </span>
       </label>
       <label class="inline-flex items-center gap-1">
