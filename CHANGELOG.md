@@ -2,6 +2,52 @@
 
 
 
+## v0.58.0 (2026-05-10)
+
+### Feature
+
+* feat(palette): trap Tab key + role=&#39;listbox&#39; on results
+
+Two ARIA fixes for the ⌘K palette modal:
+- The dialog declares role=&#39;dialog&#39; aria-modal=&#39;true&#39;, but Tab from the
+  search input previously escaped to the underlying page. Adds
+  @keydown.tab.prevent so focus stays trapped in the dialog (matching
+  the keyboard semantics screen readers expect).
+- &lt;ul#palette-results&gt; now carries role=&#39;listbox&#39;, completing the ARIA
+  ownership chain: input.aria-controls -&gt; ul.role=&#39;listbox&#39; -&gt; li.role=&#39;option&#39;.
+  Without this, the per-&lt;li&gt; role=&#39;option&#39; attributes were orphaned and
+  some screen readers would not announce option navigation correctly.
+
+Adds two render-time smoke tests so future template churn can&#39;t quietly
+drop either attribute. ([`41b7a1a`](https://github.com/chen-star/net_alpha/commit/41b7a1a0edb2fbf1510d8ab4ec22fd0c939be8d4))
+
+* feat(ui): sticky headers + sticky-left Symbol on harvest queue table
+
+Closes a B1/B2 spec gap from the palette/table-ergonomics work — the
+harvest-queue table on /tax is long-scrolling and wide-enough to scroll
+horizontally, but was missed by the original sticky pass because it
+wasn&#39;t in the plan&#39;s template list. Adds the standard sticky-top thead
++ sticky-left Symbol column treatment, plus an overflow-x-auto wrapper
+so position: sticky has a scrolling ancestor for the horizontal axis.
+
+Extends test_sticky_table_classes.py to require these classes on
+_harvest_queue.html, matching the other six sticky-bearing tables. ([`cf829ab`](https://github.com/chen-star/net_alpha/commit/cf829ab71e9cea79a41e8d39d270ee029bdb3d69))
+
+### Refactor
+
+* refactor(db): atomic Repository.mark_plan_seen helper
+
+Collapses write_plan_snapshot + set_plan_last_seen_at — previously two
+separate Session/commits — into one transaction so a crash between the
+snapshot write and the timestamp update cannot leave the snapshot
+ahead of (or behind) plan_last_seen_at. Local single-user app makes
+the crash edge case inconsequential in practice, but the atomic API
+removes the conceptual landmine for future maintainers.
+
+plan_mark_seen route now calls the new helper; old two-step methods
+are kept on Repository for callers that only need one side. ([`6e8f24a`](https://github.com/chen-star/net_alpha/commit/6e8f24afc4fbff74bbce5304bee56a153c2576ea))
+
+
 ## v0.57.0 (2026-05-10)
 
 ### Chore
