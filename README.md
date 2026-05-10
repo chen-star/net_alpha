@@ -176,6 +176,27 @@ Reads `~/.net_alpha/net_alpha.db` (v1 schema) and writes a fresh v2 DB at `~/.ne
 
 Bundled "substantially identical" pairs cover the major index-tracking ETFs (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, etc.). Extend with your own pairs by editing `~/.net_alpha/etf_pairs.yaml` — your file *adds* to the bundled defaults, never replaces them.
 
+### §1092 Straddles
+
+`net-alpha` also surfaces same-underlying offsetting positions caught by
+**IRC §1092** (the "straddle" rule). v1 detects:
+
+- **Literal straddles** — long call + long put on the same underlying
+- **Married puts** — long stock + long put on the same underlying
+- **Non-qualified covered calls** — long stock + short call that fails the
+  §1092(c)(4) Qualified Covered Call test
+- **Vertical spreads** — long + short option of the same series, opposite legs
+
+Run `net-alpha straddles` (add `--detail` for rule citations and per-leg
+breakdown). When you simulate a sell, any §1092 straddle still active on the
+ticker is surfaced inline.
+
+The QCC test in v1 is a conservative approximation of IRS Notice 2003-31's
+lowest-qualified-benchmark step table — it errs on the side of flagging
+deeper-ITM calls. Loss-deferral computation, the §1092(b) modified wash-sale
+rule, identified-straddle elections, and correlation-based stock/ETF offsets
+are deferred to v2.
+
 ### Adding a broker
 
 Contribute a parser at `src/net_alpha/brokers/<name>.py` — implement the `BrokerParser` Protocol and register it in `brokers/registry.py`. Realized G/L parsers go in `src/net_alpha/audit/brokers/`.
