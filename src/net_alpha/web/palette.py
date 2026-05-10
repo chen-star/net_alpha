@@ -8,9 +8,12 @@ from __future__ import annotations
 from typing import Literal, Protocol, TypedDict
 
 
-class _PageEntry(TypedDict, total=False):
+class _PageEntryRequired(TypedDict):
     label: str
     route: str
+
+
+class _PageEntry(_PageEntryRequired, total=False):
     aliases: list[str]
 
 
@@ -39,7 +42,12 @@ PAGES: list[_PageEntry] = [
 ]
 
 
-def build_palette_index(repo: _PaletteRepo) -> dict:
+class _PaletteIndex(TypedDict):
+    pages: list[_PageEntry]
+    tickers: list[_TickerEntry]
+
+
+def build_palette_index(repo: _PaletteRepo) -> _PaletteIndex:
     """Build the JSON-serializable palette index.
 
     Tier preference: held > targeted > traded. One ticker maps to exactly
