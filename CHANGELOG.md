@@ -17,6 +17,73 @@
   active offsetting group.
 
 
+## v0.55.5 (2026-05-10)
+
+### Fix
+
+* fix(web): rebuild demo.db on tour replay to avoid 500
+
+Replay flipped demo_mode=True without ensuring the demo SQLite
+existed; an earlier 0-byte demo.db left behind by an aborted open
+then tripped profile_switcher_data() with `no such table: accounts`.
+Add ensure_demo_db() to self-heal missing/empty/schema-incomplete
+files and call it from both /tour/replay and /welcome/start-tour.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2f98ff8`](https://github.com/chen-star/net_alpha/commit/2f98ff85caadbcc041e30f9f522e37211a1225d0))
+
+### Style
+
+* style: ruff format ensure_demo_db
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b365730`](https://github.com/chen-star/net_alpha/commit/b36573083e25d4458f4a085d5162fb211c8036d1))
+
+* style: ruff check + format fixes for CI
+
+- fragment_cache.py: import Hashable from collections.abc (UP035)
+- app.py: reorder import block (I001)
+- pricing/service.py, routes/portfolio.py: collapse multi-line calls
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2f26bf0`](https://github.com/chen-star/net_alpha/commit/2f26bf0d344352061378a71f387c4da2a4c10060))
+
+### Unknown
+
+* Merge pull request #1 from chen-star/fix/ui-three-issues
+
+Fix/UI three issues ([`0207b1b`](https://github.com/chen-star/net_alpha/commit/0207b1b1e97241a2644f6d568eb034b0371cc18a))
+
+* ui(web): redesign /settings/service with lifecycle controls
+
+Replaced the unstyled &lt;dl&gt;/&lt;table&gt; markup with a proper panel
+layout using the project&#39;s design tokens (.panel, .btn, .btn-ghost,
+status pill). Added state-aware lifecycle buttons — Install when
+absent; Start/Stop/Restart and Pause/Resume jobs once installed;
+Uninstall with a confirmation prompt. Errors from control verbs
+surface inline via ?err=… so failed installs (missing uv) and
+restart-while-stopped no longer return raw 4xx pages. The runs
+table now uses semantic status badges instead of bare CSS classes
+that had no styles defined.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`42048cc`](https://github.com/chen-star/net_alpha/commit/42048cc9a58effb2804d9fef474546901dd201fb))
+
+* ui(web): collapse Action Inbox by default
+
+Auto-expanding when urgent items existed surprised users on every
+page load. Header counts (urgent/watch chips) still surface what&#39;s
+inside, so collapsed-by-default keeps the affordance without the
+visual weight.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ff95122`](https://github.com/chen-star/net_alpha/commit/ff951225aec7ac6326f0d5d60e4591f46ad74e22))
+
+* ui(positions): clarify harvest auto-budget label as &#34;gross gains&#34;
+
+The at-loss tab loads the harvest plan, which labeled the auto-budget
+pool as &#34;$X realized gains + $3,000 ordinary&#34;. That read like net
+realized P/L and conflicted with the overview KPI (which is net,
+GL-paired, wash-adjusted). Relabel as &#34;YTD gross gains&#34; with a tooltip.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8b480fa`](https://github.com/chen-star/net_alpha/commit/8b480fa44d9635be9cf7faf419e55c1170703673))
+
+
 ## v0.55.4 (2026-05-10)
 
 ### Performance
