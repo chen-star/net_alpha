@@ -209,6 +209,64 @@ class Section1256Classification(BaseModel):
     underlying: str
 
 
+# §1092 (straddles) -----------------------------------------------------------
+
+
+class OffsettingPosition(BaseModel):
+    """One leg of an §1092 offsetting group (an open position).
+
+    Snapshot-in-time view: built from open lots / open option contracts at
+    detection time. Not persisted in v1.
+    """
+
+    kind: str
+    # values: "long_stock" | "short_stock" | "long_call" | "short_call" |
+    #         "long_put" | "short_put"
+    trade_id: str
+    lot_id: str | None = None  # None for short option positions (no lot row)
+    ticker: str
+    quantity: Decimal
+    opened_at: date
+    side: str  # "long" | "short"
+    option_strike: Decimal | None = None
+    option_expiry: date | None = None
+    option_call_put: str | None = None  # "C" | "P" | None for stock
+
+
+class OffsettingGroup(BaseModel):
+    """A set of offsetting open positions on the same underlying — a §1092 straddle."""
+
+    account: str
+    ticker: str
+    positions: list[OffsettingPosition]
+    kind: str
+    # values: "literal_straddle"   — long call + long put (same or different strikes)
+    #         "married_put"        — long stock + long put
+    #         "covered_call"       — long stock + short call (only emitted when QCC test FAILS)
+    #         "vertical_spread"    — long + short option of same series, opposite legs
+    #         "collar"             — long stock + long put + short call (only when QCC fails)
+    confidence: str  # "Confirmed" | "Probable" | "Unclear"
+    rule_citation: str  # e.g. "IRC §1092(c)(2)(A)"
+    reasoning: str  # human-readable explanation
+
+
+class HoldingPeriodSuspension(BaseModel):
+    """Per-lot record that the long-term holding-period clock is suspended.
+
+    §1092(f) suspends the holding period of a position while an offsetting
+    position is held. v1 emits these as warnings only — no basis adjustment
+    or LT/ST reclassification is performed.
+    """
+
+    account: str
+    ticker: str
+    lot_id: str
+    suspended_at: date
+    resumed_at: date | None  # None if still active
+    offsetting_position_kind: str  # the kind of the leg that triggered suspension
+    rule_citation: str  # always "IRC §1092(f)" in v1
+
+
 class DetectionResult(BaseModel):
     """Output of the wash sale detection engine."""
 
