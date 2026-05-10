@@ -185,3 +185,44 @@ def test_multi_lot_sell_spans_two_lots():
     # SELL took 30 from lot1 + 50 from lot2. Primary = lot2 (50 > 30).
     assert fields["t-s"].pair_key == "LOT|L-2"
     assert fields["t-s"].multi_lot_overflow == 1
+
+
+def test_roll_annotates_new_pair():
+    btc = Trade(
+        id="t-btc", account="Schwab/main", date=date(2026, 2, 3), ticker="AAPL",
+        action="Buy", quantity=1.0, proceeds=None, cost_basis=5.0,
+        basis_source="option_short_close",
+        option_details=OptionDetails(strike=150.0, expiry=date(2026, 2, 15), call_put="P"),
+    )
+    sto_old = Trade(
+        id="t-sto-old", account="Schwab/main", date=date(2026, 1, 3), ticker="AAPL",
+        action="Sell", quantity=1.0, proceeds=215.0, cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=150.0, expiry=date(2026, 2, 15), call_put="P"),
+    )
+    sto_new = Trade(
+        id="t-sto-new", account="Schwab/main", date=date(2026, 2, 3), ticker="AAPL",
+        action="Sell", quantity=1.0, proceeds=120.0, cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=145.0, expiry=date(2026, 2, 28), call_put="P"),
+    )
+    rows = [FakeTimelineRow(trade=sto_old), FakeTimelineRow(trade=btc), FakeTimelineRow(trade=sto_new)]
+
+    fields = compute_pair_fields(timeline_rows=rows, lots=[], open_lot_ids=set())
+
+    assert fields["t-sto-new"].roll_from_pair_key == fields["t-sto-old"].pair_key
+    assert fields["t-sto-old"].roll_from_pair_key is None
+
+
+def test_no_roll_for_same_key_scale_in():
+    common = dict(account="Schwab/main", ticker="AAPL", basis_source="option_short_open",
+                  option_details=OptionDetails(strike=150.0, expiry=date(2026, 2, 15), call_put="P"))
+    sto1 = Trade(id="t-sto1", date=date(2026, 1, 3), action="Sell", quantity=1.0, proceeds=200.0, cost_basis=None, **common)
+    sto2 = Trade(id="t-sto2", date=date(2026, 1, 3), action="Sell", quantity=1.0, proceeds=200.0, cost_basis=None, **common)
+    rows = [FakeTimelineRow(trade=sto1), FakeTimelineRow(trade=sto2)]
+
+    fields = compute_pair_fields(timeline_rows=rows, lots=[], open_lot_ids=set())
+
+    assert fields["t-sto1"].roll_from_pair_key is None
+    assert fields["t-sto2"].roll_from_pair_key is None
+    assert fields["t-sto1"].pair_key == fields["t-sto2"].pair_key

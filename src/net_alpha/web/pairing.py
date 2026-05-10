@@ -234,4 +234,42 @@ def compute_pair_fields(
                 multi_lot_overflow=overflow,
             )
 
+    # --- Roll detection (annotation only) ---
+    # On any date D for ticker T, if a close-side option pair has a
+    # different-key open on the same date, annotate the new opener with
+    # the closed pair's key.
+    closes_by_date_ticker: dict[tuple, list[str]] = defaultdict(list)  # (date, account, ticker) -> [pair_key]
+    for r in rows:
+        if _is_option_close(r.trade):
+            key = _option_pair_key(r.trade)
+            if key is None:
+                continue
+            closes_by_date_ticker[(r.trade.date, r.trade.account, r.trade.ticker)].append(key)
+
+    for r in rows:
+        if not _is_option_open(r.trade):
+            continue
+        opener_key = _option_pair_key(r.trade)
+        if opener_key is None:
+            continue
+        same_day_closes = closes_by_date_ticker.get((r.trade.date, r.trade.account, r.trade.ticker), [])
+        candidates = [k for k in same_day_closes if k != opener_key]
+        if not candidates:
+            continue
+        prev = out.get(r.trade.id)
+        if prev is None:
+            continue
+        # Replace the dataclass with a copy that sets roll_from_pair_key.
+        out[r.trade.id] = PairFields(
+            pair_key=prev.pair_key,
+            pair_role=prev.pair_role,
+            pair_color_idx=prev.pair_color_idx,
+            pair_position=prev.pair_position,
+            pair_cap=prev.pair_cap,
+            partner_trade_id=prev.partner_trade_id,
+            roll_from_pair_key=candidates[0],
+            assignment_link=prev.assignment_link,
+            multi_lot_overflow=prev.multi_lot_overflow,
+        )
+
     return out
