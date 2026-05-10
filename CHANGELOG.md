@@ -2,6 +2,39 @@
 
 
 
+## v0.55.4 (2026-05-10)
+
+### Performance
+
+* perf(web): cache portfolio_body compute + pin today&#39;s close
+
+Every reload of /portfolio/body re-ran the full compute fan-out (KPIs,
+equity-curve, allocation, top movers, projections, inbox) and re-fetched
+today&#39;s price from Yahoo for every ticker. Today&#39;s close was never
+cached because the warm path only negative-caches *bracketed* gaps and
+today is always trailing.
+
+- pricing: pin today&#39;s live quote into historical_price_cache so the
+  equity-curve warm path stops re-fetching the trailing edge each reload.
+  End-of-day price refreshes overwrite with the authoritative close.
+- web: add FragmentCache (60s TTL) keyed on (path, params, revision).
+  portfolio_body memoizes its compute context; the template still renders
+  per-request so request-scoped Jinja globals work.
+- web: bump fragment_revision on every write path — trades CRUD, imports
+  upload/delete/bulk-delete, accounts, preferences, splits/sync,
+  prices/refresh — so user-visible changes appear on the next reload.
+- web: DEBUG-level timing log in portfolio_body to make the cache_hit
+  state observable.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2b21c07`](https://github.com/chen-star/net_alpha/commit/2b21c07748507869fcf011ac1105d2111babf711))
+
+### Style
+
+* style: ruff format pnl.py
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fe0e5e8`](https://github.com/chen-star/net_alpha/commit/fe0e5e8d3ce113335314ef2d4f5173f9da7bf1d3))
+
+
 ## v0.55.3 (2026-05-09)
 
 ### Fix
