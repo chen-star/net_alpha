@@ -609,3 +609,80 @@
   opacity: 0.4;
   background: var(--color-surface);
 }
+
+/* ── Trade pairing visualization (ticker Timeline) ─────────────── */
+:root {
+  /* 8-hue palette for closed pair rails. Avoids red and bright green
+     (reserved for P&L sign and still-open lot status). */
+  --pair-c0: #5aa0ff;
+  --pair-c1: #c08a4a;
+  --pair-c2: #9c6ad1;
+  --pair-c3: #4a9a8a;
+  --pair-c4: #d18a7a;
+  --pair-c5: #6a8acf;
+  --pair-c6: #b09a4a;
+  --pair-c7: #8a6ac0;
+  --pair-still-open: #5fc88a;
+}
+.rail-col { width: 18px; }
+td.rail-col { position: relative; padding: 0 0 0 8px; }
+.rail {
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 1.5px;
+  background: var(--c, var(--pair-c0));
+}
+.rail-still_open { background: var(--pair-still-open) !important; }
+.rail-cap-top::before,
+.rail-cap-both::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 0;
+  width: 9px;
+  height: 3px;
+  background: inherit;
+  border-radius: 1.5px;
+}
+.rail-cap-bottom::after,
+.rail-cap-both::after {
+  content: "";
+  position: absolute;
+  left: -3px;
+  bottom: 0;
+  width: 9px;
+  height: 3px;
+  background: inherit;
+  border-radius: 1.5px;
+}
+.pair-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: 10px;
+  background: rgba(140, 140, 140, 0.10);
+  color: var(--color-label-2, #bbb);
+  text-decoration: none;
+  cursor: pointer;
+}
+.pair-chip:hover { background: rgba(140, 140, 140, 0.18); }
+.pair-chip--still {
+  background: rgba(95, 200, 138, 0.12);
+  color: #9fdbb3;
+  cursor: default;
+}
+.pair-annot {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--color-label-3, #aaa);
+  padding: 1px 5px;
+  border: 1px dashed var(--color-hairline, #444);
+  border-radius: 10px;
+  margin-left: 6px;
+  text-decoration: none;
+}
+.pair-annot--roll { color: #9cc4ff; border-color: #3a4a5a; }
+.pair-annot--assign { color: #e8b85a; border-color: #5a4a2a; }
