@@ -15,6 +15,7 @@ from net_alpha.portfolio.pnl import realized_pl_from_trades
 from net_alpha.portfolio.positions import compute_open_short_option_positions, open_lots_view
 from net_alpha.web.dependencies import get_repository
 from net_alpha.web.format import display_action
+from net_alpha.web.pairing import compute_pair_fields
 
 router = APIRouter()
 
@@ -162,8 +163,6 @@ def _build_timeline_rows(
     rows.sort(key=lambda r: (r.trade.date, r.trade.id))
 
     # --- Pairing pass: compute PairFields and rebuild rows with `pair` set. ---
-    from net_alpha.web.pairing import compute_pair_fields
-
     assignment_closes = [t for t in trades if t.basis_source == "option_short_close_assigned"]
     pair_fields = compute_pair_fields(
         timeline_rows=rows,

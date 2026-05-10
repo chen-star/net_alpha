@@ -46,7 +46,7 @@ def test_jump_param_resolves_to_correct_page(client, repo, builders):
 
     resp = client.get(f"/ticker/AAPL?view=timeline&jump=trade-{target.id}")
     assert resp.status_code == 200
-    assert f'id="trade-{target.id}"' in resp.text or target.id in resp.text
+    assert f'id="trade-{target.id}"' in resp.text
 
 
 def test_jump_param_paginates_to_partner_on_other_page(client, repo, builders):
@@ -63,7 +63,7 @@ def test_jump_param_paginates_to_partner_on_other_page(client, repo, builders):
 
     resp = client.get(f"/ticker/AAPL?view=timeline&jump=trade-{page2_target.id}")
     assert resp.status_code == 200
-    assert page2_target.id in resp.text
+    assert f'id="trade-{page2_target.id}"' in resp.text
 
 
 def test_ticker_renders_pair_chip_and_rail_for_btc_pair(client, repo, builders):
