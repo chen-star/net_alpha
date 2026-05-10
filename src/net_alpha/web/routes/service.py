@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from net_alpha.db.repository import Repository
 from net_alpha.service import control
@@ -15,6 +17,7 @@ router = APIRouter(prefix="/settings/service")
 @router.get("", response_class=HTMLResponse)
 async def settings_service(
     request: Request,
+    err: str | None = None,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     s = control.status()
@@ -27,6 +30,7 @@ async def settings_service(
             "status": s,
             "state": state,
             "recent": recent,
+            "err": err,
         },
     )
 
@@ -79,26 +83,52 @@ async def status_pill(request: Request) -> HTMLResponse:
     )
 
 
-@router.post("/control", response_class=HTMLResponse)
-async def control_post(request: Request, action: str = Form(...)):
+@router.post("/control")
+async def control_post(request: Request, action: str = Form(...)) -> Response:
+    """Run a lifecycle action and redirect back to the service page.
+
+    Errors surface inline on the page via the `err` query string. HTMX
+    callers (e.g. a future inline-pill button) get the updated pill back
+    so they can swap it in place without a full reload.
+    """
     state = getattr(request.app.state, "service_state", None)
     sched = getattr(request.app.state, "scheduler", None)
+    err: str | None = None
 
-    if action == "pause":
-        if state is not None and sched is not None:
-            control.pause_in_process(state=state, scheduler=sched)
-    elif action == "resume":
-        if state is not None and sched is not None:
-            control.resume_in_process(state=state, scheduler=sched)
-    elif action == "restart":
-        try:
+    try:
+        if action == "install":
+            control.install(port=8765)
+        elif action == "uninstall":
+            control.uninstall()
+        elif action == "start":
+            control.start()
+        elif action == "stop":
+            control.stop(reason="user clicked Stop in UI")
+        elif action == "restart":
             control.restart()
-        except (control.NotInstalled, control.ServiceStopped) as e:
-            return HTMLResponse(str(e), status_code=409)
-    elif action == "stop":
-        control.stop(reason="user clicked Stop in UI")
-    else:
-        return HTMLResponse(f"unknown action: {action}", status_code=400)
+        elif action == "pause":
+            if state is None or sched is None:
+                err = "Scheduler is not running in this process."
+            else:
+                control.pause_in_process(state=state, scheduler=sched)
+        elif action == "resume":
+            if state is None or sched is None:
+                err = "Scheduler is not running in this process."
+            else:
+                control.resume_in_process(state=state, scheduler=sched)
+        else:
+            err = f"unknown action: {action}"
+    except (control.NotInstalled, control.ServiceStopped, control.MissingUv) as e:
+        err = str(e)
+    except Exception as e:  # noqa: BLE001 — surface unexpected failures to the user
+        err = f"{type(e).__name__}: {e}"
 
-    # Return the updated pill so HTMX can swap it in immediately.
-    return await status_pill(request)
+    if request.headers.get("hx-request") == "true":
+        if err:
+            return HTMLResponse(err, status_code=409)
+        return await status_pill(request)
+
+    target = "/settings/service"
+    if err:
+        target = f"{target}?err={quote(err)}"
+    return RedirectResponse(target, status_code=303)
