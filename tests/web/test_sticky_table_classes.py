@@ -120,3 +120,32 @@ def test_template_has_at_least_one_sticky_left_cell(template_name: str) -> None:
         f"{template_name}: no <th>/<td> carries both 'sticky' and 'left-0' "
         "as class tokens; horizontal scroll will not anchor the first column."
     )
+
+
+def test_timeline_thead_has_layered_sticky_left() -> None:
+    """The timeline table needs both the rail-col AND the Date column
+    sticky-left, layered with the Date column offset by the rail width.
+    Rail-col anchors pair-line connectors; Date anchors row identity."""
+    src = (TEMPLATES_DIR / "_ticker_view_timeline.html").read_text()
+    sticky_left_thead_cells = 0
+    in_thead = False
+    for line in src.splitlines():
+        if "<thead" in line:
+            in_thead = True
+        if "</thead>" in line:
+            in_thead = False
+        if in_thead and "<th" in line:
+            # crude per-line scan; a <th> opening can span multiple lines but
+            # the class attribute is typically inline
+            tag_open = line[line.find("<th") :]
+            tokens = _cell_class_tokens(tag_open)
+            if (
+                {"sticky", "left-0"}.issubset(tokens)
+                or any(t.startswith("left-[") for t in tokens)
+                and "sticky" in tokens
+            ):
+                sticky_left_thead_cells += 1
+    assert sticky_left_thead_cells >= 2, (
+        f"_ticker_view_timeline.html: expected at least 2 sticky-left "
+        f"<th> cells in <thead> (rail-col + Date); found {sticky_left_thead_cells}."
+    )

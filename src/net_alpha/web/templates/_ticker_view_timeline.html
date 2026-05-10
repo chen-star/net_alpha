@@ -3,7 +3,7 @@
     <thead class="sticky top-0 z-10 bg-bg">
       <tr>
         <th class="sticky top-0 left-0 z-20 bg-bg shadow-[2px_0_0_0_var(--hairline)] rail-col"></th>
-        <th>Date</th>
+        <th class="sticky top-0 left-[18px] z-20 bg-bg shadow-[2px_0_0_0_var(--hairline)]">Date</th>
         <th>Account</th>
         <th>Provenance</th>
         <th>Action</th>
@@ -27,7 +27,7 @@
                     {% if row.pair.pair_role != 'still_open' %}style="--c: var(--pair-c{{ row.pair.pair_color_idx or 0 }});"{% endif %}></span>
             {% endif %}
           </td>
-          <td class="px-2 py-1 font-mono">
+          <td class="sticky left-[18px] z-[1] bg-inherit shadow-[2px_0_0_0_var(--hairline)] px-2 py-1 font-mono">
             {% if is_transfer %}
               <span class="text-[10px] text-label-2 uppercase tracking-tightish">Acq</span>
               {{ t.date }}
