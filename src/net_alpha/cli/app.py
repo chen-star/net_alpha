@@ -12,6 +12,7 @@ from net_alpha.cli import imports as imports_cmd
 from net_alpha.cli import migrate as migrate_cmd
 from net_alpha.cli import refresh_cache as refresh_cache_cmd
 from net_alpha.cli import sim as sim_cmd
+from net_alpha.cli import straddles as straddles_cmd
 from net_alpha.cli import ui as ui_cmd
 from net_alpha.cli.service import service_app
 
@@ -77,6 +78,16 @@ def sim(
     account: str | None = typer.Option(None, "--account", help="Restrict to one account label"),
 ):
     raise typer.Exit(sim_cmd.run(ticker, Decimal(str(qty)), Decimal(str(price)), account))
+
+
+@app.command(
+    name="straddles",
+    help="List currently-open §1092 straddles (offsetting groups + holding-period suspensions).",
+)
+def straddles(
+    detail: bool = typer.Option(False, "--detail", help="Show rule citation and per-leg breakdown"),
+):
+    raise typer.Exit(straddles_cmd.run(detail=detail))
 
 
 @app.command(name="ui", help="Launch the local web UI in your browser.")

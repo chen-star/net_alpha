@@ -2,6 +2,21 @@
 
 
 
+## [Unreleased]
+
+### Added
+- `net-alpha straddles` — list currently-open §1092 offsetting groups
+  (literal straddles, married puts, non-qualified covered calls, vertical
+  spreads) with optional `--detail` for rule citations and per-leg breakdown.
+- Qualified Covered Call test (§1092(c)(4)) gates whether a long-stock /
+  short-call pair is flagged as a straddle. v1 ships a conservative
+  approximation of the IRS Notice 2003-31 LQB step table.
+- Holding-period suspension warnings (§1092(f)) attached to long-stock and
+  long-option lots that are currently part of an offsetting group.
+- `sim` now appends a §1092 straddle warning when the queried ticker has any
+  active offsetting group.
+
+
 ## v0.55.5 (2026-05-10)
 
 ### Fix

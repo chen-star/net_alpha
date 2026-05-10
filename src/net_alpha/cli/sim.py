@@ -33,6 +33,26 @@ def run(ticker: str, qty: Decimal, price: Decimal, account_label: str | None) ->
         return 6
 
     typer.echo(sim_result.render(ticker, qty, price, options))
+
+    # §1092 post-sell check: do the user's CURRENT holdings already form a
+    # straddle? We don't simulate the post-sell state in v1 — we surface what
+    # already exists so the user sees it on the same screen as the sim output.
+    from net_alpha.section_1092.detector import detect_offsetting_groups
+    from net_alpha.section_1092.prices import cached_underlying_prices
+
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    prices = cached_underlying_prices(repo, (t.ticker for t in trades))
+    groups = detect_offsetting_groups(trades=trades, lots=lots, underlying_prices=prices)
+    relevant = [g for g in groups if g.ticker == ticker]
+    if relevant:
+        typer.echo("")
+        typer.echo("§1092 STRADDLE WARNING")
+        typer.echo("-" * 60)
+        for g in relevant:
+            typer.echo(f"  • {g.kind} on {g.ticker} ({g.account}) — {g.rule_citation}")
+        typer.echo("  Run `net-alpha straddles --detail` for the full breakdown.")
+
     typer.echo("")
     typer.echo(disclaimer.render())
     return 0
