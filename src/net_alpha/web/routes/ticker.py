@@ -192,6 +192,7 @@ def ticker_drilldown(
     view: str = Query("timeline"),
     page: int = Query(1, ge=1),
     page_size: int = Query(PAGE_SIZE),
+    jump: str | None = Query(None),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     symbol = symbol.upper()
@@ -257,6 +258,14 @@ def ticker_drilldown(
         lots=raw_lots,
         open_lot_ids=open_lot_ids,
     )
+
+    # Resolve ?jump=trade-{id}: override `page` so the target row is on it.
+    if jump and jump.startswith("trade-"):
+        target_id = jump.removeprefix("trade-")
+        for idx, r in enumerate(timeline_rows):
+            if r.trade.id == target_id:
+                page = (idx // page_size) + 1
+                break
 
     # Independent pagination for the Timeline and Open-lots tabs. Each tab
     # uses a single shared `page` query param; switching tabs (full <a> nav
