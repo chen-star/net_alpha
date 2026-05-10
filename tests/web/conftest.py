@@ -175,7 +175,7 @@ def make_bto(
     qty: float = 1.0,
     cost: float = 100.0,
 ) -> Trade:
-    """Buy-To-Open a long option."""
+    """Buy-To-Open a long option. Pairing ignores long options in v1."""
     return Trade(
         account=account_display,
         date=day,
@@ -184,6 +184,7 @@ def make_bto(
         quantity=qty,
         proceeds=None,
         cost_basis=cost,
+        basis_source="long_option_open",
         option_details=OptionDetails(strike=strike, expiry=expiry, call_put=call_put),
     )
 
@@ -200,7 +201,7 @@ def make_stc(
     proceeds: float = 80.0,
     cost: float = 100.0,
 ) -> Trade:
-    """Sell-To-Close a long option."""
+    """Sell-To-Close a long option. Pairing ignores long options in v1."""
     return Trade(
         account=account_display,
         date=day,
@@ -209,6 +210,7 @@ def make_stc(
         quantity=qty,
         proceeds=proceeds,
         cost_basis=cost,
+        basis_source="long_option_close",
         option_details=OptionDetails(strike=strike, expiry=expiry, call_put=call_put),
     )
 

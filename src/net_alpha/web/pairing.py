@@ -7,18 +7,20 @@ outside the ticker page consumes its output.
 
 Spec: docs/superpowers/specs/2026-05-10-ticker-trade-pairings-design.md
 """
+
 from __future__ import annotations
 
 import hashlib
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable, Literal
+from typing import Literal
 
 from net_alpha.models.domain import Lot
 
-# Forward reference to avoid an import cycle with routes/ticker.py
-# where TimelineRow is defined.
-TimelineRow = "net_alpha.web.routes.ticker.TimelineRow"
+# Pairing accepts any object with .trade and .assigned_from attributes
+# (duck typing) so this module avoids importing TimelineRow from
+# routes/ticker.py and the resulting cycle.
 
 
 PairRole = Literal["open", "close", "still_open", "closed_via_assignment"]
@@ -56,6 +58,7 @@ _CLOSE_OPT_SOURCES = {
     "option_short_close_expiry",
     "option_short_close_assigned",
 }
+_ALL_OPT_SOURCES = _OPEN_OPT_SOURCES | _CLOSE_OPT_SOURCES
 
 
 def _option_pair_key(trade) -> str | None:
@@ -63,7 +66,7 @@ def _option_pair_key(trade) -> str | None:
     opt = trade.option_details
     if opt is None:
         return None
-    if trade.basis_source not in _OPEN_OPT_SOURCES | _CLOSE_OPT_SOURCES:
+    if trade.basis_source not in _ALL_OPT_SOURCES:
         return None
     return f"OPT|{trade.account}|{trade.ticker}|{opt.strike}|{opt.expiry.isoformat()}|{opt.call_put}"
 
@@ -127,22 +130,8 @@ def _attribute_sells_to_lots(rows, lots):
     return attribution
 
 
-def compute_pair_fields(
-    *,
-    timeline_rows: Iterable,
-    lots: Iterable[Lot],
-    open_lot_ids: set[str],
-    assignment_closes: Iterable | None = None,
-) -> dict[str, PairFields]:
-    """Return per-trade pairing metadata keyed by trade.id."""
-    rows = list(timeline_rows)
-    assignment_closes = list(assignment_closes or [])
-    if not rows and not assignment_closes:
-        return {}
-
-    out: dict[str, PairFields] = {}
-
-    # --- Option pairs ---
+def _apply_option_pairs(rows: list, out: dict[str, PairFields]) -> None:
+    """Group option opens/closes by pair-key and write open/close PairFields."""
     opt_groups: dict[str, list] = defaultdict(list)
     for r in rows:
         key = _option_pair_key(r.trade)
@@ -180,7 +169,14 @@ def compute_pair_fields(
                 partner_trade_id=first_open_id,
             )
 
-    # --- Stock lot pairs ---
+
+def _apply_stock_lot_pairs(
+    rows: list,
+    lots: list[Lot],
+    open_lot_ids: set[str],
+    out: dict[str, PairFields],
+) -> None:
+    """FIFO-attribute stock SELLs to lots and write open/close/still_open PairFields."""
     lots_list = [lot for lot in lots if lot.option_details is None]
     lots_by_id = {lot.id: lot for lot in lots_list}
     sell_attribution = _attribute_sells_to_lots(rows, lots_list)
@@ -247,7 +243,9 @@ def compute_pair_fields(
                 multi_lot_overflow=overflow,
             )
 
-    # --- Roll detection (annotation only) ---
+
+def _apply_roll_annotations(rows: list, out: dict[str, PairFields]) -> None:
+    """Annotate same-day option openers with the closed pair's key (roll detection)."""
     # On any date D for ticker T, if a close-side option pair has a
     # different-key open on the same date, annotate the new opener with
     # the closed pair's key.
@@ -266,7 +264,7 @@ def compute_pair_fields(
         if opener_key is None:
             continue
         same_day_closes = closes_by_date_ticker.get((r.trade.date, r.trade.account, r.trade.ticker), [])
-        candidates = [k for k in same_day_closes if k != opener_key]
+        candidates = sorted(k for k in same_day_closes if k != opener_key)
         if not candidates:
             continue
         prev = out.get(r.trade.id)
@@ -285,7 +283,13 @@ def compute_pair_fields(
             multi_lot_overflow=prev.multi_lot_overflow,
         )
 
-    # --- Assignment cross-reference ---
+
+def _apply_assignment_links(
+    rows: list,
+    assignment_closes: list,
+    out: dict[str, PairFields],
+) -> None:
+    """Cross-reference option assignment-closes with stock BUY rows."""
     # Index: option pair-key -> list of put_assignment / call-stock-sell trade rows.
     pa_rows_by_key: dict[str, list] = defaultdict(list)
     for r in rows:
@@ -343,7 +347,9 @@ def compute_pair_fields(
             multi_lot_overflow=prev_buy.multi_lot_overflow,
         )
 
-    # --- Assign colors deterministically (skipped for still_open lots). ---
+
+def _with_colors(out: dict[str, PairFields]) -> dict[str, PairFields]:
+    """Return a new dict with pair_color_idx set deterministically (skipped for still_open lots)."""
     out_with_colors: dict[str, PairFields] = {}
     for trade_id, pf in out.items():
         if pf.pair_role == "still_open" or pf.pair_key is None:
@@ -361,3 +367,24 @@ def compute_pair_fields(
             multi_lot_overflow=pf.multi_lot_overflow,
         )
     return out_with_colors
+
+
+def compute_pair_fields(
+    *,
+    timeline_rows: Iterable,
+    lots: Iterable[Lot],
+    open_lot_ids: set[str],
+    assignment_closes: Iterable | None = None,
+) -> dict[str, PairFields]:
+    """Return per-trade pairing metadata keyed by trade.id."""
+    rows = list(timeline_rows)
+    assignment_closes_list = list(assignment_closes or [])
+    if not rows and not assignment_closes_list:
+        return {}
+
+    out: dict[str, PairFields] = {}
+    _apply_option_pairs(rows, out)
+    _apply_stock_lot_pairs(rows, list(lots), open_lot_ids, out)
+    _apply_roll_annotations(rows, out)
+    _apply_assignment_links(rows, assignment_closes_list, out)
+    return _with_colors(out)
