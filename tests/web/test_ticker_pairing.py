@@ -77,3 +77,26 @@ def test_scale_in_close_groups_three_rows_under_one_pair():
     assert fields["t-sto1"].pair_cap == "top"
     assert fields["t-sto2"].pair_cap == "none"
     assert fields["t-btc"].pair_cap == "bottom"
+
+
+def test_synthetic_expiry_row_joins_parent_pair():
+    sto = Trade(
+        id="t-sto", account="Schwab/main", date=date(2026, 4, 1), ticker="AAPL",
+        action="Sell", quantity=1.0, proceeds=45.0, cost_basis=None,
+        basis_source="option_short_open",
+        option_details=OptionDetails(strike=170.0, expiry=date(2026, 4, 19), call_put="C"),
+    )
+    # Synth row built by _build_timeline_rows: same key, basis_source = option_short_close_expiry.
+    synth = Trade(
+        id="t-synth", account="Schwab/main", date=date(2026, 4, 19), ticker="AAPL",
+        action="Buy", quantity=1.0, proceeds=None, cost_basis=0.0,
+        basis_source="option_short_close_expiry",
+        option_details=OptionDetails(strike=170.0, expiry=date(2026, 4, 19), call_put="C"),
+    )
+    rows = [FakeTimelineRow(trade=sto), FakeTimelineRow(trade=synth)]
+
+    fields = compute_pair_fields(timeline_rows=rows, lots=[], open_lot_ids=set())
+
+    assert fields["t-sto"].pair_key == fields["t-synth"].pair_key
+    assert fields["t-synth"].pair_role == "close"
+    assert fields["t-synth"].pair_cap == "bottom"
