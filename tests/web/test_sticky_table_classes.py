@@ -81,3 +81,42 @@ def test_every_thead_in_template_is_sticky(template_name: str) -> None:
             f"{template_name}: <thead> at offset {m.start()} is missing "
             f"class tokens {sorted(missing)}; saw class tokens {sorted(tokens)}."
         )
+
+
+# --- Sticky-left first column ---
+
+STICKY_LEFT_TEMPLATES = [
+    "_lots_table.html",
+    "_detail_table.html",
+    "_ticker_view_timeline.html",
+    "_ticker_view_lots.html",
+]
+
+REQUIRED_LEFT_TOKENS = frozenset({"sticky", "left-0"})
+
+# Match any opening tag of <th>, <td>, etc. with optional attributes. We only
+# need the first cell per row, but a presence check on at least one sticky-left
+# cell is sufficient for the smoke test — Jinja loops mean we cannot easily
+# count cells per row from raw template source without parsing Jinja control flow.
+_CELL_OPEN_RE = re.compile(r"<(?:th|td)\b[^>]*>", re.DOTALL)
+
+
+def _cell_class_tokens(cell_tag: str) -> set[str]:
+    m = _CLASS_ATTR_RE.search(cell_tag)
+    if not m:
+        return set()
+    return set(m.group(1).split())
+
+
+@pytest.mark.parametrize("template_name", STICKY_LEFT_TEMPLATES)
+def test_template_has_at_least_one_sticky_left_cell(template_name: str) -> None:
+    """At least one <th>/<td> in each listed template carries sticky+left-0
+    as class tokens. Catches accidental removal of the sticky-left utility."""
+    src = (TEMPLATES_DIR / template_name).read_text()
+    for m in _CELL_OPEN_RE.finditer(src):
+        if REQUIRED_LEFT_TOKENS.issubset(_cell_class_tokens(m.group(0))):
+            return
+    pytest.fail(
+        f"{template_name}: no <th>/<td> carries both 'sticky' and 'left-0' "
+        "as class tokens; horizontal scroll will not anchor the first column."
+    )

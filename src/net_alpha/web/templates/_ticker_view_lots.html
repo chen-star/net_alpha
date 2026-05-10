@@ -21,7 +21,7 @@
     <table class="net-table text-sm">
       <thead class="sticky top-0 z-10 bg-bg">
         <tr>
-          <th>Account</th>
+          <th class="sticky top-0 left-0 z-20 bg-bg shadow-[2px_0_0_0_var(--hairline)]">Account</th>
           <th>Contract</th>
           <th>Opened</th>
           <th class="r">Qty short</th>
@@ -34,7 +34,7 @@
         {% for s in open_shorts %}
           {% set dte = (s.expiry - kpi_today).days if kpi_today else None %}
           <tr>
-            <td class="px-2 py-1 font-mono">{{ s.account }}</td>
+            <td class="sticky left-0 z-[1] bg-inherit shadow-[2px_0_0_0_var(--hairline)] px-2 py-1 font-mono">{{ s.account }}</td>
             <td class="px-2 py-1 font-mono text-[12px]">
               <span class="pill" style="color: var(--color-accent);">{% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %}</span>
               ${{ "%g"|format(s.strike) }}

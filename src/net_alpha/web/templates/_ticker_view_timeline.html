@@ -2,7 +2,7 @@
   <table class="net-table text-sm min-w-[960px]">
     <thead class="sticky top-0 z-10 bg-bg">
       <tr>
-        <th class="rail-col"></th>
+        <th class="sticky top-0 left-0 z-20 bg-bg shadow-[2px_0_0_0_var(--hairline)] rail-col"></th>
         <th>Date</th>
         <th>Account</th>
         <th>Provenance</th>
@@ -21,7 +21,7 @@
         {% set is_synth = t.basis_source == 'option_short_close_expiry' %}
         {% set is_transfer = t.basis_source in ('transfer_in', 'transfer_out') %}
         <tr id="trade-{{ t.id }}"{% if is_synth %} class="text-label-2"{% endif %}>
-          <td class="rail-col px-0 py-0">
+          <td class="sticky left-0 z-[1] bg-inherit shadow-[2px_0_0_0_var(--hairline)] rail-col px-0 py-0">
             {% if row.pair and row.pair.pair_role %}
               <span class="rail rail-{{ row.pair.pair_role }} rail-cap-{{ row.pair.pair_cap or 'none' }}"
                     {% if row.pair.pair_role != 'still_open' %}style="--c: var(--pair-c{{ row.pair.pair_color_idx or 0 }});"{% endif %}></span>

@@ -35,7 +35,7 @@
           <table class="net-table text-sm min-w-[960px]">
             <thead class="sticky top-0 z-10 bg-bg">
               <tr>
-                <th class="w-28">Loss date</th>
+                <th class="sticky top-0 left-0 z-20 bg-bg shadow-[2px_0_0_0_var(--hairline)] w-28">Loss date</th>
                 <th>Loss → Buy</th>
                 <th class="w-28">Trigger date</th>
                 <th class="w-20">
@@ -60,7 +60,7 @@
                     hx-target="#violation-{{ v.id }}-explain"
                     hx-swap="innerHTML"
                     class="hover:bg-surface-2 cursor-pointer">
-                  <td class="px-3 py-2 font-mono">{{ v.loss_sale_date or "—" }}</td>
+                  <td class="sticky left-0 z-[1] bg-inherit shadow-[2px_0_0_0_var(--hairline)] px-3 py-2 font-mono">{{ v.loss_sale_date or "—" }}</td>
                   <td class="px-3 py-2">{{ v.loss_account or "—" }} → {{ v.buy_account or "—" }}</td>
                   <td class="px-3 py-2 font-mono">{{ v.triggering_buy_date or "—" }}</td>
                   <td class="px-3 py-2 font-mono num">{% if lag is not none %}{{ lag }}d{% else %}—{% endif %}</td>
@@ -106,7 +106,7 @@
         <table class="net-table text-sm min-w-[960px]" data-testid="exempt-matches-table">
           <thead class="sticky top-0 z-10 bg-bg">
             <tr>
-              <th class="w-28">Loss date</th>
+              <th class="sticky top-0 left-0 z-20 bg-bg shadow-[2px_0_0_0_var(--hairline)] w-28">Loss date</th>
               <th>Loss → Buy</th>
               <th class="w-28">Trigger date</th>
               <th class="w-20">Ticker</th>
@@ -125,7 +125,7 @@
                   hx-swap="innerHTML"
                   class="hover:bg-surface-2 cursor-pointer opacity-60"
                   style="text-decoration: line-through;">
-                <td class="px-3 py-2 font-mono">{{ em.loss_sale_date or "—" }}</td>
+                <td class="sticky left-0 z-[1] bg-inherit shadow-[2px_0_0_0_var(--hairline)] px-3 py-2 font-mono">{{ em.loss_sale_date or "—" }}</td>
                 <td class="px-3 py-2">{{ em.loss_account or "—" }} → {{ em.buy_account or "—" }}</td>
                 <td class="px-3 py-2 font-mono">{{ em.triggering_buy_date or "—" }}</td>
                 <td class="px-3 py-2 font-mono">{{ em.ticker or "—" }}</td>
