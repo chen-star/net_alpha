@@ -53,3 +53,27 @@ def test_simple_btc_pair_assigns_open_close_roles():
     assert fields["t-btc"].pair_cap == "bottom"
     assert fields["t-sto"].partner_trade_id == "t-btc"
     assert fields["t-btc"].partner_trade_id == "t-sto"
+
+
+def test_scale_in_close_groups_three_rows_under_one_pair():
+    common = dict(account="Schwab/main", ticker="AAPL", basis_source="option_short_open",
+                  option_details=OptionDetails(strike=165.0, expiry=date(2026, 4, 19), call_put="C"))
+    sto1 = Trade(id="t-sto1", date=date(2026, 3, 5), action="Sell", quantity=1.0, proceeds=95.0, cost_basis=None, **common)
+    sto2 = Trade(id="t-sto2", date=date(2026, 3, 10), action="Sell", quantity=1.0, proceeds=110.0, cost_basis=None, **common)
+    btc = Trade(
+        id="t-btc", account="Schwab/main", date=date(2026, 3, 20), ticker="AAPL",
+        action="Buy", quantity=2.0, proceeds=None, cost_basis=30.0,
+        basis_source="option_short_close",
+        option_details=OptionDetails(strike=165.0, expiry=date(2026, 4, 19), call_put="C"),
+    )
+    rows = [FakeTimelineRow(trade=sto1), FakeTimelineRow(trade=sto2), FakeTimelineRow(trade=btc)]
+
+    fields = compute_pair_fields(timeline_rows=rows, lots=[], open_lot_ids=set())
+
+    assert fields["t-sto1"].pair_key == fields["t-sto2"].pair_key == fields["t-btc"].pair_key
+    assert fields["t-sto1"].pair_position == (1, 2)
+    assert fields["t-sto2"].pair_position == (2, 2)
+    assert fields["t-btc"].pair_position == (1, 1)
+    assert fields["t-sto1"].pair_cap == "top"
+    assert fields["t-sto2"].pair_cap == "none"
+    assert fields["t-btc"].pair_cap == "bottom"
