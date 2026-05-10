@@ -569,6 +569,16 @@ class Repository:
             rows = s.exec(text("SELECT DISTINCT symbol FROM position_targets")).all()
             return [r[0] for r in rows]
 
+    def tickers_with_open_lots(self) -> set[str]:
+        """Tickers that have at least one lot row with quantity > 0.
+
+        Approximates "currently held" for palette tier ranking. Cheap;
+        a single SELECT DISTINCT against an indexed column.
+        """
+        with Session(self.engine) as s:
+            rows = s.exec(text("SELECT DISTINCT ticker FROM lots WHERE quantity > 0")).all()
+            return {r[0] for r in rows}
+
     def get_trades_for_ticker(self, ticker: str) -> list[Trade]:
         """All trades for a ticker, sorted by trade_date ascending."""
         with Session(self.engine) as s:
