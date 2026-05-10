@@ -1,26 +1,189 @@
+{# Service health & lifecycle page (`/settings/service`).
+
+   Top: status panel with the live pill + key facts and per-job timestamps.
+   Middle: lifecycle controls (install / start / stop / restart / pause / uninstall),
+   gated by the current service state.
+   Bottom: schedule reference + recent runs table.
+
+   All control actions POST to `/settings/service/control` with a hidden
+   `action` field, then 303 back to this page so the browser shows the
+   updated state. Errors flow back as `?err=...` for inline display.
+#}
 {% extends "base.html" %}
+{% block title %}Service · net-alpha{% endblock %}
 {% block content %}
-<section class="settings-service">
-  <h1>Service status</h1>
-  <dl>
-    <dt>State</dt>
-    <dd>
-      {% if status.disabled %}Stopped
-      {% elif status.running %}Running
-      {% else %}Idle
+{% set installed = status.installed %}
+{% set running = status.running and not status.disabled %}
+{% set paused = state.paused if state is not none else False %}
+{% set last_price = state.last_run("price_refresh") if state is not none else None %}
+{% set last_watch = state.last_run("washsale_watch") if state is not none else None %}
+
+{% if not installed %}
+  {% set state_label = "Not installed" %}
+  {% set state_color = "var(--color-label-2)" %}
+  {% set state_tint = "var(--color-hairline)" %}
+{% elif status.disabled %}
+  {% set state_label = "Stopped" %}
+  {% set state_color = "var(--color-neg)" %}
+  {% set state_tint = "var(--color-neg-tint)" %}
+{% elif paused %}
+  {% set state_label = "Paused" %}
+  {% set state_color = "var(--color-warn)" %}
+  {% set state_tint = "var(--color-warn-tint)" %}
+{% elif running %}
+  {% set state_label = "Running" %}
+  {% set state_color = "var(--color-pos)" %}
+  {% set state_tint = "var(--color-pos-tint)" %}
+{% else %}
+  {% set state_label = "Idle" %}
+  {% set state_color = "var(--color-label-2)" %}
+  {% set state_tint = "var(--color-hairline)" %}
+{% endif %}
+
+<section class="max-w-3xl mx-auto space-y-4">
+  <div class="flex items-baseline justify-between">
+    <h1 class="text-[20px] font-semibold tracking-tight m-0">Service status</h1>
+    <p class="text-[12px] text-label-2 m-0">
+      Optional always-on background process for price + wash-sale refreshes.
+    </p>
+  </div>
+
+  {% if err %}
+  <div class="panel" style="border-color: var(--color-neg); background: var(--color-neg-tint);">
+    <div class="text-[13px]" style="color: var(--color-neg);">
+      <strong class="font-semibold">Action failed:</strong> {{ err }}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Status ──────────────────────────────────────────────────────────────── #}
+  <div class="panel">
+    <div class="panel-head">
+      <h4>Status</h4>
+      <span class="meta">refreshes every 30s</span>
+    </div>
+
+    <div class="flex items-center gap-3 mb-4">
+      <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[12px] font-medium"
+            style="color: {{ state_color }}; background: {{ state_tint }};">
+        <span class="inline-block rounded-full"
+              style="width:8px; height:8px; background:{{ state_color }}; box-shadow: 0 0 6px {{ state_color }};"></span>
+        {{ state_label }}
+      </span>
+      {% if installed and status.pid %}
+        <span class="text-[12px] num text-label-2">PID {{ status.pid }}</span>
       {% endif %}
-    </dd>
-    <dt>PID</dt><dd>{{ status.pid or "—" }}</dd>
-    <dt>Port</dt><dd>127.0.0.1:8765 (pinned)</dd>
-  </dl>
+      <span class="text-[12px] num text-label-2">127.0.0.1:8765</span>
+    </div>
 
-  <h2>Schedules</h2>
-  <ul>
-    <li>Price refresh — every 4 hours</li>
-    <li>Wash-sale watch — daily 04:00 + on every import</li>
-  </ul>
+    <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-[13px]">
+      <dt class="text-label-2">Last price refresh</dt>
+      <dd class="num">
+        {% if last_price %}
+          {{ last_price.started_at.strftime("%Y-%m-%d %H:%M") }}
+          <span class="text-label-3">· {{ last_price.status }}</span>
+        {% else %}
+          <span class="text-label-3">never</span>
+        {% endif %}
+      </dd>
 
-  <h2>Recent runs</h2>
-  <div hx-get="/settings/service/runs" hx-trigger="load, every 30s"></div>
+      <dt class="text-label-2">Last wash-sale watch</dt>
+      <dd class="num">
+        {% if last_watch %}
+          {{ last_watch.started_at.strftime("%Y-%m-%d %H:%M") }}
+          <span class="text-label-3">· {{ last_watch.status }}</span>
+        {% else %}
+          <span class="text-label-3">never</span>
+        {% endif %}
+      </dd>
+    </dl>
+  </div>
+
+  {# ── Lifecycle controls ─────────────────────────────────────────────────── #}
+  <div class="panel">
+    <div class="panel-head">
+      <h4>Controls</h4>
+    </div>
+
+    {% if not installed %}
+    <p class="text-[13px] text-label-2 mb-3">
+      The service is not installed. Installing creates a launchd agent under
+      <span class="font-mono">~/.net_alpha/</span> and provisions a runtime venv.
+      Requires <a class="underline" href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a> on PATH.
+    </p>
+    <form method="post" action="/settings/service/control">
+      <input type="hidden" name="action" value="install">
+      <button type="submit" class="btn">Install service</button>
+    </form>
+
+    {% else %}
+    <div class="flex flex-wrap gap-2">
+      {% if status.disabled %}
+        <form method="post" action="/settings/service/control">
+          <input type="hidden" name="action" value="start">
+          <button type="submit" class="btn">Start</button>
+        </form>
+      {% else %}
+        <form method="post" action="/settings/service/control">
+          <input type="hidden" name="action" value="stop">
+          <button type="submit" class="btn-ghost">Stop</button>
+        </form>
+        <form method="post" action="/settings/service/control">
+          <input type="hidden" name="action" value="restart">
+          <button type="submit" class="btn-ghost">Restart</button>
+        </form>
+        {% if paused %}
+          <form method="post" action="/settings/service/control">
+            <input type="hidden" name="action" value="resume">
+            <button type="submit" class="btn-ghost">Resume jobs</button>
+          </form>
+        {% else %}
+          <form method="post" action="/settings/service/control">
+            <input type="hidden" name="action" value="pause">
+            <button type="submit" class="btn-ghost">Pause jobs</button>
+          </form>
+        {% endif %}
+      {% endif %}
+
+      <form method="post" action="/settings/service/control"
+            onsubmit="return confirm('Uninstall the always-on service? Your data is preserved.');"
+            class="ml-auto">
+        <input type="hidden" name="action" value="uninstall">
+        <button type="submit" class="btn-ghost" style="color: var(--color-neg);">Uninstall</button>
+      </form>
+    </div>
+
+    <p class="text-[12px] text-label-2 mt-3 m-0">
+      <strong class="text-label-1">Stop</strong> survives reboots via a disabled-flag latch.
+      <strong class="text-label-1">Pause</strong> freezes background jobs but keeps the dashboard up.
+    </p>
+    {% endif %}
+  </div>
+
+  {# ── Schedules ───────────────────────────────────────────────────────────── #}
+  <div class="panel">
+    <div class="panel-head">
+      <h4>Schedules</h4>
+    </div>
+    <ul class="text-[13px] space-y-1 m-0 pl-4 list-disc text-label-1">
+      <li>
+        <span class="font-medium">Price refresh</span>
+        <span class="text-label-2">— every 4 hours</span>
+      </li>
+      <li>
+        <span class="font-medium">Wash-sale watch</span>
+        <span class="text-label-2">— daily 04:00 + on every import</span>
+      </li>
+    </ul>
+  </div>
+
+  {# ── Recent runs ─────────────────────────────────────────────────────────── #}
+  <div class="panel">
+    <div class="panel-head">
+      <h4>Recent runs</h4>
+      <span class="meta">auto-refreshes</span>
+    </div>
+    <div hx-get="/settings/service/runs" hx-trigger="load, every 30s"></div>
+  </div>
 </section>
 {% endblock %}

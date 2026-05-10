@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine
 from net_alpha.db.repository import Repository
-from net_alpha.web.demo import build_demo_db
+from net_alpha.web.demo import ensure_demo_db
 
 router = APIRouter()
 
@@ -34,9 +34,7 @@ def welcome(request: Request) -> Response:
 @router.post("/welcome/start-tour")
 def start_tour(request: Request) -> RedirectResponse:
     settings: Settings = request.app.state.settings
-    demo_path = settings.data_dir / "demo.db"
-    if not demo_path.exists():
-        build_demo_db(demo_path)
+    ensure_demo_db(settings.data_dir / "demo.db")
     request.app.state.demo_mode = True
     return RedirectResponse("/?tour=1", status_code=303)
 
