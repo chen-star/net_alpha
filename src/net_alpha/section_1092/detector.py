@@ -27,9 +27,7 @@ from decimal import Decimal
 from net_alpha.models.domain import Lot, OffsettingGroup, OffsettingPosition, Trade
 
 
-def _open_long_options(
-    trades: list[Trade], lots: list[Lot]
-) -> list[OffsettingPosition]:
+def _open_long_options(trades: list[Trade], lots: list[Lot]) -> list[OffsettingPosition]:
     """Return one OffsettingPosition per long option contract still open.
 
     A long option contract is "open" if Σ(BTO qty) − Σ(STC qty) > 0 for that
@@ -85,9 +83,7 @@ def _open_long_options(
     return positions
 
 
-def _open_long_stock(
-    trades: list[Trade], lots: list[Lot]
-) -> list[OffsettingPosition]:
+def _open_long_stock(trades: list[Trade], lots: list[Lot]) -> list[OffsettingPosition]:
     """Return one OffsettingPosition per (account, ticker) with net long equity."""
     qty: dict[tuple[str, str], Decimal] = defaultdict(lambda: Decimal("0"))
     earliest_lot: dict[tuple[str, str], Lot] = {}
