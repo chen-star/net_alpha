@@ -1,18 +1,18 @@
-"""Lightweight regex check that table-bearing templates carry sticky-header
-classes. This catches accidental removal of the sticky utility during future
+"""Lightweight check that table-bearing templates carry sticky-header
+classes. Catches accidental removal of the sticky utility during future
 template churn without needing a browser to verify scroll behavior.
 
-Templates originally listed in the plan that do NOT contain a <thead> element
-and were therefore excluded from this check (they are fragments or use
-non-table layout):
+Approach: parse each <thead>'s class attribute into a token set and
+assert {"sticky", "top-0"} is a subset. This is order-independent and
+immune to false positives from `sticky` appearing in non-class attributes
+(e.g., title="…").
 
-- _tax_wash_sales_tab.html: no <table>; delegates rendering to
-  _detail_table.html and _portfolio_wash_watch.html via {% include %}.
-- _portfolio_wash_watch.html: no <table>; renders a CSS grid/flexbox layout.
-- _ticker_view_reconciliation.html: no <table>; loads reconciliation data via
-  HTMX GET into child divs; the actual table lives in _reconciliation_diff.html.
-- _imports_detail_row.html: a <td> fragment (detail expand panel); contains
-  no table element at all.
+Templates excluded from the original plan list (verified to have no
+<thead> at all):
+- _tax_wash_sales_tab.html (delegates to _detail_table.html, which IS covered)
+- _portfolio_wash_watch.html (CSS grid layout, no <table>)
+- _ticker_view_reconciliation.html (HTMX wrapper for _reconciliation_diff.html, which IS covered)
+- _imports_detail_row.html (a <td> fragment, no table)
 """
 
 from __future__ import annotations
@@ -22,11 +22,10 @@ from pathlib import Path
 
 import pytest
 
-TEMPLATES_DIR = Path("src/net_alpha/web/templates")
+# Anchor to the project root so the test is invocation-directory-independent.
+TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "src/net_alpha/web/templates"
 
 # Templates whose <thead> rows must carry sticky-header classes.
-# Note: four templates from the original plan were removed because they contain
-# no <thead> element (see module docstring above).
 STICKY_HEADER_TEMPLATES = [
     "_lots_table.html",
     "_ticker_view_timeline.html",
@@ -36,30 +35,49 @@ STICKY_HEADER_TEMPLATES = [
     "_reconciliation_diff.html",
 ]
 
-STICKY_HEADER_PATTERN = re.compile(
-    r"<thead[^>]*class=\"[^\"]*\bsticky\b[^\"]*\btop-0\b[^\"]*\"",
-    re.DOTALL,
-)
+REQUIRED_TOKENS = frozenset({"sticky", "top-0"})
+
+_THEAD_OPEN_RE = re.compile(r"<thead\b[^>]*>", re.DOTALL)
+_CLASS_ATTR_RE = re.compile(r'class="([^"]*)"')
+
+
+def _thead_class_tokens(thead_tag: str) -> set[str]:
+    """Return the set of class tokens on a <thead> opening tag, or an empty
+    set if the tag has no class attribute."""
+    m = _CLASS_ATTR_RE.search(thead_tag)
+    if not m:
+        return set()
+    return set(m.group(1).split())
 
 
 @pytest.mark.parametrize("template_name", STICKY_HEADER_TEMPLATES)
-def test_template_has_sticky_thead(template_name: str) -> None:
+def test_template_has_at_least_one_sticky_thead(template_name: str) -> None:
+    """At least one <thead> in each listed template carries sticky+top-0."""
     src = (TEMPLATES_DIR / template_name).read_text()
-    assert STICKY_HEADER_PATTERN.search(src), (
-        f"{template_name}: <thead> must carry 'sticky top-0' classes; "
-        "the table either lacks a <thead> wrapper or the sticky utility "
-        "was removed."
+    found = False
+    for m in _THEAD_OPEN_RE.finditer(src):
+        if REQUIRED_TOKENS.issubset(_thead_class_tokens(m.group(0))):
+            found = True
+            break
+    assert found, (
+        f"{template_name}: no <thead> carries both 'sticky' and 'top-0' "
+        "as class tokens; the table either lacks a <thead> wrapper or the "
+        "sticky utility was removed."
     )
 
 
 @pytest.mark.parametrize("template_name", STICKY_HEADER_TEMPLATES)
-def test_all_theads_in_template_are_sticky(template_name: str) -> None:
-    """Some templates have multiple <thead>s (e.g., _detail_table.html has
-    both wash-sales and exempt-matches tables). Each one must be sticky."""
+def test_every_thead_in_template_is_sticky(template_name: str) -> None:
+    """Every <thead> in each listed template must be sticky.
+
+    Some templates (e.g. _detail_table.html) have multiple <thead>s — one
+    each for the wash-sales and exempt-matches tables. Each one must carry
+    sticky+top-0; partial coverage is a regression."""
     src = (TEMPLATES_DIR / template_name).read_text()
-    thead_pattern = re.compile(r"<thead\b[^>]*>", re.DOTALL)
-    for match in thead_pattern.finditer(src):
-        thead_tag = match.group(0)
-        assert "sticky" in thead_tag and "top-0" in thead_tag, (
-            f"{template_name}: a <thead> at offset {match.start()} is missing sticky/top-0 classes: {thead_tag!r}"
+    for m in _THEAD_OPEN_RE.finditer(src):
+        tokens = _thead_class_tokens(m.group(0))
+        missing = REQUIRED_TOKENS - tokens
+        assert not missing, (
+            f"{template_name}: <thead> at offset {m.start()} is missing "
+            f"class tokens {sorted(missing)}; saw class tokens {sorted(tokens)}."
         )
