@@ -20,11 +20,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Response
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 
 from net_alpha.db.repository import Repository
 from net_alpha.models.preferences import AccountPreference
 from net_alpha.web.dependencies import get_repository
+from net_alpha.web.fragment_cache import bump_fragment_revision
 
 router = APIRouter()
 
@@ -35,6 +36,7 @@ _VALID_THEMES = {"system", "light", "dark"}
 
 @router.post("/preferences", status_code=204)
 def post_preferences(
+    request: Request,
     profile: str = Form(...),
     density: str = Form(...),
     theme: str = Form(default="system"),
@@ -67,5 +69,6 @@ def post_preferences(
             )
         )
 
+    bump_fragment_revision(request)
     headers = {"HX-Refresh": "true"}
     return Response(status_code=204, headers=headers)

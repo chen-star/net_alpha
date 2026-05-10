@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from datetime import date, timedelta
 from datetime import date as _date
 from decimal import Decimal
@@ -7,6 +8,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
+from loguru import logger
 from sqlmodel import Session
 
 from net_alpha.audit import (
@@ -55,6 +57,7 @@ from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.dependencies import get_pricing_service, get_repository
+from net_alpha.web.fragment_cache import bump_fragment_revision
 
 router = APIRouter()
 
@@ -169,6 +172,7 @@ def _build_metric_refs(
 
 @router.post("/splits/sync")
 def sync_splits(
+    request: Request,
     symbols: str | None = Query(default="ALL"),
     svc: PricingService = Depends(get_pricing_service),
     repo: Repository = Depends(get_repository),
@@ -182,6 +186,8 @@ def sync_splits(
     if not sym_list:
         return {"applied_count": 0, "skipped_count": 0, "error_symbols": []}
     result = svc.sync_splits(sym_list, repo=repo)
+    if result.applied_count:
+        bump_fragment_revision(request)
     return {
         "applied_count": result.applied_count,
         "skipped_count": result.skipped_count,
@@ -191,6 +197,7 @@ def sync_splits(
 
 @router.post("/prices/refresh")
 def refresh_prices(
+    request: Request,
     symbols: str | None = Query(default=None),
     svc: PricingService = Depends(get_pricing_service),
     repo: Repository = Depends(get_repository),
@@ -206,6 +213,8 @@ def refresh_prices(
         return {"fetched": [], "missing": [], "degraded": False}
     quotes = svc.refresh(sym_list)
     snap = svc.last_snapshot()
+    if quotes:
+        bump_fragment_revision(request)
     return {
         "fetched": list(quotes.keys()),
         "missing": snap.missing_symbols,
@@ -731,19 +740,16 @@ def portfolio_wash_watch_fragment(
     )
 
 
-@router.get("/portfolio/body", response_class=HTMLResponse)
-def portfolio_body(
+def _compute_portfolio_body_context(
+    *,
     request: Request,
-    period: str | None = None,
-    account: str | None = None,
-    repo: Repository = Depends(get_repository),
-    svc: PricingService = Depends(get_pricing_service),
-) -> HTMLResponse:
-    """Bundled fragment: KPIs + equity-curve + allocation + wash-watch.
-
-    Loads trades/lots/prices ONCE and feeds the existing pure compute
-    functions, replacing the 5-way page-load fan-out on /portfolio.
-    """
+    period: str | None,
+    account: str | None,
+    repo: Repository,
+    svc: PricingService,
+) -> dict[str, object]:
+    """Heavy compute behind /portfolio/body. Pure function of (DB rows, prices,
+    period, account); cached by portfolio_body keyed on the fragment revision."""
     today = date.today()
     period_tuple, period_label = _parse_period(period, today.year)
 
@@ -926,39 +932,73 @@ def portfolio_body(
         (body_total_account_value - cash_kpis.net_contributions) if body_total_account_value is not None else None
     )
 
-    return request.app.state.templates.TemplateResponse(
-        request,
-        "_portfolio_body.html",
-        {
-            "kpis": kpis,
-            "snapshot": snap,
-            "allocation": allocation,
-            "open_shorts": open_shorts,
-            "cash_secured_total": cash_secured_total,
-            "premium_received_total": premium_received_total,
-            "csp_count": csp_count,
-            "today": today,
-            "cash_kpis": cash_kpis,
-            "cash_points": cash_points,
-            "cash_slice": cash_slice,
-            "metric_refs": _build_metric_refs(period_tuple, period_label, account_id),
-            "offset_budget": offset_budget,
-            "projection": projection,
-            "has_tax_config": has_tax_config,
-            "profile": profile,
-            "total_account_value": body_total_account_value,
-            "vs_contributed_delta": body_vs_contributed_delta,
-            "top_movers": top_movers,
-            "benchmark_points": benchmark_points,
-            "benchmark_symbol": benchmark_symbol,
-            "account_points": account_points,
-            "period_label": period_label,
-            "monthly_pl_points": monthly_pl_points,
-            "account": account,  # used by the inbox lazy-load wrapper
-            "selected_period": period or "ytd",
-            "selected_account": account or "",
-        },
+    return {
+        "kpis": kpis,
+        "snapshot": snap,
+        "allocation": allocation,
+        "open_shorts": open_shorts,
+        "cash_secured_total": cash_secured_total,
+        "premium_received_total": premium_received_total,
+        "csp_count": csp_count,
+        "today": today,
+        "cash_kpis": cash_kpis,
+        "cash_points": cash_points,
+        "cash_slice": cash_slice,
+        "metric_refs": _build_metric_refs(period_tuple, period_label, account_id),
+        "offset_budget": offset_budget,
+        "projection": projection,
+        "has_tax_config": has_tax_config,
+        "profile": profile,
+        "total_account_value": body_total_account_value,
+        "vs_contributed_delta": body_vs_contributed_delta,
+        "top_movers": top_movers,
+        "benchmark_points": benchmark_points,
+        "benchmark_symbol": benchmark_symbol,
+        "account_points": account_points,
+        "period_label": period_label,
+        "monthly_pl_points": monthly_pl_points,
+        "account": account,  # used by the inbox lazy-load wrapper
+        "selected_period": period or "ytd",
+        "selected_account": account or "",
+    }
+
+
+@router.get("/portfolio/body", response_class=HTMLResponse)
+def portfolio_body(
+    request: Request,
+    period: str | None = None,
+    account: str | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Bundled fragment: KPIs + equity-curve + allocation + wash-watch.
+
+    Heavy compute is memoized per (period, account, fragment_revision); the
+    template still renders each request so request-scoped Jinja globals work.
+    """
+    t0 = time.perf_counter()
+    cache = request.app.state.fragment_cache
+    revision = request.app.state.fragment_revision
+    key = ("/portfolio/body", period or "", account or "", revision)
+    ctx = cache.get(key)
+    cache_hit = ctx is not None
+    if ctx is None:
+        ctx = _compute_portfolio_body_context(
+            request=request, period=period, account=account, repo=repo, svc=svc
+        )
+        cache.set(key, ctx)
+    response = request.app.state.templates.TemplateResponse(
+        request, "_portfolio_body.html", ctx
     )
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+    logger.debug(
+        "portfolio_body: {:.0f} ms cache_hit={} period={} account={!r}",
+        elapsed_ms,
+        cache_hit,
+        period or "ytd",
+        account or "",
+    )
+    return response
 
 
 def _resolve_inbox_rates(tax: TaxConfig | None) -> tuple[Decimal, Decimal]:

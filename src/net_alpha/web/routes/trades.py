@@ -9,6 +9,7 @@ from net_alpha.db.repository import Repository
 from net_alpha.engine.etf_pairs import load_etf_pairs
 from net_alpha.models.domain import Trade
 from net_alpha.web.dependencies import get_repository
+from net_alpha.web.fragment_cache import bump_fragment_revision
 
 router = APIRouter()
 
@@ -75,6 +76,7 @@ def create_trade(
     )
     etf_pairs = load_etf_pairs()
     repo.create_manual_trade(trade, etf_pairs=etf_pairs)
+    bump_fragment_revision(request)
     response = RedirectResponse(url=f"/ticker/{trade.ticker}", status_code=303)
     response.headers["HX-Redirect"] = f"/ticker/{trade.ticker}"
     return response
@@ -122,6 +124,7 @@ def edit_manual(
         saved = repo.update_manual_trade(trade, etf_pairs=etf_pairs)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    bump_fragment_revision(request)
     response = RedirectResponse(url=f"/ticker/{saved.ticker}", status_code=303)
     response.headers["HX-Redirect"] = f"/ticker/{saved.ticker}"
     return response
@@ -163,6 +166,7 @@ def edit_transfer(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    bump_fragment_revision(request)
     target = saved[0].ticker if saved else "?"
     response = RedirectResponse(url=f"/ticker/{target}", status_code=303)
     response.headers["HX-Redirect"] = f"/ticker/{target}"
@@ -186,6 +190,7 @@ def delete_trade(
         repo.delete_manual_trade(trade_id, etf_pairs=etf_pairs)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    bump_fragment_revision(request)
     response = RedirectResponse(url=f"/ticker/{target_ticker}", status_code=303)
     response.headers["HX-Redirect"] = f"/ticker/{target_ticker}"
     return response

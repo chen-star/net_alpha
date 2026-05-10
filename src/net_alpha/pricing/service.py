@@ -76,6 +76,16 @@ class PricingService:
             try:
                 fetched = self._provider.get_quotes(to_fetch)
                 self._cache.put_many(list(fetched.values()))
+                # Pin today's live quote into the historical-close cache. Without
+                # this, the equity-curve warm path treats today as a trailing
+                # missing date (warm_historical_range only negative-caches
+                # *bracketed* gaps), so every reload re-bulk-fetches every
+                # ticker for the same date. End-of-day price-refresh cycles
+                # naturally overwrite this with the authoritative close.
+                today = dt.date.today()
+                self._cache.historical_put_many(
+                    [(sym, today, q.price) for sym, q in fetched.items()]
+                )
                 served.update(fetched)
                 snap.fetched_at = max((q.as_of for q in fetched.values()), default=None)
                 if fetched:

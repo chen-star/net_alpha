@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 from net_alpha.db.repository import Repository
 from net_alpha.models.accounts import AccountType
 from net_alpha.web.dependencies import get_repository
+from net_alpha.web.fragment_cache import bump_fragment_revision
 
 router = APIRouter(prefix="/settings/accounts")
 
@@ -38,4 +39,5 @@ async def update_account(
     if type not in VALID_TYPES:
         return HTMLResponse(f"invalid type: {type}", status_code=400)
     repo.set_account_type(broker=broker, label=label, type_=type)
+    bump_fragment_revision(request)
     return await list_accounts(request, repo=repo)

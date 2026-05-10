@@ -21,6 +21,7 @@ from net_alpha.output.disclaimer import render as disclaimer_render
 from net_alpha.pricing.cache import PriceCache
 from net_alpha.pricing.yahoo import YahooPriceProvider
 from net_alpha.web.dependencies import effective_db_path
+from net_alpha.web.fragment_cache import FragmentCache
 from net_alpha.web.format import fmt_currency, fmt_date, fmt_percent, fmt_quantity
 from net_alpha.web.routes import (
     audit_routes,
@@ -111,6 +112,12 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
     app.state.pricing_config = pricing_config
     app.state.price_provider = YahooPriceProvider() if pricing_config.source == "yahoo" else None
     app.state.price_cache = PriceCache(engine, ttl_seconds=pricing_config.cache_ttl_seconds)
+
+    # Fragment-level cache for the dashboard's heavy compute. Keyed on
+    # (route_path, params, fragment_revision); revision is bumped by write
+    # endpoints (see fragment_cache.bump_fragment_revision).
+    app.state.fragment_cache = FragmentCache(ttl_seconds=60)
+    app.state.fragment_revision = 0
 
     static_dir = files("net_alpha.web") / "static"
     templates_dir = files("net_alpha.web") / "templates"

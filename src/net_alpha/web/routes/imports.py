@@ -23,6 +23,7 @@ from net_alpha.service.jobs.runner import run_job
 from net_alpha.service.jobs.washsale_watch import run_washsale_watch
 from net_alpha.splits.sync import _post_import_autosync_splits
 from net_alpha.web.dependencies import get_etf_pairs, get_repository
+from net_alpha.web.fragment_cache import bump_fragment_revision
 
 router = APIRouter()
 
@@ -158,6 +159,7 @@ def remove_import(
         # are demoted to FIFO/unknown before detection runs.
         stitch_account(repo, account_id)
         recompute_all_violations(repo, etf_pairs)
+    bump_fragment_revision(request)
     pagination = _paginate_imports(repo.list_imports(), page=page, page_size=_IMPORTS_PAGE_SIZE)
     return request.app.state.templates.TemplateResponse(
         request,
@@ -196,6 +198,8 @@ def bulk_remove_imports(
         stitch_account(repo, acct_id)
     if needs_recompute:
         recompute_all_violations(repo, etf_pairs)
+    if ids:
+        bump_fragment_revision(request)
     pagination = _paginate_imports(repo.list_imports(), page=page, page_size=_IMPORTS_PAGE_SIZE)
     return request.app.state.templates.TemplateResponse(
         request,
@@ -405,6 +409,9 @@ async def upload(
     _post_import_autosync_splits(repo, new_symbols=new_symbols, existing_symbols=existing_symbols)
 
     _enqueue_washsale_watch(request)
+
+    if new_trade_count or new_gl_count:
+        bump_fragment_revision(request)
 
     if last_import_id is not None:
         return RedirectResponse(url=f"/imports/success?id={last_import_id}", status_code=303)
