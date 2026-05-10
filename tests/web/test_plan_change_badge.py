@@ -50,3 +50,20 @@ def test_mark_as_seen_persists_timestamp_and_snapshot(client, repo):
     assert repo.get_plan_last_seen_at() is not None
     snap = repo.read_plan_snapshot()
     assert "NVDA" in snap
+
+
+def test_mark_as_seen_snapshot_is_global_not_account_filtered(client, repo):
+    """Posting mark-seen with ?account=… must NOT filter the snapshot — the
+    snapshot is always cross-account global. Otherwise pl_bucket entries for
+    out-of-account targets would silently snapshot as 0, corrupting future
+    diffs after the user switches back to All accounts."""
+    _seed_target(repo, symbol="NVDA")
+    # POST with an account filter — the snapshot must still cover NVDA.
+    resp = client.post("/positions/plan/mark-seen?account=fake/none")
+    assert resp.status_code in (200, 204), resp.status_code
+    snap = repo.read_plan_snapshot()
+    assert "NVDA" in snap, (
+        "snapshot must include all targets regardless of account filter "
+        "on the request URL — otherwise multi-account users get corrupted "
+        "snapshots when marking as seen from a filtered view"
+    )

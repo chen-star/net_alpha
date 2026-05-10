@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
+from starlette.responses import Response
 
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.carryforward import get_effective_carryforward
@@ -606,33 +607,36 @@ def plan_target_delete(
     return _render_plan_body(request, repo, pricing)
 
 
-@router.post("/positions/plan/mark-seen", response_class=HTMLResponse)
+@router.post("/positions/plan/mark-seen")
 def plan_mark_seen(
     request: Request,
     repo: Repository = Depends(get_repository),
     pricing: PricingService = Depends(get_pricing_service),
-    account: str | None = None,
-) -> HTMLResponse:
+) -> Response:
     """Persist the current Plan view as the new 'last seen' snapshot.
 
-    Wipes the prior snapshot in full and writes one row per current plan-view
-    ticker. Updates `plan_last_seen_at` in the meta table. Returns 204 No
-    Content; the toolbar button reloads the page after success.
+    Snapshot is always global (cross-account) — the `account` filter on
+    GET routes does not apply here. The current Plan view is built with
+    all positions, all targets, all watch results, then written in full.
+
+    Returns 204 No Content; the toolbar button reloads the page after
+    success.
     """
     from dataclasses import asdict
-    from datetime import datetime
 
     from net_alpha.portfolio.plan_diff import SnapshotRow
 
-    plan_view, pos_by_sym = _build_plan_view_for_request(repo, pricing, account, selected_tag=None, sort_key="alpha")
+    plan_view, pos_by_sym = _build_plan_view_for_request(
+        repo, pricing, account=None, selected_tag=None, sort_key="alpha"
+    )
     watch_results = repo.watch_results_by_target()
     diff_rows = _build_plan_diff_rows(plan_view, pos_by_sym, watch_results)
     snapshot = [SnapshotRow(**asdict(r)) for r in diff_rows]
 
-    now_iso = datetime.now(dt.UTC).isoformat()
+    now_iso = dt.datetime.now(dt.UTC).isoformat()
     repo.write_plan_snapshot(snapshot, taken_at=now_iso)
     repo.set_plan_last_seen_at(now_iso)
-    return HTMLResponse(status_code=204)
+    return Response(status_code=204)
 
 
 @router.post("/positions/plan/target/{symbol}/tag", response_class=HTMLResponse)
