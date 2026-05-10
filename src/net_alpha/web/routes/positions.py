@@ -350,6 +350,39 @@ def positions_pane(
 # ---------------------------------------------------------------------------
 
 
+def _build_plan_diff_rows(
+    plan_view: PlanView,
+    pos_by_sym: dict[str, PositionRow],
+    watch_results: dict,
+) -> list:
+    """Build PlanDiffRow per visible plan-view row.
+
+    Extracted so both the diff path (_compute_change_states) and the snapshot
+    path (plan_mark_seen) can reuse the field mapping. PlanDiffRow and
+    SnapshotRow have identical fields; SnapshotRow can be constructed from a
+    PlanDiffRow via SnapshotRow(**asdict(r)).
+    """
+    from net_alpha.portfolio.plan_diff import PlanDiffRow, compute_pl_bucket
+
+    out: list[PlanDiffRow] = []
+    for r in plan_view.rows:
+        pos = pos_by_sym.get(r.symbol)
+        unrealized = float(pos.unrealized_pl) if pos and pos.unrealized_pl is not None else 0.0
+        basis = float(pos.open_cost) if pos else 0.0
+        watch = watch_results.get(r.symbol)
+        severity = watch.severity if watch else "green"
+        out.append(
+            PlanDiffRow(
+                ticker=r.symbol,
+                target_kind=str(r.target_unit),
+                target_value=float(r.target_amount),
+                risk_pill=severity,
+                pl_bucket=compute_pl_bucket(unrealized, basis),
+            )
+        )
+    return out
+
+
 def _compute_change_states(
     plan_view: PlanView,
     pos_by_sym: dict[str, PositionRow],
@@ -365,33 +398,12 @@ def _compute_change_states(
     Operates on the rows currently in plan_view (call after pagination so only
     visible rows are diffed).
     """
-    from net_alpha.portfolio.plan_diff import (
-        PlanDiffRow,
-        compute_pl_bucket,
-        diff_plan,
-    )
+    from net_alpha.portfolio.plan_diff import diff_plan
 
     watch_results = repo.watch_results_by_target()
-    current_diff_rows: list[PlanDiffRow] = []
-    for r in plan_view.rows:
-        pos = pos_by_sym.get(r.symbol)
-        unrealized = float(pos.unrealized_pl) if pos and pos.unrealized_pl is not None else 0.0
-        basis = float(pos.open_cost) if pos else 0.0
-        watch = watch_results.get(r.symbol)
-        severity = watch.severity if watch else "green"
-        current_diff_rows.append(
-            PlanDiffRow(
-                ticker=r.symbol,
-                target_kind=str(r.target_unit),
-                target_value=float(r.target_amount),
-                risk_pill=severity,
-                pl_bucket=compute_pl_bucket(unrealized, basis),
-            )
-        )
-
+    diff_rows = _build_plan_diff_rows(plan_view, pos_by_sym, watch_results)
     snapshot = repo.read_plan_snapshot()
-    change_states = diff_plan(current_diff_rows, snapshot)
-    return change_states, watch_results
+    return diff_plan(diff_rows, snapshot), watch_results
 
 
 def _build_plan_view_for_request(
@@ -592,6 +604,35 @@ def plan_target_delete(
 ) -> HTMLResponse:
     repo.delete_target(symbol)
     return _render_plan_body(request, repo, pricing)
+
+
+@router.post("/positions/plan/mark-seen", response_class=HTMLResponse)
+def plan_mark_seen(
+    request: Request,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+    account: str | None = None,
+) -> HTMLResponse:
+    """Persist the current Plan view as the new 'last seen' snapshot.
+
+    Wipes the prior snapshot in full and writes one row per current plan-view
+    ticker. Updates `plan_last_seen_at` in the meta table. Returns 204 No
+    Content; the toolbar button reloads the page after success.
+    """
+    from dataclasses import asdict
+    from datetime import datetime
+
+    from net_alpha.portfolio.plan_diff import SnapshotRow
+
+    plan_view, pos_by_sym = _build_plan_view_for_request(repo, pricing, account, selected_tag=None, sort_key="alpha")
+    watch_results = repo.watch_results_by_target()
+    diff_rows = _build_plan_diff_rows(plan_view, pos_by_sym, watch_results)
+    snapshot = [SnapshotRow(**asdict(r)) for r in diff_rows]
+
+    now_iso = datetime.now(dt.UTC).isoformat()
+    repo.write_plan_snapshot(snapshot, taken_at=now_iso)
+    repo.set_plan_last_seen_at(now_iso)
+    return HTMLResponse(status_code=204)
 
 
 @router.post("/positions/plan/target/{symbol}/tag", response_class=HTMLResponse)

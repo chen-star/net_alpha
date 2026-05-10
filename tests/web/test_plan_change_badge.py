@@ -39,3 +39,14 @@ def test_mark_as_seen_button_is_present(client):
     assert resp.status_code == 200
     # Either label is acceptable; pick whichever Task 11 uses.
     assert "Mark as seen" in resp.text or "Mark all seen" in resp.text
+
+
+def test_mark_as_seen_persists_timestamp_and_snapshot(client, repo):
+    """Posting mark-seen writes plan_last_seen_at and rewrites the snapshot."""
+    _seed_target(repo, symbol="NVDA")
+    assert repo.get_plan_last_seen_at() is None
+    resp = client.post("/positions/plan/mark-seen")
+    assert resp.status_code in (200, 204)
+    assert repo.get_plan_last_seen_at() is not None
+    snap = repo.read_plan_snapshot()
+    assert "NVDA" in snap
