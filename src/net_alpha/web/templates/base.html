@@ -56,6 +56,8 @@
   <script src="/static/keyboard.js?v={{ asset_v }}" defer></script>
   <script src="/static/vendor/sortablejs/Sortable.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/plan_reorder.js?v={{ asset_v }}" defer></script>
+  <script id="palette-index" type="application/json">{{ palette_index_json() | safe }}</script>
+  <script src="/static/palette.js?v={{ asset_v }}" defer></script>
 </head>
 <body class="min-h-screen flex flex-col bg-bg text-text"
       x-data
@@ -129,6 +131,7 @@
   </dialog>
   {% include "_settings_drawer.html" %}
   {% include "_keyboard_cheatsheet.html" %}
+  {% include "_palette.html" %}
   {% set _fvm = first_visit_modal_data() %}
   {% if _fvm.show_modal %}
     {% with accounts=_fvm.accounts %}
