@@ -225,6 +225,7 @@ def detect_offsetting_groups(
         long_puts = [p for p in legs if p.kind == "long_put"]
         long_stk = [p for p in legs if p.kind == "long_stock"]
         short_calls = [p for p in legs if p.kind == "short_call"]
+        short_puts = [p for p in legs if p.kind == "short_put"]
 
         # Rule 1 — literal straddle.
         if long_calls and long_puts:
@@ -290,6 +291,44 @@ def detect_offsetting_groups(
                         confidence="Confirmed",
                         rule_citation="IRC §1092(c)(4)",
                         reasoning=reasoning,
+                    )
+                )
+
+        # Rule 4 — vertical spread (same expiry, opposite legs, same option type).
+        for lc in long_calls:
+            for sc in short_calls:
+                if lc.option_expiry is None or sc.option_expiry is None:
+                    continue
+                if lc.option_expiry != sc.option_expiry:
+                    continue
+                groups.append(
+                    OffsettingGroup(
+                        account=account,
+                        ticker=ticker,
+                        positions=[lc, sc],
+                        kind="vertical_spread",
+                        confidence="Confirmed",
+                        rule_citation="IRC §1092(c)(2)(A)",
+                        reasoning="Long call + short call (same expiry) — short leg substantially "
+                        "diminishes loss risk on the long leg; pair is an §1092 straddle.",
+                    )
+                )
+        for lp in long_puts:
+            for sp in short_puts:
+                if lp.option_expiry is None or sp.option_expiry is None:
+                    continue
+                if lp.option_expiry != sp.option_expiry:
+                    continue
+                groups.append(
+                    OffsettingGroup(
+                        account=account,
+                        ticker=ticker,
+                        positions=[lp, sp],
+                        kind="vertical_spread",
+                        confidence="Confirmed",
+                        rule_citation="IRC §1092(c)(2)(A)",
+                        reasoning="Long put + short put (same expiry) — short leg substantially "
+                        "diminishes loss risk on the long leg; pair is an §1092 straddle.",
                     )
                 )
 

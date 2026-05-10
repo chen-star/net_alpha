@@ -231,3 +231,24 @@ def test_covered_call_without_underlying_price_falls_back_to_strike_only():
     cc_groups = [g for g in groups if g.kind == "covered_call"]
     assert len(cc_groups) == 1
     assert "QCC" in cc_groups[0].reasoning and "skipped" in cc_groups[0].reasoning.lower()
+
+
+def test_long_call_short_call_same_expiry_emits_vertical_spread():
+    long_call = _long_call_trade(strike=180.0, expiry=date(2026, 6, 19))
+    sto_call = _short_call_sto(strike=200.0, expiry=date(2026, 6, 19), proceeds=200.0)
+    lots = [Lot.from_trade(long_call)]
+
+    groups = detect_offsetting_groups(trades=[long_call, sto_call], lots=lots)
+    spreads = [g for g in groups if g.kind == "vertical_spread"]
+    assert len(spreads) == 1
+    assert {p.kind for p in spreads[0].positions} == {"long_call", "short_call"}
+    assert spreads[0].rule_citation.startswith("IRC §1092")
+
+
+def test_long_call_short_call_different_expiry_no_spread():
+    long_call = _long_call_trade(strike=180.0, expiry=date(2026, 6, 19))
+    sto_call = _short_call_sto(strike=200.0, expiry=date(2026, 9, 18), proceeds=200.0)
+    lots = [Lot.from_trade(long_call)]
+
+    groups = detect_offsetting_groups(trades=[long_call, sto_call], lots=lots)
+    assert [g for g in groups if g.kind == "vertical_spread"] == []
