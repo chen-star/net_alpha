@@ -10,6 +10,7 @@ from loguru import logger
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.cash_flow import compute_cash_kpis
+from net_alpha.portfolio.models import PositionRow
 from net_alpha.portfolio.positions import (
     compute_closed_lots,
     compute_open_positions,
@@ -20,7 +21,7 @@ from net_alpha.portfolio.tax_planner import compute_harvest_queue, compute_offse
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
 from net_alpha.targets.models import TargetUnit
-from net_alpha.targets.view import build_plan_view
+from net_alpha.targets.view import PlanView, build_plan_view
 from net_alpha.web.dependencies import (
     get_etf_pairs,
     get_pricing_service,
@@ -181,7 +182,9 @@ def positions_page(
 
         selected_tag_param = request.query_params.get("tag") or None
         sort_key_param = request.query_params.get("sort") or "alpha"
-        plan_view = _build_plan_view_for_request(repo, pricing, account, selected_tag_param, sort_key_param)
+        plan_view, _pos_by_sym = _build_plan_view_for_request(
+            repo, pricing, account, selected_tag_param, sort_key_param
+        )
 
         page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
         page_norm = max(1, page)
@@ -350,10 +353,10 @@ def _build_plan_view_for_request(
     account: str | None,
     selected_tag: str | None = None,
     sort_key: str = "alpha",
-):
+) -> tuple[PlanView, dict[str, PositionRow]]:
     """Compute the PlanView used by both GET ?view=plan and the POST/DELETE
     fragment refreshes. Pulls trades, lots, prices, cash events, CSP collateral,
-    free cash, then calls build_plan_view."""
+    free cash, then calls build_plan_view. Returns (plan_view, pos_by_sym)."""
     if sort_key == "manual":
         targets = repo.list_targets_by_manual_order()
     else:
@@ -403,7 +406,7 @@ def _build_plan_view_for_request(
     cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
     free_cash = cash_kpis.cash_balance - cash_secured_total
 
-    return build_plan_view(
+    plan_view = build_plan_view(
         targets=targets,
         positions_by_symbol=pos_by_sym,
         quotes_by_symbol=quotes_by_sym,
@@ -411,6 +414,7 @@ def _build_plan_view_for_request(
         selected_tag=selected_tag,
         sort_key=sort_key,
     )
+    return plan_view, pos_by_sym
 
 
 def _modal_error(request: Request, msg: str, status: int) -> HTMLResponse:
@@ -437,7 +441,9 @@ def _render_plan_body(
 ) -> HTMLResponse:
     import dataclasses as _dc
 
-    plan_view = _build_plan_view_for_request(repo, pricing, account, selected_tag, sort_key)
+    from net_alpha.portfolio.plan_diff import PlanDiffRow, compute_pl_bucket, diff_plan
+
+    plan_view, pos_by_sym = _build_plan_view_for_request(repo, pricing, account, selected_tag, sort_key)
 
     page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
     page_norm = max(1, page)
@@ -448,6 +454,27 @@ def _render_plan_body(
     end_idx = start_idx + page_size_norm
     plan_view = _dc.replace(plan_view, rows=list(plan_view.rows)[start_idx:end_idx])
 
+    watch_results = repo.watch_results_by_target()
+    current_diff_rows: list[PlanDiffRow] = []
+    for r in plan_view.rows:
+        pos = pos_by_sym.get(r.symbol)
+        unrealized = float(pos.unrealized_pl) if pos and pos.unrealized_pl is not None else 0.0
+        basis = float(pos.open_cost) if pos else 0.0
+        watch = watch_results.get(r.symbol)
+        severity = watch.severity if watch else "green"
+        current_diff_rows.append(
+            PlanDiffRow(
+                ticker=r.symbol,
+                target_kind=str(r.target_unit),
+                target_value=float(r.target_amount),
+                risk_pill=severity,
+                pl_bucket=compute_pl_bucket(unrealized, basis),
+            )
+        )
+
+    snapshot = repo.read_plan_snapshot()
+    change_states = diff_plan(current_diff_rows, snapshot)
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_positions_view_plan.html",
@@ -455,7 +482,8 @@ def _render_plan_body(
             "plan_view": plan_view,
             "selected_account": account or "",
             "selected_period": "ytd",
-            "watch_by_target_id": repo.watch_results_by_target(),
+            "watch_by_target_id": watch_results,
+            "change_states": change_states,
             "pagination": {
                 "page": page_norm,
                 "page_size": page_size_norm,
