@@ -11,23 +11,22 @@
 [![codecov](https://codecov.io/github/chen-star/net_alpha/graph/badge.svg?token=XETFUGJO3L)](https://codecov.io/github/chen-star/net_alpha)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Overview](#overview) ·
+[Why](#why-net-alpha) ·
 [Quickstart](#quickstart) ·
-[Service management](#service-management) ·
 [Features](#features) ·
 [Usage](#usage) ·
-[How the rules work](#how-the-rules-work) ·
-[Architecture](#architecture)
+[Rules](#how-the-rules-work) ·
+[Service](#always-on-service) ·
+[Architecture](#architecture) ·
+[Development](#development)
 
 </div>
 
 ---
 
-## Overview
+## Why net-alpha
 
-When you trade across multiple brokerages, each platform tracks wash sales **only within its own ecosystem**. A loss sale on Schwab can be silently neutralized by a repurchase on Fidelity, and you won't find out until tax season — long after the window to act has closed.
-
-The problem compounds when you trade **options** alongside the underlying, or **ETFs** that track the same index.
+When you trade across multiple brokerages, each platform tracks wash sales **only within its own ecosystem**. A loss sale on Schwab can be silently neutralized by a repurchase on Fidelity — you won't find out until tax season, long after the window to act has closed. The problem compounds when you trade **options** alongside the underlying, or **ETFs** that track the same index.
 
 **net-alpha** is a local-first Python tool that gives you a single, unified view of your wash sale exposure across every account, asset class, and tax year — *before* it's too late to act.
 
@@ -39,22 +38,20 @@ The problem compounds when you trade **options** alongside the underlying, or **
 `net-alpha` requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-# Install with the local web UI
+# 1. Install with the local web UI
 uv tool install 'wash-alpha[ui]'
 
-# One-time: install the always-on background service
+# 2. (Optional) Install the always-on background service
 net-alpha service install
 
-# Open the dashboard (browser opens automatically)
+# 3. Open the dashboard (browser opens automatically)
 net-alpha ui
 ```
 
-The service runs locally at http://127.0.0.1:8765. It refreshes prices every 4 hours
-and re-runs forward-looking wash-sale + §1091 detection daily. Stop it any time with
-`net-alpha service stop` (data at `~/.net_alpha/` is left untouched).
+The UI runs locally at `http://127.0.0.1:8765`. With the service installed, prices refresh every 4 hours and forward-looking wash-sale checks run daily; without it, `net-alpha ui` runs ephemerally (Ctrl-C to stop).
 
-Prefer a one-shot launch without the background service? `net-alpha ui` still works in
-ephemeral mode (Ctrl-C to stop). The service is opt-in.
+> [!TIP]
+> First run? Pick **"Try the demo"** on the welcome screen for a guided tour with sample data — no CSV needed. Replay any time from `/tour`.
 
 Prefer the terminal? The CLI works without UI extras:
 
@@ -63,104 +60,85 @@ uv tool install wash-alpha
 net-alpha schwab.csv --account personal --detail
 ```
 
-## Service management
-
-| Command | Effect |
-|---|---|
-| `net-alpha service install` | Provision the runtime venv at `~/.net_alpha/venv/`, write the launchd plist + sandbox profile, and (re)load the agent. Idempotent — safe to re-run. |
-| `net-alpha service start` | Start (or reload) the service |
-| `net-alpha service stop` | Stop the service. Survives reboots until `start` |
-| `net-alpha service restart` | Restart |
-| `net-alpha service pause` | Freeze background jobs but keep the dashboard reachable |
-| `net-alpha service resume` | Unfreeze jobs |
-| `net-alpha service status` | Health report (also `--json` for scripting) |
-| `net-alpha service logs -f` | Tail the service log |
-| `net-alpha service uninstall` | Remove plist, sandbox profile, and runtime venv. Your data at `~/.net_alpha/net_alpha.db` is preserved. |
-
-The dashboard at `/settings/service` exposes the same controls in a UI surface, plus
-recent-runs history and a status pill in the site header.
-
-### What `install` does
-
-Everything the running service needs lives inside `~/.net_alpha/`, the only path
-the sandbox profile allows the service to write to:
-
-- `~/.net_alpha/venv/` — a dedicated runtime venv (homebrew Python 3.11 via `uv`) with `wash-alpha` installed from your local project source.
-- `~/.net_alpha/bin/net-alpha-wrap` — the launchd wrapper script.
-- `~/.net_alpha/run/sandbox.sb` — the sandbox-exec profile applied to the running service.
-- `~/Library/LaunchAgents/com.netalpha.service.plist` — the LaunchAgent registration.
-
-The runtime venv intentionally lives outside `~/Documents/`. Under launchd, the
-service runs with a TCC identity that can't read user-data folders, so the
-project's own `.venv/` is unreadable; `~/.net_alpha/` is TCC-clear.
-
-Re-running `install` is safe — it bootouts a stale plist before re-bootstrapping
-and reinstalls `wash-alpha` with `uv pip install --reinstall-package wash-alpha`
-(deps stay cached, so the refresh is fast).
-
-### Re-installing after code changes
-
-The runtime venv is a non-editable snapshot of your project source at install
-time. To make the running service reflect new code or `pyproject.toml` changes,
-re-run `net-alpha service install`.
-
-For active development, run `net-alpha …` directly from your project's editable
-`.venv` — the LaunchAgent is for the always-on background service, not for the
-dev edit-run loop.
-
 ## Features
 
+### Detection
+
 - **Cross-account intelligence** — match a loss sale on one broker against a repurchase on another in a single pass. The whole point of the tool.
-- **Bundled broker parsers** — Schwab transactions and Schwab Realized G/L are supported out of the box. Other brokers can be added by contributing a parser.
-- **Local web UI** — Portfolio · Positions · Tax · Sim · Imports · per-ticker drill-down, all rendered server-side via HTMX. No Node, no npm, no CDN at runtime, dependencies vendored.
-- **Pre-trade simulation** — `net-alpha sim TSLA 10 --price 180` shows FIFO lot consumption, realized P&L, and a cross-account wash-sale verdict per account *before* you execute. The Sim page surfaces one-click suggestion chips (largest unrealized loss, wash-sale risk, largest unrealized gain).
-- **Tax-harvest planner** — a forward-looking, plan-builder assistant turns the harvest queue into a ranked, editable plan (greedy by tax saved, capped by §1211's $3,000 ordinary-loss limit). Honors user-declared position targets so it never closes something you want to keep.
-- **§1256 awareness** — index options (SPX, NDX, RUT, VIX, etc.) are recognized as §1256 contracts: wash-sale-exempt with statutory 60/40 LT/ST classification.
-- **Auditable explanations** — every wash-sale flag includes rule citation, source trades, match reason, math, and confidence reasoning — inline in the UI or via `--detail` on the CLI. Per-symbol reconciliation cross-checks computed P&L against your broker's Realized G/L file.
-- **After-tax performance** — the Tax → Performance view shows realized P&L *after* estimated taxes, with a tax-drag breakdown and an ST/LT/§1256 mix bar.
-- **Manual trade CRUD** — add, edit, transfer, or delete trades by hand from the web UI; wash sales recompute automatically over the affected window.
-- **100% local & zero-knowledge** — your trade data, accounts, and P&L never leave the box. Symbols are sent to Yahoo Finance for live quotes only; disable with `prices.enable_remote: false`.
+- **§1091 wash sales** — equities, options (exact contract or same underlying), and ETFs (same ticker or same-index pair). Every match has a **Confirmed / Probable / Unclear** confidence label with rule citation.
+- **§1256 awareness** — index options (SPX, NDX, RUT, VIX, …) are recognized as §1256 contracts: wash-sale-exempt with statutory 60/40 LT/ST classification.
+- **§1092 straddles** — `net-alpha straddles` surfaces literal straddles, married puts, non-qualified covered calls (with QCC test), and vertical spreads. Holding-period suspension warnings attach to affected lots.
+- **Bundled "substantially identical" pairs** — major index-tracking ETFs (S&P 500, Nasdaq-100, Russell 2000, …). Extend with your own at `~/.net_alpha/etf_pairs.yaml` (additive, never replaces defaults).
+
+### Planning
+
+- **Pre-trade simulator** — `/sim` shows FIFO lot consumption, realized P&L, and a per-account cross-account wash-sale verdict *before* you execute. Suggestion chips surface the largest unrealized loss, wash-sale risk, and largest unrealized gain.
+- **Lot-selection strategies** — compare **FIFO / LIFO / HIFO / MIN_TAX / MAX_LOSS** side-by-side on a Sell sim, with each strategy's wash-sale verdict computed independently.
+- **Tax-harvest planner** — `/tax/harvest/plan` turns the harvest queue into a ranked, editable plan (greedy by tax saved, capped by §1211's $3,000 ordinary-loss limit). Honors user-declared **PositionTargets** so it never closes something you want to keep.
+- **Forward-looking watchlist** — the always-on service forward-simulates every PositionTarget daily and surfaces wash-sale / §1091 risk inline as colored pills on the Plan view.
+- **Action Inbox** — a single panel rolls urgent items (imminent wash-sale tripwires, §1092 holding-period suspensions, broken reconciliation, missing basis) into one place.
+
+### Reporting
+
+- **After-tax performance** — `/tax?view=performance` shows realized P&L *after* estimated taxes, with a tax-drag breakdown and an ST/LT/§1256 mix bar.
+- **Capital-loss carryforward** — auto-derived from prior years honoring §1212(b) cross-category netting and §1211 $3K cap, with hand-editable overrides at `/settings/carryforward`.
+- **Auditable explanations** — every wash-sale flag includes rule citation, source trades, match reason, math, and confidence reasoning — inline in the UI or via `--detail` on the CLI.
+- **Per-symbol reconciliation** — cross-checks computed P&L against your broker's Realized G/L file (Schwab supported); discrepancies surface inline on the ticker page.
+- **Data hygiene rollup** — Imports page groups missing-basis / no-quote / missing-date rows so you can fix them in one pass.
+
+### Local & private
+
+- **100% local, zero-knowledge** — your trade data, accounts, and P&L never leave the box. Symbols are sent to Yahoo Finance for live quotes only; disable with `prices.enable_remote: false`.
+- **No CDN at runtime, no Node** — htmx, Alpine, ApexCharts, Lucide icons, and fonts are vendored under `web/static/`.
+- **Manual trade CRUD** — add, edit, transfer, or delete trades from the web UI; wash sales recompute over the affected window automatically.
 
 ## Usage
 
-### Local web UI
+### Local web UI (primary surface)
 
 ```bash
 net-alpha ui [--port 8765] [--no-browser] [--reload]
 ```
 
-Drop CSVs onto the dashboard, drill into any ticker, build a harvest plan, hand-enter trades, run pre-trade sims with suggested chips. Server-side HTMX, dies on Ctrl-C.
+| Page | Highlights |
+| :--- | :--- |
+| `/` Portfolio | KPIs, allocation, equity & cash curves, top movers, options & short-options panels, wash-sale watch |
+| `/positions` | Holdings (all / stocks / options / at-loss / closed), drag-to-reorder Plan view, multi-lot basis editor |
+| `/sim` | Pre-trade simulator with suggestion chips and lot-strategy comparison table |
+| `/tax` | After-tax performance, harvest queue, plan-builder, projection setup, wash-sale + exempt-match listings |
+| `/imports` | Drop-zone upload, preview/commit, per-import detail, data-hygiene buckets |
+| `/ticker/{symbol}` | Per-symbol timeline, lots, reconciliation, lot edit + add-trade forms |
+| `/settings` | Profile, density, ETF pairs, carryforward, service controls, about |
 
-### Import + check from the CLI
+Server-side HTMX + Alpine, dies on Ctrl-C.
+
+### CLI
 
 ```bash
-net-alpha schwab.csv --account personal
-```
+# Import a CSV → recompute wash sales → print watchlist + YTD impact
+net-alpha schwab.csv --account personal [--detail]
 
-Imports the CSV, recomputes wash sales over the affected window, and prints a watch list plus a YTD impact summary. Add `--detail` for a per-violation breakdown.
-
-### Pre-trade simulation
-
-```bash
+# Pre-trade simulation across every account holding the ticker
 net-alpha sim TSLA 10 --price 180
-```
 
-Lists every account that holds the ticker, with FIFO lot consumption, realized P&L, and a cross-account wash-sale verdict per account.
+# §1092 straddles currently open
+net-alpha straddles [--detail]
 
-### Manage past imports
+# Manage past imports (recomputes wash sales on remove)
+net-alpha imports
+net-alpha imports rm 3 --yes
 
-```bash
-net-alpha imports                # list
-net-alpha imports rm 3 --yes     # remove (recomputes wash sales)
-```
-
-### Migrate from v0.x
-
-```bash
+# v1 → v2 schema migration helper (v2.0.x line only)
 net-alpha migrate-from-v1 --yes
 ```
 
-Reads `~/.net_alpha/net_alpha.db` (v1 schema) and writes a fresh v2 DB at `~/.net_alpha/net_alpha.db.v2`. Helper exists only on the v2.0.x line.
+### Adding a broker
+
+Bundled at launch: **Schwab** (transactions + Realized G/L for audit reconciliation). To add another:
+
+1. Implement the `BrokerParser` Protocol at `src/net_alpha/brokers/<name>.py`.
+2. Register it in `brokers/registry.py`.
+3. (Optional) Add a Realized G/L parser at `src/net_alpha/audit/brokers/`.
 
 ## How the rules work
 
@@ -174,32 +152,55 @@ Reads `~/.net_alpha/net_alpha.db` (v1 schema) and writes a fresh v2 DB at `~/.ne
 | **ETFs** | Sold ETF at a loss, bought the exact same ETF ticker | 🟢 **Confirmed** |
 | **ETFs** | Sold ETF at a loss, bought ETF tracking the same index (e.g., `SPY` → `VOO`) | 🔵 **Unclear** |
 
-Bundled "substantially identical" pairs cover the major index-tracking ETFs (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, etc.). Extend with your own pairs by editing `~/.net_alpha/etf_pairs.yaml` — your file *adds* to the bundled defaults, never replaces them.
+### §1256 contracts
 
-### §1092 Straddles
+Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, …) are exempt from §1091. Closed §1256 P&L is split 60/40 LT/ST per §1256(a)(3), regardless of holding period. Open positions at year-end are **not** marked-to-market in v1; consult your 1099-B / Form 6781.
 
-`net-alpha` also surfaces same-underlying offsetting positions caught by
-**IRC §1092** (the "straddle" rule). v1 detects:
+### §1092 straddles
+
+Same-underlying offsetting positions caught by IRC §1092:
 
 - **Literal straddles** — long call + long put on the same underlying
 - **Married puts** — long stock + long put on the same underlying
-- **Non-qualified covered calls** — long stock + short call that fails the
-  §1092(c)(4) Qualified Covered Call test
+- **Non-qualified covered calls** — long stock + short call that fails the §1092(c)(4) Qualified Covered Call test
 - **Vertical spreads** — long + short option of the same series, opposite legs
 
-Run `net-alpha straddles` (add `--detail` for rule citations and per-leg
-breakdown). When you simulate a sell, any §1092 straddle still active on the
-ticker is surfaced inline.
+> [!NOTE]
+> The QCC test in v1 is a conservative approximation of IRS Notice 2003-31's lowest-qualified-benchmark step table — it errs on the side of flagging deeper-ITM calls. Loss-deferral computation, the §1092(b) modified wash-sale rule, identified-straddle elections, and correlation-based stock/ETF offsets are deferred to v2.
 
-The QCC test in v1 is a conservative approximation of IRS Notice 2003-31's
-lowest-qualified-benchmark step table — it errs on the side of flagging
-deeper-ITM calls. Loss-deferral computation, the §1092(b) modified wash-sale
-rule, identified-straddle elections, and correlation-based stock/ETF offsets
-are deferred to v2.
+## Always-on service
 
-### Adding a broker
+`net-alpha service` is an opt-in launchd-supervised process that hosts the FastAPI app and runs two background jobs:
 
-Contribute a parser at `src/net_alpha/brokers/<name>.py` — implement the `BrokerParser` Protocol and register it in `brokers/registry.py`. Realized G/L parsers go in `src/net_alpha/audit/brokers/`.
+- **`price_refresh`** — every 4 hours, refreshes quotes for held + targeted tickers.
+- **`washsale_watch`** — daily 04:00 + on every manual import. Forward-simulates each PositionTarget and surfaces wash-sale / §1091 risk in the Plan view.
+
+### Lifecycle
+
+| Command | Effect |
+| :--- | :--- |
+| `net-alpha service install` | Provision runtime venv, write launchd plist + sandbox profile, (re)load the agent. Idempotent. |
+| `net-alpha service start` / `stop` / `restart` | Lifecycle. `stop` survives reboots until `start`. |
+| `net-alpha service pause` / `resume` | Freeze background jobs but keep the dashboard reachable. |
+| `net-alpha service status [--json]` | Health report. |
+| `net-alpha service logs [-f]` | View / tail the service log. |
+| `net-alpha service uninstall` | Remove plist, sandbox, and runtime venv. **Data at `~/.net_alpha/net_alpha.db` is preserved.** |
+
+The dashboard at `/settings/service` exposes the same controls in a UI surface, plus recent-runs history and a status pill in the site header.
+
+### What `install` does
+
+Everything the running service needs lives inside `~/.net_alpha/`, the only path the sandbox profile allows the service to write to:
+
+- `~/.net_alpha/venv/` — dedicated runtime venv with `wash-alpha` installed from your local project source.
+- `~/.net_alpha/bin/net-alpha-wrap` — the launchd wrapper script.
+- `~/.net_alpha/run/sandbox.sb` — the sandbox-exec profile applied to the running service.
+- `~/Library/LaunchAgents/com.netalpha.service.plist` — the LaunchAgent registration.
+
+> [!IMPORTANT]
+> The runtime venv intentionally lives outside `~/Documents/`. Under launchd, the service runs with a TCC identity that cannot read user-data folders, so the project's own `.venv/` is unreadable; `~/.net_alpha/` is TCC-clear.
+
+The runtime venv is a **non-editable snapshot** of your project source at install time. To make the running service reflect new code or `pyproject.toml` changes, re-run `net-alpha service install`. For active development, run `net-alpha …` directly from your editable `.venv` — the LaunchAgent is for the always-on service, not the dev edit-run loop.
 
 ## Architecture
 
@@ -208,18 +209,22 @@ CSV → BrokerParser → Trade (Pydantic) ──► SQLite (~/.net_alpha/net_alp
                                               │
                                               ├─► Wash-sale engine  (incremental ±30-day window)
                                               ├─► §1256 classifier  (60/40 LT/ST split)
+                                              ├─► §1092 straddle detector
                                               ├─► Reconciliation    (against broker Realized G/L)
                                               └─► Portfolio / planner / pricing  (pure functions)
                                                                 │
                                                   ┌─────────────┴─────────────┐
                                                   ▼                           ▼
                                             Typer CLI                 FastAPI + HTMX UI
+                                                                              │
+                                                                launchd-supervised service
+                                                                  (price_refresh + washsale_watch)
 ```
 
-- **Stack** — Python 3.11+, `pydantic` v2, `sqlmodel` over SQLite, `typer` CLI, optional `fastapi` + Jinja + HTMX UI, `ruff`, `pytest`. Managed with `uv`.
+- **Stack** — Python 3.11+, `pydantic` v2, `sqlmodel` over SQLite, `typer` CLI, optional `fastapi` + Jinja + HTMX UI, APScheduler for the service, `ruff`, `pytest`. Managed with `uv`.
 - **Storage** — single SQLite DB at `~/.net_alpha/net_alpha.db`; cross-year window detection works because all trades live in one place. Schema versioned via a `meta` table; hand-written `ALTER TABLE` migrations.
-- **Engine** — wash-sale recompute is incremental, only the ±30-day window around affected trade dates is recalculated on import or removal. Every emitted violation is reproducible from source trades.
-- **Web UI** — optional subpackage at `src/net_alpha/web/`. Calls only existing public seams (`Repository`, engine functions, audit/portfolio/planner pure functions); no business logic in `web/`. Static assets vendored — no CDN at runtime, no Node toolchain.
+- **Engine** — wash-sale recompute is incremental: only the ±30-day window around affected trade dates is recalculated on import or removal. Every emitted violation is reproducible from source trades.
+- **Web UI** — optional subpackage at `src/net_alpha/web/`. Calls only existing public seams (`Repository`, engine functions, audit/portfolio/planner pure functions); **no business logic in `web/`**. Static assets vendored — no CDN at runtime, no Node toolchain.
 
 ## Development
 
