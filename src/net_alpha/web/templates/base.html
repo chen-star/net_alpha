@@ -56,7 +56,7 @@
   <script src="/static/keyboard.js?v={{ asset_v }}" defer></script>
   <script src="/static/vendor/sortablejs/Sortable.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/plan_reorder.js?v={{ asset_v }}" defer></script>
-  <script id="palette-index" type="application/json">{{ palette_index_json() | safe }}</script>
+  <script id="palette-index" type="application/json">{{ palette_index() | tojson }}</script>
   <script src="/static/palette.js?v={{ asset_v }}" defer></script>
 </head>
 <body class="min-h-screen flex flex-col bg-bg text-text"
