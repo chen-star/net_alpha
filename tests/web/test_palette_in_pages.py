@@ -66,3 +66,28 @@ def test_palette_json_escapes_script_close_tag(client):
         "palette JSON contains a literal '</' which could close the wrapping "
         "<script> tag and enable HTML injection from CSV-derived ticker strings"
     )
+
+
+def test_palette_results_list_has_listbox_role(client):
+    """The results <ul> must carry role='listbox' so the input's
+    aria-controls + each <li>'s role='option' form a proper ARIA
+    ownership chain for screen readers."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert (
+        '<ul id="palette-results" role="listbox"' in resp.text
+        or 'id="palette-results"' in resp.text
+        and 'role="listbox"' in resp.text
+    ), "palette results <ul> missing role='listbox'"
+
+
+def test_palette_input_traps_tab_key(client):
+    """The palette input must intercept Tab (via Alpine's @keydown.tab.prevent)
+    so focus stays inside the modal dialog while it is open."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    # Alpine attribute is emitted verbatim by Jinja into the rendered HTML.
+    assert "@keydown.tab.prevent" in resp.text, (
+        "palette input missing @keydown.tab.prevent — Tab key would escape "
+        "the open modal, violating role='dialog' aria-modal='true' contract"
+    )

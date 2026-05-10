@@ -23,6 +23,7 @@
       @keydown.arrow-down.prevent="move(1)"
       @keydown.arrow-up.prevent="move(-1)"
       @keydown.enter.prevent="commit($event)"
+      @keydown.tab.prevent
       type="text"
       placeholder="Jump to page or ticker…"
       class="w-full px-4 py-3 bg-transparent border-b border-hairline outline-none text-text placeholder:text-label-3"
@@ -31,7 +32,7 @@
       aria-controls="palette-results"
       :aria-activedescendant="results.length ? `palette-row-${activeIndex}` : null"
     />
-    <ul id="palette-results" class="max-h-[360px] overflow-auto py-1">
+    <ul id="palette-results" role="listbox" aria-label="Search results" class="max-h-[360px] overflow-auto py-1">
       <template x-for="(item, i) in results" :key="`${item.kind}-${item.id}`">
         <li
           :id="`palette-row-${i}`"
