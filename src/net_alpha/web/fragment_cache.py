@@ -13,8 +13,9 @@ imports_badge_count, asset_v) keep working.
 from __future__ import annotations
 
 import time
+from collections.abc import Hashable
 from threading import Lock
-from typing import Any, Hashable
+from typing import Any
 
 
 class FragmentCache:

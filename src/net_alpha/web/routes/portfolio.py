@@ -983,13 +983,9 @@ def portfolio_body(
     ctx = cache.get(key)
     cache_hit = ctx is not None
     if ctx is None:
-        ctx = _compute_portfolio_body_context(
-            request=request, period=period, account=account, repo=repo, svc=svc
-        )
+        ctx = _compute_portfolio_body_context(request=request, period=period, account=account, repo=repo, svc=svc)
         cache.set(key, ctx)
-    response = request.app.state.templates.TemplateResponse(
-        request, "_portfolio_body.html", ctx
-    )
+    response = request.app.state.templates.TemplateResponse(request, "_portfolio_body.html", ctx)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     logger.debug(
         "portfolio_body: {:.0f} ms cache_hit={} period={} account={!r}",

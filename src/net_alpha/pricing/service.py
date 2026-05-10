@@ -83,9 +83,7 @@ class PricingService:
                 # ticker for the same date. End-of-day price-refresh cycles
                 # naturally overwrite this with the authoritative close.
                 today = dt.date.today()
-                self._cache.historical_put_many(
-                    [(sym, today, q.price) for sym, q in fetched.items()]
-                )
+                self._cache.historical_put_many([(sym, today, q.price) for sym, q in fetched.items()])
                 served.update(fetched)
                 snap.fetched_at = max((q.as_of for q in fetched.values()), default=None)
                 if fetched:

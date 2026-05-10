@@ -21,8 +21,8 @@ from net_alpha.output.disclaimer import render as disclaimer_render
 from net_alpha.pricing.cache import PriceCache
 from net_alpha.pricing.yahoo import YahooPriceProvider
 from net_alpha.web.dependencies import effective_db_path
-from net_alpha.web.fragment_cache import FragmentCache
 from net_alpha.web.format import fmt_currency, fmt_date, fmt_percent, fmt_quantity
+from net_alpha.web.fragment_cache import FragmentCache
 from net_alpha.web.routes import (
     audit_routes,
     positions,
