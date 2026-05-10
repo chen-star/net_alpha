@@ -139,10 +139,8 @@ def test_timeline_thead_has_layered_sticky_left() -> None:
             # the class attribute is typically inline
             tag_open = line[line.find("<th") :]
             tokens = _cell_class_tokens(tag_open)
-            if (
-                {"sticky", "left-0"}.issubset(tokens)
-                or any(t.startswith("left-[") for t in tokens)
-                and "sticky" in tokens
+            if {"sticky", "left-0"}.issubset(tokens) or (
+                any(t.startswith("left-[") for t in tokens) and "sticky" in tokens
             ):
                 sticky_left_thead_cells += 1
     assert sticky_left_thead_cells >= 2, (

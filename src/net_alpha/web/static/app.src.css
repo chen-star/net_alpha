@@ -624,6 +624,7 @@
   --pair-c7: #8a6ac0;
   --pair-still-open: #5fc88a;
 }
+/* width must match left-[18px] in _ticker_view_timeline.html (Date column offset). */
 .rail-col { width: 18px; }
 td.rail-col { position: relative; padding: 0 0 0 8px; }
 .rail {
