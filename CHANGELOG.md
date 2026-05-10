@@ -2,11 +2,325 @@
 
 
 
-## v0.56.1 (2026-05-10)
+## v0.57.0 (2026-05-10)
+
+### Chore
+
+* chore(palette): tighten TypedDict shapes for palette index ([`5d51856`](https://github.com/chen-star/net_alpha/commit/5d51856f8e12b51656824f298b848a3f8732bcc7))
+
+* chore(ui): cross-reference rail-col width; parenthesize sticky-left test
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`df273d7`](https://github.com/chen-star/net_alpha/commit/df273d70317be53f56edd23197ef53cb05535851))
 
 ### Documentation
 
-* docs: use absolute raw-GitHub URL for README logo so it renders on PyPI
+* docs(readme): add demo-data screenshots showing the cross-account story
+
+Captured from the bundled demo dataset (TSLA, NVDA cross-account, AAPL,
+SPY puts, plus open MSFT/AMZN/GOOGL/META/AMD) so the headline pitch —
+&#34;the wash sale your single broker can&#39;t see&#34; — is visible without the
+reader installing anything. Layout uses a vertical stack with
+`&lt;img width=&#34;900&#34;&gt;` so it renders consistently on both GitHub and PyPI
+(table-cell `width%` attributes get stripped by readme_renderer&#39;s
+bleach allowlist).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`60de621`](https://github.com/chen-star/net_alpha/commit/60de6212c915f14b9d5eb1d1b1cd6a2413c742fc))
+
+### Feature
+
+* feat(positions): POST /positions/plan/mark-seen handler
+
+Extract _build_plan_diff_rows helper (shared by _compute_change_states
+and the new route) and add plan_mark_seen route that persists the current
+Plan view snapshot and updates plan_last_seen_at, returning 204.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ef31ab7`](https://github.com/chen-star/net_alpha/commit/ef31ab70e2eae8e2b0fb816f9d989ecf3c19200e))
+
+* feat(positions): change-state badge + &#39;Mark as seen&#39; button on Plan view
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c20056e`](https://github.com/chen-star/net_alpha/commit/c20056e6391234ddc57348288db0abc49b8bb1c7))
+
+* feat(positions): compute change_states for Plan view via diff_plan
+
+Refactor _build_plan_view_for_request to return (plan_view, pos_by_sym),
+update both callers, and compute change_states in _render_plan_body using
+diff_plan so the template context carries per-symbol new/changed/None badges.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`698fa88`](https://github.com/chen-star/net_alpha/commit/698fa88a6340cfca32eb4ea31c537b49166c2231))
+
+* feat(db): plan_view_snapshot read/write + plan_last_seen_at helpers
+
+Add four Repository methods for the Plan-view &#39;what changed&#39; feature:
+read_plan_snapshot, write_plan_snapshot, get_plan_last_seen_at, and
+set_plan_last_seen_at, with 4 new tests covering round-trip and replace. ([`62c8877`](https://github.com/chen-star/net_alpha/commit/62c8877e68acde3f7c0914c076ad7ee265bdfa1c))
+
+* feat(portfolio): pure diff_plan() for Plan-view &#39;what changed&#39; badges
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`34158b7`](https://github.com/chen-star/net_alpha/commit/34158b7137156fb18b35ef2ac899a8b4379ba98d))
+
+* feat(db): add v20 migration for plan_view_snapshot table
+
+Adds the plan_view_snapshot table (ticker, target_kind, target_value,
+risk_pill, pl_bucket, snapshot_taken_at) used by the Plan-view diff
+badge logic. Bumps CURRENT_SCHEMA_VERSION to 20 and updates all pinned
+schema-version assertions in the test suite.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`63a2299`](https://github.com/chen-star/net_alpha/commit/63a22990846d4851de82e73fc402586cd4580b51))
+
+* feat(palette): ⌘K overlay with client-side fuzzy match
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ea70419`](https://github.com/chen-star/net_alpha/commit/ea70419520f9d8d4fef11652e72abd9dd84bd29c))
+
+* feat(palette): bootstrap palette-index JSON into every page
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fa2fae1`](https://github.com/chen-star/net_alpha/commit/fa2fae1fabbfa7087d27332e471981411e43880e))
+
+* feat(db): tickers_with_open_lots helper for palette tier
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`273cdc8`](https://github.com/chen-star/net_alpha/commit/273cdc8e75bcf27ed5a2b0b5aa6126a5cec6abaf))
+
+* feat(palette): pure index builder (pages + tier-ranked tickers)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6c2e651`](https://github.com/chen-star/net_alpha/commit/6c2e651454b6ea0927df0f57b264129a463ab9c9))
+
+* feat(ui): layered sticky-left on timeline (rail + Date column)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bbb8887`](https://github.com/chen-star/net_alpha/commit/bbb88877457cf5be3976465c21439123c21cfc2b))
+
+* feat(ui): sticky-left first column on wide tables
+
+Add sticky left-0 classes to the first &lt;th&gt; (corner, z-20) and first
+&lt;td&gt; (bg-inherit, z-[1]) of each wide table so the anchoring column
+stays visible during horizontal scroll, with a hairline shadow seam.
+Extend test_sticky_table_classes.py with 4 parametrized smoke tests.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c454cda`](https://github.com/chen-star/net_alpha/commit/c454cda534a0c3bfc9a1e96eca4f1e5f06ec8621))
+
+* feat(ui): sticky headers on detail-table and reconciliation-diff
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`58d4c8c`](https://github.com/chen-star/net_alpha/commit/58d4c8ce7871b15320e200e21bf3db9467e2c1db))
+
+* feat(ui): sticky table headers across long-scrolling tables
+
+Add `sticky top-0 z-10 bg-bg` to &lt;thead&gt; in _lots_table, _ticker_view_timeline,
+_ticker_view_lots (open-shorts table), and _imports_table so headers stay visible
+during vertical scroll. Add regression test that asserts the sticky utility is
+present on every covered template&#39;s &lt;thead&gt;.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`84dc883`](https://github.com/chen-star/net_alpha/commit/84dc883a10c2a1e77df94d254168982fc178d079))
+
+### Fix
+
+* fix(positions): mark-seen snapshot is always global, not account-filtered ([`8a0444b`](https://github.com/chen-star/net_alpha/commit/8a0444bf3905d1ac21316cb3257aa79b6f753325))
+
+* fix(palette): escape &lt;script&gt; via Jinja tojson to prevent CSV-borne XSS
+
+Replace json.dumps() + | safe with Jinja&#39;s tojson filter, which
+unicode-escapes &lt;, &gt;, and &amp; — preventing a malicious ticker string
+(e.g. &lt;/script&gt;&lt;script&gt;alert(1)&lt;/script&gt;) from breaking out of the
+palette bootstrap &lt;script&gt; tag on any page render.
+
+Adds an XSS regression test asserting no literal &#39;&lt;/&#39; appears in the
+rendered JSON blob. ([`a5440dc`](https://github.com/chen-star/net_alpha/commit/a5440dc640fc7ec517a7d675dfa6046e3f4e5613))
+
+### Refactor
+
+* refactor(positions): extract _compute_change_states helper
+
+Eliminates the 19-line change-states computation block that was
+duplicated verbatim between positions_page and _render_plan_body.
+The new helper returns (change_states, watch_results) as a tuple
+(Option A) so callers avoid a second watch_results_by_target() query.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7bfdad3`](https://github.com/chen-star/net_alpha/commit/7bfdad3b57b6acb2e944935b1a2a927792bfecb5))
+
+* refactor(ticker): move pairing import to module level; tighten jump test assertions
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`23003f3`](https://github.com/chen-star/net_alpha/commit/23003f373b3aaf7d99990cd37475f05ba3f2b179))
+
+### Test
+
+* test(ui): tokenize &lt;thead&gt; class attribute for order-independent matching
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9786f64`](https://github.com/chen-star/net_alpha/commit/9786f6458914f79b4385d89befe0ba3c5f81f1d5))
+
+### Unknown
+
+* Merge feat/palette-table-ergonomics: ⌘K palette + table ergonomics
+
+Two paired UX improvements for the local web UI:
+
+- ⌘K command palette: top-aligned modal, pages + tickers, client-side fuzzy
+  match with held &gt; targeted &gt; traded tier ranking. Bootstrapped via inline
+  JSON; no per-keystroke server roundtrip; tojson-escaped to prevent
+  CSV-borne XSS.
+
+- Table ergonomics: sticky &lt;thead&gt; across long-scrolling tables, sticky-left
+  first column on wide tables (with right-edge shadow + layered offset for
+  the timeline rail-col), and Plan-view &#39;what changed since last open&#39;
+  badges (● new / ▲ changed) with a &#39;Mark as seen&#39; toolbar button.
+
+Schema bumped to v20 with a plan_view_snapshot table; plan_last_seen_at
+lives in the existing meta key/value table. The diff is a pure function
+in portfolio/plan_diff.py with -or-5%-of-basis bucketing to suppress
+P&amp;L jitter.
+
+20 commits, all tests green (1812 passed, 1 documented flake skipped). ([`e0dc37c`](https://github.com/chen-star/net_alpha/commit/e0dc37cb1e707f7a868440cc50b156a61eceac4f))
+
+* Merge pull request #4 from chen-star/refactor/pairing-cleanup
+
+refactor(ticker): module-level pairing import + tighter jump test assertions ([`fcc796b`](https://github.com/chen-star/net_alpha/commit/fcc796bc775bc6a48fe30e38816c9e6770c9a6c8))
+
+
+## v0.56.1 (2026-05-11)
+
+### Chore
+
+* chore: bump to 0.56.1 — fix README logo URL on PyPI
+
+Relative img src `assets/logo.svg` doesn&#39;t resolve on PyPI; switch
+to absolute raw-GitHub URL pinned at the release tag.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4417d44`](https://github.com/chen-star/net_alpha/commit/4417d44e7247e801067c6304fbb1ec5054adedfc))
+
+### Ci
+
+* ci: gate releases on master to prevent stray-tag publishes
+
+release.yml now refuses to publish if the tag&#39;s commit isn&#39;t an
+ancestor of origin/master. version.yml&#39;s workflow_dispatch is
+restricted to master so manual bumps from side branches can&#39;t
+mint version tags. v2.0.0 was published from a parallel
+always-on-service branch and ended up as PyPI&#39;s &#34;latest&#34; because
+semver puts 2.0.0 above 0.56.0 — these guards close that path.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f2c9540`](https://github.com/chen-star/net_alpha/commit/f2c95409178ff19f242f6c5c0a158545817a9e45))
+
+### Documentation
+
+* docs(readme): restructure for clarity and add current features
+
+Reorganize the README around user intent — Why → Quickstart → Features
+→ Usage → Rules → Service → Architecture — instead of leading with
+service management. Bucket Features into Detection / Planning /
+Reporting / Local &amp; private so readers can scan to the capability
+they care about. Replace the freeform Web UI prose with a per-route
+table.
+
+Surfaces features that had landed but were missing from the README:
+§1092 straddle detection (`net-alpha straddles`, QCC test, holding-
+period suspension warnings), Sim-page lot-strategy comparison
+(FIFO/LIFO/HIFO/MIN_TAX/MAX_LOSS), capital-loss carryforward + override
+page, Action Inbox, demo-mode tour, and drag-to-reorder Plan view.
+Architecture diagram extended to show the §1092 detector and the
+launchd service tier.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`da52eec`](https://github.com/chen-star/net_alpha/commit/da52eecb7f779d3de156a83c11694300a74ac7f1))
+
+### Feature
+
+* feat(ticker): CSS for rail, pair chips, and annotation pills
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f834b85`](https://github.com/chen-star/net_alpha/commit/f834b85807b9c0b560e973546873932b406b991b))
+
+* feat(ticker): rail column + Pairing chips in Timeline template
+
+Adds leftmost rail-col &lt;th&gt;/&lt;td&gt; for pair-role visual indicator, row
+id=&#34;trade-{id}&#34; anchor for jump-scroll, Pairing column with pair-chip
+links and pair-annot annotations, and updates empty-state colspan from 9
+to 11.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`249178b`](https://github.com/chen-star/net_alpha/commit/249178b863dba339c452f58e82dfa7c9d7a262c3))
+
+* feat(ticker): resolve ?jump=trade-{id} to the page containing the row
+
+Adds a `jump` query parameter to the ticker drilldown route that computes
+which page a target trade lives on and overrides `page` before pagination
+slicing, enabling server-side click-to-partner navigation.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ca8e4b9`](https://github.com/chen-star/net_alpha/commit/ca8e4b99a1a39bbc45d8c4d3d2f9fc4c36304b64))
+
+* feat(ticker): wire pairing into TimelineRow
+
+Add `pair: object | None` field to TimelineRow, update _build_timeline_rows
+to accept lots/open_lot_ids kwargs and run a pairing pass after sorting, and
+update the ticker_drilldown call site to supply raw_lots and open_lot_ids.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b64ad13`](https://github.com/chen-star/net_alpha/commit/b64ad13340f90e83f088044aa2a984b630be955b))
+
+* feat(pairing): stable color index per pair_key
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2f733ed`](https://github.com/chen-star/net_alpha/commit/2f733edaf5458092ed07c1d3143465b320670f41))
+
+* feat(pairing): bidirectional assignment cross-reference
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`afae330`](https://github.com/chen-star/net_alpha/commit/afae330014f3d875dba8086a803ef7f31cc57ffb))
+
+* feat(pairing): roll detection annotates new opener
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`545acbb`](https://github.com/chen-star/net_alpha/commit/545acbb122402ed2847393c4768b23903a65207d))
+
+* feat(pairing): stock lot pairing with FIFO attribution
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9e4239b`](https://github.com/chen-star/net_alpha/commit/9e4239b43f12947df333c619aaf35aff394587c9))
+
+* feat(pairing): option pair-keying with open/close roles and caps
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`63905d6`](https://github.com/chen-star/net_alpha/commit/63905d6474cad123093a9ae443f28b8ed49a54ae))
+
+* feat(pairing): scaffold pairing module with PairFields dataclass
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7b0a97f`](https://github.com/chen-star/net_alpha/commit/7b0a97f2ba97b94ed46a5b0ea83f14f212e97745))
+
+### Refactor
+
+* refactor(pairing): decompose, fix lint, deterministic roll selection
+
+- Fix 1: Auto-fixed UP035 (Iterable from collections.abc), F401 (unused
+  pytest/PairFields imports); manually wrapped E501 long lines in test file.
+- Fix 2: Removed dead TimelineRow alias; replaced with duck-typing comment.
+- Fix 3: Added _ALL_OPT_SOURCES module constant to avoid recomputing set
+  union on every _option_pair_key call.
+- Fix 4: Sort roll candidates before picking candidates[0] for deterministic
+  output regardless of row arrival order.
+- Fix 5: Extracted compute_pair_fields passes into five private helpers
+  (_apply_option_pairs, _apply_stock_lot_pairs, _apply_roll_annotations,
+  _apply_assignment_links, _with_colors); main function is now ~15 lines.
+- Fix 6: Added explicit basis_source=&#39;long_option_open&#39;/&#39;long_option_close&#39;
+  to make_bto/make_stc builders in tests/web/conftest.py with docstring note.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a6ee533`](https://github.com/chen-star/net_alpha/commit/a6ee533d54f5a142567ddf402605bceb78f23def))
+
+### Style
+
+* style(ticker): annotate lots: list[Lot]; ruff format ([`7a53128`](https://github.com/chen-star/net_alpha/commit/7a531289d4e499ea697e8c9c0c55169c04cfa9d8))
+
+### Test
+
+* test(ticker): smoke-render rail + pairing chips for STO/BTC and still-open lot
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9554a64`](https://github.com/chen-star/net_alpha/commit/9554a645171e9808b1ff366553ed5e610abf6070))
+
+* test(pairing): synthetic expiry row joins parent pair
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a073da4`](https://github.com/chen-star/net_alpha/commit/a073da4582e16d315d94473b357a953063c82f80))
+
+* test(pairing): cover scale-in close with three-row pair
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`bb8712f`](https://github.com/chen-star/net_alpha/commit/bb8712f43636c35e317bff5b6b37abfdd393a58f))
+
+* test(ticker): add option trade builders for pairing tests
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1e0d766`](https://github.com/chen-star/net_alpha/commit/1e0d766cb0388428f8c2f8a890ff1c0dc23ef0b6))
+
+### Unknown
+
+* Merge ci/release-master-guard: pairing feature + 0.56.1 release ([`cc3d5c4`](https://github.com/chen-star/net_alpha/commit/cc3d5c4456d676583aa51efde1cff350def5952f))
+
+* Merge pull request #3 from chen-star/ci/release-master-guard
+
+ci: gate releases on master to prevent stray-tag publishes ([`65c9d5b`](https://github.com/chen-star/net_alpha/commit/65c9d5b89d748dd1c8d88c65b6a76fc971e9e9d4))
+
 
 ## v0.56.0 (2026-05-10)
 
