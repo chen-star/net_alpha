@@ -10,6 +10,7 @@ from fastapi.responses import RedirectResponse
 from net_alpha.config import Settings
 from net_alpha.db.connection import get_engine
 from net_alpha.db.repository import Repository
+from net_alpha.web.demo import ensure_demo_db
 
 router = APIRouter(prefix="/tour")
 
@@ -40,6 +41,8 @@ def dismiss(request: Request) -> RedirectResponse:
 @router.post("/replay")
 def replay(request: Request) -> RedirectResponse:
     _real_repo(request).set_tour_completed(False)
+    settings: Settings = request.app.state.settings
+    ensure_demo_db(settings.data_dir / "demo.db")
     request.app.state.demo_mode = True
     return RedirectResponse("/welcome?replay=1", status_code=303)
 
