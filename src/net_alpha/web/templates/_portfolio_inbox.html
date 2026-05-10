@@ -7,7 +7,7 @@
 {% set total = items | length %}
 
 <div id="inbox-panel" class="panel mb-4"
-     x-data="{ open: {{ 'true' if urgent_count > 0 else 'false' }} }"
+     x-data="{ open: false }"
      {% if account %}data-account="{{ account }}"{% endif %}>
   <div class="flex items-center justify-between cursor-pointer select-none" @click="open = !open">
     <div class="flex items-center gap-2">
