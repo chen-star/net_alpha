@@ -27,6 +27,7 @@ from net_alpha.db.tables import (
     PositionTargetRow,
     RealizedGLLotRow,
     Section1256ClassificationRow,
+    Section1256MTMRow,
     ServiceRunRow,
     SplitRow,
     TradeRow,
@@ -45,6 +46,7 @@ from net_alpha.models.domain import (
     OptionDetails,
     RemoveImportResult,
     Section1256Classification,
+    Section1256MTM,
     Trade,
     WashSaleViolation,
 )
@@ -1739,6 +1741,87 @@ class Repository:
             else:
                 stmt = select(Section1256ClassificationRow)
             return list(session.exec(stmt).all())
+
+    # ---- Section1256MTM (year-end mark-to-market) ----
+
+    def save_section_1256_mtm(self, rows: list[Section1256MTM]) -> None:
+        """Idempotent upsert by (position_key, tax_year)."""
+        if not rows:
+            return
+        with Session(self.engine) as session:
+            for r in rows:
+                session.exec(
+                    Section1256MTMRow.__table__.delete().where(
+                        (Section1256MTMRow.position_key == r.position_key) & (Section1256MTMRow.tax_year == r.tax_year)
+                    )
+                )
+                session.add(
+                    Section1256MTMRow(
+                        position_key=r.position_key,
+                        tax_year=r.tax_year,
+                        last_business_day=r.last_business_day.isoformat(),
+                        fmv=r.fmv,
+                        basis_before=r.basis_before,
+                        unrealized_pnl=r.unrealized_pnl,
+                        long_term_portion=r.long_term_portion,
+                        short_term_portion=r.short_term_portion,
+                        fmv_source=r.fmv_source,
+                        ticker=r.ticker,
+                        account=r.account,
+                    )
+                )
+            session.commit()
+
+    def clear_section_1256_mtm(self) -> None:
+        """Delete all MTM rows."""
+        with Session(self.engine) as session:
+            session.exec(Section1256MTMRow.__table__.delete())
+            session.commit()
+
+    def section_1256_mtm_rows(self, period, account: str | None) -> list[Section1256MTM]:
+        """Return MTM rows filtered by period and optional account."""
+        with Session(self.engine) as session:
+            stmt = select(Section1256MTMRow)
+            if period.kind == "year" and period.year is not None:
+                stmt = stmt.where(Section1256MTMRow.tax_year == period.year)
+            if account is not None:
+                stmt = stmt.where(Section1256MTMRow.account == account)
+            rows = session.exec(stmt).all()
+            return [
+                Section1256MTM(
+                    position_key=r.position_key,
+                    tax_year=r.tax_year,
+                    last_business_day=date.fromisoformat(r.last_business_day),
+                    fmv=r.fmv,
+                    basis_before=r.basis_before,
+                    unrealized_pnl=r.unrealized_pnl,
+                    long_term_portion=r.long_term_portion,
+                    short_term_portion=r.short_term_portion,
+                    fmv_source=r.fmv_source,
+                    ticker=r.ticker,
+                    account=r.account,
+                )
+                for r in rows
+            ]
+
+    def section_1256_mtm_pnl(self, period, account: str | None) -> Decimal:
+        """Sum of unrealized_pnl across all MTM rows matching period and account."""
+        rows = self.section_1256_mtm_rows(period, account)
+        total = Decimal("0")
+        for r in rows:
+            total += r.unrealized_pnl
+        return total
+
+    def prior_year_mtm_basis_for_position(self, position_key: str, year: int) -> Decimal | None:
+        """FMV at end of `year` for `position_key` — becomes basis_before for `year+1`."""
+        with Session(self.engine) as session:
+            stmt = (
+                select(Section1256MTMRow)
+                .where(Section1256MTMRow.position_key == position_key)
+                .where(Section1256MTMRow.tax_year == year)
+            )
+            row = session.exec(stmt).first()
+            return row.fmv if row is not None else None
 
     def get_violation(self, vid: int):
         """Return WashSaleViolationRow by primary key, or None."""
