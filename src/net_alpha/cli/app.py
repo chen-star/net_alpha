@@ -14,6 +14,7 @@ from net_alpha.cli import refresh_cache as refresh_cache_cmd
 from net_alpha.cli import sim as sim_cmd
 from net_alpha.cli import straddles as straddles_cmd
 from net_alpha.cli import ui as ui_cmd
+from net_alpha.cli.backup import backup_cmd, backups_app, restore_cmd
 from net_alpha.cli.service import service_app
 
 
@@ -40,6 +41,7 @@ app = typer.Typer(
 imports_app = typer.Typer(no_args_is_help=False)
 app.add_typer(imports_app, name="imports", help="List or remove past imports.")
 app.add_typer(service_app, name="service", help="Manage the always-on local service.")
+app.add_typer(backups_app, name="backups", help="List, remove, or prune backup bundles.")
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +129,10 @@ def imports_rm(
 @app.command(name="migrate-from-v1", help="One-shot migration of v1 DB into v2 schema.")
 def migrate_from_v1(yes: bool = typer.Option(False, "--yes", "-y")):
     raise typer.Exit(migrate_cmd.run(yes))
+
+
+app.command(name="backup", help="Create a backup bundle in ~/.net_alpha/backups/.")(backup_cmd)
+app.command(name="restore", help="Restore ~/.net_alpha/ state from a backup bundle.")(restore_cmd)
 
 
 @app.command(
