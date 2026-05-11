@@ -11,7 +11,7 @@ from net_alpha.db.repository import Repository
 from net_alpha.engine.detector import detect_in_window
 from net_alpha.engine.merge import merge_violations
 from net_alpha.section_1256.classifier import classify_closed_trades
-from net_alpha.section_1256.mtm import mark_to_market, open_section_1256_positions
+from net_alpha.section_1256.mtm import mark_to_market
 from net_alpha.section_1256.universe import load_universe, universe_hash
 from net_alpha.splits.apply import apply_manual_overrides, apply_splits
 
@@ -81,24 +81,32 @@ def _run_section_1256_pass(repo: Repository, all_trades, all_lots) -> None:
     repo.clear_section_1256_classifications()
     repo.save_section_1256_classifications(classifications)
 
-    # MTM pass: walk back from current year to find the earliest year any
-    # §1256 position was open at year-end, then write one MTM row per
-    # (position, tax_year) from there through current year.
+    # MTM pass: scan every year from the earliest §1256 trade through the current
+    # year.  mark_to_market returns [] for years with no open positions, so
+    # iterating over "gap" years is a cheap no-op.  The old gap-stop probe broke
+    # the §1256(a)(2) basis-carry chain when multiple positions existed with a
+    # year-long gap between them (e.g. position A closed 2022-01-15, position B
+    # opened 2024-03-01 — the probe stopped at 2023 and never wrote A's 2020/2021
+    # MTM rows, leaving B's 2022 sell with a broken prior-year basis chain).
     universe = load_universe()
     current_year = date.today().year
-    earliest_open: int | None = None
-    for year_probe in range(current_year, current_year - 30, -1):
-        as_of = date(year_probe, 12, 31)
-        if open_section_1256_positions(all_trades, all_lots, universe, as_of=as_of):
-            earliest_open = year_probe
-        elif earliest_open is not None:
-            # Found a gap below the earliest-open year — stop probing further back.
-            break
+
+    # Determine the earliest tax year to mark — bounded by the oldest §1256 trade
+    # in the ledger.
+    earliest_trade_year: int | None = None
+    for t in all_trades:
+        if not (t.is_section_1256 and t.option_details is not None):
+            continue
+        y = t.date.year
+        if earliest_trade_year is None or y < earliest_trade_year:
+            earliest_trade_year = y
 
     repo.clear_section_1256_mtm()
-    if earliest_open is not None:
+    if earliest_trade_year is not None:
+        # Cap lookback at 30 years for safety against pathologically old data.
+        start_year = max(earliest_trade_year, current_year - 30)
         fmv_fn = _fmv_fn_for_recompute(repo)
-        for tax_year in range(earliest_open, current_year + 1):
+        for tax_year in range(start_year, current_year + 1):
             rows = mark_to_market(
                 trades=all_trades,
                 lots=all_lots,

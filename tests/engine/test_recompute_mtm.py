@@ -96,6 +96,107 @@ def test_recompute_writes_mtm_rows_for_each_open_year(repo, monkeypatch):
     assert rows_2025[0].unrealized_pnl == Decimal("30.00")
 
 
+def test_recompute_handles_year_long_gap_between_positions(repo, monkeypatch):
+    """Position A held 2020-2021, closed Jan 2022. Position B opened 2024.
+
+    Both must get correct MTM chains; A's prior-year basis must survive the gap.
+    The old gap-stop probe broke at 2023 (no open positions) and never wrote A's
+    2020/2021 MTM rows, leaving the 2022 sell classification with a broken chain.
+    """
+    import datetime as _dt
+
+    import net_alpha.engine.recompute as rc_mod
+
+    o_a = OptionDetails(strike=3000.0, expiry=date(2022, 6, 17), call_put="C")
+    o_b = OptionDetails(strike=5000.0, expiry=date(2026, 6, 19), call_put="C")
+
+    buy_a = Trade(
+        account="test/personal",
+        date=date(2020, 3, 1),
+        ticker="SPX",
+        action="Buy",
+        quantity=1,
+        proceeds=None,
+        cost_basis=80,
+        option_details=o_a,
+        is_section_1256=True,
+    )
+    sell_a = Trade(
+        account="test/personal",
+        date=date(2022, 1, 15),
+        ticker="SPX",
+        action="Sell",
+        quantity=1,
+        proceeds=130,
+        cost_basis=None,
+        option_details=o_a,
+        is_section_1256=True,
+    )
+    buy_b = Trade(
+        account="test/personal",
+        date=date(2024, 3, 1),
+        ticker="SPX",
+        action="Buy",
+        quantity=1,
+        proceeds=None,
+        cost_basis=200,
+        option_details=o_b,
+        is_section_1256=True,
+    )
+    _seed_import(repo, [buy_a, sell_a, buy_b])
+
+    # FMV map: expiry keys are isoformat strings (matched by _fake_fmv_fn_factory)
+    price_map = {
+        ("SPX", 3000.0, "2022-06-17", "C", 2020): (Decimal("100"), "yahoo_close"),
+        ("SPX", 3000.0, "2022-06-17", "C", 2021): (Decimal("120"), "yahoo_close"),
+        ("SPX", 5000.0, "2026-06-19", "C", 2024): (Decimal("250"), "yahoo_close"),
+        ("SPX", 5000.0, "2026-06-19", "C", 2025): (Decimal("300"), "yahoo_close"),
+    }
+    monkeypatch.setattr(rc_mod, "_fmv_fn_for_recompute", lambda _repo: _fake_fmv_fn_factory(price_map))
+
+    class _FixedDate(_dt.date):
+        @classmethod
+        def today(cls):
+            return _dt.date(2025, 6, 1)
+
+    monkeypatch.setattr(rc_mod, "date", _FixedDate)
+
+    rc_mod.recompute_all_violations(repo, {})
+
+    # Position A: MTM rows for 2020 and 2021 must exist.
+    rows_2020 = repo.section_1256_mtm_rows(Period.for_year(2020), account=None)
+    rows_2021 = repo.section_1256_mtm_rows(Period.for_year(2021), account=None)
+    assert len(rows_2020) == 1
+    assert rows_2020[0].fmv == Decimal("100")
+    assert rows_2020[0].unrealized_pnl == Decimal("20.00")  # 100 - 80
+    assert len(rows_2021) == 1
+    assert rows_2021[0].fmv == Decimal("120")
+    assert rows_2021[0].basis_before == Decimal("100")  # chained from 2020 MTM
+    assert rows_2021[0].unrealized_pnl == Decimal("20.00")  # 120 - 100
+
+    # Year 2022: A is closed Jan 15 — not open at year-end → no MTM row.
+    rows_2022 = repo.section_1256_mtm_rows(Period.for_year(2022), account=None)
+    assert rows_2022 == []
+
+    # Year 2023: neither A nor B is open → no MTM row.
+    rows_2023 = repo.section_1256_mtm_rows(Period.for_year(2023), account=None)
+    assert rows_2023 == []
+
+    # Position B: MTM rows for 2024 and 2025.
+    rows_2024 = repo.section_1256_mtm_rows(Period.for_year(2024), account=None)
+    rows_2025 = repo.section_1256_mtm_rows(Period.for_year(2025), account=None)
+    assert len(rows_2024) == 1
+    assert rows_2024[0].fmv == Decimal("250")
+    assert rows_2024[0].basis_before == Decimal("200")  # B's original cost
+    assert len(rows_2025) == 1
+    assert rows_2025[0].basis_before == Decimal("250")  # chained from 2024 MTM
+
+    # Position A's 2022 sell: realized = proceeds(130) - prior-year MTM basis(120) = 10
+    classifications = repo.list_section_1256_classifications(year=2022)
+    assert len(classifications) == 1
+    assert classifications[0].realized_pnl == Decimal("10")
+
+
 def test_recompute_classifier_uses_prior_mtm_for_next_year_sell(repo, monkeypatch):
     """Buy 2024, MTM at 2024-end = 150, Sell in 2025 @ 180 — realized = 30 (not 80)."""
     import net_alpha.engine.recompute as rc_mod
