@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import io
-import shutil
 import socket
 import sqlite3
 import tarfile
@@ -24,27 +23,17 @@ _AAD_CONST = b"wash-alpha-backup-v1".ljust(32, b"\x00")
 
 
 def capture_db(src: Path, dst: Path) -> None:
-    """WAL-safe copy that also produces a byte-identical file when no WAL is active.
-
-    Strategy: checkpoint the WAL into the main DB file first (PASSIVE mode — does not
-    block writers), then do a raw file copy.  For a DB with no open connections and no
-    active WAL this is byte-identical to the source.  For a DB with a concurrent writer
-    holding an open WAL transaction the checkpoint folds committed frames into the main
-    file; the uncommitted transaction is not captured, which is the correct safe
-    behaviour (the copy will contain only committed data).
-    """
+    """Atomic, WAL-safe copy via SQLite's online backup API."""
     if not src.exists():
         raise FileNotFoundError(f"source DB not found: {src}")
     dst.parent.mkdir(parents=True, exist_ok=True)
-    # Attempt a PASSIVE checkpoint so committed WAL frames land in the main file.
-    # PASSIVE never blocks and is a no-op on a non-WAL database.
+    src_conn = sqlite3.connect(str(src))
+    dst_conn = sqlite3.connect(str(dst))
     try:
-        chk_conn = sqlite3.connect(str(src))
-        chk_conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
-        chk_conn.close()
-    except Exception:
-        pass  # best-effort; the raw copy will still capture committed state
-    shutil.copy2(src, dst)
+        src_conn.backup(dst_conn)
+    finally:
+        dst_conn.close()
+        src_conn.close()
 
 
 def _sha256_file(path: Path) -> str:

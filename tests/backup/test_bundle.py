@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import sqlite3
 import tarfile
 from pathlib import Path
@@ -23,12 +22,21 @@ def _seed_db(path: Path) -> None:
     con.close()
 
 
-def test_capture_db_produces_byte_identical_copy(tmp_path):
+def test_capture_db_produces_logically_equivalent_copy(tmp_path):
+    """The captured DB has the same tables and rows as the source."""
     src = tmp_path / "src.db"
     dst = tmp_path / "dst.db"
     _seed_db(src)
     capture_db(src, dst)
-    assert hashlib.sha256(src.read_bytes()).hexdigest() == hashlib.sha256(dst.read_bytes()).hexdigest()
+    src_con = sqlite3.connect(src)
+    dst_con = sqlite3.connect(dst)
+    try:
+        src_rows = sorted(src_con.execute("SELECT id, v FROM t").fetchall())
+        dst_rows = sorted(dst_con.execute("SELECT id, v FROM t").fetchall())
+        assert dst_rows == src_rows
+    finally:
+        src_con.close()
+        dst_con.close()
 
 
 def test_capture_db_is_wal_safe(tmp_path):
