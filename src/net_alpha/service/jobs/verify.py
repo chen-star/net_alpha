@@ -18,6 +18,7 @@ from net_alpha.verify.broker_recon import (
     reconcile_open_positions,
     reconcile_realized_gl,
 )
+from net_alpha.verify.suppress import is_suppressed, load_suppressions
 from net_alpha.verify.tolerances import Severity, load_tolerances
 
 
@@ -51,15 +52,13 @@ def run_verify_once(*, repo: Any, trigger: str, today: date | None = None) -> di
     open_pos, ref_age = reconcile_open_positions(repo=repo, tol_cfg=tol, today=today)
     findings = realized + open_pos
 
-    # Phase 6 wires user-managed suppression rules. Until that module lands,
-    # the import is best-effort so Phase 5 can ship on its own.
-    try:  # pragma: no cover - exercised once Phase 6 lands
-        from net_alpha.verify.suppress import load_suppressions
-
-        suppressions = load_suppressions()
-        findings = [f for f in findings if not suppressions.matches(f)]
-    except ImportError:
-        pass
+    # Apply user-managed suppression rules. Loader returns [] when no config
+    # exists, so this is a cheap no-op in the common case.
+    rules = load_suppressions()
+    if rules:
+        findings = [
+            f for f in findings if not is_suppressed(rule_id=f.rule_id, scope=f.scope, rules=rules, today=today)
+        ]
 
     duration_ms = int((time.monotonic() - started) * 1000)
     status = _status_from_findings(findings)
