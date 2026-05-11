@@ -196,6 +196,24 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
 
     templates.env.globals["first_visit_modal_data"] = _first_visit_modal_data
 
+    def _verify_pill_data() -> dict[str, str]:
+        """Global header pill payload — latest verify run status + label.
+
+        Returns ``status="grey"`` when no run has been recorded yet. Read once
+        per render (no caching) so the pill reflects the most recent run
+        without a soft-refresh; the underlying ``latest_verify_run`` query is
+        a single indexed-LIMIT-1 select, cheap enough for every page.
+        """
+        from net_alpha.db.repository import Repository as _Repository
+
+        _engine = get_engine(effective_db_path(settings, app.state.demo_mode))
+        latest = _Repository(_engine).latest_verify_run()
+        if latest is None:
+            return {"status": "grey", "label": "never run"}
+        return {"status": str(latest.status), "label": str(latest.run_at)}
+
+    templates.env.globals["verify_pill_data"] = _verify_pill_data
+
     def _palette_index() -> dict:
         """Bootstrap blob for the ⌘K palette. Re-built on every render so new
         imports / targets appear immediately on the next navigation.

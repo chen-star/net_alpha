@@ -82,6 +82,10 @@
           {% include "_profile_switcher.html" %}
         {% endwith %}
       {% endif %}
+      {% set _vp = verify_pill_data() %}
+      {% with verify_pill_status=_vp.status, verify_pill_label=_vp.label %}
+        {% include "verify/_header_pill.html" %}
+      {% endwith %}
       <div hx-get="/settings/service/pill" hx-trigger="load, every 30s" class="status-pill-host"></div>
       {% block topbar_right %}{% endblock %}
       <button
