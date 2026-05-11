@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from datetime import date as _date
 from typing import Any
 
 from net_alpha.verify.tolerances import Severity, Tolerance, classify
@@ -137,3 +138,82 @@ def check_al2_leaderboard_weight(
         theirs=total_market_value,
         tol=tol,
     )
+
+
+def check_pl1_value_consistency(
+    *,
+    lot_rows: Iterable[dict],
+    tol: Tolerance,
+) -> list[InvariantResult]:
+    """PL-1: Each per-lot row: qty x current_price ~= market_value."""
+    out: list[InvariantResult] = []
+    for row in lot_rows:
+        expected = float(row["qty"]) * float(row["current_price"])
+        out.append(
+            _compare(
+                rule_id="PL-1",
+                ours=float(row["market_value"]),
+                theirs=expected,
+                tol=tol,
+                scope=f"lot:{row['id']}",
+            )
+        )
+    return out
+
+
+def check_pl2_pnl_consistency(
+    *,
+    lot_rows: Iterable[dict],
+    tol: Tolerance,
+) -> list[InvariantResult]:
+    """PL-2: Each per-lot row: market_value - adjusted_basis == unrealized_pl."""
+    out: list[InvariantResult] = []
+    for row in lot_rows:
+        expected = float(row["market_value"]) - float(row["adjusted_basis"])
+        out.append(
+            _compare(
+                rule_id="PL-2",
+                ours=float(row["unrealized_pl"]),
+                theirs=expected,
+                tol=tol,
+                scope=f"lot:{row['id']}",
+            )
+        )
+    return out
+
+
+def check_pl3_holding_period(
+    *,
+    lot_rows: Iterable[dict],
+    today: _date,
+) -> list[InvariantResult]:
+    """PL-3: holding period bucket (ST/LT) matches today - tacked_acquired_date >= 366."""
+    out: list[InvariantResult] = []
+    for row in lot_rows:
+        acquired = _date.fromisoformat(row["tacked_acquired_date"])
+        days = (today - acquired).days
+        expected_bucket = "LT" if days >= 366 else "ST"
+        actual_bucket = row["bucket"]
+        if actual_bucket == expected_bucket:
+            sev = Severity.OK
+            detail = {"days_held": days, "bucket": actual_bucket}
+        else:
+            sev = Severity.FAIL
+            detail = {
+                "days_held": days,
+                "actual_bucket": actual_bucket,
+                "expected_bucket": expected_bucket,
+                "reason": f"expected {expected_bucket} after {days} days, got {actual_bucket}",
+            }
+        out.append(
+            InvariantResult(
+                rule_id="PL-3",
+                severity=sev,
+                scope=f"lot:{row['id']}",
+                ours=None,
+                theirs=None,
+                delta=None,
+                detail=detail,
+            )
+        )
+    return out

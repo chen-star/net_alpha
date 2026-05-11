@@ -138,3 +138,81 @@ def test_al2_fails_when_leaderboard_drifts():
         tol=Tolerance(abs=0.01, rel=0.0001),
     )
     assert result.severity == Severity.FAIL
+
+
+# --- Task 7: Per-lot invariants (PL-1, PL-2, PL-3) --------------------------
+
+from datetime import date  # noqa: E402
+
+from net_alpha.verify.invariants import (  # noqa: E402
+    check_pl1_value_consistency,
+    check_pl2_pnl_consistency,
+    check_pl3_holding_period,
+)
+
+
+def test_pl1_passes_when_qty_times_price_matches_mv():
+    results = check_pl1_value_consistency(
+        lot_rows=[
+            {"id": 1, "qty": 100, "current_price": 150.0, "market_value": 15000.0},
+            {"id": 2, "qty": 50, "current_price": 100.0, "market_value": 5000.0},
+        ],
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert all(r.severity == Severity.OK for r in results)
+    assert {r.rule_id for r in results} == {"PL-1"}
+
+
+def test_pl1_fails_for_drifted_lot():
+    results = check_pl1_value_consistency(
+        lot_rows=[
+            {"id": 1, "qty": 100, "current_price": 150.0, "market_value": 14000.0},  # drift $1000
+        ],
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert results[0].severity == Severity.FAIL
+    assert results[0].scope == "lot:1"
+
+
+def test_pl2_passes_when_pnl_matches_mv_minus_basis():
+    results = check_pl2_pnl_consistency(
+        lot_rows=[
+            {"id": 1, "market_value": 15000.0, "adjusted_basis": 12000.0, "unrealized_pl": 3000.0},
+        ],
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert results[0].severity == Severity.OK
+
+
+def test_pl2_fails_when_pnl_off():
+    results = check_pl2_pnl_consistency(
+        lot_rows=[
+            {"id": 1, "market_value": 15000.0, "adjusted_basis": 12000.0, "unrealized_pl": 4000.0},
+        ],
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert results[0].severity == Severity.FAIL
+
+
+def test_pl3_long_term_with_tacking():
+    # Lot acquired 400 days ago via wash-sale tacking -> LT bucket required.
+    today = date(2026, 5, 11)
+    results = check_pl3_holding_period(
+        lot_rows=[
+            {"id": 1, "tacked_acquired_date": "2025-04-06", "bucket": "LT"},  # 400 days ago
+        ],
+        today=today,
+    )
+    assert results[0].severity == Severity.OK
+
+
+def test_pl3_fails_when_bucket_wrong():
+    today = date(2026, 5, 11)
+    results = check_pl3_holding_period(
+        lot_rows=[
+            {"id": 1, "tacked_acquired_date": "2026-04-01", "bucket": "LT"},  # 40 days, must be ST
+        ],
+        today=today,
+    )
+    assert results[0].severity == Severity.FAIL
+    assert "expected ST" in results[0].detail.get("reason", "")
