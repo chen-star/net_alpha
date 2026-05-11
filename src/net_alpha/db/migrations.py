@@ -650,15 +650,8 @@ def _migrate_v22_to_v23(session: Session) -> None:
     advantaged account; §1091(d) basis rollover is impossible, so the loss
     is permanently disallowed). Pre-existing rows backfill to 'deferred'.
     """
-    if _table_exists(session, "wash_sale_violations") and not _column_exists(
-        session, "wash_sale_violations", "kind"
-    ):
-        session.exec(
-            text(
-                "ALTER TABLE wash_sale_violations "
-                "ADD COLUMN kind TEXT NOT NULL DEFAULT 'deferred'"
-            )
-        )
+    if _table_exists(session, "wash_sale_violations") and not _column_exists(session, "wash_sale_violations", "kind"):
+        session.exec(text("ALTER TABLE wash_sale_violations ADD COLUMN kind TEXT NOT NULL DEFAULT 'deferred'"))
 
 
 def migrate(session: Session) -> None:
