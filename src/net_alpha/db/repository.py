@@ -2682,6 +2682,101 @@ class Repository:
             as_of = rows[0].as_of_date if rows else None
             return rows, as_of
 
+    # --- Verify engine persistence ---
+
+    def save_verify_run(
+        self,
+        *,
+        run_at: str,
+        trigger: str,
+        status: str,
+        duration_ms: int,
+        checks_total: int,
+        checks_passed: int,
+        checks_warned: int,
+        checks_failed: int,
+        reference_age_days: int | None,
+        notes: str,
+        findings: list,
+    ) -> int:
+        """Insert one verify_result + N verify_finding rows in a single transaction.
+
+        Also runs the rolling 90-day cleanup on the indexed ``run_at`` column —
+        keeps the audit table from growing unboundedly while still preserving
+        a useful trend window for the verify history page.
+
+        ``detail_json`` is stored as a JSON string when the finding carries a
+        non-empty detail dict, and as NULL otherwise (avoids "{}" noise).
+        """
+        from net_alpha.verify.models import VerifyFinding, VerifyResult
+
+        with Session(self.engine) as session:
+            vr = VerifyResult(
+                run_at=run_at,
+                trigger=trigger,
+                status=status,
+                duration_ms=duration_ms,
+                checks_total=checks_total,
+                checks_passed=checks_passed,
+                checks_warned=checks_warned,
+                checks_failed=checks_failed,
+                reference_age_days=reference_age_days,
+                notes=notes,
+            )
+            session.add(vr)
+            session.flush()
+            for f in findings:
+                severity = f.severity.value if hasattr(f.severity, "value") else str(f.severity)
+                detail_json = json.dumps(f.detail) if f.detail else None
+                session.add(
+                    VerifyFinding(
+                        run_id=vr.id,
+                        rule_id=f.rule_id,
+                        severity=severity,
+                        scope=f.scope,
+                        ours=f.ours,
+                        theirs=f.theirs,
+                        delta=f.delta,
+                        detail_json=detail_json,
+                    )
+                )
+            # Rolling 90-day cleanup. ``run_at`` is an ISO timestamp string —
+            # SQLite's date() parses the leading YYYY-MM-DD prefix so this
+            # comparison is safe without explicit casting.
+            session.exec(text("DELETE FROM verify_result WHERE run_at < date('now', '-90 days')"))
+            session.commit()
+            return vr.id
+
+    def latest_verify_run(self):
+        """Return the most-recent VerifyResult row (or None)."""
+        from net_alpha.verify.models import VerifyResult
+
+        with Session(self.engine) as session:
+            row = session.exec(select(VerifyResult).order_by(VerifyResult.run_at.desc()).limit(1)).first()
+            if row is not None:
+                session.expunge(row)
+            return row
+
+    def list_verify_runs(self, *, limit: int = 50) -> list:
+        """Return the most-recent ``limit`` VerifyResult rows, newest first."""
+        from net_alpha.verify.models import VerifyResult
+
+        with Session(self.engine) as session:
+            rows = list(session.exec(select(VerifyResult).order_by(VerifyResult.run_at.desc()).limit(limit)).all())
+            for r in rows:
+                session.expunge(r)
+            return rows
+
+    def list_verify_findings(self, *, run_id: int) -> list:
+        """Return every VerifyFinding row attached to a given verify_result.id."""
+        from net_alpha.verify.models import VerifyFinding
+
+        with Session(self.engine) as session:
+            rows = list(session.exec(select(VerifyFinding).where(VerifyFinding.run_id == run_id)).all())
+            for r in rows:
+                session.expunge(r)
+            return rows
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility
