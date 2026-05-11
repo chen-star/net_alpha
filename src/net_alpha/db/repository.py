@@ -2601,6 +2601,65 @@ class Repository:
             s.commit()
             return rec.id
 
+    def aggregate_open_positions(self) -> list[dict]:
+        """Sum open-lot qty/basis/market_value per (symbol, account_label).
+
+        Equity-only — option lots are skipped to match the Phase 3 choice in
+        the renderer (broker All-Positions CSV reconciliation compares equity
+        positions only). FIFO-consumes lots by sells + Realized G/L closures
+        so we don't double-count closed lots.
+
+        market_value_total is computed from the cached `latest_price()`; if a
+        symbol has no cached price the contribution is 0 and downstream tolerance
+        comparisons may surface drift — that's intentional (the user can refresh
+        prices and re-run verify).
+
+        Returns a list of dicts with keys: ``symbol``, ``account_label``,
+        ``qty``, ``adjusted_basis_total``, ``market_value_total``.
+        """
+        from net_alpha.portfolio.positions import consume_lots_fifo
+
+        trades = self.all_trades()
+        lots = self.all_lots()
+        gl_closures = self.get_equity_gl_closures()
+        gl_option_closures = self.get_option_gl_closures()
+        consumed = consume_lots_fifo(
+            lots=lots,
+            trades=trades,
+            gl_closures=gl_closures,
+            gl_option_closures=gl_option_closures,
+        )
+
+        price_cache: dict[str, Decimal | None] = {}
+
+        def _price(ticker: str) -> Decimal:
+            if ticker not in price_cache:
+                price_cache[ticker] = self.latest_price(ticker)
+            p = price_cache[ticker]
+            return p if p is not None else Decimal("0")
+
+        out: dict[tuple[str, str], dict] = {}
+        for lot, rem_qty, rem_basis in consumed:
+            if lot.option_details is not None:
+                continue
+            if rem_qty <= 0:
+                continue
+            key = (lot.account, lot.ticker)
+            row = out.get(key)
+            if row is None:
+                row = {
+                    "symbol": lot.ticker,
+                    "account_label": lot.account,
+                    "qty": 0.0,
+                    "adjusted_basis_total": 0.0,
+                    "market_value_total": 0.0,
+                }
+                out[key] = row
+            row["qty"] += float(rem_qty)
+            row["adjusted_basis_total"] += float(rem_basis)
+            row["market_value_total"] += float(rem_qty * _price(lot.ticker))
+        return list(out.values())
+
     def latest_broker_positions(self) -> tuple[list, str | None]:
         """Return the most-recent broker_position rows + their as_of_date.
 
