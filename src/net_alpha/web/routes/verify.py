@@ -1,12 +1,10 @@
 """Verification engine routes.
 
-Initial surface (created in Task 10):
-  GET /verify/badge?page={overview|positions}   -> render the inline badge fragment
-
-Task 19 will extend this same module with:
+Surface:
   GET  /verify                       -> run history + latest run details
   POST /verify/run                   -> trigger a verify run synchronously
   GET  /verify/findings/{id}         -> HTMX fragment listing findings for a run
+  GET  /verify/badge?page=...        -> inline ✓/⚠/✗ chip for Overview / Positions
 """
 
 from __future__ import annotations
@@ -15,7 +13,7 @@ from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.db.repository import Repository
 from net_alpha.portfolio.allocation import build_allocation
@@ -169,4 +167,61 @@ def verify_badge_fragment(
         request,
         "verify/_badge.html",
         {"verify_badge": status},
+    )
+
+
+@router.get("/verify")
+def verify_index(
+    request: Request,
+    repo: Repository = Depends(get_repository),
+):
+    """Render the verify dashboard: latest run summary + history + findings."""
+    latest = repo.latest_verify_run()
+    history = repo.list_verify_runs(limit=30)
+    findings = repo.list_verify_findings(run_id=latest.id) if latest else []
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "verify/index.html",
+        {
+            "latest": latest,
+            "history": history,
+            "findings": findings,
+            "active_page": "verify",
+        },
+    )
+
+
+@router.post("/verify/run")
+def verify_run(
+    request: Request,
+    repo: Repository = Depends(get_repository),
+):
+    """Trigger one synchronous verify run, then redirect to /verify.
+
+    Manual UI trigger -> ``trigger="manual"`` on the persisted result row.
+    Synchronous on purpose: the user clicks the button and expects to see
+    the updated dashboard on the next page load, not an async toast.
+    """
+    from net_alpha.service.jobs.verify import run_verify_once
+
+    run_verify_once(repo=repo, trigger="manual")
+    return RedirectResponse(url="/verify", status_code=303)
+
+
+@router.get("/verify/findings/{run_id}", response_class=HTMLResponse)
+def verify_findings(
+    request: Request,
+    run_id: int,
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse:
+    """HTMX fragment: findings table for one historical run."""
+    runs = repo.list_verify_runs(limit=200)
+    run = next((r for r in runs if r.id == run_id), None)
+    if run is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    findings = repo.list_verify_findings(run_id=run_id)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "verify/_findings_table.html",
+        {"run": run, "findings": findings},
     )

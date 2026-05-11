@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Verification — net-alpha{% endblock %}
+{% block content %}
+<section class="verify-page">
+  <header class="page-header">
+    <h1 class="text-xl font-semibold">Verification</h1>
+    <p class="text-label-2 text-[13px] mt-1 max-w-prose">
+      Cross-checks the Overview and Positions pages against internal invariants
+      and (when uploaded) Schwab&rsquo;s All-Positions and Realized G/L CSVs.
+    </p>
+  </header>
+
+  <form method="post" action="/verify/run" class="verify-run-form mt-4">
+    <button type="submit"
+            class="px-3 py-1.5 rounded-md bg-surface-2 hover:bg-surface-3 text-text text-[13px] border border-hairline">
+      Run verification now
+    </button>
+  </form>
+
+  {% if not latest %}
+    <p class="empty-state mt-6 text-label-2 text-[13px]">
+      No verification runs yet. Click <em>Run verification now</em> above &mdash;
+      or upload a Schwab All-Positions CSV on the
+      <a href="/imports" class="underline">Imports page</a> to enable broker reconciliation.
+    </p>
+  {% else %}
+    <section class="latest-run mt-6">
+      <h2 class="text-base font-semibold mb-2">Latest run</h2>
+      <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-[13px]">
+        <dt class="text-label-2">When</dt><dd>{{ latest.run_at }}</dd>
+        <dt class="text-label-2">Trigger</dt><dd>{{ latest.trigger }}</dd>
+        <dt class="text-label-2">Status</dt>
+        <dd><span class="status-{{ latest.status }}">{{ latest.status }}</span></dd>
+        <dt class="text-label-2">Duration</dt><dd>{{ latest.duration_ms }} ms</dd>
+        <dt class="text-label-2">Findings</dt>
+        <dd>
+          {{ latest.checks_failed }} failed &middot;
+          {{ latest.checks_warned }} warned &middot;
+          {{ latest.checks_total }} total
+        </dd>
+        {% if latest.reference_age_days is not none %}
+          <dt class="text-label-2">Positions reference age</dt>
+          <dd>{{ latest.reference_age_days }} days</dd>
+        {% endif %}
+      </dl>
+      <div class="mt-4">
+        {% include "verify/_findings_table.html" %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="history mt-8">
+    <h2 class="text-base font-semibold mb-2">Run history (last 90 days)</h2>
+    {% if history %}
+      <table class="w-full text-[13px] border-collapse">
+        <thead>
+          <tr class="text-left text-label-2 border-b border-hairline">
+            <th class="py-1.5 pr-4 font-medium">When</th>
+            <th class="py-1.5 pr-4 font-medium">Trigger</th>
+            <th class="py-1.5 pr-4 font-medium">Status</th>
+            <th class="py-1.5 pr-4 font-medium">Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in history %}
+          <tr class="border-b border-hairline last:border-0">
+            <td class="py-1.5 pr-4">{{ r.run_at }}</td>
+            <td class="py-1.5 pr-4">{{ r.trigger }}</td>
+            <td class="py-1.5 pr-4"><span class="status-{{ r.status }}">{{ r.status }}</span></td>
+            <td class="py-1.5 pr-4">{{ r.checks_failed }}F / {{ r.checks_warned }}W</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="text-label-2 text-[13px]">No run history yet.</p>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}
