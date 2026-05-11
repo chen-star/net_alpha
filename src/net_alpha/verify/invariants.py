@@ -111,3 +111,29 @@ def check_ov3_realized_ytd(
         theirs=expected,
         tol=tol,
     )
+
+
+def check_al1_allocation_sums_to_100(
+    *,
+    allocation_rows: Iterable[tuple[str, float]],
+    tol: Tolerance,
+) -> InvariantResult:
+    """AL-1: Allocation %s sum to 100.00 +/- tolerance."""
+    total = sum(pct for _sym, pct in allocation_rows)
+    return _compare(rule_id="AL-1", ours=total, theirs=100.0, tol=tol)
+
+
+def check_al2_leaderboard_weight(
+    *,
+    leaderboard_rows: Iterable[tuple[str, float]],
+    total_market_value: float,
+    tol: Tolerance,
+) -> InvariantResult:
+    """AL-2: Allocation leaderboard total weight == total_market_value."""
+    leaderboard_total = sum(weight for _sym, weight in leaderboard_rows)
+    return _compare(
+        rule_id="AL-2",
+        ours=leaderboard_total,
+        theirs=total_market_value,
+        tol=tol,
+    )

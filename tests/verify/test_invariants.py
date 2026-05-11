@@ -92,3 +92,49 @@ def test_invariant_result_serializes_to_dict():
     assert d["severity"] == "ok"
     # Touch the import so ruff doesn't trim it.
     assert InvariantResult is not None
+
+
+# --- Task 6: Allocation invariants (AL-1, AL-2) -----------------------------
+
+from net_alpha.verify.invariants import (  # noqa: E402
+    check_al1_allocation_sums_to_100,
+    check_al2_leaderboard_weight,
+)
+
+
+def test_al1_passes_when_pct_sums_to_100():
+    rows = [("AAPL", 40.0), ("MSFT", 35.0), ("GOOG", 25.0)]
+    result = check_al1_allocation_sums_to_100(
+        allocation_rows=rows,
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert result.severity == Severity.OK
+
+
+def test_al1_fails_when_pct_off():
+    rows = [("AAPL", 40.0), ("MSFT", 35.0), ("GOOG", 30.0)]  # sums to 105
+    result = check_al1_allocation_sums_to_100(
+        allocation_rows=rows,
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert result.severity == Severity.FAIL
+
+
+def test_al2_passes_when_leaderboard_weight_matches_total_mv():
+    rows = [("AAPL", 1000.0), ("MSFT", 500.0)]
+    result = check_al2_leaderboard_weight(
+        leaderboard_rows=rows,
+        total_market_value=1500.0,
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert result.severity == Severity.OK
+
+
+def test_al2_fails_when_leaderboard_drifts():
+    rows = [("AAPL", 1000.0), ("MSFT", 500.0)]
+    result = check_al2_leaderboard_weight(
+        leaderboard_rows=rows,
+        total_market_value=1600.0,  # drift of $100
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert result.severity == Severity.FAIL
