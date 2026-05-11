@@ -56,6 +56,9 @@ class AfterTaxBreakdown(BaseModel):
     section_1256_pnl: Decimal
     section_1256_lt_portion: Decimal
     section_1256_st_portion: Decimal
+    section_1256_mtm_pnl: Decimal = Decimal("0")
+    section_1256_mtm_lt_portion: Decimal = Decimal("0")
+    section_1256_mtm_st_portion: Decimal = Decimal("0")
 
     wash_sale_disallowed_total: Decimal
     wash_sale_marginal_cost: Decimal
@@ -79,6 +82,7 @@ def compute_after_tax(
     st_pnl: Decimal = pnl["short_term"]
     lt_pnl: Decimal = pnl["long_term"]
     sec1256_pnl: Decimal = repo.section_1256_pnl(period, account)
+    sec1256_mtm: Decimal = repo.section_1256_mtm_pnl(period, account)
     disallowed: Decimal = repo.wash_sale_disallowed_total(period, account)
 
     cf = carryforward or Carryforward(st=Decimal("0"), lt=Decimal("0"), source="none")
@@ -101,8 +105,11 @@ def compute_after_tax(
     st_pnl = st_after_cf
     lt_pnl = lt_after_cf
 
-    sec1256_lt = sec1256_pnl * _LT_FRAC
-    sec1256_st = sec1256_pnl * _ST_FRAC
+    sec1256_total = sec1256_pnl + sec1256_mtm
+    sec1256_lt = sec1256_total * _LT_FRAC
+    sec1256_st = sec1256_total * _ST_FRAC
+    sec1256_mtm_lt = sec1256_mtm * _LT_FRAC
+    sec1256_mtm_st = sec1256_mtm * _ST_FRAC
 
     total_st = st_pnl + sec1256_st
     total_lt = lt_pnl + sec1256_lt
@@ -113,7 +120,7 @@ def compute_after_tax(
     niit = max(Decimal("0"), total_st + total_lt) * _NIIT_RATE if brackets.niit_enabled else Decimal("0")
 
     tax_bill = st_tax + lt_tax + state_tax + niit
-    pre_tax = st_pnl + lt_pnl + sec1256_pnl
+    pre_tax = st_pnl + lt_pnl + sec1256_pnl + sec1256_mtm
     after_tax = pre_tax - tax_bill
     drag_dollar = pre_tax - after_tax  # equals tax_bill when pre_tax > 0; 0 when pre_tax <= 0
 
@@ -129,7 +136,9 @@ def compute_after_tax(
         "Estimate using your configured marginal rates — not a tax filing.",
         f"NIIT applied at 3.8% above MAGI threshold ($200K single / $250K MFJ) "
         f"when enabled (currently: {'on' if brackets.niit_enabled else 'off'}).",
-        "Open §1256 positions Dec 31 not marked-to-market — see 1099-B / Form 6781 separately.",
+        "§1256 contracts open Dec 31 are marked to fair-market-value per IRC §1256(a). "
+        "Year-end FMV is sourced from Yahoo (option closes) with a Black-Scholes fallback "
+        "for thin-volume strikes; verify against your 1099-B / Form 6781 before filing.",
         "Wash-sale 'deferred tax savings' = tax savings deferred (not lost) — basis rolls into the replacement lot.",
     ]
     if period.kind == "lifetime":
@@ -151,6 +160,9 @@ def compute_after_tax(
         section_1256_pnl=sec1256_pnl,
         section_1256_lt_portion=sec1256_lt,
         section_1256_st_portion=sec1256_st,
+        section_1256_mtm_pnl=sec1256_mtm,
+        section_1256_mtm_lt_portion=sec1256_mtm_lt,
+        section_1256_mtm_st_portion=sec1256_mtm_st,
         wash_sale_disallowed_total=disallowed,
         wash_sale_marginal_cost=wash_marginal_cost,
         effective_tax_rate=effective_rate,
