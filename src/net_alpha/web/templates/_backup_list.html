@@ -1,0 +1,27 @@
+<table id="backup-list" class="data-table">
+  <thead>
+    <tr>
+      <th>Created</th>
+      <th>Reason</th>
+      <th>Size</th>
+      <th>Filename</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if not bundles %}
+    <tr><td colspan="4" class="empty">No backups yet.</td></tr>
+    {% else %}
+    {% for b in bundles %}
+    <tr>
+      <td>{{ b.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      <td><span class="badge badge-{{ b.reason }}">{{ b.reason }}</span></td>
+      <td>{{ "%.1f MB"|format(b.size_bytes / 1024 / 1024) }}</td>
+      <td>
+        <code>{{ b.path.name }}</code>
+        {% if b.path.suffix == ".enc" %}🔒{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    {% endif %}
+  </tbody>
+</table>

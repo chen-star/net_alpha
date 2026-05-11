@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-backup">
+  <h1>Backups</h1>
+  <p class="hint">
+    Snapshots of <code>~/.net_alpha/</code> (DB + config). Daily snapshots run automatically when
+    the always-on service is installed; pre-mutation snapshots run before every CSV import.
+  </p>
+
+  <div class="toolbar">
+    <button hx-post="/settings/backup/create"
+            hx-target="#backup-list"
+            hx-swap="outerHTML">
+      Create backup now
+    </button>
+  </div>
+
+  {% include "_backup_list.html" %}
+
+  <p class="hint">
+    To restore from a bundle, run <code>net-alpha restore &lt;file&gt;</code> in a terminal.
+  </p>
+</section>
+{% endblock %}
