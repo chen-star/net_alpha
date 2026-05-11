@@ -127,23 +127,17 @@ def test_golden_case(case_path: Path, tmp_path: Path) -> None:
     if "open_position_value" in expected:
         actual = kpis.open_position_value or Decimal("0")
         exp = Decimal(str(expected["open_position_value"]))
-        assert abs(actual - exp) < eps, (
-            f"[{case['name']}] open_position_value: ours={actual}, expected={exp}"
-        )
+        assert abs(actual - exp) < eps, f"[{case['name']}] open_position_value: ours={actual}, expected={exp}"
 
     if "unrealized" in expected:
         actual = kpis.period_unrealized if kpis.period_unrealized is not None else Decimal("0")
         exp = Decimal(str(expected["unrealized"]))
-        assert abs(actual - exp) < eps, (
-            f"[{case['name']}] unrealized: ours={actual}, expected={exp}"
-        )
+        assert abs(actual - exp) < eps, f"[{case['name']}] unrealized: ours={actual}, expected={exp}"
 
     if "period_realized" in expected:
         actual = kpis.period_realized
         exp = Decimal(str(expected["period_realized"]))
-        assert abs(actual - exp) < eps, (
-            f"[{case['name']}] period_realized: ours={actual}, expected={exp}"
-        )
+        assert abs(actual - exp) < eps, f"[{case['name']}] period_realized: ours={actual}, expected={exp}"
 
     # Spot-check expected lots (presence, qty, adjusted_basis, tacking).
     # Disambiguate by `date` when the case has multiple lots of the same ticker.
@@ -160,10 +154,7 @@ def test_golden_case(case_path: Path, tmp_path: Path) -> None:
             return True
 
         match = next((lot for lot in lots if _matches(lot)), None)
-        assert match is not None, (
-            f"[{case['name']}] no lot found for {expected_lot['ticker']} "
-            f"(date={expected_date})"
-        )
+        assert match is not None, f"[{case['name']}] no lot found for {expected_lot['ticker']} (date={expected_date})"
         if "quantity" in expected_lot:
             assert abs(match.quantity - float(expected_lot["quantity"])) < 1e-6
         if "adjusted_basis" in expected_lot:
