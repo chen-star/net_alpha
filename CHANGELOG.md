@@ -2,6 +2,94 @@
 
 
 
+## v0.59.0 (2026-05-11)
+
+### Build
+
+* build(deps): add cryptography for backup encryption ([`1368007`](https://github.com/chen-star/net_alpha/commit/13680071d88a7d4bd67b4c5af39c41dc34fb3192))
+
+### Documentation
+
+* docs: document the backup subsystem
+
+Add Backup subsystem section to CLAUDE.md and AGENTS.md immediately after
+the v2 Always-on service section. Also fix ruff lint/format issues across
+backup source files and tests (UP017 datetime.UTC alias, I001 import order,
+F401 unused imports, E501 line length).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2945562`](https://github.com/chen-star/net_alpha/commit/29455625ddc98547b86bf41cda31b874bd446fab))
+
+### Feature
+
+* feat(web): /settings/backup page with list + create-now button
+
+Adds a backup management page at /settings/backup showing all bundles
+with their timestamp, reason, size, and filename. A &#34;Create backup now&#34;
+button triggers an HTMX POST to /settings/backup/create which returns
+the refreshed bundle list fragment. Links to the page from the Settings
+drawer About tab under the Data location section.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f9c4bef`](https://github.com/chen-star/net_alpha/commit/f9c4bef6524f237022c8df82f371c793a9c1e11b))
+
+* feat(service): register daily backup job at 03:30 UTC ([`e3aff14`](https://github.com/chen-star/net_alpha/commit/e3aff14cf25f3747d60a2baabd16852d729d352b))
+
+* feat(service): daily backup job (snapshot + retention prune) ([`96d83f2`](https://github.com/chen-star/net_alpha/commit/96d83f2219f558a04503767f5ce9110b91738241))
+
+* feat(cli): pre-migrate snapshot before v1→v2 migration ([`9e92f6b`](https://github.com/chen-star/net_alpha/commit/9e92f6b81e0f21127b6c0760e4c21aac035c1972))
+
+* feat(cli): pre-imports-rm snapshot before deletion ([`aea0895`](https://github.com/chen-star/net_alpha/commit/aea08953011e8fcd748711c4dd7697ef3c3d027f))
+
+* feat(cli): pre-import snapshot before CSV import commits ([`9cfc133`](https://github.com/chen-star/net_alpha/commit/9cfc133f9a593d1442cb0552b07585fe2abd83bc))
+
+* feat(cli): register backup, restore, backups in the root Typer app ([`308d5de`](https://github.com/chen-star/net_alpha/commit/308d5ded6b87b795bf9c774f0e4c9586dc39173d))
+
+* feat(cli): backup, restore, backups ls/rm/prune subcommands
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9f6c929`](https://github.com/chen-star/net_alpha/commit/9f6c92939e81e2ad2e60b772855514597728c1bb))
+
+* feat(backup): restore with schema-version + sha256 safety checks
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e6d4e6f`](https://github.com/chen-star/net_alpha/commit/e6d4e6fa005f54cfc062cc4b7fb655f34b052baa))
+
+* feat(backup): public seams (create_bundle, list_bundles, prune, snapshot_pre) ([`75c2b3e`](https://github.com/chen-star/net_alpha/commit/75c2b3edcd7397ce3fc1799a1fd7acf0c3c20279))
+
+* feat(backup): create/extract tarball + SQLite-safe DB capture
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1dd18d8`](https://github.com/chen-star/net_alpha/commit/1dd18d85b43269cf1f1e6ee7a18c2c5df148f3c8))
+
+* feat(backup): pure-function retention with manual-is-sacred rule ([`7f7a441`](https://github.com/chen-star/net_alpha/commit/7f7a441f30c1e379ec5d6065a783b46506171cdd))
+
+* feat(backup): AES-256-GCM envelope with scrypt KDF ([`2d60877`](https://github.com/chen-star/net_alpha/commit/2d60877cfd583cb2f50878e2756435482b1d3ff7))
+
+* feat(backup): Manifest pydantic model with json round-trip ([`4c61993`](https://github.com/chen-star/net_alpha/commit/4c6199321170e7f11688bfe73ab6a2bd3afa948e))
+
+* feat(backup): paths module + filename convention ([`3c09080`](https://github.com/chen-star/net_alpha/commit/3c09080b9627e22aa264a7aa1fd0c48815fdbf3a))
+
+### Fix
+
+* fix(backup): use SQLite online backup API for WAL safety
+
+Replace checkpoint(PASSIVE)+shutil.copy2 with sqlite3.Connection.backup(),
+which is WAL-safe and lock-friendly even under concurrent writers. Relax
+the byte-identity test to a semantic-equivalence check (same rows) since
+SQLite page reuse and free-page lists mean byte identity is not a reliable
+invariant for logically-equivalent copies.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5df26ca`](https://github.com/chen-star/net_alpha/commit/5df26ca898d67637f02b9ecf4504a40ff734439e))
+
+### Refactor
+
+* refactor(backup): code-review fixes — tar filter, scratch cleanup, restore crash-safety, web error handling, dead code
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0143a1b`](https://github.com/chen-star/net_alpha/commit/0143a1bdf142f93e8bb476dd2a20ac3a78c4f74d))
+
+### Unknown
+
+* Merge pull request #5 from chen-star/feat/backup-restore
+
+feat(backup): cross-machine backup + restore subsystem ([`ddee9ce`](https://github.com/chen-star/net_alpha/commit/ddee9ce778e41fae8aa505d1804dc01b494c69ed))
+
+
 ## v0.58.0 (2026-05-10)
 
 ### Feature
