@@ -317,7 +317,17 @@ def _build_performance_ctx(
     from net_alpha.portfolio.after_tax import Period, compute_after_tax
     from net_alpha.portfolio.carryforward import get_effective_carryforward
 
-    ctx: dict = {"request": request, "tax_brackets_cfg": cfg}
+    today = _date.today()
+    if year is not None:
+        period_obj = Period.for_year(year)
+    else:
+        period_obj = Period.ytd(today.year)
+
+    # Load §1256 year-end MTM rows — available regardless of tax config.
+    mtm_rows = repo.section_1256_mtm_rows(period_obj, account=account)
+    mtm_rows.sort(key=lambda r: (r.tax_year, r.ticker, r.position_key))
+
+    ctx: dict = {"request": request, "tax_brackets_cfg": cfg, "mtm_rows": mtm_rows}
     if cfg is None:
         ctx["breakdown"] = None
         ctx["has_tax_config"] = False
@@ -331,12 +341,6 @@ def _build_performance_ctx(
         ltcg_rate=cfg.ltcg_rate,
         qualified_div_rate=cfg.qualified_div_rate,
     )
-
-    today = _date.today()
-    if year is not None:
-        period_obj = Period.for_year(year)
-    else:
-        period_obj = Period.ytd(today.year)
 
     # Apply prior-year carryforward (override-wins) when the period is
     # year-scoped. Lifetime period (year is None) gets no carryforward —
