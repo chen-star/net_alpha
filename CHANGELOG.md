@@ -2,6 +2,101 @@
 
 
 
+## v0.60.0 (2026-05-11)
+
+### Chore
+
+* chore: docs + version bump to 0.60.0 for §1256 MTM
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c4d0206`](https://github.com/chen-star/net_alpha/commit/c4d02063d11f4889ed4faf19343297eb7ec8e53e))
+
+### Feature
+
+* feat(1256-mtm): /tax performance view renders year-end MTM table
+
+Adds a §1256 year-end mark-to-market section to the /tax?view=performance
+page: new _section_1256_mtm.html fragment, route wiring in
+_build_performance_ctx, and 2 passing web tests.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ff508c1`](https://github.com/chen-star/net_alpha/commit/ff508c1902c2090f62b56f7b6d6c8c822c25a8ae))
+
+* feat(1256-mtm): fold MTM into AfterTaxBreakdown; replace stale caveat
+
+Adds section_1256_mtm_pnl / _lt_portion / _st_portion fields to
+AfterTaxBreakdown (default Decimal(&#34;0&#34;) for backward compat). compute_after_tax
+now calls repo.section_1256_mtm_pnl and combines it with realized §1256 P&amp;L
+before the 60/40 split, so year-end MTM gains/losses appear in the tax bill on
+/tax?view=performance. Replaces the stale &#34;not marked-to-market&#34; caveat with the
+accurate §1256(a) MTM source description.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ab646fb`](https://github.com/chen-star/net_alpha/commit/ab646fbff666a0952c11be66448174763cf28e0f))
+
+* feat(1256-mtm): wire MTM into recompute; classifier re-runs with prior-year basis
+
+Adds a new _run_section_1256_pass shared helper invoked from both
+recompute_all_violations and migrate_existing_violations. The helper:
+
+1. Runs classify_closed_trades (cost-basis pass).
+2. Walks back from current year to discover the earliest year any open
+   §1256 position existed at year-end, then writes per-(position, year)
+   Section1256MTMRow rows from there through current year.
+3. Re-runs classify_closed_trades with prior_year_mtm_basis_fn so
+   realized P&amp;L on a sell in year N uses the year N-1 MTM FMV as basis
+   per IRC §1256(a)(2).
+
+The public signatures are unchanged (recompute_all_violations and
+migrate_existing_violations). A new module-level _fmv_fn_for_recompute
+factory wraps PricingService + year_end_fmv and is monkeypatchable for
+tests. `date` is imported at module level so tests can pin &#34;today&#34;.
+
+Pricing seam: Repository does not expose a price provider, so the
+factory mirrors cli/refresh_cache.py — PriceCache(repo.engine) +
+YahooPriceProvider() wrapped in PricingService with config-driven
+enabled flag. When enable_remote is false the provider returns None
+and year_end_fmv falls back to (None, &#34;missing&#34;), producing MTM rows
+with fmv=0 and source=&#34;missing&#34;.
+
+Idempotency: clear_section_1256_mtm + clear_section_1256_classifications
+are called inside the pass so running recompute twice yields the same
+DB state. ([`550a3f2`](https://github.com/chen-star/net_alpha/commit/550a3f28ca0c5252d0d9273d3fe77a31c77e25fd))
+
+* feat(1256-mtm): classifier uses prior-year MTM as basis per §1256(a)(2)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9e62703`](https://github.com/chen-star/net_alpha/commit/9e62703ce29c5a27ced5a91b0f3ac9c8b651fa9f))
+
+* feat(1256-mtm): repository plumbing (save/clear/read/pnl/prior-basis)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`dfb8377`](https://github.com/chen-star/net_alpha/commit/dfb8377687269936628252a1cdde50ad0b43a1fc))
+
+* feat(1256-mtm): pure mark_to_market module + open-position discovery
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`841bf9d`](https://github.com/chen-star/net_alpha/commit/841bf9da0325439434fb5cd242a198825d8bdd8f))
+
+* feat(1256-mtm): year-end FMV cascade (Yahoo close → Black-Scholes → intrinsic)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a5546c7`](https://github.com/chen-star/net_alpha/commit/a5546c7978408c91d60cf01d5ebaf0a1419dd6ea))
+
+* feat(1256-mtm): add Section1256MTM model, table, and schema v21 migration
+
+Introduces the domain model, SQLModel table, and idempotent CREATE TABLE
+migration for IRC §1256(a)(1) year-end mark-to-market rows. Schema version
+bumped from 20 to 21; older version-pinned tests updated to stay green.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`cc28ff3`](https://github.com/chen-star/net_alpha/commit/cc28ff3662b9d3526db1f866b4391ac3254b7ca3))
+
+### Fix
+
+* fix(1256-mtm): scan all years from earliest §1256 trade — gap-stop probe missed multi-position chains
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`14b5cb3`](https://github.com/chen-star/net_alpha/commit/14b5cb352f7721057976f392b5a7d31c1a6e4786))
+
+### Unknown
+
+* Merge pull request #6 from chen-star/feat/section-1256-mtm
+
+feat: IRC §1256(a) year-end mark-to-market for open contracts ([`b217fa4`](https://github.com/chen-star/net_alpha/commit/b217fa450b53d5587b2ff6710490c650aa264e1b))
+
+
 ## v0.59.0 (2026-05-11)
 
 ### Build
