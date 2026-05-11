@@ -18,6 +18,7 @@ from net_alpha.service import disabled_flag
 from net_alpha.service.jobs.backup import run_backup_job
 from net_alpha.service.jobs.price_refresh import run_price_refresh
 from net_alpha.service.jobs.runner import run_job
+from net_alpha.service.jobs.verify import run_verify_job
 from net_alpha.service.jobs.washsale_watch import run_washsale_watch
 
 
@@ -71,6 +72,25 @@ def build_scheduler(*, repo, pricing, state) -> AsyncIOScheduler:
         },
         id="backup",
         trigger=CronTrigger(hour=3, minute=30),
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=3600,
+    )
+
+    # Weekly L2 broker reconciliation. Sunday 04:30 UTC sits an hour after the
+    # daily 04:00 washsale watch and a full hour after the 03:30 backup, so the
+    # three jobs never overlap. misfire_grace_time covers laptop-slept-through-
+    # window scenarios; coalesce collapses any pile-up to a single run.
+    sched.add_job(
+        func=run_job,
+        kwargs={
+            "job_name": "verify",
+            "fn": lambda: run_verify_job(repo=repo),
+            "state": state,
+            "repo": repo,
+        },
+        id="verify",
+        trigger=CronTrigger(day_of_week="sun", hour=4, minute=30),
         max_instances=1,
         coalesce=True,
         misfire_grace_time=3600,

@@ -1,0 +1,13 @@
+{# Global header pill summarising the latest verify run.
+   Context: `verify_pill_status` (str: ok|warn|fail|stale|grey),
+            `verify_pill_label` (str: timestamp or "never run"). #}
+<a href="/verify"
+   class="verify-pill verify-pill--{{ verify_pill_status }} inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[12px] border border-hairline hover:bg-surface-2 no-underline"
+   data-verify-pill="{{ verify_pill_status }}"
+   title="Verify: {{ verify_pill_label }}">
+  {% if verify_pill_status == "ok" %}<span aria-hidden="true">✓</span> Verified
+  {% elif verify_pill_status == "warn" %}<span aria-hidden="true">⚠</span> Verify
+  {% elif verify_pill_status == "fail" %}<span aria-hidden="true">✗</span> Verify
+  {% elif verify_pill_status == "stale" %}<span aria-hidden="true">⚠</span> Stale
+  {% else %}<span aria-hidden="true">⏸</span> Verify{% endif %}
+</a>
