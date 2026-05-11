@@ -65,7 +65,7 @@ def build_scheduler(*, repo, pricing, state) -> AsyncIOScheduler:
         func=run_job,
         kwargs={
             "job_name": "backup",
-            "fn": lambda: run_backup_job(),
+            "fn": run_backup_job,
             "state": state,
             "repo": repo,
         },

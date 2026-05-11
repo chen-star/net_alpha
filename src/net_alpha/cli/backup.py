@@ -11,6 +11,7 @@ import typer
 from loguru import logger
 
 import net_alpha.backup as backup
+from net_alpha.backup.crypto import BadPassphraseError
 from net_alpha.backup.restore import (
     IncompatibleSchemaError,
     dry_run_restore,
@@ -97,10 +98,7 @@ def restore_cmd(
             typer.echo(f"  Previous DB moved to: {result.bak_db_path.name}")
         typer.echo("If you use the always-on service, start it with: net-alpha service start")
         raise typer.Exit(0)
-    except IncompatibleSchemaError as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(2)
-    except ValueError as e:
+    except (BadPassphraseError, IncompatibleSchemaError, ValueError) as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(2)
 

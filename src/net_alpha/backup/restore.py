@@ -26,7 +26,6 @@ class IncompatibleSchemaError(Exception):
 class RestoreResult:
     manifest: Manifest
     bak_db_path: Path | None
-    extracted_dir: Path
 
 
 def _validate(extracted_dir: Path, manifest: Manifest, current_schema_version: int) -> None:
@@ -53,10 +52,11 @@ def dry_run_restore(
     current_schema_version: int,
 ) -> RestoreResult:
     """Extract + validate; perform NO writes to ~/.net_alpha/."""
-    scratch = Path(tempfile.mkdtemp(prefix="washalpha-restore-dry-"))
-    manifest = _bundle.extract_bundle(bundle_path, scratch, passphrase=passphrase)
-    _validate(scratch, manifest, current_schema_version)
-    return RestoreResult(manifest=manifest, bak_db_path=None, extracted_dir=scratch)
+    with tempfile.TemporaryDirectory(prefix="washalpha-restore-dry-") as scratch_str:
+        scratch = Path(scratch_str)
+        manifest = _bundle.extract_bundle(bundle_path, scratch, passphrase=passphrase)
+        _validate(scratch, manifest, current_schema_version)
+        return RestoreResult(manifest=manifest, bak_db_path=None)
 
 
 def restore_bundle(
@@ -73,37 +73,52 @@ def restore_bundle(
     data_dir = paths.net_alpha_home()
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    scratch = Path(tempfile.mkdtemp(prefix="washalpha-restore-"))
-    manifest = _bundle.extract_bundle(bundle_path, scratch, passphrase=passphrase)
-    _validate(scratch, manifest, current_schema_version)
+    with tempfile.TemporaryDirectory(prefix="washalpha-restore-") as scratch_str:
+        scratch = Path(scratch_str)
+        manifest = _bundle.extract_bundle(bundle_path, scratch, passphrase=passphrase)
+        _validate(scratch, manifest, current_schema_version)
 
-    ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+        ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+        db_target = data_dir / "net_alpha.db"
+        db_staged = data_dir / f"net_alpha.db.restore-staged-{ts}"
+        bak_db = None
 
-    db_target = data_dir / "net_alpha.db"
-    bak_db = None
-    if db_target.exists():
-        bak_db = data_dir / f"net_alpha.db.pre-restore-{ts}.bak"
-        db_target.rename(bak_db)
-        logger.info("Moved existing DB aside: {}", bak_db.name)
+        # Step A: copy the new DB into a sibling path. If this fails, the old DB
+        # is untouched and the user is no worse off.
+        shutil.copy2(scratch / "db" / "net_alpha.db", db_staged)
 
-    # WAL siblings are stale after the DB moves; delete.
-    for sibling in (data_dir / "net_alpha.db-wal", data_dir / "net_alpha.db-shm"):
-        sibling.unlink(missing_ok=True)
+        # Step B: move old aside, then move new into place. Both are atomic renames
+        # on the same filesystem.
+        try:
+            if db_target.exists():
+                bak_db = data_dir / f"net_alpha.db.pre-restore-{ts}.bak"
+                db_target.rename(bak_db)
+                logger.info("Moved existing DB aside: {}", bak_db.name)
+            db_staged.rename(db_target)
+        except Exception:
+            # Rollback: if we moved the old DB but failed before the new one
+            # was in place, put the old one back.
+            if bak_db and bak_db.exists() and not db_target.exists():
+                bak_db.rename(db_target)
+            db_staged.unlink(missing_ok=True)
+            raise
 
-    # Config files moved aside.
-    for cfg in _CONFIG_FILES:
-        src = data_dir / cfg
-        if src.exists():
-            src.rename(data_dir / f"{cfg}.pre-restore-{ts}.bak")
+        # WAL siblings of the OLD db are stale once we've replaced the file.
+        for sibling in (data_dir / "net_alpha.db-wal", data_dir / "net_alpha.db-shm"):
+            sibling.unlink(missing_ok=True)
 
-    # Copy from scratch into place.
-    shutil.copy2(scratch / "db" / "net_alpha.db", db_target)
-    extracted_config = scratch / "config"
-    if extracted_config.exists():
+        # Config files: still rename-aside + copy-in, but only after the DB is settled.
         for cfg in _CONFIG_FILES:
-            src = extracted_config / cfg
+            src = data_dir / cfg
             if src.exists():
-                shutil.copy2(src, data_dir / cfg)
+                src.rename(data_dir / f"{cfg}.pre-restore-{ts}.bak")
+
+        extracted_config = scratch / "config"
+        if extracted_config.exists():
+            for cfg in _CONFIG_FILES:
+                src = extracted_config / cfg
+                if src.exists():
+                    shutil.copy2(src, data_dir / cfg)
 
     logger.info(
         "Restored bundle {} (schema v{}, {} accounts)",
@@ -111,4 +126,4 @@ def restore_bundle(
         manifest.schema_version,
         len(manifest.account_labels),
     )
-    return RestoreResult(manifest=manifest, bak_db_path=bak_db, extracted_dir=scratch)
+    return RestoreResult(manifest=manifest, bak_db_path=bak_db)

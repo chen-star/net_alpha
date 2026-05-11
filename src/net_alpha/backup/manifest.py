@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from typing import Self
 
@@ -35,15 +34,3 @@ class Manifest(BaseModel):
             return cls.model_validate_json(blob)
         except ValidationError as e:
             raise ValueError(f"invalid manifest: {e}") from e
-
-    def to_aad(self) -> bytes:
-        """Compact 32-byte AAD for AES-GCM authentication."""
-        payload = json.dumps(
-            {
-                "fv": self.format_version,
-                "ts": self.created_at.isoformat(),
-                "sv": self.schema_version,
-            },
-            sort_keys=True,
-        )
-        return payload.encode("utf-8")[:32].ljust(32, b"\x00")

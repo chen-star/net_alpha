@@ -136,7 +136,11 @@ def extract_bundle(
         plaintext = raw
 
     with tarfile.open(fileobj=io.BytesIO(plaintext), mode="r:gz") as tf:
-        tf.extractall(out_dir)
+        try:
+            tf.extractall(out_dir, filter="data")
+        except TypeError:
+            # Python 3.11 without the filter-aware tarfile patch
+            tf.extractall(out_dir)
 
     manifest_path = out_dir / "manifest.json"
     return Manifest.from_json_bytes(manifest_path.read_bytes())
