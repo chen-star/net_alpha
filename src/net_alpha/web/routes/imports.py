@@ -15,6 +15,10 @@ from net_alpha.db.repository import Repository
 from net_alpha.engine.recompute import recompute_all_violations
 from net_alpha.engine.stitch import stitch_account
 from net_alpha.import_.aggregations import compute_import_aggregates
+from net_alpha.import_.positions_csv import (
+    PositionsCSVParseError,
+    parse_positions_csv,
+)
 from net_alpha.ingest.csv_loader import load_csv
 from net_alpha.ingest.dedup import filter_new
 from net_alpha.models.domain import Account, ImportRecord
@@ -416,6 +420,45 @@ async def upload(
     if last_import_id is not None:
         return RedirectResponse(url=f"/imports/success?id={last_import_id}", status_code=303)
     return RedirectResponse(url="/settings/imports", status_code=303)
+
+
+@router.post("/imports/positions", response_model=None)
+async def upload_positions_csv(
+    request: Request,
+    file: UploadFile = File(...),
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse | RedirectResponse:
+    """Ingest a Schwab All-Positions CSV → ``broker_position`` rows.
+
+    The parsed rows + the as-of date from the CSV header are persisted via
+    :meth:`Repository.save_broker_positions`, which also writes a sentinel
+    ImportRecord so the row surfaces on the Imports page. A verify run is
+    then triggered best-effort (failures don't block — the verify-job
+    orchestrator is wired in a later phase).
+    """
+    if request.app.state.demo_mode:
+        return RedirectResponse("/welcome", status_code=303)
+
+    content = (await file.read()).decode("utf-8", errors="replace")
+    try:
+        rows, as_of = parse_positions_csv(content)
+    except PositionsCSVParseError as e:
+        raise HTTPException(status_code=400, detail=f"Could not parse positions CSV: {e}") from e
+
+    import_id = repo.save_broker_positions(rows=rows, as_of_date=as_of)
+
+    # Best-effort: trigger an immediate verify run. The orchestrator lands
+    # in a subsequent phase — until then this is a no-op import miss.
+    try:  # pragma: no cover - exercised once Phase 5 lands
+        from net_alpha.service.jobs.verify import run_verify_once
+
+        run_verify_once(repo=repo, trigger="positions_import")
+    except Exception:  # noqa: BLE001
+        pass
+
+    bump_fragment_revision(request)
+
+    return RedirectResponse(url=f"/settings/imports?highlight={import_id}", status_code=303)
 
 
 @router.get("/imports/success", response_class=HTMLResponse)

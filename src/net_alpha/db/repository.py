@@ -2545,6 +2545,84 @@ class Repository:
             )
             return {symbol: row for row, symbol in s.exec(stmt).all()}
 
+    # --- Broker positions (verify engine) ---------------------------------
+
+    def save_broker_positions(self, *, rows: list[dict], as_of_date: str) -> int:
+        """Insert an ImportRecord + N BrokerPosition rows.
+
+        The ``imports`` table has a NOT-NULL ``account_id`` FK so we attach
+        every positions import to a sentinel account (``positions/(multi)``)
+        — the underlying broker_position rows carry their own per-row
+        ``account_label`` so the sentinel is purely a referential-integrity
+        placeholder, never surfaced as a real trading account.
+
+        The ``csv_filename`` is prefixed with ``[positions]`` so the imports
+        page can visibly distinguish positions imports from trade/G&L imports
+        even without a dedicated ``kind`` column on the table.
+
+        Returns the new ImportRecord ``id``.
+        """
+        from net_alpha.verify.models import BrokerPosition
+
+        with Session(self.engine) as s:
+            # Sentinel account for the FK; created lazily on first positions
+            # import. broker="positions", label="(multi)" — distinct enough
+            # from any real broker that it cannot collide.
+            acct = s.exec(
+                select(AccountRow).where(AccountRow.broker == "positions", AccountRow.label == "(multi)")
+            ).first()
+            if acct is None:
+                acct = AccountRow(broker="positions", label="(multi)")
+                s.add(acct)
+                s.flush()
+
+            rec = ImportRecordRow(
+                account_id=acct.id,
+                csv_filename=f"[positions] as of {as_of_date}",
+                csv_sha256=f"positions-{as_of_date}-{len(rows)}",
+                imported_at=datetime.now(UTC),
+                trade_count=len(rows),
+            )
+            s.add(rec)
+            s.flush()
+            for r in rows:
+                s.add(
+                    BrokerPosition(
+                        import_id=rec.id,
+                        account_label=r["account_label"],
+                        symbol=r["symbol"],
+                        qty=r["qty"],
+                        cost_basis=r["cost_basis"],
+                        market_value=r["market_value"],
+                        unrealized_pl=r["unrealized_pl"],
+                        as_of_date=as_of_date,
+                    )
+                )
+            s.commit()
+            return rec.id
+
+    def latest_broker_positions(self) -> tuple[list, str | None]:
+        """Return the most-recent broker_position rows + their as_of_date.
+
+        Empty list + None if no positions CSV has ever been imported. Rows
+        are returned as ``BrokerPosition`` SQLModel instances detached from
+        the session.
+        """
+        from net_alpha.verify.models import BrokerPosition
+
+        with Session(self.engine) as s:
+            max_import = s.exec(text("SELECT MAX(import_id) FROM broker_position")).first()
+            # SQLAlchemy returns a Row; exec().first() on raw text gives a
+            # tuple-like Row, or None on empty results. Guard both shapes.
+            if not max_import or max_import[0] is None:
+                return [], None
+            latest_import_id = max_import[0]
+            rows = list(s.exec(select(BrokerPosition).where(BrokerPosition.import_id == latest_import_id)).all())
+            for r in rows:
+                s.expunge(r)
+            as_of = rows[0].as_of_date if rows else None
+            return rows, as_of
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility
