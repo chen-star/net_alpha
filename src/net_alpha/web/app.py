@@ -35,12 +35,12 @@ from net_alpha.web.routes import (
     wash_sales,
     welcome,
 )
+from net_alpha.web.routes import backup as backup_routes
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
 from net_alpha.web.routes import preferences as preferences_routes
 from net_alpha.web.routes import service as service_routes
 from net_alpha.web.routes import settings as settings_routes
-from net_alpha.web.routes import backup as backup_routes
 from net_alpha.web.routes import tax as tax_routes
 from net_alpha.web.routes.accounts import router as accounts_router
 

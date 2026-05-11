@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 from net_alpha.backup.crypto import (
-    BadPassphraseError,
     ENVELOPE_MAGIC,
+    BadPassphraseError,
     decrypt_bundle,
     encrypt_bundle,
 )

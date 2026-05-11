@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from net_alpha.backup.retention import BackupFile, RetentionPolicy, select_for_deletion
@@ -10,13 +10,13 @@ def _bf(name: str, reason: str, days_ago: int, size: int = 1024) -> BackupFile:
     return BackupFile(
         path=Path(f"/tmp/{name}"),
         reason=reason,
-        created_at=datetime(2026, 5, 10, tzinfo=timezone.utc) - timedelta(days=days_ago),
+        created_at=datetime(2026, 5, 10, tzinfo=UTC) - timedelta(days=days_ago),
         size_bytes=size,
     )
 
 
-_NOW = datetime(2026, 5, 10, tzinfo=timezone.utc)
-_POLICY = RetentionPolicy(daily_keep=14, pre_keep=10, size_cap_bytes=2 * 1024 ** 3)
+_NOW = datetime(2026, 5, 10, tzinfo=UTC)
+_POLICY = RetentionPolicy(daily_keep=14, pre_keep=10, size_cap_bytes=2 * 1024**3)
 
 
 def test_manual_is_never_deleted():
@@ -43,7 +43,7 @@ def test_pre_keeps_newest_n_across_reasons():
 
 
 def test_size_cap_prunes_non_manual():
-    big = 500 * 1024 ** 2  # 500 MB each
+    big = 500 * 1024**2  # 500 MB each
     bundles = [
         _bf("manual1", "manual", 0, big),
         _bf("daily1", "daily", 1, big),
@@ -63,7 +63,7 @@ def test_size_cap_prunes_non_manual():
 
 
 def test_manual_only_exceeds_cap_logs_no_prune(caplog):
-    big = 1500 * 1024 ** 2  # 1.5 GB each
+    big = 1500 * 1024**2  # 1.5 GB each
     bundles = [_bf("m1", "manual", 0, big), _bf("m2", "manual", 1, big)]
     deleted = select_for_deletion(bundles, policy=_POLICY, now=_NOW)
     assert deleted == []

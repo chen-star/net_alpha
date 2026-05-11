@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
-from net_alpha.backup.manifest import Manifest, MANIFEST_FORMAT_VERSION
+from net_alpha.backup.manifest import MANIFEST_FORMAT_VERSION, Manifest
 
 
 def test_manifest_roundtrip_json():
@@ -13,7 +13,7 @@ def test_manifest_roundtrip_json():
         format_version=MANIFEST_FORMAT_VERSION,
         app_version="0.57.0",
         schema_version=20,
-        created_at=datetime(2026, 5, 10, 15, 30, 0, tzinfo=timezone.utc),
+        created_at=datetime(2026, 5, 10, 15, 30, 0, tzinfo=UTC),
         reason="manual",
         hostname="test-host",
         db_sha256="a" * 64,

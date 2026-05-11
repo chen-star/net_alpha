@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import getpass
 import json as _json
+from datetime import UTC
 from pathlib import Path
 
 import typer
@@ -16,7 +17,6 @@ from net_alpha.backup.restore import (
     restore_bundle,
 )
 from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION
-
 
 backups_app = typer.Typer(no_args_is_help=True, help="List, remove, or prune backup bundles.")
 
@@ -75,7 +75,8 @@ def restore_cmd(
             raise typer.Exit(0)
 
         if not force:
-            if not typer.confirm("Overwrite current ~/.net_alpha/ state? (an existing DB is renamed to .pre-restore-*.bak)"):
+            msg = "Overwrite current ~/.net_alpha/ state? (an existing DB is renamed to .pre-restore-*.bak)"
+            if not typer.confirm(msg):
                 typer.echo("Cancelled.")
                 raise typer.Exit(0)
 
@@ -151,14 +152,12 @@ def backups_rm(
 def backups_prune(dry_run: bool = typer.Option(False, "--dry-run")):
     """Apply retention policy: 14 daily + 10 pre-mutation + 2GB cap; manual is sacred."""
     if dry_run:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from net_alpha.backup.retention import RetentionPolicy, select_for_deletion
 
         bundles = backup.list_bundles()
-        deleted = select_for_deletion(
-            bundles, policy=RetentionPolicy(), now=datetime.now(timezone.utc)
-        )
+        deleted = select_for_deletion(bundles, policy=RetentionPolicy(), now=datetime.now(UTC))
         for b in deleted:
             typer.echo(f"would delete: {b.path.name}")
         typer.echo(f"({len(deleted)} bundles)")

@@ -46,13 +46,7 @@ def encrypt_bundle(plaintext: bytes, *, passphrase: str, aad: bytes) -> bytes:
     nonce = os.urandom(NONCE_LEN)
     key = _derive_key(passphrase, salt)
     ct = AESGCM(key).encrypt(nonce, plaintext, aad)
-    return (
-        ENVELOPE_MAGIC
-        + bytes([ENVELOPE_VERSION])
-        + salt
-        + nonce
-        + ct
-    )
+    return ENVELOPE_MAGIC + bytes([ENVELOPE_VERSION]) + salt + nonce + ct
 
 
 def decrypt_bundle(envelope: bytes, *, passphrase: str, aad: bytes) -> bytes:

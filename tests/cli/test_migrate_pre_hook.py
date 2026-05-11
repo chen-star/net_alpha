@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sqlite3
-from pathlib import Path
 
 from net_alpha.cli import migrate as migrate_cmd
 
@@ -16,7 +15,10 @@ def test_pre_migrate_hook_creates_bundle(tmp_path, monkeypatch):
     con = sqlite3.connect(v1)
     con.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
     con.execute("INSERT INTO meta (key, value) VALUES ('schema_version', '1')")
-    con.execute("CREATE TABLE trades (account TEXT, date TEXT, ticker TEXT, action TEXT, quantity REAL, proceeds REAL, cost_basis REAL)")
+    con.execute(
+        "CREATE TABLE trades (account TEXT, date TEXT, ticker TEXT, action TEXT,"
+        " quantity REAL, proceeds REAL, cost_basis REAL)"
+    )
     con.commit()
     con.close()
 

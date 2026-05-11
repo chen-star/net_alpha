@@ -22,7 +22,7 @@ class BackupFile:
 class RetentionPolicy:
     daily_keep: int = 14
     pre_keep: int = 10
-    size_cap_bytes: int = 2 * 1024 ** 3  # 2 GB
+    size_cap_bytes: int = 2 * 1024**3  # 2 GB
 
 
 def select_for_deletion(

@@ -5,7 +5,7 @@ from __future__ import annotations
 import shutil
 import tempfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from loguru import logger
@@ -77,7 +77,7 @@ def restore_bundle(
     manifest = _bundle.extract_bundle(bundle_path, scratch, passphrase=passphrase)
     _validate(scratch, manifest, current_schema_version)
 
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
 
     db_target = data_dir / "net_alpha.db"
     bak_db = None

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from loguru import logger
@@ -22,9 +22,7 @@ from net_alpha.backup.retention import BackupFile, RetentionPolicy, select_for_d
 
 __all__ = ["create_bundle", "list_bundles", "prune", "snapshot_pre"]
 
-_FILENAME_RE = re.compile(
-    r"^wash-alpha-(\d{8})-(\d{6})-(?P<reason>[a-z0-9-]+)\.tar\.gz(?P<enc>\.enc)?$"
-)
+_FILENAME_RE = re.compile(r"^wash-alpha-(\d{8})-(\d{6})-(?P<reason>[a-z0-9-]+)\.tar\.gz(?P<enc>\.enc)?$")
 
 
 def _read_schema_version(db_path: Path) -> int:
@@ -79,7 +77,7 @@ def list_bundles() -> list[BackupFile]:
         m = _FILENAME_RE.match(p.name)
         if not m:
             continue
-        ts = datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+        ts = datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H%M%S").replace(tzinfo=UTC)
         out.append(
             BackupFile(
                 path=p,
@@ -96,7 +94,7 @@ def prune(*, policy: RetentionPolicy | None = None) -> list[Path]:
     """Apply retention rules; delete and return the paths that were removed."""
     pol = policy or RetentionPolicy()
     bundles = list_bundles()
-    deleted_files = select_for_deletion(bundles, policy=pol, now=datetime.now(timezone.utc))
+    deleted_files = select_for_deletion(bundles, policy=pol, now=datetime.now(UTC))
     out: list[Path] = []
     for b in deleted_files:
         try:

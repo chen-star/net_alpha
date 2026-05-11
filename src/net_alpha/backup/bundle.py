@@ -8,7 +8,7 @@ import socket
 import sqlite3
 import tarfile
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from loguru import logger
@@ -57,7 +57,7 @@ def create_bundle(
 ) -> Path:
     """Create a backup bundle in `out_dir` and return its path."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    created_at = datetime.now(timezone.utc)
+    created_at = datetime.now(UTC)
     encrypted = encrypt_passphrase is not None
     final_name = paths.bundle_filename(created_at=created_at, reason=reason, encrypted=encrypted)
     final_path = out_dir / final_name
@@ -101,9 +101,7 @@ def create_bundle(
 
         try:
             if encrypted:
-                payload = crypto.encrypt_bundle(
-                    tarball, passphrase=encrypt_passphrase, aad=_AAD_CONST
-                )
+                payload = crypto.encrypt_bundle(tarball, passphrase=encrypt_passphrase, aad=_AAD_CONST)
             else:
                 payload = tarball
 

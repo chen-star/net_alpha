@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
-
-import pytest
-
 import net_alpha.backup as backup
-from net_alpha.backup.retention import BackupFile
 
 
 def test_public_api_exports():
