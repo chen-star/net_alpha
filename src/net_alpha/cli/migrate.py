@@ -8,6 +8,7 @@ from pathlib import Path
 import typer
 from sqlmodel import SQLModel, create_engine
 
+import net_alpha.backup as backup
 from net_alpha.db.repository import Repository
 from net_alpha.models.domain import ImportRecord, Trade
 
@@ -27,6 +28,7 @@ def run(yes: bool) -> int:
         if not typer.confirm(f"Migrate v1 DB at {v1} into a new v2 DB at {v2}?"):
             return 0
 
+    backup.snapshot_pre(reason="pre-migrate")
     con = sqlite3.connect(str(v1))
     rows = con.execute("SELECT account, date, ticker, action, quantity, proceeds, cost_basis FROM trades").fetchall()
     con.close()

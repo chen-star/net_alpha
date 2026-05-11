@@ -5,6 +5,7 @@ from pathlib import Path
 
 import typer
 
+import net_alpha.backup as backup
 from net_alpha.cli.default import _engine
 from net_alpha.db.repository import Repository
 from net_alpha.engine.etf_pairs import load_etf_pairs
@@ -21,6 +22,7 @@ def list_cmd() -> int:
 
 
 def remove_cmd(import_id: int, yes: bool) -> int:
+    backup.snapshot_pre(reason="pre-imports-rm")
     repo = Repository(_engine())
     if repo.get_import(import_id) is None:
         typer.echo(f"Error: no import with id {import_id}. Run `net-alpha imports` to list.", err=True)

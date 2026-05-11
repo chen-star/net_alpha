@@ -35,6 +35,7 @@ from net_alpha.web.routes import (
     wash_sales,
     welcome,
 )
+from net_alpha.web.routes import backup as backup_routes
 from net_alpha.web.routes import imports as imports_routes
 from net_alpha.web.routes import portfolio as portfolio_routes
 from net_alpha.web.routes import preferences as preferences_routes
@@ -248,6 +249,7 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
     app.include_router(ticker.router)
     app.include_router(portfolio_routes.router)
     app.include_router(trades.router)
+    app.include_router(backup_routes.router)
     app.include_router(system.router)
 
     system.register_error_handlers(app)

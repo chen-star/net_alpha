@@ -7,6 +7,7 @@ from pathlib import Path
 import typer
 from sqlmodel import create_engine
 
+import net_alpha.backup as backup
 from net_alpha.brokers.registry import detect_broker
 from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
 from net_alpha.db.connection import init_db
@@ -65,6 +66,7 @@ def _engine():
 
 
 def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
+    backup.snapshot_pre(reason="pre-import")
     repo = Repository(_engine())
 
     affected_dates: list = []

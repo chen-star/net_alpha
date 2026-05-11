@@ -114,6 +114,20 @@ Key files:
 - `cli/service.py`, `cli/service_run.py`
 - `web/routes/service.py`, `web/routes/accounts.py`
 
+### Backup subsystem
+
+`net-alpha backup` creates a tarball of `~/.net_alpha/` (DB + config) in
+`~/.net_alpha/backups/`. The DB is captured via SQLite's online `.backup()` API
+so it's WAL-safe even while the service is writing. Encryption (`--encrypt`)
+uses AES-256-GCM with scrypt KDF. Automatic snapshots: daily at 03:30 UTC
+(service-supervised) and inline before every CSV import, `imports rm`, and
+`migrate-from-v1` operation. Retention: 14 daily + 10 pre-mutation + 2 GB cap;
+manual bundles are never auto-pruned. Restore is CLI-only (`net-alpha restore`)
+and never auto-restarts the service.
+
+Key files: `backup/` (paths, manifest, crypto, retention, bundle, restore),
+`cli/backup.py`, `service/jobs/backup.py`, `web/routes/backup.py`.
+
 ### Disclaimer Policy
 
 Every command output ends with exactly:
@@ -128,7 +142,7 @@ No exceptions. Not skippable.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **net_alpha** (5412 symbols, 18790 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **net_alpha** (5623 symbols, 19291 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

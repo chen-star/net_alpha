@@ -15,6 +15,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from net_alpha.service import disabled_flag
+from net_alpha.service.jobs.backup import run_backup_job
 from net_alpha.service.jobs.price_refresh import run_price_refresh
 from net_alpha.service.jobs.runner import run_job
 from net_alpha.service.jobs.washsale_watch import run_washsale_watch
@@ -55,6 +56,21 @@ def build_scheduler(*, repo, pricing, state) -> AsyncIOScheduler:
         },
         id="washsale_watch",
         trigger=CronTrigger(hour=4, minute=0),
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=3600,
+    )
+
+    sched.add_job(
+        func=run_job,
+        kwargs={
+            "job_name": "backup",
+            "fn": run_backup_job,
+            "state": state,
+            "repo": repo,
+        },
+        id="backup",
+        trigger=CronTrigger(hour=3, minute=30),
         max_instances=1,
         coalesce=True,
         misfire_grace_time=3600,
