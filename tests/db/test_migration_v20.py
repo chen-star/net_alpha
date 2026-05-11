@@ -17,8 +17,8 @@ from net_alpha.db.migrations import (
 )
 
 
-def test_current_schema_version_is_20():
-    assert CURRENT_SCHEMA_VERSION == 20
+def test_current_schema_version_is_at_least_20():
+    assert CURRENT_SCHEMA_VERSION == 21
 
 
 def test_migration_creates_snapshot_table(tmp_path):
@@ -40,7 +40,7 @@ def test_migration_creates_snapshot_table(tmp_path):
         assert rows, "plan_view_snapshot table not created"
 
         version = s.exec(text("SELECT value FROM meta WHERE key='schema_version'")).first()
-        assert version[0] == "20"
+        assert int(version[0]) == CURRENT_SCHEMA_VERSION
 
 
 def test_migration_is_idempotent(tmp_path):

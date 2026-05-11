@@ -50,7 +50,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 20
+CURRENT_SCHEMA_VERSION = 21
 
 
 def get_schema_version(session: Session) -> int:
@@ -600,6 +600,36 @@ def _migrate_v19_to_v20(session: Session) -> None:
     )
 
 
+def _migrate_v20_to_v21(session: Session) -> None:
+    """v20 → v21: add section_1256_mtm table.
+
+    Persists IRC §1256(a)(1) year-end mark-to-market rows. One row per
+    (position_key, tax_year). Fully rebuilt on every recompute.
+    """
+    session.exec(
+        text("""
+        CREATE TABLE IF NOT EXISTS section_1256_mtm (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            position_key TEXT NOT NULL,
+            tax_year INTEGER NOT NULL,
+            last_business_day TEXT NOT NULL,
+            fmv NUMERIC NOT NULL,
+            basis_before NUMERIC NOT NULL,
+            unrealized_pnl NUMERIC NOT NULL,
+            long_term_portion NUMERIC NOT NULL,
+            short_term_portion NUMERIC NOT NULL,
+            fmv_source TEXT NOT NULL,
+            ticker TEXT NOT NULL,
+            account TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+    """)
+    )
+    session.exec(text("CREATE INDEX IF NOT EXISTS idx_s1256_mtm_year ON section_1256_mtm(tax_year)"))
+    session.exec(text("CREATE INDEX IF NOT EXISTS idx_s1256_mtm_posyear ON section_1256_mtm(position_key, tax_year)"))
+    session.exec(text("CREATE INDEX IF NOT EXISTS idx_s1256_mtm_ticker ON section_1256_mtm(ticker)"))
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -617,6 +647,7 @@ def migrate(session: Session) -> None:
         _stamp_section_1256_meta(session)
         _migrate_v18_to_v19(session)
         _migrate_v19_to_v20(session)
+        _migrate_v20_to_v21(session)
         session.commit()
         return
     if current == 1:
@@ -695,6 +726,10 @@ def migrate(session: Session) -> None:
         _migrate_v19_to_v20(session)
         set_schema_version(session, 20)
         current = 20
+    if current < 21:
+        _migrate_v20_to_v21(session)
+        set_schema_version(session, 21)
+        current = 21
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "

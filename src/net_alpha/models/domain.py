@@ -209,6 +209,22 @@ class Section1256Classification(BaseModel):
     underlying: str
 
 
+class Section1256MTM(BaseModel):
+    """Year-end mark-to-market entry for an open §1256 contract (IRC §1256(a)(1)–(3))."""
+
+    position_key: str
+    tax_year: int
+    last_business_day: date
+    fmv: Decimal
+    basis_before: Decimal
+    unrealized_pnl: Decimal
+    long_term_portion: Decimal
+    short_term_portion: Decimal
+    fmv_source: str
+    ticker: str
+    account: str = ""
+
+
 # §1092 (straddles) -----------------------------------------------------------
 
 

@@ -2,7 +2,7 @@ from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 
 import net_alpha.db.tables as _tables  # noqa: F401 — registers all SQLModel table classes
-from net_alpha.db.migrations import get_schema_version, migrate
+from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION, get_schema_version, migrate
 
 
 def test_v19_creates_service_run_table():
@@ -59,9 +59,9 @@ def test_v19_idempotent():
         assert get_schema_version(s) == first_version
 
 
-def test_v19_advances_version_to_20():
+def test_v19_advances_version_to_current():
     engine = create_engine("sqlite:///:memory:")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as s:
         migrate(s)
-        assert get_schema_version(s) == 20
+        assert get_schema_version(s) == CURRENT_SCHEMA_VERSION
