@@ -2,6 +2,44 @@
 
 
 
+## v0.61.0 (2026-05-11)
+
+### Feature
+
+* feat(1091-tacking): IRC §1223(4) holding-period tacking on wash-sale replacement lots
+
+When a wash sale rolls disallowed loss into a replacement lot, the replacement&#39;s
+holding-period clock now tacks back to the acquisition date of the lot whose
+sale triggered the wash sale (IRC §1223(4)). Previously the engine adjusted
+basis but classified the replacement&#39;s later sale as ST/LT using only the raw
+buy date — distorting both the after-tax P&amp;L bucket and the §1256 mix bar.
+
+Engine: detector walks all sells in date order, FIFO-consuming lots to find
+the loss-side donor&#39;s effective acquired date, then sets
+``Lot.tacked_acquired_date`` on the replacement. Chains transitively across
+multi-step wash sales.
+
+Persistence: schema v22 adds ``lots.tacked_acquired_date``; round-trips through
+``_lot_to_row`` / ``_row_to_lot``.
+
+Classifiers consume the effective date everywhere:
+  - Repository.realized_pnl_split_by_year (per-lot FIFO; falls back to trade
+    FIFO when no lot rows exist)
+  - tax_planner._classify_st_lt_gains (now delegates to the repo method)
+  - engine/lot_selector ST/LT chip in the Sim comparison table
+  - portfolio/lot_aging &#34;crossing LTCG&#34; view
+  - portfolio/positions per-symbol LT/ST quantity split
+  - tax_planner harvest-opportunity LT/ST + tax-light is_st heuristic
+
+The repository classifier rewrite also fixes a pre-existing FIFO bug: it had
+been using ``chain[0].date`` (earliest buy of the ticker) regardless of which
+lot the sell actually consumed.
+
+17 new tests across engine/db/portfolio. 1938 total passing, zero regressions.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ffa2c0b`](https://github.com/chen-star/net_alpha/commit/ffa2c0b2a4f7159c061186f07b0fe574c2c6850e))
+
+
 ## v0.60.0 (2026-05-11)
 
 ### Chore
