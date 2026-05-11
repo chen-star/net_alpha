@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`wash-alpha` (package `net_alpha`, current version `0.40.0`) is a local-first Python tool for cross-account wash sale detection, tax-performance analysis, and pre-trade simulation — covering equities, options, and ETFs. It ships a Typer CLI plus an optional FastAPI web UI (`net-alpha ui`) that is now the primary interactive surface.
+`wash-alpha` (package `net_alpha`, current version `0.60.0`) is a local-first Python tool for cross-account wash sale detection, tax-performance analysis, and pre-trade simulation — covering equities, options, and ETFs. It ships a Typer CLI plus an optional FastAPI web UI (`net-alpha ui`) that is now the primary interactive surface.
 
 ## Tech Stack
 
@@ -106,7 +106,7 @@ Bundled in `etf_pairs.yaml` (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, et
 
 ### §1256 Contracts
 
-Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, MXEF, MXEA — bundled in `section_1256_underlyings.yaml`) are recognized as §1256 contracts. The engine emits an `ExemptMatch` record (not a `WashSaleViolation`) when either side of a wash-sale candidate is §1256 — they are exempt from §1091 under §1256(c). A separate classifier (`section_1256/classifier.py`) splits closed §1256 trade P&L 60/40 LT/ST per §1256(a)(3), regardless of holding period. Open positions at year-end are NOT marked-to-market in v1; users consult their 1099-B / Form 6781.
+Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, MXEF, MXEA — bundled in `section_1256_underlyings.yaml`) are recognized as §1256 contracts. The engine emits an `ExemptMatch` record (not a `WashSaleViolation`) when either side of a wash-sale candidate is §1256 — they are exempt from §1091 under §1256(c). A separate classifier (`section_1256/classifier.py`) splits closed §1256 trade P&L 60/40 LT/ST per §1256(a)(3), regardless of holding period. Open §1256 positions at year-end ARE marked-to-market per §1256(a)(1) (`section_1256/mtm.py`). FMV cascade: Yahoo option close → Black-Scholes from underlying close + 30-day historical vol → intrinsic if expired. The `Section1256MTM` table is fully rebuilt on every recompute. §1256(c) loss carryback election is out of scope; users wanting it consult Form 6781 line 6 directly.
 
 ### Database
 
@@ -114,7 +114,7 @@ Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, MXEF, MXEA — b
 - Schema versioning via `meta` table (`schema_version` integer); hand-written `ALTER TABLE` migrations — no migration framework
 - Wash sale recompute is incremental: only the ±30-day window around affected trade dates is recalculated on import or import removal
 - Schema is at v18 as of 2026-05-05 (added `loss_carryforward` table for prior-year ST/LT carryforward overrides).
-- Schema v19 adds: `accounts.type` (taxable/IRA/Roth/401k/HSA/other), `accounts.created_at`, plus `service_run` and `washsale_watch_result` tables.
+- Schema v19 adds: `accounts.type` (taxable/IRA/Roth/401k/HSA/other), `accounts.created_at`, plus `service_run` and `washsale_watch_result` tables. Schema v20 adds `plan_view_snapshot`. Schema v21 adds `section_1256_mtm` (year-end mark-to-market rows per IRC §1256(a)(1)).
 
 ### v2 Always-on service (Phase 2/3/4 of v2.0)
 

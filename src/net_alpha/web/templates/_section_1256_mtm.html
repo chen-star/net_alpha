@@ -1,0 +1,57 @@
+{# §1256 Year-End Mark-to-Market table for /tax?view=performance #}
+{% if mtm_rows %}
+<section class="rounded-lg border border-hairline p-4 mt-6" id="section-1256-mtm">
+  <header class="flex items-baseline justify-between mb-3">
+    <h3 class="text-base font-semibold">§1256 Year-End Mark-to-Market</h3>
+    <span class="text-xs text-label-2">IRC §1256(a)(1) — open contracts at Dec 31</span>
+  </header>
+  <table class="w-full text-sm">
+    <thead class="text-left text-xs uppercase text-label-2">
+      <tr>
+        <th class="py-1">Year</th>
+        <th class="py-1">Ticker</th>
+        <th class="py-1">Contract</th>
+        <th class="py-1 text-right">Basis</th>
+        <th class="py-1 text-right">FMV</th>
+        <th class="py-1 text-right">Unrealized</th>
+        <th class="py-1 text-right">LT (60%)</th>
+        <th class="py-1 text-right">ST (40%)</th>
+        <th class="py-1">Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in mtm_rows %}
+      <tr style="border-top: 0.5px solid var(--color-hairline);">
+        <td class="py-1">{{ m.tax_year }}</td>
+        <td class="py-1 font-mono">{{ m.ticker }}</td>
+        <td class="py-1 font-mono text-xs text-label-2">
+          {%- set parts = m.position_key.split("|") -%}
+          {{ parts[1] }} {{ parts[3] }} {{ parts[2] }}
+        </td>
+        <td class="py-1 text-right tabular-nums">${{ "%.2f"|format(m.basis_before) }}</td>
+        <td class="py-1 text-right tabular-nums">${{ "%.2f"|format(m.fmv) }}</td>
+        <td class="py-1 text-right tabular-nums {% if m.unrealized_pnl < 0 %}text-neg{% else %}text-pos{% endif %}">
+          ${{ "%.2f"|format(m.unrealized_pnl) }}
+        </td>
+        <td class="py-1 text-right tabular-nums">${{ "%.2f"|format(m.long_term_portion) }}</td>
+        <td class="py-1 text-right tabular-nums">${{ "%.2f"|format(m.short_term_portion) }}</td>
+        <td class="py-1 text-xs">
+          {%- if m.fmv_source == "yahoo_close" -%}
+            <span class="text-label-2">Yahoo close</span>
+          {%- elif m.fmv_source == "black_scholes" -%}
+            <span class="text-warn" title="Estimated via Black-Scholes from underlying close">Black-Scholes</span>
+          {%- elif m.fmv_source == "intrinsic" -%}
+            <span class="text-label-2">Intrinsic</span>
+          {%- else -%}
+            <span class="text-neg" title="FMV unavailable — treated as zero">missing</span>
+          {%- endif -%}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="text-xs text-label-2 mt-2">
+    "Black-Scholes" or "missing" indicates an estimate that may differ from your 1099-B / Form 6781.
+  </p>
+</section>
+{% endif %}

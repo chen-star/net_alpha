@@ -27,10 +27,19 @@ def _brackets(*, niit=True, state=Decimal("0")) -> TaxBrackets:
 
 
 class _StubRepo:
-    def __init__(self, *, st=Decimal("0"), lt=Decimal("0"), s1256=Decimal("0"), disallowed=Decimal("0")):
+    def __init__(
+        self,
+        *,
+        st=Decimal("0"),
+        lt=Decimal("0"),
+        s1256=Decimal("0"),
+        s1256_mtm=Decimal("0"),
+        disallowed=Decimal("0"),
+    ):
         self._st = st
         self._lt = lt
         self._s1256 = s1256
+        self._s1256_mtm = s1256_mtm
         self._disallowed = disallowed
 
     def realized_pnl_split(self, period, account):
@@ -38,6 +47,9 @@ class _StubRepo:
 
     def section_1256_pnl(self, period, account):
         return self._s1256
+
+    def section_1256_mtm_pnl(self, period, account):
+        return self._s1256_mtm
 
     def wash_sale_disallowed_total(self, period, account):
         return self._disallowed

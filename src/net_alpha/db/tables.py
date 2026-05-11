@@ -157,6 +157,26 @@ class Section1256ClassificationRow(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class Section1256MTMRow(SQLModel, table=True):
+    """Persistent form of `models.domain.Section1256MTM`. Pure derived data."""
+
+    __tablename__ = "section_1256_mtm"
+
+    id: int | None = Field(default=None, primary_key=True)
+    position_key: str = Field(index=True)
+    tax_year: int = Field(index=True)
+    last_business_day: str  # YYYY-MM-DD per project convention
+    fmv: Decimal
+    basis_before: Decimal
+    unrealized_pnl: Decimal
+    long_term_portion: Decimal
+    short_term_portion: Decimal
+    fmv_source: str
+    ticker: str = Field(index=True)
+    account: str = Field(default="", index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class MetaRow(SQLModel, table=True):
     __tablename__ = "meta"
 
