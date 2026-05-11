@@ -217,3 +217,34 @@ def check_pl3_holding_period(
             )
         )
     return out
+
+
+def check_xp1_cross_page(
+    *,
+    positions_sum: float,
+    cached_overview_total: float | None,
+    tol: Tolerance,
+) -> InvariantResult:
+    """XP-1: Sum of /positions per-lot rows == Overview total_market_value.
+
+    If the cache is empty/stale, this check is intentionally skipped (OK with
+    a 'skipped' detail flag) rather than falsely flagging - the user simply
+    hasn't visited the Overview page yet in this process lifetime.
+    """
+    if cached_overview_total is None:
+        return InvariantResult(
+            rule_id="XP-1",
+            severity=Severity.OK,
+            scope="cross_page",
+            ours=None,
+            theirs=None,
+            delta=None,
+            detail={"skipped": True, "reason": "no recent overview snapshot in cache"},
+        )
+    return _compare(
+        rule_id="XP-1",
+        ours=positions_sum,
+        theirs=cached_overview_total,
+        tol=tol,
+        scope="cross_page",
+    )

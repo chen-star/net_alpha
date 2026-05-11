@@ -216,3 +216,51 @@ def test_pl3_fails_when_bucket_wrong():
     )
     assert results[0].severity == Severity.FAIL
     assert "expected ST" in results[0].detail.get("reason", "")
+
+
+# --- Task 8: Cross-page cache + XP-1 ----------------------------------------
+
+from net_alpha.verify.badge import (  # noqa: E402
+    OverviewTotalCache,
+    read_overview_total,
+    snapshot_overview_total,
+)
+from net_alpha.verify.invariants import check_xp1_cross_page  # noqa: E402
+
+
+def test_overview_total_cache_round_trip():
+    cache = OverviewTotalCache()
+    snapshot_overview_total(cache, total_market_value=12345.67)
+    cached = read_overview_total(cache, max_age_seconds=60)
+    assert cached == 12345.67
+
+
+def test_overview_total_cache_returns_none_when_empty():
+    cache = OverviewTotalCache()
+    assert read_overview_total(cache, max_age_seconds=60) is None
+
+
+def test_overview_total_cache_returns_none_when_stale():
+    cache = OverviewTotalCache()
+    snapshot_overview_total(cache, total_market_value=100.0, _now=lambda: 1000.0)
+    cached = read_overview_total(cache, max_age_seconds=60, _now=lambda: 1100.0)  # 100s later
+    assert cached is None
+
+
+def test_xp1_skips_when_no_cached_overview_total():
+    result = check_xp1_cross_page(
+        positions_sum=12345.67,
+        cached_overview_total=None,
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert result.severity == Severity.OK  # not_checked is OK from the badge's perspective
+    assert result.detail.get("skipped") is True
+
+
+def test_xp1_fails_when_pages_disagree():
+    result = check_xp1_cross_page(
+        positions_sum=10000.0,
+        cached_overview_total=9000.0,
+        tol=Tolerance(abs=0.01, rel=0.0001),
+    )
+    assert result.severity == Severity.FAIL
