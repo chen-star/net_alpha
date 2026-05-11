@@ -2,6 +2,37 @@
 
 
 
+## v0.62.0 (2026-05-11)
+
+### Feature
+
+* feat(1091-ira): Rev. Rul. 2008-5 permanent disallowance for IRA/Roth replacement legs
+
+Detector now branches on account type via a new
+`Repository.account_types_by_display()` lookup threaded through
+`detect_in_window` and `recompute_all_violations`. When a §1091 loss in a
+taxable account is replaced by a buy in a tax-advantaged account (IRA / Roth /
+401(k) / HSA) within ±30 days, the violation is classified
+`WashSaleViolation.kind=&#34;permanent_ira&#34;` and we skip the §1091(d) basis
+rollover plus §1223(4) holding-period tacking — the loss is permanently lost
+because IRAs have no basis ledger to receive it. Losses sold INSIDE a
+tax-advantaged account bypass detection entirely (no taxable event → no §1091).
+
+Schema v23 adds `wash_sale_violations.kind TEXT NOT NULL DEFAULT &#39;deferred&#39;`;
+pre-existing rows reinterpret as deferred (existing behavior).
+
+`compute_after_tax` exposes `wash_sale_deferred_total` and
+`wash_sale_permanent_total` separately; the `/tax` performance panel renders
+both lines when permanent disallowances exist. Violations list shows a
+&#34;Permanent (IRA trap)&#34; pill and the explain fragment / CLI `--detail` cite
+Rev. Rul. 2008-5.
+
+26 files changed, ~480 net lines. 1957 tests pass (+4 IRA-trap suites:
+detector, recompute, after_tax, explain). Version bumped to 0.61.0.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c068444`](https://github.com/chen-star/net_alpha/commit/c068444bac60477aa19a0d5d6a44d130b90a8b37))
+
+
 ## v0.61.0 (2026-05-11)
 
 ### Feature
