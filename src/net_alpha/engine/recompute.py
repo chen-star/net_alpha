@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, timedelta
 
 from sqlalchemy import text
 from sqlmodel import Session
@@ -11,7 +11,8 @@ from net_alpha.db.repository import Repository
 from net_alpha.engine.detector import detect_in_window
 from net_alpha.engine.merge import merge_violations
 from net_alpha.section_1256.classifier import classify_closed_trades
-from net_alpha.section_1256.universe import universe_hash
+from net_alpha.section_1256.mtm import mark_to_market, open_section_1256_positions
+from net_alpha.section_1256.universe import load_universe, universe_hash
 from net_alpha.splits.apply import apply_manual_overrides, apply_splits
 
 
@@ -51,6 +52,72 @@ def _stamp_universe_hash(repo: Repository) -> None:
             ).bindparams(v=str(CURRENT_SCHEMA_VERSION))
         )
         session.commit()
+
+
+def _fmv_fn_for_recompute(repo: Repository):
+    """Production FMV fn — builds a cached PriceProvider from the repo's engine; monkeypatchable in tests."""
+    from net_alpha.config import Settings, load_pricing_config
+    from net_alpha.pricing.cache import PriceCache
+    from net_alpha.pricing.service import PricingService
+    from net_alpha.pricing.yahoo import YahooPriceProvider
+    from net_alpha.pricing.year_end import year_end_fmv
+
+    pcfg = load_pricing_config(Settings().config_yaml_path)
+    cache = PriceCache(repo.engine, ttl_seconds=pcfg.cache_ttl_seconds)
+    provider = PricingService(provider=YahooPriceProvider(), cache=cache, enabled=pcfg.enable_remote)
+
+    def fn(ticker, option_details, year):
+        return year_end_fmv(ticker=ticker, option_details=option_details, year=year, provider=provider)
+
+    return fn
+
+
+def _run_section_1256_pass(repo: Repository, all_trades, all_lots) -> None:
+    """Run §1256 classifier, write per-year MTM rows, then re-classify with prior-year basis carry."""
+    # First pass: classifier with cost basis (MTM rows from prior runs were
+    # cleared below). Persist so any downstream readers between passes see a
+    # consistent state.
+    classifications = classify_closed_trades(all_trades, all_lots)
+    repo.clear_section_1256_classifications()
+    repo.save_section_1256_classifications(classifications)
+
+    # MTM pass: walk back from current year to find the earliest year any
+    # §1256 position was open at year-end, then write one MTM row per
+    # (position, tax_year) from there through current year.
+    universe = load_universe()
+    current_year = date.today().year
+    earliest_open: int | None = None
+    for year_probe in range(current_year, current_year - 30, -1):
+        as_of = date(year_probe, 12, 31)
+        if open_section_1256_positions(all_trades, all_lots, universe, as_of=as_of):
+            earliest_open = year_probe
+        elif earliest_open is not None:
+            # Found a gap below the earliest-open year — stop probing further back.
+            break
+
+    repo.clear_section_1256_mtm()
+    if earliest_open is not None:
+        fmv_fn = _fmv_fn_for_recompute(repo)
+        for tax_year in range(earliest_open, current_year + 1):
+            rows = mark_to_market(
+                trades=all_trades,
+                lots=all_lots,
+                universe=universe,
+                tax_year=tax_year,
+                fmv_fn=fmv_fn,
+                prior_year_mtm_basis_fn=repo.prior_year_mtm_basis_for_position,
+            )
+            if rows:
+                repo.save_section_1256_mtm(rows)
+
+    # Re-run classifier honoring prior-year MTM basis per §1256(a)(2).
+    classifications = classify_closed_trades(
+        all_trades,
+        all_lots,
+        prior_year_mtm_basis_fn=repo.prior_year_mtm_basis_for_position,
+    )
+    repo.clear_section_1256_classifications()
+    repo.save_section_1256_classifications(classifications)
 
 
 def recompute_all(repo: Repository) -> None:
@@ -118,12 +185,10 @@ def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) 
     repo.clear_exempt_matches()
     repo.save_exempt_matches(det.exempt_matches)
 
-    # C2: Run §1256 classifier over all closed §1256 trades and persist classifications.
+    # Run §1256 classifier + MTM pass + re-classify with prior-year basis carry.
     # Reload lots AFTER splits/overrides have been applied so adjusted_basis is correct.
     all_lots = repo.all_lots()
-    classifications = classify_closed_trades(all_trades, all_lots)
-    repo.clear_section_1256_classifications()
-    repo.save_section_1256_classifications(classifications)
+    _run_section_1256_pass(repo, all_trades, all_lots)
 
     # Stamp universe hash + engine version so should_full_recompute() returns False
     # until the universe YAML changes or the binary is upgraded.
@@ -215,13 +280,11 @@ def migrate_existing_violations(repo: Repository) -> MigrationRecomputeSummary:
     if new_exempt_matches:
         repo.save_exempt_matches(new_exempt_matches)
 
-    # ---- Step 3: Run §1256 classifier ----------------------------------------
+    # ---- Step 3: Run §1256 classifier + MTM pass -----------------------------
     all_lots = repo.all_lots()
-    classifications = classify_closed_trades(all_trades, all_lots)
-    # NOTE: save_section_1256_classifications is upsert-by-trade_id, so re-running
-    # on the same trade list overwrites cleanly — no clear needed.
-    if classifications:
-        repo.save_section_1256_classifications(classifications)
+    _run_section_1256_pass(repo, all_trades, all_lots)
+    # Re-read classifications to report the count (the pass clears + rewrites).
+    classifications = repo.list_section_1256_classifications()
 
     return MigrationRecomputeSummary(
         reclassified_count=len(stale_ids),
