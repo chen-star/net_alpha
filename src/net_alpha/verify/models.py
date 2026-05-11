@@ -39,3 +39,17 @@ class VerifyFinding(SQLModel, table=True):
     theirs: float | None = None
     delta: float | None = None
     detail_json: str | None = None
+
+
+class BrokerPosition(SQLModel, table=True):
+    __tablename__ = "broker_position"
+
+    id: int | None = Field(default=None, primary_key=True)
+    import_id: int = Field(foreign_key="imports.id")
+    account_label: str
+    symbol: str
+    qty: float
+    cost_basis: float
+    market_value: float
+    unrealized_pl: float
+    as_of_date: str  # YYYY-MM-DD from CSV header

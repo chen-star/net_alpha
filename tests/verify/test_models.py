@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from net_alpha.verify.models import VerifyFinding, VerifyResult
+from net_alpha.verify.models import BrokerPosition, VerifyFinding, VerifyResult
 
 
 def test_verify_result_defaults():
@@ -30,3 +30,19 @@ def test_verify_finding_defaults():
     assert vf.theirs is None
     assert vf.delta is None
     assert vf.detail_json is None
+
+
+def test_broker_position_required_fields():
+    bp = BrokerPosition(
+        import_id=1,
+        account_label="Schwab-Taxable",
+        symbol="AAPL",
+        qty=100.0,
+        cost_basis=15000.0,
+        market_value=17500.0,
+        unrealized_pl=2500.0,
+        as_of_date="2026-05-10",
+    )
+    assert bp.id is None
+    assert bp.symbol == "AAPL"
+    assert bp.qty == 100.0
