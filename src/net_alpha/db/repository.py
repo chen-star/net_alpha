@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -521,6 +522,7 @@ class Repository:
             cost_basis=row.cost_basis,
             adjusted_basis=row.adjusted_basis,
             option_details=opt,
+            tacked_acquired_date=(date.fromisoformat(row.tacked_acquired_date) if row.tacked_acquired_date else None),
         )
 
     def all_lots(self) -> list[Lot]:
@@ -903,6 +905,7 @@ class Repository:
             option_strike=(lot.option_details.strike if lot.option_details else None),
             option_expiry=(lot.option_details.expiry.isoformat() if lot.option_details else None),
             option_call_put=(lot.option_details.call_put if lot.option_details else None),
+            tacked_acquired_date=(lot.tacked_acquired_date.isoformat() if lot.tacked_acquired_date else None),
         )
 
     def _account_id_for_display(self, s: Session, display: str) -> int:
@@ -2142,40 +2145,122 @@ class Repository:
     def realized_pnl_split_by_year(self, year: int) -> tuple[Decimal, Decimal]:
         """Return (st_pnl, lt_pnl) signed for the given calendar year.
 
-        Mirrors ``tax_planner._classify_st_lt_gains`` scoped to a single year.
-        Long-term threshold: held > 365 days. Equities only — option closes
-        and trades with missing proceeds/cost are skipped.
+        ST/LT classification:
+        - FIFO-match each sell to a buy lot (same account+ticker, lot date
+          <= sell date); consume lot quantity as sells walk forward in time.
+        - Holding period uses ``Lot.effective_acquired_date`` so IRC §1223(4)
+          wash-sale tacking is honored (a replacement lot's clock includes
+          the time held in the wash-triggering loss-side lot).
+        - When no Lot rows exist for an (account, ticker) — e.g. trades were
+          inserted without a subsequent wash-sale recompute — fall back to
+          synthesizing a FIFO chain from Buy trades. The fallback gives correct
+          FIFO consumption but cannot honor tacking (no tacked_acquired_date
+          to read).
+        - Long-term threshold: > 365 days.
+        - Equities only — option sells are skipped.
+        - Sells with no available prior lot/trade fall back to ST.
         """
         st = Decimal("0")
         lt = Decimal("0")
         all_trades = self.all_trades()
-        buys: dict[tuple[str, str], list] = {}
-        for t in all_trades:
-            if t.action.lower() in {"buy", "buy to open"} and t.option_details is None:
-                buys.setdefault((t.account, t.ticker), []).append(t)
-        for chain in buys.values():
-            chain.sort(key=lambda x: x.date)
+        all_lots = self.all_lots()
 
-        for sell in all_trades:
-            if sell.action.lower() != "sell":
+        # Per (account, ticker) chain of "lot-like" donors with FIFO ordering,
+        # remaining quantity, and effective acquired date. Lots win when
+        # present; otherwise we synthesize from Buy trades.
+        @dataclass
+        class _Donor:
+            key: str
+            sort_date: date
+            eff_date: date
+            quantity: float
+
+        chains: dict[tuple[str, str], list[_Donor]] = {}
+        keys_with_lots: set[tuple[str, str]] = set()
+        for lot in all_lots:
+            if lot.option_details is not None:
+                continue  # equities only
+            k = (lot.account, lot.ticker)
+            keys_with_lots.add(k)
+            chains.setdefault(k, []).append(
+                _Donor(
+                    key=f"lot:{lot.id}",
+                    sort_date=lot.date,
+                    eff_date=lot.effective_acquired_date(),
+                    quantity=lot.quantity,
+                )
+            )
+        # Trade-based fallback: include Buys whose (account, ticker) had no
+        # lot rows at all. (Mixed states for a single ticker fall on the lot
+        # side — once recompute has run, the engine is authoritative.)
+        for t in all_trades:
+            if t.option_details is not None:
                 continue
-            if sell.option_details is not None:
+            if t.action.lower() not in {"buy", "buy to open"}:
                 continue
+            k = (t.account, t.ticker)
+            if k in keys_with_lots:
+                continue
+            chains.setdefault(k, []).append(
+                _Donor(
+                    key=f"trade:{t.id}",
+                    sort_date=t.date,
+                    eff_date=t.date,
+                    quantity=t.quantity,
+                )
+            )
+        for chain in chains.values():
+            chain.sort(key=lambda d: d.sort_date)
+
+        # Walk sells in chronological order so prior-year consumption is
+        # reflected when classifying current-year sells.
+        sells = sorted(
+            [
+                t
+                for t in all_trades
+                if t.action.lower() == "sell"
+                and t.option_details is None
+                and t.proceeds is not None
+                and t.cost_basis is not None
+            ],
+            key=lambda t: t.date,
+        )
+
+        for sell in sells:
+            chain = chains.get((sell.account, sell.ticker), [])
+            qty_to_match = sell.quantity
+            consumed: list[tuple[float, date]] = []
+            for donor in chain:
+                if donor.sort_date > sell.date:
+                    break
+                if donor.quantity <= 0:
+                    continue
+                take = min(qty_to_match, donor.quantity)
+                donor.quantity -= take
+                consumed.append((take, donor.eff_date))
+                qty_to_match -= take
+                if qty_to_match <= 0:
+                    break
+
             if sell.date.year != year:
-                continue
-            if sell.proceeds is None or sell.cost_basis is None:
-                continue
-            chain = buys.get((sell.account, sell.ticker), [])
+                continue  # consumption recorded; classification only for target year
+
             pnl = Decimal(str(sell.proceeds)) - Decimal(str(sell.cost_basis))
-            if not chain:
+            if not consumed:
+                # Orphan sell — no prior donor available. Conservative: ST.
                 st += pnl
                 continue
-            oldest = chain[0].date
-            days = (sell.date - oldest).days
-            if days > 365:
-                lt += pnl
-            else:
-                st += pnl
+
+            # Per-share allocation across consumed donor fragments.
+            total_consumed_qty = sum(q for q, _ in consumed)
+            for take, eff_date in consumed:
+                share = Decimal(str(take)) / Decimal(str(total_consumed_qty))
+                portion = pnl * share
+                days = (sell.date - eff_date).days
+                if days > 365:
+                    lt += portion
+                else:
+                    st += portion
         return st, lt
 
     # ---- Carryforward overrides ----

@@ -150,6 +150,11 @@ class Lot(BaseModel):
     cost_basis: float
     adjusted_basis: float
     option_details: OptionDetails | None = None
+    # IRC §1223(4): when a wash sale rolls disallowed loss into this lot, the
+    # holding-period clock tacks back to the acquisition date of the lot whose
+    # sale triggered the wash sale. ``date`` (raw acquisition) is preserved for
+    # audit; ``tacked_acquired_date`` is the effective start used for LT/ST.
+    tacked_acquired_date: date | None = None
 
     @classmethod
     def from_trade(cls, trade: Trade) -> Lot:
@@ -163,6 +168,10 @@ class Lot(BaseModel):
             adjusted_basis=trade.cost_basis or 0.0,
             option_details=trade.option_details,
         )
+
+    def effective_acquired_date(self) -> date:
+        """Holding-period start for LT/ST classification under §1223(4)."""
+        return self.tacked_acquired_date or self.date
 
 
 class WashSaleViolation(BaseModel):

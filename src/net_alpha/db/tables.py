@@ -102,6 +102,9 @@ class LotRow(SQLModel, table=True):
     option_strike: float | None = None
     option_expiry: str | None = None
     option_call_put: str | None = None
+    # IRC §1223(4): wash-sale-tacked holding-period start. NULL means use
+    # ``trade_date`` directly (no tacking).
+    tacked_acquired_date: str | None = None
 
 
 class WashSaleViolationRow(SQLModel, table=True):

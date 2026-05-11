@@ -20,7 +20,8 @@ def top_lots_crossing_ltcg(*, lots: Iterable[Lot], horizon_days: int = 90, top_n
     for lot in lots:
         if lot.option_details is not None or lot.quantity <= 0:
             continue
-        ltcg_date = lot.date + dt.timedelta(days=365)
+        # IRC §1223(4): the LTCG clock starts at the effective acquired date.
+        ltcg_date = lot.effective_acquired_date() + dt.timedelta(days=365)
         days = (ltcg_date - today).days
         if days < 1 or days > horizon_days:
             continue

@@ -50,7 +50,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 21
+CURRENT_SCHEMA_VERSION = 22
 
 
 def get_schema_version(session: Session) -> int:
@@ -630,6 +630,17 @@ def _migrate_v20_to_v21(session: Session) -> None:
     session.exec(text("CREATE INDEX IF NOT EXISTS idx_s1256_mtm_ticker ON section_1256_mtm(ticker)"))
 
 
+def _migrate_v21_to_v22(session: Session) -> None:
+    """v21 → v22: add lots.tacked_acquired_date for IRC §1223(4) holding-period tacking.
+
+    When a wash sale rolls disallowed loss into a replacement lot, the
+    replacement's holding-period clock must include the time held in the lot
+    whose sale triggered the wash sale. NULL means no tacking (use trade_date).
+    """
+    if _table_exists(session, "lots") and not _column_exists(session, "lots", "tacked_acquired_date"):
+        session.exec(text("ALTER TABLE lots ADD COLUMN tacked_acquired_date TEXT"))
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -730,6 +741,10 @@ def migrate(session: Session) -> None:
         _migrate_v20_to_v21(session)
         set_schema_version(session, 21)
         current = 21
+    if current < 22:
+        _migrate_v21_to_v22(session)
+        set_schema_version(session, 22)
+        current = 22
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "

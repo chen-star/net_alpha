@@ -525,7 +525,9 @@ def compute_open_positions(
         prior = oldest_open_by_sym.get(sym)
         if prior is None or lot.date < prior:
             oldest_open_by_sym[sym] = lot.date
-        if (today - lot.date).days > LT_DAYS:
+        # IRC §1223(4): use effective_acquired_date so wash-sale-tacked
+        # lots are classified LT even when raw acquisition is recent.
+        if (today - lot.effective_acquired_date()).days > LT_DAYS:
             lt_qty_by_sym[sym] += rem_qty
         else:
             st_qty_by_sym[sym] += rem_qty

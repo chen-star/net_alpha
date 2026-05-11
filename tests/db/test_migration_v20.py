@@ -18,7 +18,7 @@ from net_alpha.db.migrations import (
 
 
 def test_current_schema_version_is_at_least_20():
-    assert CURRENT_SCHEMA_VERSION == 21
+    assert CURRENT_SCHEMA_VERSION >= 20
 
 
 def test_migration_creates_snapshot_table(tmp_path):

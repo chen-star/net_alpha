@@ -59,37 +59,13 @@ class TaxProjection(BaseModel):
 
 
 def _classify_st_lt_gains(repo: Repository, year: int) -> tuple[Decimal, Decimal]:
-    """Return (st_gain, lt_gain) — both signed, by sell-trade holding period."""
-    st = Decimal("0")
-    lt = Decimal("0")
-    buys: dict[tuple[str, str], list[Trade]] = {}
-    for t in repo.all_trades():
-        if t.action.lower() in {"buy", "buy to open"} and t.option_details is None:
-            buys.setdefault((t.account, t.ticker), []).append(t)
-    for chain in buys.values():
-        chain.sort(key=lambda x: x.date)
+    """Return (st_gain, lt_gain) — both signed, by sell-trade holding period.
 
-    for sell in repo.all_trades():
-        if sell.action.lower() not in {"sell"}:
-            continue
-        if sell.option_details is not None:
-            continue
-        if sell.date.year != year:
-            continue
-        if sell.proceeds is None or sell.cost_basis is None:
-            continue
-        chain = buys.get((sell.account, sell.ticker), [])
-        pnl = Decimal(str(sell.proceeds)) - Decimal(str(sell.cost_basis))
-        if not chain:
-            st += pnl
-            continue
-        oldest_buy_date = chain[0].date
-        days_held = (sell.date - oldest_buy_date).days
-        if days_held > LT_HOLDING_DAYS:
-            lt += pnl
-        else:
-            st += pnl
-    return st, lt
+    Delegates to ``Repository.realized_pnl_split_by_year`` so that per-lot FIFO
+    and §1223(4) wash-sale tacking apply consistently to the historical base
+    here and to the carryforward-derivation path in compute_after_tax.
+    """
+    return repo.realized_pnl_split_by_year(year)
 
 
 def _quantize(d: Decimal) -> Decimal:
@@ -367,7 +343,9 @@ def compute_harvest_queue(
     rows: list[HarvestOpportunity] = []
     for lot, qty, basis, market_value in candidates:
         loss = market_value - basis
-        days_held = (as_of - lot.date).days
+        # IRC §1223(4): use effective_acquired_date so wash-sale-tacked lots
+        # are surfaced with their true holding-period classification.
+        days_held = (as_of - lot.effective_acquired_date()).days
         lt_st: Literal["LT", "ST"] = "LT" if days_held > LT_HOLDING_DAYS else "ST"
         clear = compute_lockout_clear_date(
             symbol=lot.ticker,
@@ -598,7 +576,9 @@ def assess_trade(
     if avg_basis is not None:
         lots = repo.get_lots_for_ticker(proposed.symbol)
         if lots:
-            oldest = min(lots, key=lambda lot: lot.date).date
+            # IRC §1223(4): "oldest" lot for tax purposes is the one with the
+            # earliest *effective* acquired date (wash-sale tacking applied).
+            oldest = min(lots, key=lambda lot: lot.effective_acquired_date()).effective_acquired_date()
             days_held = (as_of - oldest).days
 
     if pnl_per_share is not None and pnl_per_share > 0:

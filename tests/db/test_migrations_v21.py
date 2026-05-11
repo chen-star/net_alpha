@@ -7,8 +7,8 @@ from net_alpha.db.migrations import (
 )
 
 
-def test_current_schema_version_is_21():
-    assert CURRENT_SCHEMA_VERSION == 21
+def test_current_schema_version_is_22():
+    assert CURRENT_SCHEMA_VERSION == 22
 
 
 def test_v20_to_v21_creates_table_idempotently():

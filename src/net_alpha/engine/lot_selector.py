@@ -49,6 +49,10 @@ class LotPick(BaseModel):
     adjusted_basis: Decimal  # per-share (see class docstring)
     holding_period_days: int
     is_long_term: bool
+    # IRC §1223(4) tacked holding-period start (None when no wash-sale tacking).
+    # ``acquired_date`` keeps the raw lot date for audit display; the days held
+    # and LT classification reflect this tacked date when present.
+    tacked_acquired_date: date | None = None
 
 
 class LotPickResult(BaseModel):
@@ -369,7 +373,10 @@ def _consume(
             break
         lot_qty = Decimal(str(lot.quantity))
         take = min(lot_qty, remaining)
-        held = (sell_date - lot.date).days
+        # IRC §1223(4): wash-sale-tacked lots use their effective acquired
+        # date for ST/LT classification. Raw lot.date is preserved on the
+        # pick (`acquired_date`) for audit display.
+        held = (sell_date - lot.effective_acquired_date()).days
         per_share_basis = Decimal(str(lot.adjusted_basis)) / lot_qty if lot_qty else Decimal("0")
         picks.append(
             LotPick(
@@ -379,6 +386,7 @@ def _consume(
                 adjusted_basis=per_share_basis,
                 holding_period_days=held,
                 is_long_term=held > LT_HOLDING_DAYS,
+                tacked_acquired_date=lot.tacked_acquired_date,
             )
         )
         remaining -= take

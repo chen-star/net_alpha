@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date as _date
 from decimal import Decimal
 
 from net_alpha.engine.matcher import get_match_confidence, is_within_wash_sale_window
 from net_alpha.models.domain import DetectionResult, ExemptMatch, Lot, Trade, WashSaleViolation
+
+
+def _lot_key(t: Trade) -> tuple:
+    """FIFO consumption key — equities by (account, ticker); options by full contract."""
+    if t.option_details is not None:
+        o = t.option_details
+        return (t.account, t.ticker, o.strike, o.expiry.isoformat(), o.call_put)
+    return (t.account, t.ticker, None, None, None)
 
 
 def detect_wash_sales(
@@ -18,16 +27,14 @@ def detect_wash_sales(
     2. Create lots from all buy trades
     3. For each loss sale, match against candidates in FIFO order
     4. Allocate disallowed loss and adjust replacement lot basis
+    5. Tack holding period of replacement lot per IRC §1223(4): the FIFO-matched
+       loss-side lot's effective acquired date is propagated onto the replacement.
     """
     # Skip the assigned-put synthetic STO/BTC pair from loss/candidate scans:
     # they have synthetic proceeds/cost (premium and 0 respectively) used only
     # to keep cash flow / open-option counts honest, not to represent
     # independent realized events the wash-sale rule applies to.
     _SYNTHETIC_SOURCES = {"option_short_open_assigned", "option_short_close_assigned"}
-    loss_sales = sorted(
-        [t for t in trades if t.is_loss() and t.basis_source not in _SYNTHETIC_SOURCES],
-        key=lambda t: t.date,
-    )
 
     # Create lots from buys — track remaining allocable quantity per lot.
     # `option_short_close` (BTC) is a Buy that closes a short option position;
@@ -36,12 +43,44 @@ def detect_wash_sales(
     # never lists it.)
     lots: dict[str, Lot] = {}
     lot_remaining: dict[str, float] = {}
+    # Parallel FIFO tracker: how much of each buy lot is still unconsumed by
+    # later sells (gain or loss). Used only to find the holding-period donor
+    # for §1223(4) tacking — independent of ``lot_remaining`` which tracks
+    # replacement-side allocations for wash-sale matches.
+    fifo_remaining: dict[str, float] = {}
     _NO_LOT_BUYS = {"option_short_close", "option_short_close_assigned"}
+    buys_by_key: dict[tuple, list[Trade]] = defaultdict(list)
     for t in trades:
         if t.is_buy() and t.basis_source not in _NO_LOT_BUYS:
             lot = Lot.from_trade(t)
             lots[t.id] = lot
             lot_remaining[t.id] = t.quantity
+            fifo_remaining[t.id] = t.quantity
+            buys_by_key[_lot_key(t)].append(t)
+    for chain in buys_by_key.values():
+        chain.sort(key=lambda x: x.date)
+
+    def consume_fifo_acquired_date(sell: Trade) -> _date | None:
+        """FIFO-consume buys of the same key with date <= sell.date; return the
+        earliest effective acquired date of the consumed lots (or None)."""
+        chain = buys_by_key.get(_lot_key(sell), [])
+        qty_to_match = sell.quantity
+        earliest: _date | None = None
+        for buy in chain:
+            if buy.date > sell.date:
+                break
+            available = fifo_remaining.get(buy.id, 0)
+            if available <= 0:
+                continue
+            take = min(qty_to_match, available)
+            fifo_remaining[buy.id] -= take
+            eff = lots[buy.id].effective_acquired_date()
+            if earliest is None or eff < earliest:
+                earliest = eff
+            qty_to_match -= take
+            if qty_to_match <= 0:
+                break
+        return earliest
 
     # Count basis_unknown trades for the warning
     basis_unknown_count = sum(1 for t in trades if t.basis_unknown)
@@ -49,7 +88,24 @@ def detect_wash_sales(
     violations: list[WashSaleViolation] = []
     exempt_matches: list[ExemptMatch] = []
 
-    for loss_sale in loss_sales:
+    # Walk ALL sells in date order; FIFO-consume buys so the per-loss
+    # acquired-date lookup is correct even when prior gain sells have already
+    # drained the earliest lots. Loss sells then run wash-sale detection.
+    all_sells = sorted(
+        [t for t in trades if t.is_sell() and t.basis_source not in _SYNTHETIC_SOURCES],
+        key=lambda t: t.date,
+    )
+
+    for sell in all_sells:
+        loss_side_acquired = consume_fifo_acquired_date(sell)
+        if not sell.is_loss():
+            continue
+
+        loss_sale = sell
+        # Fallback: orphan loss sell with no prior buy → use sell date.
+        if loss_side_acquired is None:
+            loss_side_acquired = loss_sale.date
+
         remaining_qty = loss_sale.quantity
         loss_per_unit = loss_sale.loss_amount() / loss_sale.quantity
 
@@ -109,9 +165,12 @@ def detect_wash_sales(
                     )
                 )
 
-                # Adjust replacement lot basis
+                # Adjust replacement lot basis + tack holding period (§1223(4)).
                 if candidate.id in lots:
                     lots[candidate.id].adjusted_basis += disallowed
+                    current_eff = lots[candidate.id].effective_acquired_date()
+                    if loss_side_acquired < current_eff:
+                        lots[candidate.id].tacked_acquired_date = loss_side_acquired
 
             remaining_qty -= allocable
 
