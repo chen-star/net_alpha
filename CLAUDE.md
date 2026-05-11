@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`wash-alpha` (package `net_alpha`, current version `0.60.0`) is a local-first Python tool for cross-account wash sale detection, tax-performance analysis, and pre-trade simulation — covering equities, options, and ETFs. It ships a Typer CLI plus an optional FastAPI web UI (`net-alpha ui`) that is now the primary interactive surface.
+`wash-alpha` (package `net_alpha`, current version `0.61.0`) is a local-first Python tool for cross-account wash sale detection, tax-performance analysis, and pre-trade simulation — covering equities, options, and ETFs. It ships a Typer CLI plus an optional FastAPI web UI (`net-alpha ui`) that is now the primary interactive surface.
 
 ## Tech Stack
 
@@ -108,13 +108,17 @@ Bundled in `etf_pairs.yaml` (S&P 500: SPY/VOO/IVV/SPLG, Nasdaq-100: QQQ/QQQM, et
 
 Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, MXEF, MXEA — bundled in `section_1256_underlyings.yaml`) are recognized as §1256 contracts. The engine emits an `ExemptMatch` record (not a `WashSaleViolation`) when either side of a wash-sale candidate is §1256 — they are exempt from §1091 under §1256(c). A separate classifier (`section_1256/classifier.py`) splits closed §1256 trade P&L 60/40 LT/ST per §1256(a)(3), regardless of holding period. Open §1256 positions at year-end ARE marked-to-market per §1256(a)(1) (`section_1256/mtm.py`). FMV cascade: Yahoo option close → Black-Scholes from underlying close + 30-day historical vol → intrinsic if expired. The `Section1256MTM` table is fully rebuilt on every recompute. §1256(c) loss carryback election is out of scope; users wanting it consult Form 6781 line 6 directly.
 
+### IRA-trap wash sales (Rev. Rul. 2008-5)
+
+When a loss in a **taxable** account is replaced by a substantially-identical buy in a **tax-advantaged** account (IRA / Roth / 401(k) / HSA) within ±30 days, §1091(a) still disallows the loss, but §1091(d)'s basis rollover cannot apply (no IRA basis ledger) — the loss is **permanently lost**. The detector reads `repo.account_types_by_display()`, classifies these as `WashSaleViolation.kind="permanent_ira"`, and skips both the `adjusted_basis` mutation and §1223(4) tacking on the replacement lot. Losses sold **inside** a tax-advantaged account are not taxable events and bypass detection entirely. The ruling names IRAs only; we extend by analogy to 401(k) / HSA (caveat surfaced inline in the explain panel). Spousal-IRA attribution under §1091(d) is out of scope.
+
 ### Database
 
 - Single SQLite DB at `~/.net_alpha/net_alpha.db` (all years, cross-year window detection works)
 - Schema versioning via `meta` table (`schema_version` integer); hand-written `ALTER TABLE` migrations — no migration framework
 - Wash sale recompute is incremental: only the ±30-day window around affected trade dates is recalculated on import or import removal
 - Schema is at v18 as of 2026-05-05 (added `loss_carryforward` table for prior-year ST/LT carryforward overrides).
-- Schema v19 adds: `accounts.type` (taxable/IRA/Roth/401k/HSA/other), `accounts.created_at`, plus `service_run` and `washsale_watch_result` tables. Schema v20 adds `plan_view_snapshot`. Schema v21 adds `section_1256_mtm` (year-end mark-to-market rows per IRC §1256(a)(1)).
+- Schema v19 adds: `accounts.type` (taxable/IRA/Roth/401k/HSA/other), `accounts.created_at`, plus `service_run` and `washsale_watch_result` tables. Schema v20 adds `plan_view_snapshot`. Schema v21 adds `section_1256_mtm` (year-end mark-to-market rows per IRC §1256(a)(1)). Schema v22 adds `lots.tacked_acquired_date` (IRC §1223(4) wash-sale holding-period tacking). Schema v23 adds `wash_sale_violations.kind` (Rev. Rul. 2008-5: distinguishes `deferred` §1091(d) basis-rollover wash sales from `permanent_ira` ones whose replacement leg sits in an IRA / Roth / 401(k) / HSA — the latter permanently lose the disallowed loss).
 
 ### v2 Always-on service (Phase 2/3/4 of v2.0)
 
@@ -225,7 +229,7 @@ never leave the box. Disable price fetches by setting
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **net_alpha** (5623 symbols, 19291 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **net_alpha** (11089 symbols, 15726 relationships, 101 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -237,44 +241,12 @@ This project is indexed by GitNexus as **net_alpha** (5623 symbols, 19291 relati
 - When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
 - When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
 
-## When Debugging
-
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/net_alpha/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
-
-## When Refactoring
-
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
-
 ## Never Do
 
 - NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
 - NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
 - NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Tools Quick Reference
-
-| Tool | When to use | Command |
-|------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
-| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
-| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
-| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
-
-## Impact Risk Levels
-
-| Depth | Meaning | Action |
-|-------|---------|--------|
-| d=1 | WILL BREAK — direct callers/importers | MUST update these |
-| d=2 | LIKELY AFFECTED — indirect deps | Should test |
-| d=3 | MAY NEED TESTING — transitive | Test if critical path |
 
 ## Resources
 
@@ -284,32 +256,6 @@ This project is indexed by GitNexus as **net_alpha** (5623 symbols, 19291 relati
 | `gitnexus://repo/net_alpha/clusters` | All functional areas |
 | `gitnexus://repo/net_alpha/processes` | All execution flows |
 | `gitnexus://repo/net_alpha/process/{name}` | Step-by-step execution trace |
-
-## Self-Check Before Finishing
-
-Before completing any code modification task, verify:
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
-
-## Keeping the Index Fresh
-
-After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
-
-```bash
-npx gitnexus analyze
-```
-
-If the index previously included embeddings, preserve them by adding `--embeddings`:
-
-```bash
-npx gitnexus analyze --embeddings
-```
-
-To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
-
-> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
 
 ## CLI
 

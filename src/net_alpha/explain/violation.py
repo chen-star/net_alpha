@@ -49,6 +49,10 @@ class ExplanationModel(BaseModel):
     confidence_reason: str
     adjusted_basis_target: LotRef | None
     cross_account: AccountPair | None
+    # True when Rev. Rul. 2008-5 applies (replacement leg in IRA / Roth /
+    # 401(k) / HSA): §1091(a) disallows the loss but §1091(d)'s basis
+    # rollover doesn't apply, so the disallowed amount is permanently lost.
+    is_permanent_ira: bool = False
 
 
 def _row_for(t) -> TradeRow:
@@ -119,10 +123,18 @@ def explain_violation(v: WashSaleViolationRow, *, repo) -> ExplanationModel:
             adjusted_basis=Decimal(str(lot_dict["adjusted_basis"])),
         )
 
-    summary = (
-        f"{loss.ticker} loss on {loss.date.isoformat()} disallowed by buy on "
-        f"{buy.date.isoformat()} ({days} days later)."
-    )
+    is_permanent = getattr(v, "kind", "deferred") == "permanent_ira"
+    if is_permanent:
+        summary = (
+            f"{loss.ticker} loss on {loss.date.isoformat()} permanently disallowed by buy on "
+            f"{buy.date.isoformat()} ({days} days later) in a tax-advantaged account — the "
+            f"§1091(d) basis rollover does not apply (Rev. Rul. 2008-5)."
+        )
+    else:
+        summary = (
+            f"{loss.ticker} loss on {loss.date.isoformat()} disallowed by buy on "
+            f"{buy.date.isoformat()} ({days} days later)."
+        )
 
     if allocable != loss_qty:
         # Partial wash sale — show the allocation math using the full trade loss
@@ -137,7 +149,7 @@ def explain_violation(v: WashSaleViolationRow, *, repo) -> ExplanationModel:
 
     return ExplanationModel(
         summary=summary,
-        rule_citation=tmpl.rule_citation("regular"),
+        rule_citation=tmpl.rule_citation("permanent_ira" if is_permanent else "regular"),
         is_exempt=False,
         loss_trade=_row_for(loss),
         triggering_buy=_row_for(buy),
@@ -147,6 +159,7 @@ def explain_violation(v: WashSaleViolationRow, *, repo) -> ExplanationModel:
         disallowed_math=disallowed_math,
         confidence=v.confidence,
         confidence_reason=tmpl.confidence_reason(v.confidence, match_kind=match_kind, days_between=days),
-        adjusted_basis_target=lot_ref,
+        adjusted_basis_target=None if is_permanent else lot_ref,
         cross_account=cross,
+        is_permanent_ira=is_permanent,
     )

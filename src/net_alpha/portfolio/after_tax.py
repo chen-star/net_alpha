@@ -62,6 +62,12 @@ class AfterTaxBreakdown(BaseModel):
 
     wash_sale_disallowed_total: Decimal
     wash_sale_marginal_cost: Decimal
+    # Rev. Rul. 2008-5: replacement lot in an IRA / Roth / 401(k) / HSA means
+    # §1091(d) basis rollover is impossible — the loss is permanently lost.
+    # ``wash_sale_deferred_total`` rolls into the replacement lot's basis (future
+    # tax savings); ``wash_sale_permanent_total`` does not.
+    wash_sale_deferred_total: Decimal = Decimal("0")
+    wash_sale_permanent_total: Decimal = Decimal("0")
 
     effective_tax_rate: Decimal
 
@@ -83,7 +89,14 @@ def compute_after_tax(
     lt_pnl: Decimal = pnl["long_term"]
     sec1256_pnl: Decimal = repo.section_1256_pnl(period, account)
     sec1256_mtm: Decimal = repo.section_1256_mtm_pnl(period, account)
-    disallowed: Decimal = repo.wash_sale_disallowed_total(period, account)
+    disallowed_by_kind = (
+        repo.wash_sale_disallowed_by_kind(period, account)
+        if hasattr(repo, "wash_sale_disallowed_by_kind")
+        else {"deferred": repo.wash_sale_disallowed_total(period, account), "permanent_ira": Decimal("0")}
+    )
+    disallowed_deferred = disallowed_by_kind.get("deferred", Decimal("0"))
+    disallowed_permanent = disallowed_by_kind.get("permanent_ira", Decimal("0"))
+    disallowed: Decimal = disallowed_deferred + disallowed_permanent
 
     cf = carryforward or Carryforward(st=Decimal("0"), lt=Decimal("0"), source="none")
 
@@ -141,6 +154,12 @@ def compute_after_tax(
         "for thin-volume strikes; verify against your 1099-B / Form 6781 before filing.",
         "Wash-sale 'deferred tax savings' = tax savings deferred (not lost) — basis rolls into the replacement lot.",
     ]
+    if disallowed_permanent > 0:
+        caveats.append(
+            "Permanently disallowed (Rev. Rul. 2008-5): a wash-sale replacement leg in a "
+            "tax-advantaged account (IRA / Roth / 401(k) / HSA) blocks the §1091(d) basis "
+            "rollover — the disallowed loss is gone for good, not deferred."
+        )
     if period.kind == "lifetime":
         caveats.append(
             "Lifetime period uses currently configured rates for all historical years; "
@@ -165,6 +184,8 @@ def compute_after_tax(
         section_1256_mtm_st_portion=sec1256_mtm_st,
         wash_sale_disallowed_total=disallowed,
         wash_sale_marginal_cost=wash_marginal_cost,
+        wash_sale_deferred_total=disallowed_deferred,
+        wash_sale_permanent_total=disallowed_permanent,
         effective_tax_rate=effective_rate,
         period_label=period.label,
         account_filter=account,

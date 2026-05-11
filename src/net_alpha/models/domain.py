@@ -189,6 +189,12 @@ class WashSaleViolation(BaseModel):
     triggering_buy_date: date | None = None
     ticker: str = ""
     source: str = "engine"  # "schwab_g_l" | "engine"
+    # IRC §1091 disposition kind. See Rev. Rul. 2008-5: a wash sale whose
+    # replacement leg sits in an IRA / Roth / 401(k) / HSA can't roll the
+    # disallowed loss into basis (no IRA basis ledger), so the loss is
+    # permanently lost. "deferred" = ordinary §1091(d) rollover; "permanent_ira"
+    # = Rev. Rul. 2008-5 permanent disallowance.
+    kind: str = "deferred"
 
 
 class ExemptMatch(BaseModel):

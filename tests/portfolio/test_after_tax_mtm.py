@@ -26,6 +26,10 @@ def _repo(*, st=0, lt=0, sec1256_realized=0, sec1256_mtm=0, disallowed=0):
     repo.section_1256_pnl.return_value = Decimal(str(sec1256_realized))
     repo.section_1256_mtm_pnl.return_value = Decimal(str(sec1256_mtm))
     repo.wash_sale_disallowed_total.return_value = Decimal(str(disallowed))
+    repo.wash_sale_disallowed_by_kind.return_value = {
+        "deferred": Decimal(str(disallowed)),
+        "permanent_ira": Decimal("0"),
+    }
     return repo
 
 

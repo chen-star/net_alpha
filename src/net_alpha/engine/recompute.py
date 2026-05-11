@@ -173,6 +173,7 @@ def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) 
         win_start,
         win_end,
         etf_pairs=etf_pairs,
+        account_types=repo.account_types_by_display(),
     )
     merged = merge_violations(
         engine_violations=det.violations,

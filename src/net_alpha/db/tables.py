@@ -123,6 +123,11 @@ class WashSaleViolationRow(SQLModel, table=True):
     matched_quantity: float
     source: str = Field(default="engine")
     # values: "schwab_g_l" | "engine"
+    # IRC §1091 disposition kind. "deferred" = §1091(d) basis rollover (default;
+    # pre-2026-05-11 behavior). "permanent_ira" = Rev. Rul. 2008-5: replacement
+    # leg is in a tax-advantaged account, so the disallowed loss can't roll into
+    # basis and is permanently lost.
+    kind: str = Field(default="deferred")
 
 
 class ExemptMatchRow(SQLModel, table=True):

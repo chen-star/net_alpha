@@ -72,6 +72,35 @@ def test_explain_violation_exact_ticker_full_match():
     assert e.cross_account is None  # same account both sides
 
 
+def test_explain_violation_permanent_ira_kind():
+    """Rev. Rul. 2008-5: kind='permanent_ira' surfaces the IRA-trap citation
+    and suppresses the rolled-into-lot reference."""
+    loss = _trade("11", "TSLA", "Sell", date(2024, 9, 15), 100, Decimal("18757"), Decimal("20000"))
+    buy = _trade("12", "TSLA", "Buy", date(2024, 9, 22), 100, Decimal("19000"), Decimal("19000"))
+    buy = buy.model_copy(update={"account": "schwab/roth"})
+    repo = _FakeRepo([loss, buy])
+    v = WashSaleViolationRow(
+        id=11,
+        loss_trade_id=11,
+        replacement_trade_id=12,
+        confidence="Confirmed",
+        disallowed_loss=Decimal("1243"),
+        matched_quantity=100.0,
+        loss_account_id=1,
+        buy_account_id=2,
+        loss_sale_date="2024-09-15",
+        triggering_buy_date="2024-09-22",
+        ticker="TSLA",
+        kind="permanent_ira",
+    )
+    e = explain_violation(v, repo=repo)
+    assert e.is_permanent_ira is True
+    assert "Rev. Rul. 2008-5" in e.rule_citation
+    assert "permanently" in e.summary.lower()
+    # No rollover target on permanent_ira (the loss is gone, not deferred).
+    assert e.adjusted_basis_target is None
+
+
 def test_explain_violation_cross_account():
     loss = _trade("3", "TSLA", "Sell", date(2024, 9, 15), 100, Decimal("18757"), Decimal("20000"))
     buy = _trade("4", "TSLA", "Buy", date(2024, 9, 22), 100, Decimal("19000"), Decimal("19000"))

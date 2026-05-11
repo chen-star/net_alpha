@@ -11,6 +11,7 @@ from decimal import Decimal
 _RULE_CITATIONS = {
     "regular": "IRC §1091(a) — Pub 550 p.59",
     "section_1256": "IRC §1256(c)",
+    "permanent_ira": "IRC §1091(a) + Rev. Rul. 2008-5 — basis rollover blocked (IRA)",
 }
 
 

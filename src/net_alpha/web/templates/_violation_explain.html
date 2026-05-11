@@ -42,7 +42,13 @@
     <span class="text-label-3">Confidence:</span> {{ e.confidence_reason }}
   </div>
 
-  {% if e.adjusted_basis_target %}
+  {% if e.is_permanent_ira %}
+    <div class="text-[12px] text-neg mb-2 italic">
+      Permanently disallowed — replacement leg is in a tax-advantaged account
+      (IRA / Roth / 401(k) / HSA), so §1091(d)'s basis rollover cannot apply.
+      The loss is gone for good (Rev. Rul. 2008-5).
+    </div>
+  {% elif e.adjusted_basis_target %}
     <div class="text-[12px] text-label-2 mb-2">
       <span class="text-label-3">Rolled into:</span>
       Lot {{ e.adjusted_basis_target.lot_id }} ({{ e.adjusted_basis_target.acquired_date }}) &mdash;

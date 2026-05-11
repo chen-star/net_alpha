@@ -33,7 +33,12 @@ def render_explanation(e: ExplanationModel) -> str:
 
     lines.append(f"  Confidence: {e.confidence_reason}")
 
-    if e.adjusted_basis_target is not None:
+    if e.is_permanent_ira:
+        lines.append(
+            "  Permanently disallowed — replacement leg in a tax-advantaged account "
+            "(IRA / Roth / 401(k) / HSA); §1091(d) basis rollover blocked (Rev. Rul. 2008-5)."
+        )
+    elif e.adjusted_basis_target is not None:
         a = e.adjusted_basis_target
         lines.append(f"  Rolled into: Lot {a.lot_id} ({a.acquired_date}) — adjusted basis ${a.adjusted_basis}")
 

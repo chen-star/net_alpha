@@ -5,6 +5,7 @@ from datetime import date as _date
 from decimal import Decimal
 
 from net_alpha.engine.matcher import get_match_confidence, is_within_wash_sale_window
+from net_alpha.models.accounts import AccountType
 from net_alpha.models.domain import DetectionResult, ExemptMatch, Lot, Trade, WashSaleViolation
 
 
@@ -16,9 +17,19 @@ def _lot_key(t: Trade) -> tuple:
     return (t.account, t.ticker, None, None, None)
 
 
+def _is_tax_advantaged(account: str, account_types: dict[str, AccountType] | None) -> bool:
+    """Resolve an account label to its tax-advantaged status. Defaults to False
+    (taxable) when the lookup is missing — matches pre-Rev. Rul. 2008-5 behavior."""
+    if not account_types:
+        return False
+    t = account_types.get(account, AccountType.TAXABLE)
+    return t.is_tax_advantaged
+
+
 def detect_wash_sales(
     trades: list[Trade],
     etf_pairs: dict[str, list[str]],
+    account_types: dict[str, AccountType] | None = None,
 ) -> DetectionResult:
     """Detect wash sales across all trades. Pure function — no I/O.
 
@@ -29,6 +40,13 @@ def detect_wash_sales(
     4. Allocate disallowed loss and adjust replacement lot basis
     5. Tack holding period of replacement lot per IRC §1223(4): the FIFO-matched
        loss-side lot's effective acquired date is propagated onto the replacement.
+
+    Rev. Rul. 2008-5 (IRA trap): when the replacement leg sits in a tax-advantaged
+    account (IRA / Roth / 401(k) / HSA) per ``account_types``, the violation is
+    classified ``kind="permanent_ira"`` and §1091(d)'s basis rollover does NOT
+    apply — the disallowed loss is permanently lost. Also: a loss sale INSIDE a
+    tax-advantaged account is not a taxable event, so we skip §1091 entirely on
+    that loss leg.
     """
     # Skip the assigned-put synthetic STO/BTC pair from loss/candidate scans:
     # they have synthetic proceeds/cost (premium and 0 respectively) used only
@@ -102,6 +120,11 @@ def detect_wash_sales(
             continue
 
         loss_sale = sell
+        # Rev. Rul. 2008-5: a loss inside a tax-advantaged account is not a
+        # taxable event (no §61 income → no §165 loss). §1091 has nothing to
+        # disallow, so skip detection on the loss leg entirely.
+        if _is_tax_advantaged(loss_sale.account, account_types):
+            continue
         # Fallback: orphan loss sell with no prior buy → use sell date.
         if loss_side_acquired is None:
             loss_side_acquired = loss_sale.date
@@ -150,6 +173,12 @@ def detect_wash_sales(
                 )
                 # do NOT adjust replacement-lot basis — §1256 is exempt, no rollover
             else:
+                # Rev. Rul. 2008-5: if the replacement leg is in a tax-
+                # advantaged account, §1091(a) still disallows the loss but
+                # §1091(d)'s basis rollover can't apply — the loss is gone.
+                is_permanent = _is_tax_advantaged(candidate.account, account_types)
+                kind = "permanent_ira" if is_permanent else "deferred"
+
                 violations.append(
                     WashSaleViolation(
                         loss_trade_id=loss_sale.id,
@@ -162,11 +191,15 @@ def detect_wash_sales(
                         loss_sale_date=loss_sale.date,
                         triggering_buy_date=candidate.date,
                         ticker=loss_sale.ticker,
+                        kind=kind,
                     )
                 )
 
-                # Adjust replacement lot basis + tack holding period (§1223(4)).
-                if candidate.id in lots:
+                # Adjust replacement lot basis + tack holding period (§1223(4)),
+                # but ONLY for deferred wash sales. Permanent (IRA-trap) ones
+                # have no §1091(d) rollover, so the IRA lot's basis is its own
+                # purchase cost — untouched.
+                if not is_permanent and candidate.id in lots:
                     lots[candidate.id].adjusted_basis += disallowed
                     current_eff = lots[candidate.id].effective_acquired_date()
                     if loss_side_acquired < current_eff:
@@ -209,14 +242,18 @@ def detect_in_window(
     window_start: _date,
     window_end: _date,
     etf_pairs: dict[str, list[str]],
+    account_types: dict[str, AccountType] | None = None,
 ) -> DetectionResult:
     """Run the full detection algorithm but emit only violations whose
     loss_sale_date is within [window_start, window_end].
 
     `trades` MUST include all trades within ±30 days of [window_start, window_end]
     so cross-window matching is correct. The caller is responsible for that.
+
+    ``account_types`` (Rev. Rul. 2008-5) is forwarded to ``detect_wash_sales``;
+    missing or empty defaults to all-taxable behavior.
     """
-    full = detect_wash_sales(trades, etf_pairs)
+    full = detect_wash_sales(trades, etf_pairs, account_types=account_types)
     in_window = [
         v for v in full.violations if v.loss_sale_date is not None and window_start <= v.loss_sale_date <= window_end
     ]

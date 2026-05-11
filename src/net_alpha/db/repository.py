@@ -36,6 +36,7 @@ from net_alpha.db.tables import (
     WashSaleViolationRow,
     WashSaleWatchResultRow,
 )
+from net_alpha.models.accounts import AccountType
 from net_alpha.models.domain import (
     Account,
     AddImportResult,
@@ -100,6 +101,24 @@ class Repository:
         with Session(self.engine) as s:
             row = s.exec(select(AccountRow).where(AccountRow.broker == broker, AccountRow.label == label)).first()
             return row.type if row else "taxable"
+
+    def account_types_by_display(self) -> dict[str, AccountType]:
+        """Single-query map of ``"broker/label"`` → ``AccountType``.
+
+        Used by the wash-sale detector to apply Rev. Rul. 2008-5 (IRA-trap)
+        rules. Missing or unknown type strings fall back to ``TAXABLE`` so
+        legacy rows pre-dating schema v19 stay safe.
+        """
+        out: dict[str, AccountType] = {}
+        with Session(self.engine) as s:
+            rows = s.exec(select(AccountRow)).all()
+            for r in rows:
+                display = f"{r.broker}/{r.label}"
+                try:
+                    out[display] = AccountType(r.type) if r.type else AccountType.TAXABLE
+                except ValueError:
+                    out[display] = AccountType.TAXABLE
+        return out
 
     def set_account_type(self, *, broker: str, label: str, type_: str) -> None:
         with Session(self.engine) as s:
@@ -544,6 +563,7 @@ class Repository:
             loss_sale_date=date.fromisoformat(row.loss_sale_date),
             triggering_buy_date=date.fromisoformat(row.triggering_buy_date),
             source=row.source,
+            kind=getattr(row, "kind", "deferred") or "deferred",
         )
 
     def all_violations(self) -> list[WashSaleViolation]:
@@ -878,6 +898,7 @@ class Repository:
             disallowed_loss=v.disallowed_loss,
             matched_quantity=v.matched_quantity,
             source=getattr(v, "source", "engine"),
+            kind=getattr(v, "kind", "deferred") or "deferred",
         )
 
     def replace_lots_in_window(self, start: date, end: date, new_lots: list[Lot]) -> None:
@@ -1906,22 +1927,36 @@ class Repository:
         Draws from WashSaleViolationRow. Account filter matches violations where
         the loss account OR the triggering buy account is the specified account.
         """
+        by_kind = self.wash_sale_disallowed_by_kind(period, account)
+        return sum(by_kind.values(), Decimal("0"))
+
+    def wash_sale_disallowed_by_kind(self, period, account: str | None) -> dict[str, Decimal]:
+        """Disallowed loss totals split by ``WashSaleViolation.kind``.
+
+        Returns ``{"deferred": <amount>, "permanent_ira": <amount>}``. The
+        permanent_ira bucket holds Rev. Rul. 2008-5 disallowances (loss is gone
+        forever — no §1091(d) basis rollover); deferred holds ordinary
+        §1091 wash sales whose disallowed loss adds to the replacement lot's
+        basis. Always returns both keys (zero when none present) so callers
+        can format without conditional logic.
+        """
         with Session(self.engine) as session:
-            stmt = select(WashSaleViolationRow.disallowed_loss)
+            stmt = select(WashSaleViolationRow.kind, WashSaleViolationRow.disallowed_loss)
             if account:
                 try:
                     acct_id = self._account_id_for_display(session, account)
                 except RuntimeError:
-                    return Decimal("0")
+                    return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
                 stmt = stmt.where(
                     (WashSaleViolationRow.loss_account_id == acct_id) | (WashSaleViolationRow.buy_account_id == acct_id)
                 )
             if period.kind != "lifetime":
                 stmt = stmt.where(WashSaleViolationRow.loss_sale_date.startswith(f"{period.year}-"))
-            total = Decimal("0")
-            for v in session.exec(stmt).all():
-                total += Decimal(str(v))
-        return total
+            out: dict[str, Decimal] = {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
+            for kind, amount in session.exec(stmt).all():
+                bucket = kind if kind in out else "deferred"
+                out[bucket] += Decimal(str(amount))
+        return out
 
     # ---- Position Targets ----
 

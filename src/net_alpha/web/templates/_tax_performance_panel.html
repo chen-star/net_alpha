@@ -108,13 +108,28 @@
         Disallowed losses:
         <span class="num font-medium">${{ '{:,.2f}'.format(breakdown.wash_sale_disallowed_total|float) }}</span>
       </div>
+      {% if breakdown.wash_sale_permanent_total and breakdown.wash_sale_permanent_total|float > 0 %}
+        <div class="text-[13px] mt-1">
+          <span class="text-label-3">— Deferred (basis rolls):</span>
+          <span class="num font-medium">${{ '{:,.2f}'.format(breakdown.wash_sale_deferred_total|float) }}</span>
+        </div>
+        <div class="text-[13px] mt-1">
+          <span class="text-label-3">— Permanently disallowed (IRA trap):</span>
+          <span class="num font-medium">${{ '{:,.2f}'.format(breakdown.wash_sale_permanent_total|float) }}</span>
+        </div>
+      {% endif %}
       <div class="text-[13px] mt-1">
         Estimated deferred tax savings:
         <span class="num font-medium">${{ '{:,.2f}'.format(breakdown.wash_sale_marginal_cost|float) }}</span>
         <span class="text-label-3 ml-1">(disallowed × federal marginal rate)</span>
       </div>
       <div class="text-[11px] text-label-3 mt-1 italic">
-        Deferred, not lost — basis rolls into the replacement lot.
+        {% if breakdown.wash_sale_permanent_total and breakdown.wash_sale_permanent_total|float > 0 %}
+          Deferred rows roll into replacement-lot basis. Permanent rows
+          (Rev. Rul. 2008-5) are lost — no §1091(d) rollover into an IRA.
+        {% else %}
+          Deferred, not lost — basis rolls into the replacement lot.
+        {% endif %}
       </div>
     </div>
 

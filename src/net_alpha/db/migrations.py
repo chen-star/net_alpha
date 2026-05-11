@@ -50,7 +50,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 22
+CURRENT_SCHEMA_VERSION = 23
 
 
 def get_schema_version(session: Session) -> int:
@@ -641,6 +641,26 @@ def _migrate_v21_to_v22(session: Session) -> None:
         session.exec(text("ALTER TABLE lots ADD COLUMN tacked_acquired_date TEXT"))
 
 
+def _migrate_v22_to_v23(session: Session) -> None:
+    """v22 → v23: add wash_sale_violations.kind for Rev. Rul. 2008-5.
+
+    Discriminator between ordinary §1091 wash sales (kind='deferred' — the
+    disallowed loss rolls into the replacement lot's basis via §1091(d)) and
+    IRA-trap wash sales (kind='permanent_ira' — replacement is in a tax-
+    advantaged account; §1091(d) basis rollover is impossible, so the loss
+    is permanently disallowed). Pre-existing rows backfill to 'deferred'.
+    """
+    if _table_exists(session, "wash_sale_violations") and not _column_exists(
+        session, "wash_sale_violations", "kind"
+    ):
+        session.exec(
+            text(
+                "ALTER TABLE wash_sale_violations "
+                "ADD COLUMN kind TEXT NOT NULL DEFAULT 'deferred'"
+            )
+        )
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -659,6 +679,7 @@ def migrate(session: Session) -> None:
         _migrate_v18_to_v19(session)
         _migrate_v19_to_v20(session)
         _migrate_v20_to_v21(session)
+        _migrate_v22_to_v23(session)
         session.commit()
         return
     if current == 1:
@@ -745,6 +766,10 @@ def migrate(session: Session) -> None:
         _migrate_v21_to_v22(session)
         set_schema_version(session, 22)
         current = 22
+    if current < 23:
+        _migrate_v22_to_v23(session)
+        set_schema_version(session, 23)
+        current = 23
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "
