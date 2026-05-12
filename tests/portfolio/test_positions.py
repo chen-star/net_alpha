@@ -527,3 +527,96 @@ def test_transfer_in_basis_feeds_cash_invested():
     r = rows[0]
     assert abs(r.avg_basis - Decimal("441.42")) < Decimal("0.01")
     assert abs(r.cash_sunk_per_share - Decimal("441.42")) < Decimal("0.01")
+
+
+# ---------------------------------------------------------------------------
+# accounts= list-filter tests (Task 4: multi-account filter widening)
+# ---------------------------------------------------------------------------
+
+
+def test_compute_open_positions_accounts_list_single_matches_legacy():
+    """accounts=['Tax'] equals account='Tax' for open positions."""
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0),
+        _trade(id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0),
+    ]
+    lots = [
+        _lot(id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0,
+             cost_basis=1000.0, adjusted_basis=1000.0),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0,
+             cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    prices = {"SPY": _quote("SPY", 120)}
+    legacy = compute_open_positions(trades=trades, lots=lots, prices=prices, account="Tax")
+    new = compute_open_positions(trades=trades, lots=lots, prices=prices, accounts=["Tax"])
+    assert [(p.symbol, p.account_chip) for p in legacy] == [(p.symbol, p.account_chip) for p in new]
+
+
+def test_compute_open_positions_two_accounts_equals_all():
+    """accounts=['Tax', 'IRA'] returns same result as no account filter."""
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0),
+        _trade(id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0),
+    ]
+    lots = [
+        _lot(id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0,
+             cost_basis=1000.0, adjusted_basis=1000.0),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0,
+             cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    prices = {"SPY": _quote("SPY", 120)}
+    all_p = compute_open_positions(trades=trades, lots=lots, prices=prices)
+    both = compute_open_positions(trades=trades, lots=lots, prices=prices, accounts=["Tax", "IRA"])
+    assert [(p.symbol, p.account_chip) for p in all_p] == [(p.symbol, p.account_chip) for p in both]
+
+
+def test_compute_open_option_positions_accounts_list_single_matches_legacy():
+    """accounts=['Tax'] equals account='Tax' for option positions."""
+    from net_alpha.portfolio.positions import compute_open_option_positions
+
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0),
+        _trade(id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0),
+    ]
+    lots = [
+        _lot(id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0,
+             cost_basis=1000.0, adjusted_basis=1000.0),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0,
+             cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    legacy = compute_open_option_positions(trades, lots, account="Tax")
+    new = compute_open_option_positions(trades, lots, accounts=["Tax"])
+    assert [(r.ticker, r.account) for r in legacy] == [(r.ticker, r.account) for r in new]
+
+
+def test_compute_closed_lots_accounts_list_filters_correctly():
+    """compute_closed_lots: new `accounts` param filters just like `account_display` (singular)."""
+    import datetime as _dt
+    from net_alpha.models.realized_gl import RealizedGLLot
+    from net_alpha.portfolio.positions import compute_closed_lots
+
+    def _gl_lot(account: str, ticker: str) -> RealizedGLLot:
+        return RealizedGLLot(
+            account_display=account,
+            symbol_raw=ticker,
+            ticker=ticker,
+            closed_date=_dt.date(2025, 6, 1),
+            opened_date=_dt.date(2025, 1, 1),
+            quantity=10.0,
+            proceeds=1100.0,
+            cost_basis=1000.0,
+            unadjusted_cost_basis=1000.0,
+            wash_sale=False,
+            disallowed_loss=0.0,
+            term="ST",
+        )
+
+    gl_lots = [_gl_lot("Tax", "SPY"), _gl_lot("IRA", "SPY")]
+
+    legacy = compute_closed_lots(gl_lots, account_display="Tax")
+    new = compute_closed_lots(gl_lots, accounts=["Tax"])
+    assert len(legacy) == len(new) == 1
+    assert legacy[0].account == new[0].account == "Tax"
+
+    both = compute_closed_lots(gl_lots, accounts=["Tax", "IRA"])
+    assert len(both) == 2
