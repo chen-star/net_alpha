@@ -2,6 +2,111 @@
 
 
 
+## v0.65.0 (2026-05-12)
+
+### Ci
+
+* ci: install Playwright Chromium for E2E tests
+
+PR #8 introduced tests/web/e2e/ Playwright tests but did not update the CI
+workflow to install the browser binary, so every run after that PR fails
+with &#34;Executable doesn&#39;t exist at .../chrome-headless-shell&#34;. Adds an
+explicit `playwright install --with-deps chromium` step after dependency
+sync.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`295b306`](https://github.com/chen-star/net_alpha/commit/295b306d4b94c91a73eee63a6891546be0f095f5))
+
+### Feature
+
+* feat(ticker): responsive KPI grid with collapsible secondaries (B3) ([`8eb1d18`](https://github.com/chen-star/net_alpha/commit/8eb1d18519ec92b7f1533194ad9c7c01303b5786))
+
+* feat(portfolio): declutter Total Account Value hero tile (B1) ([`31fce24`](https://github.com/chen-star/net_alpha/commit/31fce241f97006c130e163f51a15ce2370a0331d))
+
+* feat(web): in-flight spinners for HTMX-driven forms (A5) ([`346779b`](https://github.com/chen-star/net_alpha/commit/346779bc24421c7d161140451cd23902de2c1a6e))
+
+* feat(web): arrow-key row nav + visible search focus ring (A4) ([`b665efb`](https://github.com/chen-star/net_alpha/commit/b665efb131f9125bf9d7a194873a315db1d4119a))
+
+* feat(web): skeleton loaders for lazy-loaded panels (A3) ([`80b074c`](https://github.com/chen-star/net_alpha/commit/80b074c594cf4680d666e30762420d5d8077ce54))
+
+* feat(harvest): split summary + table regions for OOB swap (A2.3) ([`40e51fe`](https://github.com/chen-star/net_alpha/commit/40e51fe88a8d6d406cacdc56bd346c290760c6bb))
+
+* feat(portfolio): HTMX toolbar swap with OOB subline (A2.2)
+
+Replace the full-page reload on Portfolio period/account toolbar changes
+with an HTMX swap targeting #portfolio-body. The page H1 subline (which
+sits outside #portfolio-body) is updated via an OOB fragment emitted
+from /portfolio/body when called with HX-Request.
+
+Also fix the HTMX-bypass bug in the account multi-select Alpine helper
+and the profile-switcher selects: form.submit() does not fire the
+&#39;submit&#39; event so HTMX never intercepted; requestSubmit() does.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`acf2bea`](https://github.com/chen-star/net_alpha/commit/acf2beafb0f10e6c39fa2ffae2aabb3ee0f88800))
+
+* feat(positions): per-tab page memory via localStorage (A2.1) ([`5e06253`](https://github.com/chen-star/net_alpha/commit/5e062538d876b5bca74a8cf30dd14ac07be14b5a))
+
+* feat(sim): add next-step CTAs to buy/sell result panels (A1)
+
+After running a sim trade the result panel was a dead end. Append a &#34;Next
+steps&#34; CTA strip with deep links to the position view and ticker timeline
+(both buy + sell), plus an &#34;Add to harvest plan&#34; link on sell-at-loss that
+piggybacks on the harvest planner&#39;s existing `pick={sym}::{acct}` query
+contract.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`be3d396`](https://github.com/chen-star/net_alpha/commit/be3d3965dc9dfae78fc8fc6bef2c1396de70d223))
+
+### Fix
+
+* fix(web): table-nav HTMX re-init + row focus ring (A4) ([`45bcfb3`](https://github.com/chen-star/net_alpha/commit/45bcfb3202d65c78b4560445800b00167390456b))
+
+* fix(portfolio): scope toolbar HTMX to Portfolio page only (A2.2) ([`35768d4`](https://github.com/chen-star/net_alpha/commit/35768d4cbf6c2c7cc8500d22bafd6dfdab0c1ce6))
+
+* fix(portfolio): dispatch change event instead of requestSubmit() in account multi-select (A2.2) ([`b7fa303`](https://github.com/chen-star/net_alpha/commit/b7fa303d5be2cbd924a102458abb209af9274932))
+
+### Refactor
+
+* refactor(tax): single-source taxpayer-level offset caveat (B2)
+
+Move the taxpayer-level offset caveat into a shared partial,
+_taxpayer_caveat.html, included from both tax.html (page-level for
+/tax routes) and _harvest_plan.html (HTMX fragment loaded into
+/positions?view=at-loss). The two contexts never co-render, so the
+partial is the single source of truth for the caveat copy.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`be262bf`](https://github.com/chen-star/net_alpha/commit/be262bf3d8c0e24be3a264ab61860089268212ee))
+
+### Style
+
+* style: apply ruff format to tax route harvest OOB block ([`dbfa18e`](https://github.com/chen-star/net_alpha/commit/dbfa18ea24555aeb2b9f8b9bf5287f2e0927e648))
+
+* style: apply ruff format to flow-and-clarity-pass test files ([`8de9920`](https://github.com/chen-star/net_alpha/commit/8de99201b8c5b84b2e831d7345dac7edbc69d2dc))
+
+* style: apply ruff format to test_palette_in_pages.py
+
+Fixes CI lint failure on master where ruff format --check rejected
+nested-quote and line-wrap style in two assertion messages.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0990c2b`](https://github.com/chen-star/net_alpha/commit/0990c2bbacb854197e409809f7738ab9e330dd36))
+
+### Test
+
+* test(e2e): scroll preservation + arrow-key nav golden flows
+
+Two Playwright tests cover behaviors that TestClient HTML snapshots can&#39;t:
+scroll Y is preserved across the harvest checkbox HTMX summary swap (A2.3),
+and ArrowDown traverses rows under tbody[data-table-nav] (A4). Builds a
+self-contained live_server_harvest fixture that seeds buys + price_cache
+quotes (well below basis) so compute_harvest_queue produces 8 loss rows.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`946fa70`](https://github.com/chen-star/net_alpha/commit/946fa70a9d38d9d35fe32779ec1b86304ca05d22))
+
+### Unknown
+
+* Merge pull request #9 from chen-star/worktree-flow-and-clarity-pass
+
+feat(web): flow &amp; clarity UX pass ([`e7e95fd`](https://github.com/chen-star/net_alpha/commit/e7e95fd69430de02769bd0c986110d799df7513f))
+
+
 ## v0.64.0 (2026-05-12)
 
 ### Chore
