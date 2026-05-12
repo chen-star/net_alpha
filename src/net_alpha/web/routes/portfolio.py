@@ -56,6 +56,7 @@ from net_alpha.portfolio.top_movers import build_top_movers
 from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
+from net_alpha.web.account_filter import parse_accounts
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 from net_alpha.web.fragment_cache import bump_fragment_revision
 
@@ -91,9 +92,9 @@ def _warm_historical_for_curve(
     svc.warm_historical_range(tickers, warm_start, warm_end)
 
 
-def _resolve_profile(repo: Repository, account: str | None):
+def _resolve_profile(repo: Repository, accounts: list[str]):
     prefs = repo.list_user_preferences()
-    filter_id = _resolve_account_id(account, repo)
+    filter_id = _resolve_account_id(accounts, repo)
     return resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
 
 
@@ -110,12 +111,17 @@ def _parse_period(period: str | None, current_year: int) -> tuple[tuple[int, int
         return ((current_year, current_year + 1), f"YTD {current_year}")
 
 
-def _resolve_account_id(account: str | None, repo: Repository) -> int | None:
-    """Resolve an account display string (e.g. 'Schwab/Tax') to its DB id, or None for all."""
-    if not account:
+def _resolve_account_id(accounts: list[str], repo: Repository) -> int | None:
+    """Resolve to a single account ID when exactly ONE account is selected, else None.
+
+    Provenance MetricRefs encode a single int; multi-select degrades to None
+    (taxpayer-level). The user re-applies the filter on the destination page.
+    """
+    if len(accounts) != 1:
         return None
+    target = accounts[0]
     for a in repo.list_accounts():
-        if f"{a.broker}/{a.label}" == account:
+        if f"{a.broker}/{a.label}" == target:
             return a.id
     return None
 
@@ -226,13 +232,15 @@ def refresh_prices(
 def portfolio_page(
     request: Request,
     period: str | None = None,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     group_options: str = "merge",
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
+    accounts: list[str] = parse_accounts(account)
+    account_filter_active: bool = bool(accounts)
     imports = repo.list_imports()
-    accounts = sorted({imp.account_display for imp in imports})
+    accounts_available = sorted({imp.account_display for imp in imports})
 
     today = date.today()
     current_year = today.year
@@ -247,11 +255,12 @@ def portfolio_page(
         "portfolio.html",
         {
             "imports": imports,
-            "accounts": accounts,
+            "accounts_available": accounts_available,
+            "selected_accounts": accounts,
+            "account_filter_active": account_filter_active,
             "available_years": available_years,
             "current_year": current_year,
             "selected_period": selected_period,
-            "selected_account": account or "",
             "group_options": group_options,
             "toolbar_action": "/",
             "price_freshness": price_freshness,
@@ -264,10 +273,12 @@ def portfolio_page(
 def portfolio_kpis(
     request: Request,
     period: str | None = None,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
+    accounts: list[str] = parse_accounts(account)
+    account_filter_active: bool = bool(accounts)
     today = date.today()
     period_tuple, period_label = _parse_period(period, today.year)
     trades = repo.all_trades()
@@ -280,20 +291,22 @@ def portfolio_kpis(
         prices=prices,
         period_label=period_label,
         period=period_tuple,
-        account=account or None,
+        accounts=accounts or None,
         gl_lots=repo.list_all_gl_lots(),
     )
     wi = compute_wash_impact(
         violations=repo.all_violations(),
         period_label=period_label,
         period=period_tuple,
-        account=account or None,
+        accounts=accounts or None,
     )
     snap = svc.last_snapshot()
-    account_id = _resolve_account_id(account, repo)
+    account_id = _resolve_account_id(accounts, repo)
     # Open shorts (CSPs) — used for cash-secured / pledged-cash badges in the
     # Cash KPI tile so the user can see how much of their cash is collateral.
-    scoped_trades_for_shorts = [t for t in trades if t.account == account] if account else trades
+    scoped_trades_for_shorts = (
+        [t for t in trades if t.account in set(accounts)] if accounts else trades
+    )
     open_shorts = compute_open_short_option_positions(
         scoped_trades_for_shorts,
         gl_option_closures=repo.get_option_gl_closures(),
@@ -322,13 +335,13 @@ def portfolio_kpis(
         except MissingTaxConfig:
             projection = None
             has_tax_config = False
-    profile = _resolve_profile(repo, account)
+    profile = _resolve_profile(repo, accounts)
 
     # Cash KPIs — needed for the Cash tile and for total_account_value.
     cash_events = repo.list_cash_events(account_id=None)
-    if account:
-        cash_events = [e for e in cash_events if e.account == account]
-        scoped_trades_for_cash = [t for t in trades if t.account == account]
+    if accounts:
+        cash_events = [e for e in cash_events if e.account in set(accounts)]
+        scoped_trades_for_cash = [t for t in trades if t.account in set(accounts)]
     else:
         scoped_trades_for_cash = trades
     holdings_value = kpis.open_position_value or Decimal("0")
@@ -344,7 +357,9 @@ def portfolio_kpis(
             account=None,
             period=None,  # need full history through the boundary
         )
-        scoped_lots_for_anchor = [lt for lt in lots if lt.account == account] if account else lots
+        scoped_lots_for_anchor = (
+            [lt for lt in lots if lt.account in set(accounts)] if accounts else lots
+        )
         period_starting_value = account_value_at(
             on=boundary,
             trades=scoped_trades_for_cash,
@@ -388,7 +403,8 @@ def portfolio_kpis(
             "total_account_value": total_account_value,
             "vs_contributed_delta": vs_contributed_delta,
             "selected_period": period or "ytd",
-            "selected_account": account or "",
+            "selected_accounts": accounts,
+            "account_filter_active": account_filter_active,
         },
     )
 
@@ -431,7 +447,7 @@ def _sort_rows(rows: list, sort: str | None, direction: str | None) -> list:
 def portfolio_positions(
     request: Request,
     period: str | None = None,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     group_options: str = "merge",
     show: str = "open",  # "open" | "all"
     page: int = 1,
@@ -443,6 +459,8 @@ def portfolio_positions(
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
+    accounts: list[str] = parse_accounts(account)
+    account_filter_active: bool = bool(accounts)
     today = date.today()
     period_tuple, period_label = _parse_period(period, today.year)
     trades = repo.all_trades()
@@ -457,7 +475,7 @@ def portfolio_positions(
         lots=lots,
         prices=prices,
         period=period_tuple,
-        account=account or None,
+        accounts=accounts or None,
         include_closed=include_closed,
         gl_closures=gl_closures,
         gl_option_closures=gl_option_closures,
@@ -490,18 +508,18 @@ def portfolio_positions(
     page = max(1, min(page, total_pages))
     start = (page - 1) * page_size
     page_rows = rows[start : start + page_size]
+    query_parts = [f"period={period or 'ytd'}"]
+    query_parts.extend(f"account={a}" for a in accounts)
+    query_parts.append(f"group_options={group_options}")
+    query_parts.append(f"symbols={'%2C'.join(sorted(selected_symbols))}")
     symbol_filter_config = {
         "selected": sorted(selected_symbols),
         "all": sorted(universe),
-        "qsTemplate": (
-            f"period={period or 'ytd'}&account={account or ''}"
-            f"&group_options={group_options}"
-            f"&symbols={'%2C'.join(sorted(selected_symbols))}"
-        ),
+        "qsTemplate": "&".join(query_parts),
         "show": show,
         "pageSize": page_size,
     }
-    profile = _resolve_profile(repo, account)
+    profile = _resolve_profile(repo, accounts)
     extra_columns = profile.default_columns("holdings")
     # Inject targets-by-symbol + 'target' column when any targets exist.
     targets = repo.list_targets()
@@ -523,7 +541,8 @@ def portfolio_positions(
             "selected_symbols": sorted(selected_symbols),
             "symbol_filter_config": symbol_filter_config,
             "selected_period": period or "ytd",
-            "selected_account": account or "",
+            "selected_accounts": accounts,
+            "account_filter_active": account_filter_active,
             "group_options": group_options,
             "profile": profile,
             "extra_columns": extra_columns,
@@ -537,10 +556,11 @@ def portfolio_positions(
 @router.get("/portfolio/allocation", response_class=HTMLResponse)
 def portfolio_allocation_fragment(
     request: Request,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
+    accounts: list[str] = parse_accounts(account)
     today = date.today()
     trades = repo.all_trades()
     lots = repo.all_lots()
@@ -551,7 +571,7 @@ def portfolio_allocation_fragment(
         lots=lots,
         prices=prices,
         period=(today.year, today.year + 1),
-        account=account or None,
+        accounts=accounts or None,
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=repo.get_option_gl_closures(),
         gl_lots=repo.list_all_gl_lots(),
@@ -567,7 +587,7 @@ def portfolio_allocation_fragment(
 @router.get("/holdings/options", response_class=HTMLResponse)
 def holdings_options(
     request: Request,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     page: int = 1,
     page_size: int = 25,
     repo: Repository = Depends(get_repository),
@@ -577,13 +597,14 @@ def holdings_options(
     Pure read of trades + lots + GL closures, scoped by account. Sorted by
     expiry so the next contract to roll/manage is always at the top.
     """
+    accounts: list[str] = parse_accounts(account)
     today = date.today()
     trades = repo.all_trades()
     lots = repo.all_lots()
     open_options = compute_open_option_positions(
         trades,
         lots,
-        account=account or None,
+        accounts=accounts or None,
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=repo.get_option_gl_closures(),
     )
@@ -643,7 +664,8 @@ def holdings_options(
             "options_summary": options_summary,
             "option_counts": option_counts,
             "today": today,
-            "selected_account": account or "",
+            "selected_accounts": accounts,
+            "account_filter_active": bool(accounts),
             "pagination": pagination,
         },
     )
@@ -652,7 +674,7 @@ def holdings_options(
 @router.get("/holdings/short-options", response_class=HTMLResponse)
 def holdings_short_options_legacy(
     request: Request,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     """Backwards-compat alias — renders the unified options panel."""
@@ -663,22 +685,24 @@ def holdings_short_options_legacy(
 def portfolio_equity_curve(
     request: Request,
     period: str | None = None,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
+    accounts: list[str] = parse_accounts(account)
     today = date.today()
     period_tuple, period_label = _parse_period(period, today.year)
 
     trades = repo.all_trades()
     lots = repo.all_lots()
-    if account:
-        trades = [t for t in trades if t.account == account]
-        lots = [lot for lot in lots if lot.account == account]
+    if accounts:
+        accs_set = set(accounts)
+        trades = [t for t in trades if t.account in accs_set]
+        lots = [lot for lot in lots if lot.account in accs_set]
 
     cash_events = repo.list_cash_events(account_id=None)
-    if account:
-        cash_events = [e for e in cash_events if e.account == account]
+    if accounts:
+        cash_events = [e for e in cash_events if e.account in accs_set]
 
     cash_points = build_cash_balance_series(
         events=cash_events,
@@ -723,15 +747,16 @@ def portfolio_equity_curve(
 @router.get("/portfolio/wash-watch", response_class=HTMLResponse)
 def portfolio_wash_watch_fragment(
     request: Request,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     window_days: int = 30,
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
+    accounts: list[str] = parse_accounts(account)
     rows = recent_loss_closes(
         repo=repo,
         today=date.today(),
         window_days=window_days,
-        account=account or None,
+        accounts=accounts or None,
     )
     return request.app.state.templates.TemplateResponse(
         request,
@@ -744,20 +769,21 @@ def _compute_portfolio_body_context(
     *,
     request: Request,
     period: str | None,
-    account: str | None,
+    accounts: list[str],
     repo: Repository,
     svc: PricingService,
 ) -> dict[str, object]:
     """Heavy compute behind /portfolio/body. Pure function of (DB rows, prices,
-    period, account); cached by portfolio_body keyed on the fragment revision."""
+    period, accounts); cached by portfolio_body keyed on the fragment revision."""
     today = date.today()
     period_tuple, period_label = _parse_period(period, today.year)
 
     all_trades = repo.all_trades()
     all_lots = repo.all_lots()
-    if account:
-        scoped_trades = [t for t in all_trades if t.account == account]
-        scoped_lots = [lot for lot in all_lots if lot.account == account]
+    if accounts:
+        accs_set = set(accounts)
+        scoped_trades = [t for t in all_trades if t.account in accs_set]
+        scoped_lots = [lot for lot in all_lots if lot.account in accs_set]
     else:
         scoped_trades = all_trades
         scoped_lots = all_lots
@@ -766,7 +792,9 @@ def _compute_portfolio_body_context(
     snap = svc.last_snapshot()
 
     gl_lots_all = repo.list_all_gl_lots()
-    gl_lots_scoped = [g for g in gl_lots_all if g.account_display == account] if account else gl_lots_all
+    gl_lots_scoped = (
+        [g for g in gl_lots_all if g.account_display in set(accounts)] if accounts else gl_lots_all
+    )
     kpis = compute_kpis(
         trades=scoped_trades,
         lots=scoped_lots,
@@ -794,8 +822,8 @@ def _compute_portfolio_body_context(
 
     # --- Cash flow ---
     cash_events = repo.list_cash_events(account_id=None)
-    if account:
-        cash_events = [e for e in cash_events if e.account == account]
+    if accounts:
+        cash_events = [e for e in cash_events if e.account in accs_set]
     # Use the same total `compute_kpis` already produced for the Hero tile and
     # `account_value_at` (period-start anchor) — both include open long-option
     # lots carried at basis. Summing `compute_open_positions` market values
@@ -899,7 +927,7 @@ def _compute_portfolio_body_context(
     )
     csp_count = sum(1 for s in open_shorts if s.call_put == "P")
 
-    account_id = _resolve_account_id(account, repo)
+    account_id = _resolve_account_id(accounts, repo)
     offset_budget = compute_offset_budget(
         repo=repo,
         year=today.year,
@@ -922,7 +950,7 @@ def _compute_portfolio_body_context(
         except MissingTaxConfig:
             projection = None
             has_tax_config = False
-    profile = _resolve_profile(repo, account)
+    profile = _resolve_profile(repo, accounts)
 
     # Hero / Today tile context (same as portfolio_kpis handler).
     body_total_account_value: Decimal | None = (
@@ -957,9 +985,10 @@ def _compute_portfolio_body_context(
         "account_points": account_points,
         "period_label": period_label,
         "monthly_pl_points": monthly_pl_points,
-        "account": account,  # used by the inbox lazy-load wrapper
+        "accounts": accounts,  # used by the inbox lazy-load wrapper
         "selected_period": period or "ytd",
-        "selected_account": account or "",
+        "selected_accounts": accounts,
+        "account_filter_active": bool(accounts),
     }
 
 
@@ -967,32 +996,33 @@ def _compute_portfolio_body_context(
 def portfolio_body(
     request: Request,
     period: str | None = None,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
     """Bundled fragment: KPIs + equity-curve + allocation + wash-watch.
 
-    Heavy compute is memoized per (period, account, fragment_revision); the
+    Heavy compute is memoized per (period, accounts, fragment_revision); the
     template still renders each request so request-scoped Jinja globals work.
     """
+    accounts: list[str] = parse_accounts(account)
     t0 = time.perf_counter()
     cache = request.app.state.fragment_cache
     revision = request.app.state.fragment_revision
-    key = ("/portfolio/body", period or "", account or "", revision)
+    key = ("/portfolio/body", period or "", tuple(sorted(accounts)), revision)
     ctx = cache.get(key)
     cache_hit = ctx is not None
     if ctx is None:
-        ctx = _compute_portfolio_body_context(request=request, period=period, account=account, repo=repo, svc=svc)
+        ctx = _compute_portfolio_body_context(request=request, period=period, accounts=accounts, repo=repo, svc=svc)
         cache.set(key, ctx)
     response = request.app.state.templates.TemplateResponse(request, "_portfolio_body.html", ctx)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     logger.debug(
-        "portfolio_body: {:.0f} ms cache_hit={} period={} account={!r}",
+        "portfolio_body: {:.0f} ms cache_hit={} period={} accounts={!r}",
         elapsed_ms,
         cache_hit,
         period or "ytd",
-        account or "",
+        accounts,
     )
     return response
 
@@ -1021,13 +1051,17 @@ def _resolve_inbox_rates(tax: TaxConfig | None) -> tuple[Decimal, Decimal]:
 @router.get("/portfolio/inbox", response_class=HTMLResponse)
 def portfolio_inbox(
     request: Request,
-    account: str | None = Query(default=None),
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
     pricing: PricingService = Depends(get_pricing_service),
 ):
+    accounts: list[str] = parse_accounts(account)
     cfg = load_inbox_config(Path.home() / ".net_alpha" / "config.yaml")
     st_rate, lt_rate = _resolve_inbox_rates(request.app.state.tax_brackets_cfg)
     today = _date.today()
+    # gather_inbox only accepts a single account string; pass the first selected
+    # account when exactly one is active, or None for all-accounts.
+    inbox_account = accounts[0] if len(accounts) == 1 else None
     with Session(repo.engine) as session:
         items = gather_inbox(
             repo=repo,
@@ -1037,12 +1071,12 @@ def portfolio_inbox(
             config=cfg,
             st_rate=st_rate,
             lt_rate=lt_rate,
-            account=account,
+            account=inbox_account,
         )
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_inbox.html",
-        {"items": items, "account": account},
+        {"items": items, "accounts": accounts, "account_filter_active": bool(accounts)},
     )
 
 
@@ -1050,7 +1084,7 @@ def portfolio_inbox(
 def portfolio_inbox_dismiss(
     request: Request,
     dismiss_key: str,
-    account: str | None = Query(default=None),
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
     pricing: PricingService = Depends(get_pricing_service),
 ):
@@ -1063,24 +1097,26 @@ def portfolio_inbox_dismiss(
 def explain_total_return(
     request: Request,
     period: str | None = None,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
     """Math explainer fragment for the Total Return KPI tile."""
     from net_alpha.portfolio.explain import build_total_return_breakdown
 
+    accounts: list[str] = parse_accounts(account)
     today = date.today()
     period_tuple, period_label = _parse_period(period, today.year)
 
     trades = repo.all_trades()
     lots = repo.all_lots()
-    if account:
-        trades = [t for t in trades if t.account == account]
-        lots = [lt for lt in lots if lt.account == account]
+    if accounts:
+        accs_set = set(accounts)
+        trades = [t for t in trades if t.account in accs_set]
+        lots = [lt for lt in lots if lt.account in accs_set]
     cash_events = repo.list_cash_events(account_id=None)
-    if account:
-        cash_events = [e for e in cash_events if e.account == account]
+    if accounts:
+        cash_events = [e for e in cash_events if e.account in accs_set]
 
     cash_points_full = build_cash_balance_series(
         events=cash_events,
@@ -1106,14 +1142,18 @@ def explain_total_return(
 
     symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(symbols) if symbols else {}
+    gl_lots_all = repo.list_all_gl_lots()
+    gl_lots_scoped = (
+        [g for g in gl_lots_all if g.account_display in accs_set] if accounts else gl_lots_all
+    )
     kpis_now = compute_kpis(
         trades=trades,
         lots=lots,
         prices=prices,
         period_label=period_label,
         period=period_tuple,
-        account=account,
-        gl_lots=repo.list_all_gl_lots(),
+        account=None,  # already pre-filtered above
+        gl_lots=gl_lots_scoped,
     )
     holdings_value = kpis_now.open_position_value or Decimal("0")
     cash_kpis = compute_cash_kpis(
@@ -1146,7 +1186,7 @@ def explain_total_return(
 @router.get("/portfolio/explain/unrealized", response_class=HTMLResponse)
 def explain_unrealized(
     request: Request,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
@@ -1157,18 +1197,20 @@ def explain_unrealized(
     from net_alpha.portfolio.explain import build_unrealized_breakdown
     from net_alpha.portfolio.positions import consume_lots_fifo
 
+    accounts: list[str] = parse_accounts(account)
     today = date.today()
     trades = repo.all_trades()
     lots = repo.all_lots()
-    if account:
-        trades = [t for t in trades if t.account == account]
-        lots = [lt for lt in lots if lt.account == account]
+    if accounts:
+        accs_set = set(accounts)
+        trades = [t for t in trades if t.account in accs_set]
+        lots = [lt for lt in lots if lt.account in accs_set]
 
     gl_closures = repo.get_equity_gl_closures()
     gl_option_closures = repo.get_option_gl_closures()
-    if account:
-        gl_closures = {k: v for k, v in gl_closures.items() if k[0] == account}
-        gl_option_closures = {k: v for k, v in gl_option_closures.items() if k[0] == account}
+    if accounts:
+        gl_closures = {k: v for k, v in gl_closures.items() if k[0] in accs_set}
+        gl_option_closures = {k: v for k, v in gl_option_closures.items() if k[0] in accs_set}
 
     consumed = consume_lots_fifo(
         lots=lots,
@@ -1199,7 +1241,7 @@ def explain_unrealized(
 @router.get("/portfolio/explain/account-value", response_class=HTMLResponse)
 def explain_account_value(
     request: Request,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
@@ -1210,25 +1252,27 @@ def explain_account_value(
     from net_alpha.portfolio.explain import build_account_value_breakdown
     from net_alpha.portfolio.positions import consume_lots_fifo
 
+    accounts: list[str] = parse_accounts(account)
     today = date.today()
     trades = repo.all_trades()
     lots = repo.all_lots()
-    if account:
-        trades = [t for t in trades if t.account == account]
-        lots = [lt for lt in lots if lt.account == account]
+    if accounts:
+        accs_set = set(accounts)
+        trades = [t for t in trades if t.account in accs_set]
+        lots = [lt for lt in lots if lt.account in accs_set]
 
     cash_events = repo.list_cash_events(account_id=None)
-    if account:
-        cash_events = [e for e in cash_events if e.account == account]
+    if accounts:
+        cash_events = [e for e in cash_events if e.account in accs_set]
 
     gl_lots = repo.list_all_gl_lots()
-    if account:
-        gl_lots = [g for g in gl_lots if g.account_display == account]
+    if accounts:
+        gl_lots = [g for g in gl_lots if g.account_display in accs_set]
     gl_closures = repo.get_equity_gl_closures()
     gl_option_closures = repo.get_option_gl_closures()
-    if account:
-        gl_closures = {k: v for k, v in gl_closures.items() if k[0] == account}
-        gl_option_closures = {k: v for k, v in gl_option_closures.items() if k[0] == account}
+    if accounts:
+        gl_closures = {k: v for k, v in gl_closures.items() if k[0] in accs_set}
+        gl_option_closures = {k: v for k, v in gl_option_closures.items() if k[0] in accs_set}
 
     consumed = consume_lots_fifo(
         lots=lots,
