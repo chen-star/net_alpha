@@ -101,8 +101,7 @@
     {% endfor %}
   </div>
 
-  {% set _qs = '' %}
-  {% if selected_account %}{% set _qs = _qs + '&account=' + selected_account %}{% endif %}
+  {% set _qs %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
   {% set page_base_url = '/holdings/options' %}
   {% set page_extra_qs = _qs %}
   {% set page_target = '#holdings-options' %}

@@ -3,10 +3,11 @@
    "All" tile clears the filter. #}
 {% set selected = plan_view.selected_tag %}
 {% set palette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'] %}
+{% set _acct_qs %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
 <div class="flex items-center gap-1 mb-3 overflow-x-auto"
      style="scrollbar-width: thin;"
      title="A target with multiple tags is counted in each tile. Tag totals don't sum to the portfolio total.">
-  <a href="/positions?view=plan{% if selected_account %}&account={{ selected_account }}{% endif %}"
+  <a href="/positions?view=plan{{ _acct_qs }}"
      class="shrink-0 px-3 py-[6px] rounded-md text-[12px]"
      style="border:0.5px solid {% if selected is none %}var(--color-accent){% else %}var(--color-hairline){% endif %};
             color:{% if selected is none %}var(--color-accent){% else %}var(--color-label-2){% endif %};">
@@ -16,7 +17,7 @@
     {% set is_untagged = (s.tag == 'untagged') %}
     {% set idx = (s.tag|length + (s.tag[0]|ord if s.tag|length > 0 else 0)) % 8 %}
     {% set is_selected = (selected == s.tag) %}
-    <a href="/positions?view=plan&tag={{ s.tag }}{% if selected_account %}&account={{ selected_account }}{% endif %}"
+    <a href="/positions?view=plan&tag={{ s.tag }}{{ _acct_qs }}"
        class="shrink-0 inline-flex items-center gap-2 px-3 py-[6px] rounded-md text-[12px]"
        style="border:0.5px solid {% if is_selected %}var(--color-accent){% else %}var(--color-hairline){% endif %};">
       {% if not is_untagged %}

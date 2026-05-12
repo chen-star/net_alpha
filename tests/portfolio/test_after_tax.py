@@ -42,16 +42,16 @@ class _StubRepo:
         self._s1256_mtm = s1256_mtm
         self._disallowed = disallowed
 
-    def realized_pnl_split(self, period, account):
+    def realized_pnl_split(self, period, accounts=None):
         return {"short_term": self._st, "long_term": self._lt}
 
-    def section_1256_pnl(self, period, account):
+    def section_1256_pnl(self, period, accounts=None):
         return self._s1256
 
-    def section_1256_mtm_pnl(self, period, account):
+    def section_1256_mtm_pnl(self, period, accounts=None):
         return self._s1256_mtm
 
-    def wash_sale_disallowed_total(self, period, account):
+    def wash_sale_disallowed_total(self, period, accounts=None):
         return self._disallowed
 
 
@@ -61,7 +61,7 @@ def _ytd():
 
 def test_all_short_term_gain():
     repo = _StubRepo(st=Decimal("10000"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets())
+    r = compute_after_tax(repo, _ytd(), _brackets())
     assert r.estimated_tax_bill == Decimal("4080")  # 10000*0.37 + 10000*0.038
     assert r.after_tax_realized_pnl == Decimal("5920")
     assert r.tax_drag_dollar == Decimal("4080")
@@ -69,13 +69,13 @@ def test_all_short_term_gain():
 
 def test_all_long_term_gain():
     repo = _StubRepo(lt=Decimal("10000"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets())
+    r = compute_after_tax(repo, _ytd(), _brackets())
     assert r.estimated_tax_bill == Decimal("2380")  # 10000*0.20 + 10000*0.038
 
 
 def test_all_loss_no_negative_tax():
     repo = _StubRepo(st=Decimal("-5000"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets())
+    r = compute_after_tax(repo, _ytd(), _brackets())
     assert r.estimated_tax_bill == Decimal("0")
     assert r.after_tax_realized_pnl == Decimal("-5000")
     assert r.tax_drag_dollar == Decimal("0")
@@ -83,7 +83,7 @@ def test_all_loss_no_negative_tax():
 
 def test_section_1256_60_40_split_absorbed_into_st_lt():
     repo = _StubRepo(s1256=Decimal("1000"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets())
+    r = compute_after_tax(repo, _ytd(), _brackets())
     # st_tax = 400 * 0.37 = 148; lt_tax = 600 * 0.20 = 120; niit = 1000 * 0.038 = 38
     assert r.estimated_tax_bill == Decimal("306")
     assert r.section_1256_lt_portion == Decimal("600")
@@ -92,44 +92,44 @@ def test_section_1256_60_40_split_absorbed_into_st_lt():
 
 def test_niit_toggle_off_zeroes_niit():
     repo = _StubRepo(st=Decimal("10000"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets(niit=False))
+    r = compute_after_tax(repo, _ytd(), _brackets(niit=False))
     assert r.estimated_tax_bill == Decimal("3700")
 
 
 def test_state_tax_layer():
     repo = _StubRepo(st=Decimal("10000"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets(state=Decimal("0.05")))
+    r = compute_after_tax(repo, _ytd(), _brackets(state=Decimal("0.05")))
     assert r.estimated_tax_bill == Decimal("4580")  # 3700+500+380
 
 
 def test_wash_sale_marginal_cost():
     repo = _StubRepo(st=Decimal("0"), disallowed=Decimal("1000"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets())
+    r = compute_after_tax(repo, _ytd(), _brackets())
     assert r.wash_sale_disallowed_total == Decimal("1000")
     assert r.wash_sale_marginal_cost == Decimal("370")
 
 
 def test_effective_tax_rate():
     repo = _StubRepo(st=Decimal("10000"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets())
+    r = compute_after_tax(repo, _ytd(), _brackets())
     assert r.effective_tax_rate == Decimal("0.408")
 
 
 def test_effective_tax_rate_zero_when_no_gains():
     repo = _StubRepo(st=Decimal("-5000"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets())
+    r = compute_after_tax(repo, _ytd(), _brackets())
     assert r.effective_tax_rate == Decimal("0")
 
 
 def test_period_label_set():
     repo = _StubRepo(st=Decimal("100"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets())
+    r = compute_after_tax(repo, _ytd(), _brackets())
     assert "2026" in r.period_label or "YTD" in r.period_label
 
 
 def test_caveats_includes_lifetime_warning_when_lifetime():
     repo = _StubRepo(st=Decimal("100"))
-    r = compute_after_tax(repo, Period.lifetime(), None, _brackets())
+    r = compute_after_tax(repo, Period.lifetime(), _brackets())
     assert any("Lifetime" in c or "current rates" in c for c in r.caveats)
 
 
@@ -138,7 +138,7 @@ def test_caveats_drop_capital_loss_limitation_note():
     not modeled" caveat is gone — those are now modeled via the carryforward
     pipeline."""
     repo = _StubRepo(st=Decimal("-100"))
-    r = compute_after_tax(repo, _ytd(), None, _brackets())
+    r = compute_after_tax(repo, _ytd(), _brackets())
     assert all("not modeled" not in c for c in r.caveats)
     assert all("Capital-loss limitation" not in c for c in r.caveats)
 
@@ -148,7 +148,7 @@ def test_compute_after_tax_consumes_st_carryforward_reducing_tax_bill():
     taxable to $5,000 → federal_marginal_rate * 5000 + niit."""
     repo = _StubRepo(st=Decimal("10000"))
     cf = Carryforward(st=Decimal("5000"), lt=Decimal("0"), source="user")
-    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    r = compute_after_tax(repo, _ytd(), _brackets(), carryforward=cf)
     # ST taxable: 10000 - 5000 = 5000
     # st_tax = 5000 * 0.37 = 1850; niit = 5000 * 0.038 = 190 → 2040
     assert r.short_term_pnl == Decimal("5000")
@@ -159,7 +159,7 @@ def test_compute_after_tax_consumes_lt_carryforward_reducing_tax_bill():
     """LT carryforward absorbs same-bucket LT gain first."""
     repo = _StubRepo(lt=Decimal("10000"))
     cf = Carryforward(st=Decimal("0"), lt=Decimal("4000"), source="user")
-    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    r = compute_after_tax(repo, _ytd(), _brackets(), carryforward=cf)
     # LT taxable: 10000 - 4000 = 6000
     # lt_tax = 6000 * 0.20 = 1200; niit = 6000 * 0.038 = 228 → 1428
     assert r.long_term_pnl == Decimal("6000")
@@ -174,7 +174,7 @@ def test_compute_after_tax_carryforward_crosses_categories_st_into_lt():
     # Cross: ST carry $4,000 vs LT gain $10,000 → LT gain becomes $6,000.
     repo = _StubRepo(st=Decimal("0"), lt=Decimal("10000"))
     cf = Carryforward(st=Decimal("4000"), lt=Decimal("0"), source="derived")
-    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    r = compute_after_tax(repo, _ytd(), _brackets(), carryforward=cf)
     assert r.short_term_pnl == Decimal("0")
     assert r.long_term_pnl == Decimal("6000")
     # lt_tax = 6000*0.20=1200; niit = 6000*0.038=228 → 1428
@@ -185,7 +185,7 @@ def test_compute_after_tax_carryforward_crosses_categories_lt_into_st():
     """LT carry surplus crosses into ST gain."""
     repo = _StubRepo(st=Decimal("10000"), lt=Decimal("0"))
     cf = Carryforward(st=Decimal("0"), lt=Decimal("3000"), source="user")
-    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    r = compute_after_tax(repo, _ytd(), _brackets(), carryforward=cf)
     # ST gain reduced by 3000 cross-bucket LT carry → ST taxable 7000.
     assert r.short_term_pnl == Decimal("7000")
     assert r.long_term_pnl == Decimal("0")
@@ -196,18 +196,18 @@ def test_compute_after_tax_carryforward_crosses_categories_lt_into_st():
 def test_compute_after_tax_caveat_emitted_when_carryforward_applied():
     repo = _StubRepo(st=Decimal("10000"))
     cf = Carryforward(st=Decimal("2000"), lt=Decimal("500"), source="user")
-    r = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf)
+    r = compute_after_tax(repo, _ytd(), _brackets(), carryforward=cf)
     assert any("Carryforward applied" in c and "user" in c for c in r.caveats)
 
 
 def test_compute_after_tax_no_carryforward_caveat_when_zero():
     """When carryforward is None or all-zero, no carryforward caveat is added."""
     repo = _StubRepo(st=Decimal("10000"))
-    r_none = compute_after_tax(repo, _ytd(), None, _brackets())
+    r_none = compute_after_tax(repo, _ytd(), _brackets())
     assert all("Carryforward applied" not in c for c in r_none.caveats)
 
     cf_zero = Carryforward(st=Decimal("0"), lt=Decimal("0"), source="none")
-    r_zero = compute_after_tax(repo, _ytd(), None, _brackets(), carryforward=cf_zero)
+    r_zero = compute_after_tax(repo, _ytd(), _brackets(), carryforward=cf_zero)
     assert all("Carryforward applied" not in c for c in r_zero.caveats)
 
 
@@ -215,11 +215,10 @@ def test_compute_after_tax_carryforward_default_is_zero():
     """Omitting `carryforward` is equivalent to passing zero — preserves
     legacy behavior for existing callers."""
     repo = _StubRepo(st=Decimal("10000"))
-    r_default = compute_after_tax(repo, _ytd(), None, _brackets())
+    r_default = compute_after_tax(repo, _ytd(), _brackets())
     r_zero = compute_after_tax(
         repo,
         _ytd(),
-        None,
         _brackets(),
         carryforward=Carryforward(st=Decimal("0"), lt=Decimal("0"), source="none"),
     )
@@ -297,3 +296,121 @@ def test_realized_pnl_split_excludes_1256_at_repo_level(tmp_path):
     # Only TSLA should be counted (-1000); SPX excluded.
     assert pnl["short_term"] == Decimal("-1000")
     assert pnl["long_term"] == Decimal("0")
+
+
+def test_compute_after_tax_accounts_list_threads_through_to_repo():
+    """accounts=['A','B'] should pass `accounts=['A','B']` keyword to every repo method."""
+    received: dict[str, object] = {}
+
+    class TrackingRepo:
+        def realized_pnl_split(self, period, accounts=None):
+            received["realized_pnl_split"] = list(accounts) if accounts else None
+            return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+
+        def section_1256_pnl(self, period, accounts=None):
+            received["section_1256_pnl"] = list(accounts) if accounts else None
+            return Decimal("0")
+
+        def section_1256_mtm_pnl(self, period, accounts=None):
+            received["section_1256_mtm_pnl"] = list(accounts) if accounts else None
+            return Decimal("0")
+
+        def wash_sale_disallowed_by_kind(self, period, accounts=None):
+            received["wash_sale_disallowed_by_kind"] = list(accounts) if accounts else None
+            return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
+
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Decimal("0.32"),
+        ltcg_rate=Decimal("0.15"),
+        qualified_div_rate=Decimal("0.15"),
+        state_marginal_rate=Decimal("0.09"),
+        niit_enabled=False,
+    )
+    result = compute_after_tax(
+        TrackingRepo(),
+        Period.for_year(2025),
+        brackets=brackets,
+        accounts=["Schwab/A", "Schwab/B"],
+    )
+    for key in ("realized_pnl_split", "section_1256_pnl", "section_1256_mtm_pnl", "wash_sale_disallowed_by_kind"):
+        assert received[key] == ["Schwab/A", "Schwab/B"], (
+            f"{key} received {received[key]} instead of ['Schwab/A', 'Schwab/B']"
+        )
+    # When a multi-account filter is active, account_filter is a comma-joined string.
+    assert result.account_filter == "Schwab/A, Schwab/B"
+
+
+def test_compute_after_tax_single_account_filter_via_accounts():
+    """accounts=['Schwab/A'] routes correctly — single-entry list matches old account= behavior."""
+    received: dict[str, object] = {}
+
+    class TrackingRepo:
+        def realized_pnl_split(self, period, accounts=None):
+            received["accounts_kw"] = list(accounts) if accounts else None
+            return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+
+        def section_1256_pnl(self, period, accounts=None):
+            return Decimal("0")
+
+        def section_1256_mtm_pnl(self, period, accounts=None):
+            return Decimal("0")
+
+        def wash_sale_disallowed_by_kind(self, period, accounts=None):
+            return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
+
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Decimal("0.32"),
+        ltcg_rate=Decimal("0.15"),
+        qualified_div_rate=Decimal("0.15"),
+        state_marginal_rate=Decimal("0.09"),
+        niit_enabled=False,
+    )
+    result = compute_after_tax(
+        TrackingRepo(),
+        Period.for_year(2025),
+        brackets=brackets,
+        accounts=["Schwab/A"],
+    )
+    assert received["accounts_kw"] == ["Schwab/A"]
+    assert result.account_filter == "Schwab/A"
+
+
+def test_compute_after_tax_accounts_empty_means_no_filter():
+    """accounts=[] should NOT thread anything to repo (None passed)."""
+    received: dict[str, object] = {}
+
+    class TrackingRepo:
+        def realized_pnl_split(self, period, accounts=None):
+            received["accounts_kw"] = list(accounts) if accounts else None
+            return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+
+        def section_1256_pnl(self, period, accounts=None):
+            return Decimal("0")
+
+        def section_1256_mtm_pnl(self, period, accounts=None):
+            return Decimal("0")
+
+        def wash_sale_disallowed_by_kind(self, period, accounts=None):
+            return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
+
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Decimal("0.32"),
+        ltcg_rate=Decimal("0.15"),
+        qualified_div_rate=Decimal("0.15"),
+        state_marginal_rate=Decimal("0.09"),
+        niit_enabled=False,
+    )
+    result = compute_after_tax(
+        TrackingRepo(),
+        Period.for_year(2025),
+        brackets=brackets,
+        accounts=[],
+    )
+    assert received["accounts_kw"] is None
+    assert result.account_filter is None

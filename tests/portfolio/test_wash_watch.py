@@ -91,7 +91,7 @@ def test_account_filter():
             _sell(ticker="Y", account="Fidelity", on=date(2026, 4, 10), proceeds=0, basis=80),
         ]
     )
-    rows = recent_loss_closes(repo=repo, today=today, window_days=30, account="Schwab")
+    rows = recent_loss_closes(repo=repo, today=today, window_days=30, accounts=["Schwab"])
     assert [r.symbol for r in rows] == ["X"]
 
 
@@ -118,3 +118,48 @@ def test_days_to_safe_clamped_at_zero():
     rows = recent_loss_closes(repo=repo, today=today, window_days=30)
     assert len(rows) == 1
     assert rows[0].days_to_safe == 0
+
+
+# ---------------------------------------------------------------------------
+# Tests for accounts= list filter (multi-account widening)
+# ---------------------------------------------------------------------------
+
+
+def test_recent_loss_closes_accounts_list_single_filter():
+    """accounts=['Schwab'] filters to only Schwab losses."""
+    today = date(2026, 4, 26)
+    repo = _repo(
+        [
+            _sell(ticker="X", account="Schwab", on=date(2026, 4, 10), proceeds=0, basis=50),
+            _sell(ticker="Y", account="Fidelity", on=date(2026, 4, 10), proceeds=0, basis=80),
+        ]
+    )
+    result = recent_loss_closes(repo=repo, today=today, window_days=30, accounts=["Schwab"])
+    assert [r.symbol for r in result] == ["X"]
+
+
+def test_recent_loss_closes_two_accounts_equals_all():
+    """accounts=['Schwab', 'Fidelity'] returns same result as no filter."""
+    today = date(2026, 4, 26)
+    repo = _repo(
+        [
+            _sell(ticker="X", account="Schwab", on=date(2026, 4, 10), proceeds=0, basis=50),
+            _sell(ticker="Y", account="Fidelity", on=date(2026, 4, 11), proceeds=0, basis=80),
+        ]
+    )
+    all_ = recent_loss_closes(repo=repo, today=today, window_days=30)
+    both = recent_loss_closes(repo=repo, today=today, window_days=30, accounts=["Schwab", "Fidelity"])
+    assert all_ == both
+
+
+def test_recent_loss_closes_empty_accounts_means_all():
+    """accounts=[] is treated as 'no filter'."""
+    today = date(2026, 4, 26)
+    repo = _repo(
+        [
+            _sell(ticker="Z", account="Schwab", on=date(2026, 4, 10), proceeds=0, basis=50),
+        ]
+    )
+    all_ = recent_loss_closes(repo=repo, today=today, window_days=30)
+    empty = recent_loss_closes(repo=repo, today=today, window_days=30, accounts=[])
+    assert all_ == empty

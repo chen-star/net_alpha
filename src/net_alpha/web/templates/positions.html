@@ -7,7 +7,7 @@
     <div>
       <h1>Positions</h1>
       <div class="text-[13px] text-label-2 mt-[3px]">
-        {% if selected_account %}{{ selected_account }}{% else %}All accounts{% endif %} ·
+        {% if selected_accounts and selected_accounts | length == 1 %}{{ selected_accounts[0] }}{% elif selected_accounts and selected_accounts | length > 1 %}{{ selected_accounts | length }} accounts{% else %}All accounts{% endif %} ·
         {{ selected_period|default('YTD')|upper }}
       </div>
 </div>
@@ -16,7 +16,7 @@
            hx-get="/verify/badge?page=positions"
            hx-trigger="load delay:200ms"
            hx-swap="innerHTML"></div>
-      {% if imports and selected_view in ('all', 'stocks') %}{% include "_portfolio_toolbar.html" %}{% endif %}
+      {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
     </div>
   </div>
 

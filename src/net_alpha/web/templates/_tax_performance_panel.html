@@ -3,6 +3,14 @@
    Context: breakdown (AfterTaxBreakdown | None), has_tax_config (bool)
 #}
 
+{% if account_filter_active %}
+<div class="text-[11px] text-warn px-3 py-2 rounded mb-3"
+     data-testid="cf-taxpayer-caveat"
+     style="background: rgba(255,159,10,0.08); border: 0.5px solid var(--color-warn);">
+  Carryforward applied is taxpayer-level, not per-account. §1212(b) ST/LT netting and the §1211 $3,000 cap can't be partitioned by account.
+</div>
+{% endif %}
+
 {% if not has_tax_config %}
   <div class="panel p-4">
     <p class="text-label-2">

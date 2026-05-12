@@ -117,7 +117,7 @@ def test_golden_case(case_path: Path, tmp_path: Path) -> None:
         prices=prices,
         period_label="2025",
         period=(2025, 2026),
-        account=None,
+        accounts=None,
         gl_lots=repo.list_all_gl_lots(),
     )
 

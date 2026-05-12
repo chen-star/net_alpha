@@ -53,7 +53,6 @@ def _build_sim_positions(
         lots=lots,
         prices=quotes,
         period=None,
-        account=None,
         include_closed=False,
         gl_closures=gl_closures,
         gl_option_closures=gl_option_closures,

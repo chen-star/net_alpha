@@ -84,8 +84,8 @@ def test_recompute_writes_mtm_rows_for_each_open_year(repo, monkeypatch):
 
     rc_mod.recompute_all_violations(repo, {})
 
-    rows_2024 = repo.section_1256_mtm_rows(Period.for_year(2024), account=None)
-    rows_2025 = repo.section_1256_mtm_rows(Period.for_year(2025), account=None)
+    rows_2024 = repo.section_1256_mtm_rows(Period.for_year(2024))
+    rows_2025 = repo.section_1256_mtm_rows(Period.for_year(2025))
     assert len(rows_2024) == 1
     assert rows_2024[0].fmv == Decimal("150")
     assert rows_2024[0].basis_before == Decimal("100")
@@ -164,8 +164,8 @@ def test_recompute_handles_year_long_gap_between_positions(repo, monkeypatch):
     rc_mod.recompute_all_violations(repo, {})
 
     # Position A: MTM rows for 2020 and 2021 must exist.
-    rows_2020 = repo.section_1256_mtm_rows(Period.for_year(2020), account=None)
-    rows_2021 = repo.section_1256_mtm_rows(Period.for_year(2021), account=None)
+    rows_2020 = repo.section_1256_mtm_rows(Period.for_year(2020))
+    rows_2021 = repo.section_1256_mtm_rows(Period.for_year(2021))
     assert len(rows_2020) == 1
     assert rows_2020[0].fmv == Decimal("100")
     assert rows_2020[0].unrealized_pnl == Decimal("20.00")  # 100 - 80
@@ -175,16 +175,16 @@ def test_recompute_handles_year_long_gap_between_positions(repo, monkeypatch):
     assert rows_2021[0].unrealized_pnl == Decimal("20.00")  # 120 - 100
 
     # Year 2022: A is closed Jan 15 — not open at year-end → no MTM row.
-    rows_2022 = repo.section_1256_mtm_rows(Period.for_year(2022), account=None)
+    rows_2022 = repo.section_1256_mtm_rows(Period.for_year(2022))
     assert rows_2022 == []
 
     # Year 2023: neither A nor B is open → no MTM row.
-    rows_2023 = repo.section_1256_mtm_rows(Period.for_year(2023), account=None)
+    rows_2023 = repo.section_1256_mtm_rows(Period.for_year(2023))
     assert rows_2023 == []
 
     # Position B: MTM rows for 2024 and 2025.
-    rows_2024 = repo.section_1256_mtm_rows(Period.for_year(2024), account=None)
-    rows_2025 = repo.section_1256_mtm_rows(Period.for_year(2025), account=None)
+    rows_2024 = repo.section_1256_mtm_rows(Period.for_year(2024))
+    rows_2025 = repo.section_1256_mtm_rows(Period.for_year(2025))
     assert len(rows_2024) == 1
     assert rows_2024[0].fmv == Decimal("250")
     assert rows_2024[0].basis_before == Decimal("200")  # B's original cost

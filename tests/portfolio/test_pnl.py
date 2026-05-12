@@ -45,7 +45,7 @@ def _quote(symbol, price):
 
 
 def test_kpis_zero_when_no_trades():
-    k = compute_kpis(trades=[], lots=[], prices={}, period_label="YTD", period=(2026, 2027), account=None)
+    k = compute_kpis(trades=[], lots=[], prices={}, period_label="YTD", period=(2026, 2027))
     assert k.period_realized == Decimal("0")
     assert k.lifetime_realized == Decimal("0")
     assert k.open_position_value == Decimal("0")
@@ -57,7 +57,7 @@ def test_kpis_realized_split_by_period():
         _trade(id="t1", action="Sell", date=dt.date(2025, 6, 10), quantity=10, proceeds=5_000, cost_basis=4_000),
         _trade(id="t2", action="Sell", date=dt.date(2026, 3, 1), quantity=10, proceeds=6_000, cost_basis=4_500),
     ]
-    k = compute_kpis(trades=trades, lots=[], prices={}, period_label="YTD", period=(2026, 2027), account=None)
+    k = compute_kpis(trades=trades, lots=[], prices={}, period_label="YTD", period=(2026, 2027))
     assert k.period_realized == Decimal("1500")
     assert k.lifetime_realized == Decimal("2500")
 
@@ -70,7 +70,6 @@ def test_kpis_unrealized_uses_prices_when_available():
         prices={"SPY": _quote("SPY", 460)},
         period_label="YTD",
         period=(2026, 2027),
-        account=None,
     )
     assert k.open_position_value == Decimal("46000")
     assert k.period_unrealized == Decimal("6000")
@@ -81,7 +80,7 @@ def test_kpis_unrealized_uses_prices_when_available():
 
 def test_kpis_unrealized_none_when_all_lots_unpriced():
     lots = [_lot()]
-    k = compute_kpis(trades=[_trade()], lots=lots, prices={}, period_label="YTD", period=(2026, 2027), account=None)
+    k = compute_kpis(trades=[_trade()], lots=lots, prices={}, period_label="YTD", period=(2026, 2027))
     assert k.open_position_value is None
     assert k.period_unrealized is None
     assert k.lifetime_unrealized is None
@@ -106,7 +105,6 @@ def test_kpis_partial_when_some_lots_unpriced():
         prices={"SPY": _quote("SPY", 460)},  # BITF has no quote
         period_label="YTD",
         period=(2026, 2027),
-        account=None,
     )
     # Open value reflects only SPY (the priced lot).
     assert k.open_position_value == Decimal("46000")
@@ -138,7 +136,6 @@ def test_kpis_open_value_excludes_already_sold_lots():
         prices={"SPY": _quote("SPY", 460)},
         period_label="YTD",
         period=(2026, 2027),
-        account=None,
     )
     # Only the second lot (50 shares) remains open after the FIFO sell.
     assert k.open_position_value == Decimal("23000")  # 50 * 460
@@ -204,7 +201,6 @@ def test_kpis_open_value_carries_unexpired_options_at_basis():
         prices={"SPY": _quote("SPY", 460)},
         period_label="YTD",
         period=(2026, 2027),
-        account=None,
         as_of=dt.date(2026, 5, 3),
     )
     # Equity 100 × 460 = 46000, plus unexpired option basis-carry 400 = 46400.
@@ -245,7 +241,6 @@ def test_kpis_open_value_honors_gl_closures():
         prices={"SPY": _quote("SPY", 460)},
         period_label="YTD",
         period=(2026, 2027),
-        account=None,
         gl_lots=gl_lots,
     )
     assert k.open_position_value == Decimal("0")
@@ -277,7 +272,7 @@ def test_wash_impact_period_filters_by_loss_date():
         _violation(dt.date(2026, 3, 1), disallowed=200, confidence="Confirmed"),
         _violation(dt.date(2025, 3, 1), disallowed=300, confidence="Probable"),
     ]
-    out = compute_wash_impact(violations=violations, period_label="YTD", period=(2026, 2027), account=None)
+    out = compute_wash_impact(violations=violations, period_label="YTD", period=(2026, 2027))
     assert out.violation_count == 1
     assert out.disallowed_total == Decimal("200")
     assert out.confirmed_count == 1
@@ -288,7 +283,7 @@ def test_wash_impact_account_filter_matches_either_side():
     v1 = _violation(dt.date(2026, 3, 1), loss_account="IRA", buy_account="IRA")
     v2 = _violation(dt.date(2026, 3, 2), loss_account="Tax", buy_account="Tax")
     v3 = _violation(dt.date(2026, 3, 3), loss_account="IRA", buy_account="Tax")  # cross-account
-    out = compute_wash_impact(violations=[v1, v2, v3], period_label="YTD", period=(2026, 2027), account="Tax")
+    out = compute_wash_impact(violations=[v1, v2, v3], period_label="YTD", period=(2026, 2027), accounts=["Tax"])
     # v2 (both Tax) and v3 (Tax on buy side) match; v1 (both IRA) does not
     assert out.violation_count == 2
 
@@ -598,7 +593,6 @@ def test_compute_kpis_emits_economic_realized_alongside_recognized():
         prices={},
         period_label="2025",
         period=(2025, 2026),
-        account=None,
         gl_lots=gl_lots,
     )
     # Recognized = (proc - cb) + disallowed = -56.32 + 56.32 = 0
@@ -730,7 +724,7 @@ def test_wash_impact_lifetime_when_period_is_none():
         _violation(dt.date(2024, 6, 1), confidence="Unclear"),
         _violation(dt.date(2025, 6, 1), confidence="Probable"),
     ]
-    out = compute_wash_impact(violations=violations, period_label="Lifetime", period=None, account=None)
+    out = compute_wash_impact(violations=violations, period_label="Lifetime", period=None)
     assert out.violation_count == 2
     assert out.unclear_count == 1
     assert out.probable_count == 1
@@ -779,7 +773,6 @@ def test_short_put_otm_uses_time_decay():
         prices=prices,
         period_label="YTD 2026",
         period=(2026, 2027),
-        account=None,
         as_of=today,
     )
     assert kpis.period_unrealized is not None
@@ -825,7 +818,6 @@ def test_short_put_itm_uses_intrinsic_floor():
         prices=prices,
         period_label="YTD 2026",
         period=(2026, 2027),
-        account=None,
         as_of=today,
     )
     assert kpis.period_unrealized is not None
@@ -876,7 +868,6 @@ def test_short_covered_call_itm_uses_call_intrinsic():
         prices=prices,
         period_label="YTD 2026",
         period=(2026, 2027),
-        account=None,
         as_of=today,
     )
     assert kpis.period_unrealized is not None
@@ -910,7 +901,6 @@ def test_short_option_no_underlying_quote_falls_back_to_zero():
         prices={},
         period_label="YTD 2026",
         period=(2026, 2027),
-        account=None,
         as_of=today,
     )
     # The short option contributes 0 because we can't price the underlying.
@@ -978,10 +968,111 @@ def test_short_option_closed_via_gl_does_not_contribute_to_unrealized():
         prices=prices,
         period_label="YTD 2026",
         period=(2026, 2027),
-        account=None,
         as_of=today,
         gl_lots=[gl_lot],
     )
     # Without the fix, the OTM short put would contribute +$166.67.
     # With the fix, the GL closure flushes the short → contribution = 0.
     assert kpis.period_unrealized == Decimal("0")
+
+
+def test_compute_kpis_accounts_list_matches_single_account():
+    """accounts=['Tax'] must equal today's account='Tax'."""
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", action="Buy", quantity=10.0, cost_basis=1000.0),
+        _trade(id="t2", account="IRA", ticker="SPY", action="Buy", quantity=5.0, cost_basis=500.0),
+    ]
+    lots = [
+        _lot(
+            id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0, adjusted_basis=1000.0
+        ),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    prices = {"SPY": _quote("SPY", 120)}
+    kpis_single = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
+        accounts=["Tax"],
+    )
+    kpis_list = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
+        accounts=["Tax"],
+    )
+    assert kpis_single == kpis_list
+
+
+def test_compute_kpis_accounts_list_two_equals_union():
+    """accounts=['Tax', 'IRA'] equals account=None (no filter) when those are the only accounts."""
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", action="Buy", quantity=10.0, cost_basis=1000.0),
+        _trade(id="t2", account="IRA", ticker="SPY", action="Buy", quantity=5.0, cost_basis=500.0),
+    ]
+    lots = [
+        _lot(
+            id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0, adjusted_basis=1000.0
+        ),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    prices = {"SPY": _quote("SPY", 120)}
+    kpis_all = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
+    )
+    kpis_both = compute_kpis(
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
+        accounts=["Tax", "IRA"],
+    )
+    assert kpis_all == kpis_both
+
+
+def test_compute_kpis_empty_accounts_means_all():
+    trades = [_trade(id="t1", account="Tax", ticker="SPY")]
+    lots = [_lot(id="l1", trade_id="t1", account="Tax", ticker="SPY")]
+    prices = {"SPY": _quote("SPY", 410)}
+    kpis_none = compute_kpis(trades=trades, lots=lots, prices=prices, period_label="Lifetime", period=None)
+    kpis_empty = compute_kpis(
+        trades=trades, lots=lots, prices=prices, period_label="Lifetime", period=None, accounts=[]
+    )
+    assert kpis_none == kpis_empty
+
+
+def test_compute_wash_impact_accounts_list_or_semantic():
+    """A cross-account violation (loss=Tax, buy=IRA) must appear under filter ['Tax'] AND ['IRA']."""
+    v_cross = _violation(dt.date(2026, 3, 1), loss_account="Tax", buy_account="IRA")
+    v_other = _violation(dt.date(2026, 3, 2), loss_account="Other", buy_account="Other")
+
+    only_tax = compute_wash_impact(
+        violations=[v_cross, v_other],
+        period_label="YTD",
+        period=(2026, 2027),
+        accounts=["Tax"],
+    )
+    only_ira = compute_wash_impact(
+        violations=[v_cross, v_other],
+        period_label="YTD",
+        period=(2026, 2027),
+        accounts=["IRA"],
+    )
+    assert only_tax.violation_count == 1
+    assert only_ira.violation_count == 1
+
+
+def test_compute_wash_impact_accounts_list_single_matches_legacy():
+    v_cross = _violation(dt.date(2026, 3, 1), loss_account="Tax", buy_account="IRA")
+    result_a = compute_wash_impact(violations=[v_cross], period_label="YTD", period=(2026, 2027), accounts=["Tax"])
+    result_b = compute_wash_impact(violations=[v_cross], period_label="YTD", period=(2026, 2027), accounts=["Tax"])
+    assert result_a == result_b

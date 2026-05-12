@@ -26,6 +26,7 @@ from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.service.jobs.runner import run_job
 from net_alpha.service.jobs.washsale_watch import run_washsale_watch
 from net_alpha.splits.sync import _post_import_autosync_splits
+from net_alpha.web.account_filter import parse_accounts
 from net_alpha.web.dependencies import get_etf_pairs, get_repository
 from net_alpha.web.fragment_cache import bump_fragment_revision
 
@@ -80,6 +81,7 @@ def _paginate_imports(records: list, page: int, page_size: int) -> dict:
 def imports_page(
     request: Request,
     page: int = Query(1, ge=1),
+    account: list[str] = Query(default_factory=list),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     """Render the legacy imports page body.
@@ -90,12 +92,38 @@ def imports_page(
     surfaces it inline. Public ``/imports`` 301-redirects to
     ``/settings/imports`` (Phase 1 IA migration).
     """
+    accounts: list[str] = parse_accounts(account)
+    account_filter_active: bool = bool(accounts)
+
     records = repo.list_imports()
+    accounts_available = sorted({imp.account_display for imp in records})
+
+    # Filter import records by selected accounts (OR semantic).
+    if accounts:
+        accounts_set = set(accounts)
+        records = [r for r in records if r.account_display in accounts_set]
+
     pagination = _paginate_imports(records, page=page, page_size=_IMPORTS_PAGE_SIZE)
+
     issues = collect_issues(repo)
     missing_basis_rows = collect_missing_basis_rows(repo)
+    # HygieneIssue does not carry a per-account field (issues are DB-wide), so
+    # the data-hygiene rollups remain unfiltered intentionally.
+    # TODO: thread account filter into hygiene checks once HygieneIssue grows
+    # an account field.
+
     prefs = repo.list_user_preferences()
-    profile = resolve_effective_profile(prefs=prefs, filter_account_id=None)
+
+    # Resolve single-account ID for provenance MetricRef encoding.
+    filter_account_id: int | None = None
+    if len(accounts) == 1:
+        target = accounts[0]
+        for a in repo.list_accounts():
+            if f"{a.broker}/{a.label}" == target:
+                filter_account_id = a.id
+                break
+
+    profile = resolve_effective_profile(prefs=prefs, filter_account_id=filter_account_id)
 
     DQ_LABELS = {
         "missing_basis": "Missing basis",
@@ -139,8 +167,11 @@ def imports_page(
             "dq_labels": DQ_LABELS,
             "profile": profile,
             "page_key": "/imports",
-            "account_id": None,
-            "selected_account": "",
+            "account_id": filter_account_id,
+            "selected_account": accounts[0] if len(accounts) == 1 else "",
+            "selected_accounts": accounts,
+            "accounts_available": accounts_available,
+            "account_filter_active": account_filter_active,
         },
     )
 

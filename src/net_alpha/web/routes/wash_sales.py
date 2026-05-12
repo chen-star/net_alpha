@@ -51,7 +51,7 @@ def _sort_key(sort: str | None):
 def _wash_sales_context(
     repo: Repository,
     ticker: str | None = None,
-    account: str | None = None,
+    accounts: list[str] | None = None,
     year: int | None = None,
     confidence: str | None = None,
     sort: str | None = None,
@@ -62,9 +62,15 @@ def _wash_sales_context(
 
     Reusable from the new /tax route. Does NOT include ``request`` or ``active_page`` keys —
     the caller adds those.
+
+    ``accounts`` is a list of account display strings (e.g. ["schwab/Tax", "schwab/IRA"]).
+    OR semantics: a cross-account violation whose loss_account OR buy_account is in the
+    filter set will be included. Empty list / None means no filter (all violations shown).
     """
     if view not in ("table", "calendar"):
         view = "table"
+
+    accounts = accounts or []
 
     today = _date.today()
     all_v = repo.all_violations()
@@ -81,8 +87,9 @@ def _wash_sales_context(
     violations = list(all_v)
     if ticker:
         violations = [v for v in violations if v.ticker == ticker.upper()]
-    if account:
-        violations = [v for v in violations if account in (v.loss_account, v.buy_account)]
+    if accounts:
+        accounts_set = set(accounts)
+        violations = [v for v in violations if v.loss_account in accounts_set or v.buy_account in accounts_set]
     if effective_year is not None:
         violations = [v for v in violations if v.loss_sale_date and v.loss_sale_date.year == effective_year]
     if confidence:
@@ -102,13 +109,12 @@ def _wash_sales_context(
         repo=repo,
         today=today,
         window_days=wash_watch_window,
-        account=account or None,
+        accounts=accounts or None,
     )
 
     ctx: dict = {
         "view": view,
         "filter_ticker": ticker or "",
-        "filter_account": account or "",
         # filter_year reflects what's pre-filled in the input. None / 0 => effective default.
         "filter_year": effective_year if effective_year is not None else "",
         # True only when the user explicitly passed ?year=...; False on the default load.
@@ -116,7 +122,9 @@ def _wash_sales_context(
         "all_years": effective_year is None,
         "filter_confidence": confidence or "",
         "tickers": repo.list_distinct_tickers(),
-        "accounts": [a.display() for a in repo.list_accounts()],
+        "accounts_available": [a.display() for a in repo.list_accounts()],
+        "selected_accounts": accounts,
+        "account_filter_active": bool(accounts),
         "years": years,
         "selected_year": selected_year,
         # _portfolio_wash_watch.html reads `rows` and `window_days`.
@@ -163,7 +171,7 @@ def _wash_sales_context(
 
         # C4: load exempt matches, applying the same ticker/account/year filters.
         all_exempt = repo.list_exempt_matches(
-            account=account or None,
+            accounts=accounts or None,
             year=effective_year,
         )
         if ticker:

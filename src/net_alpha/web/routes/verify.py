@@ -97,7 +97,7 @@ def _overview_snapshot(repo: Repository, svc: PricingService) -> Any:
         lots=lots,
         prices=prices,
         period=(today.year, today.year + 1),
-        account=None,
+        accounts=None,
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=repo.get_option_gl_closures(),
         gl_lots=repo.list_all_gl_lots(),
