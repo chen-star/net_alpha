@@ -31,7 +31,7 @@
         <th>Actions</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody data-table-nav>
     {% for row in rows_page %}
       {% set _checked = (row.symbol, row.account_label) in selected_keys %}
       <tr data-symbol="{{ row.symbol|upper }}">
