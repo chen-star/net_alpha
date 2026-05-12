@@ -5,13 +5,11 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from net_alpha.db.tables import WashSaleViolationRow
 from net_alpha.models.domain import Trade
-
 
 # ---------------------------------------------------------------------------
 # Basic HTTP tests — empty DB, just checking routing and status codes

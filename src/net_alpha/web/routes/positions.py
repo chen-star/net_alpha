@@ -462,7 +462,6 @@ def _build_plan_view_for_request(
         events=cash_events,
         trades=trades,
         holdings_value=holdings_value,
-        account=None,
         period=None,
     )
 

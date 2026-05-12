@@ -1,5 +1,6 @@
 """HTTP-level multi-account filter behavior on the Positions page."""
 from __future__ import annotations
+
 from fastapi.testclient import TestClient
 
 

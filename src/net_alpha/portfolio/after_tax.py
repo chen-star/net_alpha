@@ -81,7 +81,6 @@ class AfterTaxBreakdown(BaseModel):
 def compute_after_tax(
     repo,
     period: Period,
-    account: str | None = None,
     brackets: TaxBrackets | None = None,
     carryforward: Carryforward | None = None,
     *,
@@ -89,27 +88,18 @@ def compute_after_tax(
 ) -> AfterTaxBreakdown:
     if brackets is None:
         raise ValueError("compute_after_tax requires `brackets`")
-    # Normalize: empty list is the same as "no filter"; pass None downstream.
-    effective_accounts: list[str] | None = list(accounts) if accounts else None
-    # Build a stable label for AfterTaxBreakdown.account_filter so the rendered
-    # caveat reads sensibly when multiple accounts are selected.
-    if effective_accounts is not None:
-        account_filter_label: str | None = ", ".join(effective_accounts)
-    elif account:
-        account_filter_label = account
-    else:
-        account_filter_label = None
+    account_filter_label: str | None = ", ".join(accounts) if accounts else None
 
-    pnl = repo.realized_pnl_split(period, account=account, accounts=effective_accounts)
+    pnl = repo.realized_pnl_split(period, accounts=accounts or None)
     st_pnl: Decimal = pnl["short_term"]
     lt_pnl: Decimal = pnl["long_term"]
-    sec1256_pnl: Decimal = repo.section_1256_pnl(period, account=account, accounts=effective_accounts)
-    sec1256_mtm: Decimal = repo.section_1256_mtm_pnl(period, account=account, accounts=effective_accounts)
+    sec1256_pnl: Decimal = repo.section_1256_pnl(period, accounts=accounts or None)
+    sec1256_mtm: Decimal = repo.section_1256_mtm_pnl(period, accounts=accounts or None)
     disallowed_by_kind = (
-        repo.wash_sale_disallowed_by_kind(period, account=account, accounts=effective_accounts)
+        repo.wash_sale_disallowed_by_kind(period, accounts=accounts or None)
         if hasattr(repo, "wash_sale_disallowed_by_kind")
         else {
-            "deferred": repo.wash_sale_disallowed_total(period, account=account, accounts=effective_accounts),
+            "deferred": repo.wash_sale_disallowed_total(period, accounts=accounts or None),
             "permanent_ira": Decimal("0"),
         }
     )

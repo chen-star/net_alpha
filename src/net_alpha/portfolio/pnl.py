@@ -395,7 +395,6 @@ def compute_kpis(
     prices: dict[str, Quote],
     period_label: str,
     period: tuple[int, int] | None,
-    account: str | None = None,
     accounts: Sequence[str] | None = None,
     gl_lots: Iterable[RealizedGLLot] | None = None,
     as_of: _date | None = None,
@@ -404,7 +403,7 @@ def compute_kpis(
     trades = list(trades)
     lots = list(lots)
     gl_list = list(gl_lots) if gl_lots is not None else None
-    _filter = set(accounts) if accounts else ({account} if account else None)
+    _filter = set(accounts) if accounts else None
     if _filter is not None:
         trades = [t for t in trades if t.account in _filter]
         lots = [lot for lot in lots if lot.account in _filter]
@@ -471,11 +470,10 @@ def compute_wash_impact(
     violations: Iterable[WashSaleViolation],
     period_label: str,
     period: tuple[int, int] | None,
-    account: str | None = None,
     accounts: Sequence[str] | None = None,
 ) -> WashImpact:
     rows = list(violations)
-    _filter = set(accounts) if accounts else ({account} if account else None)
+    _filter = set(accounts) if accounts else None
     if _filter is not None:
         rows = [v for v in rows if v.loss_account in _filter or v.buy_account in _filter]
     if period is not None:

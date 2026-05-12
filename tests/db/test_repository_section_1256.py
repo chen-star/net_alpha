@@ -84,9 +84,9 @@ def test_list_exempt_matches_filtered_by_account_returns_subset(repo):
     # Sanity: default returns 1
     assert len(repo.list_exempt_matches()) == 1
     # Filter to a non-existent account: 0
-    assert repo.list_exempt_matches(account="schwab/nonexistent") == []
+    assert repo.list_exempt_matches(accounts=["schwab/nonexistent"]) == []
     # Filter by the actual account: 1 (matches loss_account or buy_account)
-    rows = repo.list_exempt_matches(account="schwab/personal")
+    rows = repo.list_exempt_matches(accounts=["schwab/personal"])
     assert len(rows) == 1
 
 
@@ -95,4 +95,4 @@ def test_list_section_1256_classifications_unknown_account_returns_empty(repo):
     # Sanity: default returns 1
     assert len(repo.list_section_1256_classifications()) == 1
     # Unknown account: returns [] (RuntimeError caught)
-    assert repo.list_section_1256_classifications(account="schwab/nonexistent") == []
+    assert repo.list_section_1256_classifications(accounts=["schwab/nonexistent"]) == []

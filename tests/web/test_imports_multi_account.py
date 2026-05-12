@@ -1,9 +1,8 @@
 """Multi-account filter on the Imports page (new in Task 12)."""
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -43,7 +42,7 @@ def test_imports_filtered_to_one_account_excludes_others(
     client: TestClient, repo
 ):
     """When two accounts exist, filtering to one excludes the other account's table row."""
-    from tests.web.conftest import seed_import, make_buy
+    from tests.web.conftest import make_buy, seed_import
 
     day = date(2024, 3, 1)
     seed_import(

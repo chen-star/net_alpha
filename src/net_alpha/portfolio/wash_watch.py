@@ -29,7 +29,6 @@ def recent_loss_closes(
     repo: _RepoLike,
     today: date,
     window_days: int = 30,
-    account: str | None = None,
     accounts: Sequence[str] | None = None,
 ) -> list[LossCloseRow]:
     """Sells with realized P/L < 0 whose close_date is in [today - window_days, today].
@@ -43,7 +42,7 @@ def recent_loss_closes(
 
     Returns rows sorted by close_date desc.
     """
-    _filter = set(accounts) if accounts else ({account} if account else None)
+    _filter = set(accounts) if accounts else None
     earliest = date.fromordinal(today.toordinal() - window_days)
 
     by_symbol: dict[str, list[tuple[date, str, Decimal]]] = defaultdict(list)

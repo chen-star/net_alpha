@@ -32,7 +32,6 @@ from net_alpha.db.tables import (
 from net_alpha.models.domain import Section1256MTM
 from net_alpha.portfolio.after_tax import Period
 
-
 # ---------------------------------------------------------------------------
 # Shared fixture
 # ---------------------------------------------------------------------------
@@ -176,17 +175,13 @@ def _seed_wash_sale_violation(
 # ---------------------------------------------------------------------------
 
 
-def test_exempt_matches_accounts_list_single_matches_legacy(repo):
-    """accounts=['Schwab/A'] must return the same rows as account='Schwab/A'."""
+def test_exempt_matches_accounts_list_single_filter(repo):
+    """accounts=['Schwab/A'] filters to rows where Schwab/A is loss or buy account."""
     _seed_exempt_match(repo, loss_acct="Schwab/A", buy_acct="Schwab/B")
 
-    legacy = repo.list_exempt_matches(account="Schwab/A")
-    new = repo.list_exempt_matches(accounts=["Schwab/A"])
-
-    assert len(legacy) == 1
-    assert [(r.loss_account, r.buy_account) for r in legacy] == [
-        (r.loss_account, r.buy_account) for r in new
-    ]
+    result = repo.list_exempt_matches(accounts=["Schwab/A"])
+    assert len(result) == 1
+    assert result[0].loss_account == "Schwab/A"
 
 
 def test_exempt_matches_cross_account_or_semantic(repo):
@@ -254,9 +249,9 @@ def test_mtm_rows_accounts_list_filter(repo):
     p = Period.for_year(2025)
     repo.save_section_1256_mtm([_mtm_row("Schwab/A", "ka"), _mtm_row("Schwab/B", "kb")])
 
-    both = repo.section_1256_mtm_rows(p, account=None, accounts=["Schwab/A", "Schwab/B"])
-    just_a = repo.section_1256_mtm_rows(p, account=None, accounts=["Schwab/A"])
-    no_filter = repo.section_1256_mtm_rows(p, account=None, accounts=None)
+    both = repo.section_1256_mtm_rows(p, accounts=["Schwab/A", "Schwab/B"])
+    just_a = repo.section_1256_mtm_rows(p, accounts=["Schwab/A"])
+    no_filter = repo.section_1256_mtm_rows(p)
 
     assert len(both) == 2
     assert len(just_a) == 1
@@ -264,15 +259,14 @@ def test_mtm_rows_accounts_list_filter(repo):
     assert len(no_filter) == 2
 
 
-def test_mtm_rows_accounts_list_single_matches_legacy(repo):
-    """accounts=['Schwab/A'] must equal account='Schwab/A'."""
+def test_mtm_rows_accounts_list_single_filter(repo):
+    """accounts=['Schwab/A'] filters to only Schwab/A MTM rows."""
     p = Period.for_year(2025)
     repo.save_section_1256_mtm([_mtm_row("Schwab/A", "ka"), _mtm_row("Schwab/B", "kb")])
 
-    legacy = repo.section_1256_mtm_rows(p, account="Schwab/A")
-    new = repo.section_1256_mtm_rows(p, account=None, accounts=["Schwab/A"])
-
-    assert [r.account for r in legacy] == [r.account for r in new]
+    result = repo.section_1256_mtm_rows(p, accounts=["Schwab/A"])
+    assert len(result) == 1
+    assert result[0].account == "Schwab/A"
 
 
 def test_mtm_pnl_accounts_list_filter(repo):
@@ -280,8 +274,8 @@ def test_mtm_pnl_accounts_list_filter(repo):
     p = Period.for_year(2025)
     repo.save_section_1256_mtm([_mtm_row("Schwab/A", "ka"), _mtm_row("Schwab/B", "kb")])
 
-    total = repo.section_1256_mtm_pnl(p, account=None, accounts=["Schwab/A", "Schwab/B"])
-    just_a = repo.section_1256_mtm_pnl(p, account=None, accounts=["Schwab/A"])
+    total = repo.section_1256_mtm_pnl(p, accounts=["Schwab/A", "Schwab/B"])
+    just_a = repo.section_1256_mtm_pnl(p, accounts=["Schwab/A"])
 
     assert total == Decimal("100")
     assert just_a == Decimal("50")
@@ -297,24 +291,22 @@ def test_wash_sale_disallowed_by_kind_or_semantic(repo):
     _seed_wash_sale_violation(repo, loss_acct_display="Schwab/A", buy_acct_display="Schwab/B")
     p = Period.for_year(2025)
 
-    only_a = repo.wash_sale_disallowed_by_kind(p, account=None, accounts=["Schwab/A"])
-    only_b = repo.wash_sale_disallowed_by_kind(p, account=None, accounts=["Schwab/B"])
-    only_other = repo.wash_sale_disallowed_by_kind(p, account=None, accounts=["Schwab/Other"])
+    only_a = repo.wash_sale_disallowed_by_kind(p, accounts=["Schwab/A"])
+    only_b = repo.wash_sale_disallowed_by_kind(p, accounts=["Schwab/B"])
+    only_other = repo.wash_sale_disallowed_by_kind(p, accounts=["Schwab/Other"])
 
     assert only_a["deferred"] == Decimal("250")
     assert only_b["deferred"] == Decimal("250")
     assert only_other["deferred"] == Decimal("0")
 
 
-def test_wash_sale_disallowed_by_kind_accounts_single_matches_legacy(repo):
-    """accounts=['Schwab/A'] must equal account='Schwab/A'."""
+def test_wash_sale_disallowed_by_kind_accounts_single_filter(repo):
+    """accounts=['Schwab/A'] filters correctly."""
     _seed_wash_sale_violation(repo, loss_acct_display="Schwab/A", buy_acct_display="Schwab/A")
     p = Period.for_year(2025)
 
-    legacy = repo.wash_sale_disallowed_by_kind(p, account="Schwab/A")
-    new = repo.wash_sale_disallowed_by_kind(p, account=None, accounts=["Schwab/A"])
-
-    assert legacy["deferred"] == new["deferred"]
+    result = repo.wash_sale_disallowed_by_kind(p, accounts=["Schwab/A"])
+    assert result["deferred"] == Decimal("250")
 
 
 def test_wash_sale_disallowed_total_or_semantic(repo):
@@ -322,9 +314,9 @@ def test_wash_sale_disallowed_total_or_semantic(repo):
     _seed_wash_sale_violation(repo, loss_acct_display="Schwab/A", buy_acct_display="Schwab/B")
     p = Period.for_year(2025)
 
-    total_a = repo.wash_sale_disallowed_total(p, account=None, accounts=["Schwab/A"])
-    total_b = repo.wash_sale_disallowed_total(p, account=None, accounts=["Schwab/B"])
-    total_other = repo.wash_sale_disallowed_total(p, account=None, accounts=["Schwab/Other"])
+    total_a = repo.wash_sale_disallowed_total(p, accounts=["Schwab/A"])
+    total_b = repo.wash_sale_disallowed_total(p, accounts=["Schwab/B"])
+    total_other = repo.wash_sale_disallowed_total(p, accounts=["Schwab/Other"])
 
     assert total_a == Decimal("250")
     assert total_b == Decimal("250")
@@ -336,8 +328,8 @@ def test_wash_sale_disallowed_by_kind_empty_accounts_no_filter(repo):
     _seed_wash_sale_violation(repo, loss_acct_display="Schwab/A", buy_acct_display="Schwab/B")
     p = Period.for_year(2025)
 
-    via_empty = repo.wash_sale_disallowed_by_kind(p, account=None, accounts=[])
-    via_none = repo.wash_sale_disallowed_by_kind(p, account=None, accounts=None)
+    via_empty = repo.wash_sale_disallowed_by_kind(p, accounts=[])
+    via_none = repo.wash_sale_disallowed_by_kind(p, accounts=None)
 
     assert via_empty["deferred"] == Decimal("250")
     assert via_none["deferred"] == Decimal("250")
@@ -393,10 +385,10 @@ def test_realized_pnl_split_accounts_list_filter(repo):
     _seed_realized_gl(repo, acct_display="Schwab/B", pnl=Decimal("300"))
     p = Period.for_year(2025)
 
-    only_a = repo.realized_pnl_split(p, account=None, accounts=["Schwab/A"])
-    only_b = repo.realized_pnl_split(p, account=None, accounts=["Schwab/B"])
-    both = repo.realized_pnl_split(p, account=None, accounts=["Schwab/A", "Schwab/B"])
-    no_filter = repo.realized_pnl_split(p, account=None, accounts=None)
+    only_a = repo.realized_pnl_split(p, accounts=["Schwab/A"])
+    only_b = repo.realized_pnl_split(p, accounts=["Schwab/B"])
+    both = repo.realized_pnl_split(p, accounts=["Schwab/A", "Schwab/B"])
+    no_filter = repo.realized_pnl_split(p)
 
     assert only_a["short_term"] == Decimal("200")
     assert only_b["short_term"] == Decimal("300")
@@ -404,16 +396,14 @@ def test_realized_pnl_split_accounts_list_filter(repo):
     assert no_filter["short_term"] == Decimal("500")
 
 
-def test_realized_pnl_split_accounts_list_single_matches_legacy(repo):
-    """accounts=['Schwab/A'] must equal account='Schwab/A'."""
+def test_realized_pnl_split_accounts_list_single_filter(repo):
+    """accounts=['Schwab/A'] filters to only account A PnL."""
     _seed_realized_gl(repo, acct_display="Schwab/A", pnl=Decimal("150"))
+    _seed_realized_gl(repo, acct_display="Schwab/B", pnl=Decimal("100"))
     p = Period.for_year(2025)
 
-    legacy = repo.realized_pnl_split(p, account="Schwab/A")
-    new = repo.realized_pnl_split(p, account=None, accounts=["Schwab/A"])
-
-    assert legacy["short_term"] == new["short_term"]
-    assert legacy["long_term"] == new["long_term"]
+    result = repo.realized_pnl_split(p, accounts=["Schwab/A"])
+    assert result["short_term"] == Decimal("150")
 
 
 def test_realized_pnl_split_unknown_account_returns_zero(repo):
@@ -421,7 +411,7 @@ def test_realized_pnl_split_unknown_account_returns_zero(repo):
     _seed_realized_gl(repo, acct_display="Schwab/A", pnl=Decimal("100"))
     p = Period.for_year(2025)
 
-    result = repo.realized_pnl_split(p, account=None, accounts=["Schwab/Unknown"])
+    result = repo.realized_pnl_split(p, accounts=["Schwab/Unknown"])
     assert result == {"short_term": Decimal("0"), "long_term": Decimal("0")}
 
 
@@ -487,15 +477,14 @@ def test_list_section_1256_classifications_accounts_list_filter(repo):
     assert len(no_filter) == 2
 
 
-def test_list_section_1256_classifications_accounts_single_matches_legacy(repo):
-    """accounts=['Schwab/A'] must equal account='Schwab/A'."""
+def test_list_section_1256_classifications_accounts_single_filter(repo):
+    """accounts=['Schwab/A'] filters to only account A classifications."""
     _seed_section_1256_classification(repo, acct_display="Schwab/A", realized_pnl=Decimal("500"))
+    _seed_section_1256_classification(repo, acct_display="Schwab/B", realized_pnl=Decimal("200"))
 
-    legacy = repo.list_section_1256_classifications(account="Schwab/A")
-    new = repo.list_section_1256_classifications(accounts=["Schwab/A"])
-
-    assert len(legacy) == len(new) == 1
-    assert legacy[0].realized_pnl == new[0].realized_pnl
+    result = repo.list_section_1256_classifications(accounts=["Schwab/A"])
+    assert len(result) == 1
+    assert result[0].realized_pnl == Decimal("500")
 
 
 def test_list_section_1256_classifications_empty_accounts_no_filter(repo):
@@ -520,9 +509,9 @@ def test_section_1256_pnl_accounts_list_filter(repo):
     _seed_section_1256_classification(repo, acct_display="Schwab/B", realized_pnl=Decimal("2000"))
     p = Period.for_year(2025)
 
-    only_a = repo.section_1256_pnl(p, account=None, accounts=["Schwab/A"])
-    only_b = repo.section_1256_pnl(p, account=None, accounts=["Schwab/B"])
-    both = repo.section_1256_pnl(p, account=None, accounts=["Schwab/A", "Schwab/B"])
+    only_a = repo.section_1256_pnl(p, accounts=["Schwab/A"])
+    only_b = repo.section_1256_pnl(p, accounts=["Schwab/B"])
+    both = repo.section_1256_pnl(p, accounts=["Schwab/A", "Schwab/B"])
 
     assert only_a == Decimal("1000")
     assert only_b == Decimal("2000")

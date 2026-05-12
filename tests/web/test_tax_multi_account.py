@@ -1,5 +1,6 @@
 """HTTP-level multi-account filter behavior on the Tax page."""
 from __future__ import annotations
+
 from fastapi.testclient import TestClient
 
 

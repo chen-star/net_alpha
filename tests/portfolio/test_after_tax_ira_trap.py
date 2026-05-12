@@ -78,7 +78,7 @@ def _seed_taxable_to_roth_wash(repo):
 
 def test_after_tax_separates_permanent_from_deferred(repo, brackets):
     _seed_taxable_to_roth_wash(repo)
-    result = compute_after_tax(repo, Period.for_year(2024), account=None, brackets=brackets)
+    result = compute_after_tax(repo, Period.for_year(2024), brackets=brackets)
 
     # All disallowance in this scenario is permanent (Rev. Rul. 2008-5).
     assert result.wash_sale_disallowed_total == Decimal("500.0")
@@ -88,7 +88,7 @@ def test_after_tax_separates_permanent_from_deferred(repo, brackets):
 
 def test_after_tax_caveat_mentions_permanent_when_present(repo, brackets):
     _seed_taxable_to_roth_wash(repo)
-    result = compute_after_tax(repo, Period.for_year(2024), account=None, brackets=brackets)
+    result = compute_after_tax(repo, Period.for_year(2024), brackets=brackets)
 
     # When permanent disallowances exist, the caveat must call out the
     # permanent-vs-deferred distinction (Rev. Rul. 2008-5).
@@ -125,7 +125,7 @@ def test_after_tax_deferred_only_no_permanent_field(repo, brackets):
     repo.add_import(taxable, rec, [sell, buy])
     recompute_all_violations(repo, etf_pairs={})
 
-    result = compute_after_tax(repo, Period.for_year(2024), account=None, brackets=brackets)
+    result = compute_after_tax(repo, Period.for_year(2024), brackets=brackets)
     assert result.wash_sale_disallowed_total == Decimal("500.0")
     assert result.wash_sale_deferred_total == Decimal("500.0")
     assert result.wash_sale_permanent_total == Decimal("0.0")

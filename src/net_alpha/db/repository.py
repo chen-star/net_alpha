@@ -1698,11 +1698,10 @@ class Repository:
     def list_exempt_matches(
         self,
         *,
-        account: str | None = None,
         accounts: Sequence[str] | None = None,
         year: int | None = None,
     ) -> list[ExemptMatchRow]:
-        effective: list[str] = list(accounts) if accounts else ([account] if account else [])
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
             stmt = select(ExemptMatchRow)
             if effective:
@@ -1760,11 +1759,10 @@ class Repository:
     def list_section_1256_classifications(
         self,
         *,
-        account: str | None = None,
         accounts: Sequence[str] | None = None,
         year: int | None = None,
     ) -> list[Section1256ClassificationRow]:
-        effective: list[str] = list(accounts) if accounts else ([account] if account else [])
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
             if effective or year is not None:
                 # Join to TradeRow to apply account/year filters
@@ -1819,10 +1817,10 @@ class Repository:
             session.commit()
 
     def section_1256_mtm_rows(
-        self, period, account: str | None = None, accounts: Sequence[str] | None = None
+        self, period, accounts: Sequence[str] | None = None
     ) -> list[Section1256MTM]:
         """Return MTM rows filtered by period and optional account."""
-        effective: list[str] = list(accounts) if accounts else ([account] if account else [])
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
             stmt = select(Section1256MTMRow)
             if period.kind == "year" and period.year is not None:
@@ -1848,10 +1846,10 @@ class Repository:
             ]
 
     def section_1256_mtm_pnl(
-        self, period, account: str | None = None, accounts: Sequence[str] | None = None
+        self, period, accounts: Sequence[str] | None = None
     ) -> Decimal:
         """Sum of unrealized_pnl across all MTM rows matching period and account."""
-        rows = self.section_1256_mtm_rows(period, account=account, accounts=accounts)
+        rows = self.section_1256_mtm_rows(period, accounts=accounts)
         total = Decimal("0")
         for r in rows:
             total += r.unrealized_pnl
@@ -1881,7 +1879,7 @@ class Repository:
     # ---- After-tax helpers (Task 17) ----
 
     def realized_pnl_split(
-        self, period, account: str | None = None, accounts: Sequence[str] | None = None
+        self, period, accounts: Sequence[str] | None = None
     ) -> dict[str, Decimal]:
         """Return {'short_term': Decimal, 'long_term': Decimal} for closed non-§1256 lots.
 
@@ -1889,7 +1887,7 @@ class Repository:
         Term is determined by the broker-supplied `term` column ("Short Term" / "Long Term").
         P&L per lot = proceeds - cost_basis (uses the wash-sale-adjusted cost_basis column).
         """
-        effective: list[str] = list(accounts) if accounts else ([account] if account else [])
+        effective: list[str] = list(accounts) if accounts else []
         st = Decimal("0")
         lt = Decimal("0")
         with Session(self.engine) as session:
@@ -1920,7 +1918,7 @@ class Repository:
         return {"short_term": st, "long_term": lt}
 
     def section_1256_pnl(
-        self, period, account: str | None = None, accounts: Sequence[str] | None = None
+        self, period, accounts: Sequence[str] | None = None
     ) -> Decimal:
         """Total realized P&L for §1256 contracts in the period.
 
@@ -1928,7 +1926,7 @@ class Repository:
         field is the net gain/loss already; 60/40 LT/ST split is applied by
         compute_after_tax, not here.
         """
-        effective: list[str] = list(accounts) if accounts else ([account] if account else [])
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
             stmt = select(Section1256ClassificationRow).join(
                 TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id
@@ -1947,18 +1945,18 @@ class Repository:
         return total
 
     def wash_sale_disallowed_total(
-        self, period, account: str | None = None, accounts: Sequence[str] | None = None
+        self, period, accounts: Sequence[str] | None = None
     ) -> Decimal:
         """Total disallowed loss amount for wash-sale violations in the period.
 
         Draws from WashSaleViolationRow. Account filter matches violations where
         the loss account OR the triggering buy account is the specified account.
         """
-        by_kind = self.wash_sale_disallowed_by_kind(period, account=account, accounts=accounts)
+        by_kind = self.wash_sale_disallowed_by_kind(period, accounts=accounts)
         return sum(by_kind.values(), Decimal("0"))
 
     def wash_sale_disallowed_by_kind(
-        self, period, account: str | None = None, accounts: Sequence[str] | None = None
+        self, period, accounts: Sequence[str] | None = None
     ) -> dict[str, Decimal]:
         """Disallowed loss totals split by ``WashSaleViolation.kind``.
 
@@ -1969,7 +1967,7 @@ class Repository:
         basis. Always returns both keys (zero when none present) so callers
         can format without conditional logic.
         """
-        effective: list[str] = list(accounts) if accounts else ([account] if account else [])
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
             stmt = select(WashSaleViolationRow.kind, WashSaleViolationRow.disallowed_loss)
             if effective:

@@ -80,7 +80,7 @@ def test_account_filter_drops_other_accounts():
         _gl(account="Schwab/Tax"),
         _gl(account="Schwab/Brokerage"),
     ]
-    rows = compute_closed_lots(lots, account_display="Schwab/Tax")
+    rows = compute_closed_lots(lots, accounts=["Schwab/Tax"])
     assert len(rows) == 1
     assert rows[0].account == "Schwab/Tax"
 

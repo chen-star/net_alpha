@@ -66,17 +66,16 @@ def build_cash_balance_series(
     *,
     events: Iterable[CashEvent],
     trades: Iterable[Trade],
-    account: str | None = None,
     accounts: Sequence[str] | None = None,
     period: tuple[int, int] | None,
 ) -> list[CashBalancePoint]:
     """Return one point per distinct event date, with running cash balance.
 
-    `account=None` includes all accounts. `period=None` includes everything.
+    `accounts=None` includes all accounts. `period=None` includes everything.
     `period=(y, y+1)` restricts the *displayed* points to year `y`; events
     before `y` still contribute to the opening balance carried into year `y`.
     """
-    _filter = set(accounts) if accounts else ({account} if account else None)
+    _filter = set(accounts) if accounts else None
     # Filter by account first.
     events_list = [e for e in events if _filter is None or e.account in _filter]
     trades_list = [t for t in trades if _filter is None or t.account in _filter]
@@ -125,17 +124,15 @@ def compute_cash_kpis(
     events: Iterable[CashEvent],
     trades: Iterable[Trade],
     holdings_value: Decimal,
-    account: str | None = None,
     accounts: Sequence[str] | None = None,
     period: tuple[int, int] | None,
     period_starting_value: Decimal = Decimal("0"),
 ) -> CashFlowKPIs:
     """Single-shot summary used by the KPI strip."""
-    _filter = set(accounts) if accounts else ({account} if account else None)
+    _filter = set(accounts) if accounts else None
     series = build_cash_balance_series(
         events=events,
         trades=trades,
-        account=account,
         accounts=accounts,
         period=period,
     )
@@ -184,7 +181,6 @@ def cash_allocation_slice(
     *,
     events: Iterable[CashEvent],
     trades: Iterable[Trade],
-    account: str | None = None,
     accounts: Sequence[str] | None = None,
 ) -> Decimal:
     """Return the current cash balance (lifetime, no period clip).
@@ -194,7 +190,6 @@ def cash_allocation_slice(
     series = build_cash_balance_series(
         events=events,
         trades=trades,
-        account=account,
         accounts=accounts,
         period=None,
     )

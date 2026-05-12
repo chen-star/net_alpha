@@ -354,7 +354,6 @@ def portfolio_kpis(
         cash_points_for_anchor = build_cash_balance_series(
             events=cash_events,
             trades=scoped_trades_for_cash,
-            account=None,
             period=None,  # need full history through the boundary
         )
         scoped_lots_for_anchor = (
@@ -371,7 +370,6 @@ def portfolio_kpis(
         events=cash_events,
         trades=scoped_trades_for_cash,
         holdings_value=holdings_value,
-        account=None,  # events + trades are pre-scoped above
         period=period_tuple,
         period_starting_value=period_starting_value,
     )
@@ -707,7 +705,6 @@ def portfolio_equity_curve(
     cash_points = build_cash_balance_series(
         events=cash_events,
         trades=trades,
-        account=None,
         period=period_tuple,
     )
 
@@ -801,7 +798,6 @@ def _compute_portfolio_body_context(
         prices=prices,
         period_label=period_label,
         period=period_tuple,
-        account=None,  # already filtered above
         gl_lots=gl_lots_scoped,
     )
     # Hoist gl_option_closures so we don't re-scan the table for both
@@ -812,7 +808,6 @@ def _compute_portfolio_body_context(
         lots=scoped_lots,
         prices=prices,
         period=(today.year, today.year + 1),
-        account=None,
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=gl_option_closures,
         gl_lots=gl_lots_scoped,
@@ -840,7 +835,6 @@ def _compute_portfolio_body_context(
         cash_points_for_anchor = build_cash_balance_series(
             events=cash_events,
             trades=scoped_trades,
-            account=None,
             period=None,  # need full history through the boundary
         )
         period_starting_value = account_value_at(
@@ -854,31 +848,27 @@ def _compute_portfolio_body_context(
         events=cash_events,
         trades=scoped_trades,
         holdings_value=holdings_value_total,
-        account=None,  # already filtered above
         period=period_tuple,
         period_starting_value=period_starting_value,
     )
     # Monthly realized P&L series — feeds the wide bar chart on the overview
     # body, sits directly below the equity-curve row. Honors the page's
     # Period selector by truncating future months (YTD) or spanning the
-    # first-trade-year through today (Lifetime). Account is already
-    # pre-scoped on `scoped_trades` above, so we pass account=None here.
+    # first-trade-year through today (Lifetime). Trades are already
+    # pre-scoped on `scoped_trades` above.
     monthly_pl_points = monthly_realized_pl_series(
         trades=scoped_trades,
         period=period_tuple,
-        account=None,
         today=today,
     )
     cash_points = build_cash_balance_series(
         events=cash_events,
         trades=scoped_trades,
-        account=None,
         period=period_tuple,
     )
     cash_slice = cash_allocation_slice(
         events=cash_events,
         trades=scoped_trades,
-        account=None,
     )
 
     # Account-value series (the redesigned equity curve). Built off the same
@@ -1121,7 +1111,6 @@ def explain_total_return(
     cash_points_full = build_cash_balance_series(
         events=cash_events,
         trades=trades,
-        account=None,
         period=None,
     )
 
@@ -1152,7 +1141,6 @@ def explain_total_return(
         prices=prices,
         period_label=period_label,
         period=period_tuple,
-        account=None,  # already pre-filtered above
         gl_lots=gl_lots_scoped,
     )
     holdings_value = kpis_now.open_position_value or Decimal("0")
@@ -1160,7 +1148,6 @@ def explain_total_return(
         events=cash_events,
         trades=trades,
         holdings_value=holdings_value,
-        account=None,
         period=period_tuple,
         period_starting_value=starting_value,
     )
@@ -1294,7 +1281,6 @@ def explain_account_value(
         prices=prices,
         period_label="Lifetime",
         period=None,
-        account=None,  # already pre-filtered above
         gl_lots=gl_lots,
     )
     holdings_value = kpis_now.open_position_value or Decimal("0")
@@ -1302,7 +1288,6 @@ def explain_account_value(
         events=cash_events,
         trades=trades,
         holdings_value=holdings_value,
-        account=None,  # already pre-filtered
         period=None,
         period_starting_value=Decimal("0"),
     )
