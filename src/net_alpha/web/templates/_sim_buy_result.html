@@ -48,4 +48,16 @@
       </div>
     {% endfor %}
   </div>
+{# A1: Next-step CTAs (no harvest path on buys). #}
+{% set _first_acct = (options[0].account.display() if options else '') %}
+<div data-testid="sim-next-steps" class="panel mt-4 px-4 py-3 flex flex-wrap gap-2 items-center">
+  <span class="label-uc text-label-2 mr-2">Next steps</span>
+  <a class="btn-ghost text-[12px]"
+     href="/positions?symbol={{ ticker }}{% if _first_acct %}&account={{ _first_acct|urlencode }}{% endif %}">
+    View {{ ticker }} position
+  </a>
+  <a class="btn-ghost text-[12px]" href="/ticker/{{ ticker }}">
+    Open {{ ticker }} timeline
+  </a>
+</div>
 {% endif %}
