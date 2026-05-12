@@ -293,14 +293,10 @@ def harvest_plan(
                 ts = tax_saved_by_key.get(key)
                 if ts is None:
                     continue
-                acct_slug = (
-                    row.account_label.replace("/", "__").replace(" ", "_")
-                )
+                acct_slug = row.account_label.replace("/", "__").replace(" ", "_")
                 cell_id = f"tax-saved-{row.symbol}-{acct_slug}"
                 oob_cells_parts.append(
-                    f'<td id="{cell_id}" hx-swap-oob="true" class="r num">'
-                    f'<span class="text-pos">${ts:.2f}</span>'
-                    f"</td>"
+                    f'<td id="{cell_id}" hx-swap-oob="true" class="r num"><span class="text-pos">${ts:.2f}</span></td>'
                 )
         return request.app.state.templates.TemplateResponse(
             request,
