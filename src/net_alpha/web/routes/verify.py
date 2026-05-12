@@ -1,18 +1,19 @@
 """Verification engine routes.
 
 Surface:
-  GET  /verify                       -> run history + latest run details
-  POST /verify/run                   -> trigger a verify run synchronously
-  GET  /verify/findings/{id}         -> HTMX fragment listing findings for a run
-  GET  /verify/badge?page=...        -> inline ✓/⚠/✗ chip for Overview / Positions
+  GET  /verify                              -> run history + latest run details
+  POST /verify/run                          -> trigger a verify run synchronously
+  GET  /verify/findings/{id}                -> HTMX fragment listing findings for a run
+  POST /verify/findings/{finding_id}/suppress -> append a 1-year suppression and rerun
+  GET  /verify/badge?page=...               -> inline ✓/⚠/✗ chip for Overview / Positions
 """
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from net_alpha.db.repository import Repository
@@ -186,9 +187,49 @@ def verify_index(
             "latest": latest,
             "history": history,
             "findings": findings,
+            "reference_freshness": _reference_freshness(repo),
             "active_page": "verify",
         },
     )
+
+
+def _reference_freshness(repo: Repository) -> dict[str, str] | None:
+    """Return a small dict ({severity, message}) describing broker-positions
+    freshness, or None when no banner is warranted.
+
+    Three states:
+      * never uploaded → stale, prompt to upload
+      * older than 30 days → stale, prompt to refresh
+      * within 30 days → informational pill ("X days old")
+
+    Only the first two cases produce a visible banner today; the third is
+    returned but rendered as a subtle informational pill so users always
+    know how fresh the broker reference is.
+    """
+    from net_alpha.verify.broker_recon import STALENESS_DAYS
+
+    _rows, as_of = repo.latest_broker_positions()
+    if not as_of:
+        return {
+            "severity": "stale",
+            "message": (
+                "No broker All-Positions CSV has been uploaded yet. "
+                "Broker reconciliation checks are disabled until one is."
+            ),
+        }
+    age = (date.today() - date.fromisoformat(as_of)).days
+    if age > STALENESS_DAYS:
+        return {
+            "severity": "stale",
+            "message": (
+                f"Broker positions CSV is {age} days old (uploaded {as_of}). "
+                f"Re-export from Schwab for accurate reconciliation."
+            ),
+        }
+    return {
+        "severity": "ok",
+        "message": f"Broker positions CSV is {age} days old (uploaded {as_of}).",
+    }
 
 
 @router.post("/verify/run")
@@ -204,6 +245,37 @@ def verify_run(
     """
     from net_alpha.service.jobs.verify import run_verify_once
 
+    run_verify_once(repo=repo, trigger="manual")
+    return RedirectResponse(url="/verify", status_code=303)
+
+
+@router.post("/verify/findings/{finding_id}/suppress")
+def verify_findings_suppress(
+    request: Request,
+    finding_id: int,
+    reason: str = Form(""),
+    repo: Repository = Depends(get_repository),
+):
+    """Append a 1-year suppression for this finding's ``(rule_id, scope)``
+    and re-run verify so the dashboard reflects the change immediately.
+
+    The suppression is written to ``~/.net_alpha/config.yaml`` — the same
+    file users hand-edit. We're idempotent on ``(rule_id, scope)``: clicking
+    suppress twice updates the existing entry rather than duplicating it.
+    """
+    from net_alpha.service.jobs.verify import run_verify_once
+    from net_alpha.verify.suppress import add_suppression
+
+    finding = repo.get_verify_finding(finding_id)
+    if finding is None:
+        raise HTTPException(status_code=404, detail="finding not found")
+
+    add_suppression(
+        rule_id=finding.rule_id,
+        scope=finding.scope,
+        reason=(reason or "Suppressed from /verify").strip()[:200],
+        until=date.today() + timedelta(days=365),
+    )
     run_verify_once(repo=repo, trigger="manual")
     return RedirectResponse(url="/verify", status_code=303)
 

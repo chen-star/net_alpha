@@ -1,0 +1,131 @@
+{# Inline explainer + suppress action for one verify finding.
+   Context: `f: VerifyFinding`. Keep copy concise — one paragraph of "what
+   this means" + one paragraph of "what to do". Numbers come from the row. #}
+<div class="explain-pane p-3 bg-surface-2 rounded-md text-[13px] space-y-3">
+  <div class="explain-copy space-y-2">
+    {% if f.rule_id == "OV-1" %}
+      <p><strong>Overview market value disagrees with the sum of per-lot values.</strong>
+        We render <code>${{ '%.2f'|format(f.ours or 0) }}</code> on the dashboard, but the
+        per-lot loop totals <code>${{ '%.2f'|format(f.theirs or 0) }}</code>
+        (Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>).</p>
+      <p>Most often this means a lot was added or split-adjusted but the
+        aggregator wasn’t refreshed. Re-import the affected ticker’s CSV or
+        re-run any pending corporate-action sync.</p>
+    {% elif f.rule_id == "OV-2" %}
+      <p><strong>Unrealized P&amp;L ≠ market value − cost basis.</strong>
+        Components don’t reconcile (Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>).</p>
+      <p>Usually a stale price snapshot or a lot whose adjusted basis was
+        rewritten without recomputing P&amp;L. Refresh prices on /portfolio
+        and re-render.</p>
+    {% elif f.rule_id == "OV-3" %}
+      <p><strong>Realized YTD on the Overview disagrees with the closed-lot
+        ledger.</strong> One side is missing a closure.</p>
+      <p>Check /imports — a partial Realized G/L import is the typical cause.</p>
+    {% elif f.rule_id == "AL-1" %}
+      <p><strong>Allocation slices don’t sum to 100%.</strong>
+        The donut renders {{ '%.2f'|format(f.ours or 0) }}% across all slices
+        (cash included).</p>
+      <p>This is almost always a rounding-tolerance miss; if persistent,
+        a hidden slice (cash sleeve or excluded symbol) is the cause.</p>
+    {% elif f.rule_id == "AL-2" %}
+      <p><strong>Leaderboard $ weights don’t add up to total market value.</strong>
+        Drift <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+      <p>Open /positions and look for a symbol present in the donut but not
+        the table (or vice versa) — usually an option lot that escaped the
+        equity-only filter.</p>
+    {% elif f.rule_id == "PL-1" %}
+      <p><strong>A lot’s market value ≠ qty × current price.</strong>
+        Scope <code>{{ f.scope }}</code>, drift <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+      <p>Stale or zero quote, or a manually-edited row. Refresh quotes; if
+        the price provider is offline, the lot will mark to zero.</p>
+    {% elif f.rule_id == "PL-2" %}
+      <p><strong>A lot’s unrealized P&amp;L ≠ market value − adjusted basis.</strong></p>
+      <p>Likely a wash-sale basis adjustment that ran after the position
+        snapshot. Re-import the impacted account or click <em>Run verification
+        now</em> after the engine catches up.</p>
+    {% elif f.rule_id == "PL-3" %}
+      <p><strong>Holding-period bucket (ST vs LT) doesn’t match the
+        tacked acquired date.</strong></p>
+      <p>Most often a §1223(4) wash-sale tack rewrite that didn’t propagate
+        to the positions view. Refresh /positions.</p>
+    {% elif f.rule_id == "XP-1" %}
+      <p><strong>/positions doesn’t sum to the Overview total.</strong>
+        Cross-page drift of <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+      <p>One page was rendered against a stale price snapshot. Hard-refresh
+        both tabs; if it persists, the lot adapters are out of sync.</p>
+    {% elif f.rule_id == "RealizedRecon" %}
+      <p><strong>Computed realized P&amp;L disagrees with the broker’s Realized G/L file.</strong>
+        Scope <code>{{ f.scope }}</code>, Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+      <p>Open <a href="/reconciliation/{{ f.scope.split('/')[0] }}" class="underline">the per-ticker reconciliation view</a>
+        to see the row-level diff. Common causes: split-adjustment timing,
+        a manual trade with a stale basis, or a missing wash-sale rollover.</p>
+    {% elif f.rule_id == "BasisRecon" %}
+      <p><strong>Aggregate cost basis disagrees with the broker’s All-Positions file.</strong>
+        Scope <code>{{ f.scope }}</code>, Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+      <p>Re-check the basis editor on the symbol page; spinoffs, partial
+        rollovers, and DRIP shares are the usual suspects.</p>
+    {% elif f.rule_id == "MarketValueRecon" %}
+      <p><strong>Aggregate market value disagrees with the broker file.</strong>
+        Scope <code>{{ f.scope }}</code>, Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+      <p>Almost always a price-snapshot timing difference (broker file
+        captured pre-market, our quote is intraday). Re-export the broker
+        CSV at the same time-of-day used in the previous comparison.</p>
+    {% elif f.rule_id == "PositionsQty" %}
+      <p><strong>Share quantity disagrees with the broker.</strong>
+        Scope <code>{{ f.scope }}</code>, ours <code>{{ '%g'|format(f.ours or 0) }}</code>
+        vs. broker <code>{{ '%g'|format(f.theirs or 0) }}</code>.</p>
+      <p>A trade is missing from one side — either a recent fill we haven’t
+        imported, or a corporate-action share count the engine hasn’t applied.</p>
+    {% elif f.rule_id == "PositionsMissingLocal" %}
+      <p><strong>Broker shows a position we don’t have.</strong>
+        Scope <code>{{ f.scope }}</code>; broker qty
+        <code>{{ '%g'|format(f.theirs or 0) }}</code>.</p>
+      <p>Likely a missing trade import or an inbound transfer. Add the
+        opening trade on the symbol page or upload the broker transactions CSV.</p>
+    {% elif f.rule_id == "PositionsMissingBroker" %}
+      <p><strong>We hold a position the broker file doesn’t show.</strong>
+        Scope <code>{{ f.scope }}</code>; our qty
+        <code>{{ '%g'|format(f.ours or 0) }}</code>.</p>
+      <p>The broker All-Positions file may be from a different account or a
+        prior date. Re-export from the correct account and re-upload.</p>
+    {% elif f.rule_id == "StaleReference" %}
+      <p><strong>The broker All-Positions file is stale (or missing).</strong>
+        Without a fresh reference, the broker reconciliation checks can’t run.</p>
+      <p>Go to <a href="/imports" class="underline">/imports</a> and drop in
+        a fresh Schwab All-Positions CSV — anything inside the last 30 days
+        clears this finding.</p>
+    {% else %}
+      <p><strong>Rule <code>{{ f.rule_id }}</code> failed.</strong>
+        Scope <code>{{ f.scope }}</code>{% if f.delta is not none %},
+        Δ <code>{{ '%.4f'|format(f.delta) }}</code>{% endif %}.</p>
+      <p>No specific guidance is wired up yet for this rule. Check the
+        detail blob below for hints.</p>
+    {% endif %}
+
+    {% if f.detail_json %}
+      <details class="text-label-2">
+        <summary class="cursor-pointer text-[12px]">Raw detail</summary>
+        <pre class="mt-1 text-[11px] whitespace-pre-wrap">{{ f.detail_json }}</pre>
+      </details>
+    {% endif %}
+  </div>
+
+  <form method="post"
+        action="/verify/findings/{{ f.id }}/suppress"
+        class="suppress-form flex flex-wrap items-center gap-2 pt-2 border-t border-hairline">
+    <label class="text-label-2 text-[12px]" for="reason-{{ f.id }}">
+      Reason (optional)
+    </label>
+    <input id="reason-{{ f.id }}"
+           name="reason"
+           type="text"
+           maxlength="200"
+           placeholder="e.g. spinoff handled differently by broker"
+           class="flex-1 min-w-[12rem] px-2 py-1 rounded border border-hairline bg-surface text-[12px]" />
+    <button type="submit"
+            class="px-2.5 py-1 rounded-md bg-warn-soft hover:bg-warn-soft/80 text-text text-[12px] border border-hairline"
+            title="Adds a 1-year suppression to ~/.net_alpha/config.yaml and re-runs verify">
+      Suppress for 1 year
+    </button>
+  </form>
+</div>

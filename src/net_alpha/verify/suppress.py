@@ -101,3 +101,50 @@ def is_suppressed(
             continue
         return True
     return False
+
+
+def add_suppression(
+    *,
+    rule_id: str,
+    scope: str,
+    reason: str,
+    until: date,
+) -> SuppressionRule:
+    """Append a suppression entry to ``~/.net_alpha/config.yaml`` and return it.
+
+    Preserves any other top-level keys in the file. Idempotent on
+    ``(rule_id, scope)``: if a matching active rule already exists, its
+    ``reason`` and ``until`` are overwritten in place rather than appended
+    a second time (the last write wins).
+    """
+    path = _config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        raw = yaml.safe_load(path.read_text()) if path.exists() else None
+    except (OSError, yaml.YAMLError):
+        raw = None
+    cfg = raw if isinstance(raw, dict) else {}
+    verify_section = cfg.get("verify")
+    if not isinstance(verify_section, dict):
+        verify_section = {}
+        cfg["verify"] = verify_section
+    suppress_list = verify_section.get("suppress")
+    if not isinstance(suppress_list, list):
+        suppress_list = []
+        verify_section["suppress"] = suppress_list
+
+    entry = {
+        "rule_id": rule_id,
+        "scope": scope,
+        "reason": reason,
+        "until": until.isoformat(),
+    }
+    for i, item in enumerate(suppress_list):
+        if isinstance(item, dict) and str(item.get("rule_id")) == rule_id and str(item.get("scope")) == scope:
+            suppress_list[i] = entry
+            break
+    else:
+        suppress_list.append(entry)
+
+    path.write_text(yaml.safe_dump(cfg, sort_keys=False))
+    return SuppressionRule(rule_id=rule_id, scope=scope, reason=reason, until=until)

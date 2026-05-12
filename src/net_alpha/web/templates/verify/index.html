@@ -17,6 +17,20 @@
     </button>
   </form>
 
+  {% if reference_freshness %}
+    <aside class="freshness-banner mt-4 p-3 rounded-md border border-hairline
+                  {% if reference_freshness.severity == 'stale' %}bg-warn-soft{% else %}bg-surface-2{% endif %}
+                  text-[13px] flex flex-wrap items-center gap-3"
+           data-testid="verify-freshness-banner"
+           data-freshness-severity="{{ reference_freshness.severity }}">
+      <span aria-hidden="true">
+        {% if reference_freshness.severity == 'stale' %}⚠{% else %}ⓘ{% endif %}
+      </span>
+      <span class="flex-1">{{ reference_freshness.message }}</span>
+      <a href="/imports" class="underline font-medium">Upload now &rarr;</a>
+    </aside>
+  {% endif %}
+
   {% if not latest %}
     <p class="empty-state mt-6 text-label-2 text-[13px]">
       No verification runs yet. Click <em>Run verification now</em> above &mdash;

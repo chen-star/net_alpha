@@ -203,14 +203,33 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
         per render (no caching) so the pill reflects the most recent run
         without a soft-refresh; the underlying ``latest_verify_run`` query is
         a single indexed-LIMIT-1 select, cheap enough for every page.
+
+        The ``label`` field is the tooltip content; we append the broker
+        positions CSV age so the user can spot a stale reference without
+        opening /verify.
         """
+        from datetime import date as _date
+
         from net_alpha.db.repository import Repository as _Repository
 
         _engine = get_engine(effective_db_path(settings, app.state.demo_mode))
-        latest = _Repository(_engine).latest_verify_run()
+        repo = _Repository(_engine)
+        latest = repo.latest_verify_run()
+        try:
+            _rows, as_of = repo.latest_broker_positions()
+        except Exception:  # noqa: BLE001 — never fail the header on a DB hiccup
+            as_of = None
+        if as_of:
+            try:
+                age = (_date.today() - _date.fromisoformat(as_of)).days
+                ref_suffix = f" · positions CSV {age}d old"
+            except ValueError:
+                ref_suffix = ""
+        else:
+            ref_suffix = " · no positions CSV uploaded"
         if latest is None:
-            return {"status": "grey", "label": "never run"}
-        return {"status": str(latest.status), "label": str(latest.run_at)}
+            return {"status": "grey", "label": "never run" + ref_suffix}
+        return {"status": str(latest.status), "label": str(latest.run_at) + ref_suffix}
 
     templates.env.globals["verify_pill_data"] = _verify_pill_data
 

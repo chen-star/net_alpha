@@ -2777,6 +2777,16 @@ class Repository:
                 session.expunge(r)
             return rows
 
+    def get_verify_finding(self, finding_id: int):
+        """Return one VerifyFinding row by id (or None)."""
+        from net_alpha.verify.models import VerifyFinding
+
+        with Session(self.engine) as session:
+            row = session.exec(select(VerifyFinding).where(VerifyFinding.id == finding_id)).first()
+            if row is not None:
+                session.expunge(row)
+            return row
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility
