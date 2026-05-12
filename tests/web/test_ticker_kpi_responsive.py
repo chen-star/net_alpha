@@ -10,7 +10,9 @@ from fastapi.testclient import TestClient
 
 def test_ticker_kpi_grid_is_responsive(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/ticker/AAPL")
@@ -21,7 +23,9 @@ def test_ticker_kpi_grid_is_responsive(client: TestClient, builders, repo):
 
 def test_ticker_secondary_kpis_in_details(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/ticker/AAPL")

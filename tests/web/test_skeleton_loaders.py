@@ -9,7 +9,9 @@ from fastapi.testclient import TestClient
 
 def test_portfolio_body_skeleton_renders_initially(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/")
@@ -20,7 +22,9 @@ def test_portfolio_body_skeleton_renders_initially(client: TestClient, builders,
 
 def test_verify_badge_slot_has_skeleton(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/")
@@ -32,7 +36,9 @@ def test_verify_badge_slot_has_skeleton(client: TestClient, builders, repo):
 
 def test_positions_pane_has_skeleton(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/positions")

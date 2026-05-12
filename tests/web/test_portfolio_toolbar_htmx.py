@@ -11,7 +11,9 @@ from fastapi.testclient import TestClient
 
 def test_toolbar_form_has_hx_get(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/")
@@ -27,7 +29,9 @@ def test_toolbar_form_has_hx_get(client: TestClient, builders, repo):
 
 def test_subline_has_stable_id(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/")
@@ -42,7 +46,9 @@ def test_account_select_uses_request_submit(client: TestClient, builders, repo):
     # 'change' Event — see test_account_select_dispatches_change_not_submit.)
     # Seed an import so the profile switcher renders in the topbar.
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/")
@@ -73,7 +79,9 @@ def test_positions_toolbar_is_plain_get_form(client: TestClient, builders, repo)
     plain GET form (otherwise it tries to swap a #portfolio-body that
     doesn't exist on that page)."""
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/positions")
@@ -93,7 +101,9 @@ def test_positions_toolbar_is_plain_get_form(client: TestClient, builders, repo)
 
 def test_portfolio_body_emits_oob_subline_when_htmx(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get(

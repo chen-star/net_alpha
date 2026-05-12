@@ -12,13 +12,13 @@ def _seed_aapl_lot(repo, builders) -> None:
     from net_alpha.engine.detector import detect_in_window
 
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5), qty=10, cost=1000)],
     )
     win_start, win_end = date(2025, 12, 1), date(2026, 5, 1)
-    res = detect_in_window(
-        repo.trades_in_window(win_start, win_end), win_start, win_end, etf_pairs={}
-    )
+    res = detect_in_window(repo.trades_in_window(win_start, win_end), win_start, win_end, etf_pairs={})
     repo.replace_lots_in_window(win_start, win_end, res.lots)
 
 

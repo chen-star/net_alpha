@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 def test_search_input_uses_input_search_class(client: TestClient):
     res = client.get("/positions")
     body = res.text
-    assert 'input-search' in body
+    assert "input-search" in body
 
 
 def test_table_nav_script_registered(client: TestClient):
@@ -22,7 +22,9 @@ def test_table_nav_script_registered(client: TestClient):
 
 def test_harvest_tbody_has_table_nav_marker(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/tax/harvest/plan")
@@ -45,6 +47,7 @@ def test_table_row_focus_style_in_css(client: TestClient):
     """A4 spec: keyboard-navigable rows must have a visible focus ring."""
     # Read the built CSS bundle and verify the focus rule shipped.
     import pathlib
+
     here = pathlib.Path(__file__).resolve().parent.parent.parent
     # tests/ → repo root → src/.../static/app.css
     css_path = here / "src" / "net_alpha" / "web" / "static" / "app.css"

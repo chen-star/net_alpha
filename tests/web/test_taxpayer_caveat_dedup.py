@@ -10,7 +10,9 @@ from fastapi.testclient import TestClient
 
 def test_caveat_renders_once_on_tax_page_with_filter(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/tax?account=schwab/lt")
@@ -21,7 +23,9 @@ def test_caveat_renders_once_on_tax_page_with_filter(client: TestClient, builder
 
 def test_caveat_omitted_when_no_filter(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/tax")
@@ -30,7 +34,9 @@ def test_caveat_omitted_when_no_filter(client: TestClient, builders, repo):
 
 def test_caveat_uses_data_testid(client: TestClient, builders, repo):
     builders.seed_import(
-        repo, "schwab", "lt",
+        repo,
+        "schwab",
+        "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
     res = client.get("/tax?account=schwab/lt")
