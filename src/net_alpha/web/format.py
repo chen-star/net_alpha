@@ -2,10 +2,24 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from decimal import ROUND_HALF_EVEN, Decimal
 
 from net_alpha.models.domain import OptionDetails, Trade
+
+_DOM_ID_UNSAFE = re.compile(r"[^A-Za-z0-9_-]")
+
+
+def dom_id_slug(value: str) -> str:
+    """Coerce an arbitrary string to a safe DOM-id fragment.
+
+    Used to build per-row ``<td id="...">`` anchors for HTMX OOB swaps
+    where the source string (e.g. an account display label) may contain
+    ``/``, spaces, or other characters that would break id-based selectors.
+    Anything outside ``[A-Za-z0-9_-]`` collapses to ``_``.
+    """
+    return _DOM_ID_UNSAFE.sub("_", value)
 
 
 def _format_option_suffix(opt: OptionDetails) -> str:

@@ -264,6 +264,9 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
 
     # Register Python built-ins as Jinja2 filters that templates use.
     templates.env.filters["ord"] = ord
+    from net_alpha.web.format import dom_id_slug
+
+    templates.env.filters["dom_id_slug"] = dom_id_slug
 
     app.state.templates = templates
 
