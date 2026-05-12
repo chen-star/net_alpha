@@ -20,7 +20,7 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-5 gap-4 mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
     <div class="kpi" data-kpi-slot="open-lots">
       <div class="label-uc">Open lots</div>
       <div class="num text-[22px] font-bold mt-2">
@@ -65,23 +65,26 @@
       </div>
     </div>
 
-    <div class="kpi" data-kpi-slot="accounts">
-      <div class="label-uc">Accounts</div>
-      <div class="text-sm mt-2">
-        {% for a in kpi_accounts %}<span class="font-mono">{{ a }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
-        {% if not kpi_accounts %}<span class="text-label-3">—</span>{% endif %}
+    <details data-testid="ticker-kpi-more" class="col-span-2 md:col-span-3 xl:col-span-2 xl:contents" open>
+      <summary class="xl:hidden cursor-pointer text-[12px] text-label-2 px-2 py-1">More metrics</summary>
+      <div class="kpi" data-kpi-slot="accounts">
+        <div class="label-uc">Accounts</div>
+        <div class="text-sm mt-2">
+          {% for a in kpi_accounts %}<span class="font-mono">{{ a }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+          {% if not kpi_accounts %}<span class="text-label-3">—</span>{% endif %}
+        </div>
       </div>
-    </div>
 
-    <div class="kpi" data-kpi-slot="last-trade">
-      <div class="label-uc">Last trade</div>
-      {% if kpi_last_trade %}
-        <div class="text-sm mt-2">{{ kpi_last_trade.action }} <span class="font-mono num">{{ fmt_quantity(kpi_last_trade.quantity) }}</span></div>
-        <div class="text-xs text-label-2"><span class="font-mono">{{ fmt_date(kpi_last_trade.date) }}</span></div>
-      {% else %}
-        <div class="text-sm text-label-2 mt-2">No trades</div>
-      {% endif %}
-    </div>
+      <div class="kpi" data-kpi-slot="last-trade">
+        <div class="label-uc">Last trade</div>
+        {% if kpi_last_trade %}
+          <div class="text-sm mt-2">{{ kpi_last_trade.action }} <span class="font-mono num">{{ fmt_quantity(kpi_last_trade.quantity) }}</span></div>
+          <div class="text-xs text-label-2"><span class="font-mono">{{ fmt_date(kpi_last_trade.date) }}</span></div>
+        {% else %}
+          <div class="text-sm text-label-2 mt-2">No trades</div>
+        {% endif %}
+      </div>
+    </details>
   </div>
 
   {% include "_ticker_tabs.html" %}
