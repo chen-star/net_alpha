@@ -5,7 +5,7 @@
    state across tab switches.
 #}
 {% set _v = selected_view|default('all') %}
-<div class="tabs mb-4" role="tablist">
+<div class="tabs mb-4" role="tablist" data-positions-tabs-root>
   {% for tab in [
     ('all',     'All',       positions_count|default('')),
     ('stocks',  'Stocks',    stocks_count|default('')),
