@@ -13,7 +13,7 @@
 {%- else -%}
   {%- set label = picked ~ " of " ~ total ~ " accounts" -%}
 {%- endif -%}
-<div class="relative" x-data="accountMultiSelect()" data-testid="account-multi-select">
+<div class="relative inline-block" x-data="accountMultiSelect()" data-testid="account-multi-select">
   <button type="button"
           class="bg-surface text-text rounded-md px-2 py-1 text-[12px] inline-flex items-center gap-1"
           style="border:0.5px solid var(--color-hairline);{% if picked %}border-color:var(--color-accent);{% endif %}"
