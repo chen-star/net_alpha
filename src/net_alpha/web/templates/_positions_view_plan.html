@@ -42,7 +42,7 @@
 
       {# Pagination footer — shared partial. #}
       {% set _qs = '&view=plan' %}
-      {% if selected_account %}{% set _qs = _qs + '&account=' + selected_account %}{% endif %}
+      {% for _a in selected_accounts | default([]) %}{% set _qs = _qs + '&account=' + _a %}{% endfor %}
       {% if plan_view.selected_tag %}{% set _qs = _qs + '&tag=' + plan_view.selected_tag %}{% endif %}
       {% if plan_view.sort_key and plan_view.sort_key != 'alpha' %}{% set _qs = _qs + '&sort=' + plan_view.sort_key %}{% endif %}
       {% set page_base_url = '/positions' %}

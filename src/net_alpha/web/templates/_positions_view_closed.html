@@ -73,7 +73,7 @@
 
   {% set _qs = '&view=closed' %}
   {% if selected_period %}{% set _qs = _qs + '&period=' + selected_period %}{% endif %}
-  {% if selected_account %}{% set _qs = _qs + '&account=' + selected_account %}{% endif %}
+  {% for _a in selected_accounts | default([]) %}{% set _qs = _qs + '&account=' + _a %}{% endfor %}
   {% set page_base_url = '/positions' %}
   {% set page_extra_qs = _qs %}
   {% set page_target = '#positions-tab-content' %}

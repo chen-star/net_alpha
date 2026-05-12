@@ -7,7 +7,7 @@
     <div>
       <h1>Positions</h1>
       <div class="text-[13px] text-label-2 mt-[3px]">
-        {% if selected_account %}{{ selected_account }}{% else %}All accounts{% endif %} ·
+        {% if selected_accounts and selected_accounts | length == 1 %}{{ selected_accounts[0] }}{% elif selected_accounts and selected_accounts | length > 1 %}{{ selected_accounts | length }} accounts{% else %}All accounts{% endif %} ·
         {{ selected_period|default('YTD')|upper }}
       </div>
 </div>

@@ -1,10 +1,10 @@
 {# Plan tab toolbar — sort dropdown (left) + Add target button (right).
-   Inputs: plan_view, selected_account.
+   Inputs: plan_view, selected_accounts.
 #}
 <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
   <form method="get" action="/positions" class="flex items-center gap-2">
     <input type="hidden" name="view" value="plan">
-    {% if selected_account %}<input type="hidden" name="account" value="{{ selected_account }}">{% endif %}
+    {% for a in selected_accounts %}<input type="hidden" name="account" value="{{ a }}">{% endfor %}
     {% if plan_view.selected_tag %}<input type="hidden" name="tag" value="{{ plan_view.selected_tag }}">{% endif %}
     <label class="text-[11px] text-label-2">Sort:</label>
     <select name="sort"

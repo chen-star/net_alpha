@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
 from starlette.responses import Response
@@ -23,6 +23,7 @@ from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
 from net_alpha.targets.models import TargetUnit
 from net_alpha.targets.view import PlanView, build_plan_view
+from net_alpha.web.account_filter import parse_accounts
 from net_alpha.web.dependencies import (
     get_etf_pairs,
     get_pricing_service,
@@ -36,7 +37,7 @@ router = APIRouter()
 def positions_page(
     request: Request,
     period: str | None = None,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     view: str | None = None,
     only_harvestable: str | None = None,
     page: int = 1,
@@ -45,12 +46,15 @@ def positions_page(
     pricing: PricingService = Depends(get_pricing_service),
     etf_pairs: dict[str, list[str]] = Depends(get_etf_pairs),
 ) -> HTMLResponse:
+    accounts: list[str] = parse_accounts(account)
+    account_filter_active: bool = bool(accounts)
+
     selected_view = view or "all"
     if selected_view not in {"all", "stocks", "options", "at-loss", "closed", "plan"}:
         selected_view = "all"
 
     imports = repo.list_imports()
-    accounts = sorted({imp.account_display for imp in imports})
+    accounts_available = sorted({imp.account_display for imp in imports})
 
     today = dt.date.today()
     current_year = today.year
@@ -59,11 +63,13 @@ def positions_page(
 
     selected_period = period or "ytd"
 
+    # Resolve profile: single-account mode degrades to taxpayer-level for multi.
     prefs = repo.list_user_preferences()
-    filter_id = None
-    if account:
+    filter_id: int | None = None
+    if len(accounts) == 1:
+        target_acct = accounts[0]
         for a in repo.list_accounts():
-            if f"{a.broker}/{a.label}" == account:
+            if f"{a.broker}/{a.label}" == target_acct:
                 filter_id = a.id
                 break
     profile = resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
@@ -74,11 +80,13 @@ def positions_page(
 
     ctx: dict = {
         "imports": imports,
-        "accounts": accounts,
+        "accounts_available": accounts_available,
+        "selected_accounts": accounts,
+        "account_filter_active": account_filter_active,
         "available_years": available_years,
         "current_year": current_year,
         "selected_period": selected_period,
-        "selected_account": account or "",
+        "selected_account": accounts[0] if len(accounts) == 1 else "",
         "group_options": "merge",
         "toolbar_action": "/positions",
         "profile": profile,
@@ -100,11 +108,10 @@ def positions_page(
             y = int(selected_period)
             period_filter = (y, y + 1)
         # selected_period == "lifetime" leaves period_filter as None.
-        account_display = account if account else None
         closed_rows = compute_closed_lots(
             gl_lots,
             period=period_filter,
-            account_display=account_display,
+            accounts=accounts or None,
         )
         # Sort by closed_date desc so most recent lots appear on page 1.
         closed_rows = sorted(closed_rows, key=lambda r: r.closed_date, reverse=True)
@@ -184,7 +191,7 @@ def positions_page(
         selected_tag_param = request.query_params.get("tag") or None
         sort_key_param = request.query_params.get("sort") or "alpha"
         plan_view, _pos_by_sym = _build_plan_view_for_request(
-            repo, pricing, account, selected_tag_param, sort_key_param
+            repo, pricing, accounts, selected_tag_param, sort_key_param
         )
 
         page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
@@ -410,7 +417,7 @@ def _compute_change_states(
 def _build_plan_view_for_request(
     repo: Repository,
     pricing: PricingService,
-    account: str | None,
+    accounts: list[str],
     selected_tag: str | None = None,
     sort_key: str = "alpha",
 ) -> tuple[PlanView, dict[str, PositionRow]]:
@@ -434,7 +441,7 @@ def _build_plan_view_for_request(
         lots=lots,
         prices=prices,
         period=None,
-        account=account or None,
+        accounts=accounts or None,
         include_closed=False,
         gl_closures=gl_closures,
         gl_option_closures=gl_option_closures,
@@ -444,8 +451,9 @@ def _build_plan_view_for_request(
     quotes_by_sym = {sym: q.price for sym, q in prices.items()}
 
     cash_events = repo.list_cash_events(account_id=None)
-    if account:
-        cash_events = [e for e in cash_events if e.account == account]
+    _acct_filter = set(accounts) if accounts else None
+    if _acct_filter:
+        cash_events = [e for e in cash_events if e.account in _acct_filter]
     holdings_value = sum(
         ((r.market_value or Decimal("0")) for r in pos_rows),
         start=Decimal("0"),
@@ -458,7 +466,7 @@ def _build_plan_view_for_request(
         period=None,
     )
 
-    scoped_trades_for_shorts = [t for t in trades if t.account == account] if account else trades
+    scoped_trades_for_shorts = [t for t in trades if t.account in _acct_filter] if _acct_filter else trades
     open_shorts = compute_open_short_option_positions(
         scoped_trades_for_shorts,
         gl_option_closures=gl_option_closures,
@@ -493,7 +501,7 @@ def _render_plan_body(
     request: Request,
     repo: Repository,
     pricing: PricingService,
-    account: str | None = None,
+    accounts: list[str] | None = None,
     page: int = 1,
     page_size: int = 25,
     selected_tag: str | None = None,
@@ -501,7 +509,8 @@ def _render_plan_body(
 ) -> HTMLResponse:
     import dataclasses as _dc
 
-    plan_view, pos_by_sym = _build_plan_view_for_request(repo, pricing, account, selected_tag, sort_key)
+    _accounts = accounts or []
+    plan_view, pos_by_sym = _build_plan_view_for_request(repo, pricing, _accounts, selected_tag, sort_key)
 
     page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
     page_norm = max(1, page)
@@ -519,7 +528,8 @@ def _render_plan_body(
         "_positions_view_plan.html",
         {
             "plan_view": plan_view,
-            "selected_account": account or "",
+            "selected_accounts": _accounts,
+            "selected_account": _accounts[0] if len(_accounts) == 1 else "",
             "selected_period": "ytd",
             "watch_by_target_id": watch_results,
             "change_states": change_states,
@@ -627,7 +637,7 @@ def plan_mark_seen(
     from net_alpha.portfolio.plan_diff import SnapshotRow
 
     plan_view, pos_by_sym = _build_plan_view_for_request(
-        repo, pricing, account=None, selected_tag=None, sort_key="alpha"
+        repo, pricing, accounts=[], selected_tag=None, sort_key="alpha"
     )
     watch_results = repo.watch_results_by_target()
     diff_rows = _build_plan_diff_rows(plan_view, pos_by_sym, watch_results)
@@ -690,7 +700,9 @@ async def plan_target_reorder(
         v = form_data.get(name) or request.query_params.get(name)
         return v.strip() if isinstance(v, str) and v.strip() else None
 
-    account = _pick("account")
+    # Multi-account: collect all `account` values from form data + query params.
+    raw_accounts: list[str] = list(form_data.getlist("account")) + list(request.query_params.getlist("account"))
+    accounts_reorder = parse_accounts(raw_accounts)
     selected_tag = _pick("tag")
     page_raw = _pick("page")
     try:
@@ -704,7 +716,7 @@ async def plan_target_reorder(
         request,
         repo,
         pricing,
-        account=account,
+        accounts=accounts_reorder or None,
         page=page,
         selected_tag=selected_tag,
         sort_key="manual",
