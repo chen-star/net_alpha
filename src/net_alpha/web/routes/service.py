@@ -97,7 +97,7 @@ async def control_post(request: Request, action: str = Form(...)) -> Response:
 
     try:
         if action == "install":
-            control.install(port=8765)
+            control.install(port=18765)
         elif action == "uninstall":
             control.uninstall()
         elif action == "start":

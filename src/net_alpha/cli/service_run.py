@@ -8,7 +8,7 @@ from loguru import logger
 from net_alpha.service import lock, paths
 
 
-def run(*, port: int = 8765) -> None:
+def run(*, port: int = 18765) -> None:
     """Start the FastAPI app under uvicorn. Holds the pid lock for its lifetime."""
     logger.add(
         str(paths.log_file()),

@@ -44,7 +44,7 @@ def install_service_post(request: Request) -> Response:
     from net_alpha.service import control
 
     try:
-        control.install(port=8765)
+        control.install(port=18765)
     except Exception as e:
         return HTMLResponse(f"<p>Install failed: {e}</p>", status_code=500)
     return RedirectResponse("/", status_code=303)

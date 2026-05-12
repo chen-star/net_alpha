@@ -6,8 +6,8 @@ import pytest
 def test_pick_free_port_returns_open_port():
     from net_alpha.cli.ui import pick_free_port
 
-    port = pick_free_port(8765, 8775)
-    assert 8765 <= port <= 8775
+    port = pick_free_port(18765, 18775)
+    assert 18765 <= port <= 18775
     s = socket.socket()
     s.bind(("127.0.0.1", port))
     s.close()
@@ -18,11 +18,11 @@ def test_pick_free_port_skips_busy_ports():
 
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind(("127.0.0.1", 8765))
+    s.bind(("127.0.0.1", 18765))
     s.listen(1)
     try:
-        port = pick_free_port(8765, 8775)
-        assert port != 8765
+        port = pick_free_port(18765, 18775)
+        assert port != 18765
     finally:
         s.close()
 

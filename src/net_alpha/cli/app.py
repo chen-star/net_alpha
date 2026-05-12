@@ -94,7 +94,7 @@ def straddles(
 
 @app.command(name="ui", help="Launch the local web UI in your browser.")
 def ui(
-    port: int | None = typer.Option(None, "--port", help="Override port (default: pick free in 8765-8775)."),
+    port: int | None = typer.Option(None, "--port", help="Override port (default: pick free in 18765-18775)."),
     no_browser: bool = typer.Option(False, "--no-browser", help="Don't auto-open browser."),
     reload: bool = typer.Option(False, "--reload", help="Enable uvicorn auto-reload (dev)."),
     demo: bool = typer.Option(False, "--demo", help="Boot in demo mode and open the tour."),

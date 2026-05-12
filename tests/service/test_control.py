@@ -18,7 +18,7 @@ def test_install_writes_plist_wrapper_and_sandbox(tmp_path, monkeypatch):
     binary = _stub_binary(tmp_path)
     monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
     with patch.object(control, "_launchctl_reload") as load:
-        control.install(port=8765)
+        control.install(port=18765)
     assert paths.plist_file().exists()
     assert paths.wrapper_script().exists()
     assert paths.sandbox_profile().exists()
@@ -30,7 +30,7 @@ def test_install_makes_wrapper_executable(tmp_path, monkeypatch):
     binary = _stub_binary(tmp_path)
     monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
     with patch.object(control, "_launchctl_reload"):
-        control.install(port=8765)
+        control.install(port=18765)
     mode = paths.wrapper_script().stat().st_mode
     assert mode & 0o111  # executable bit set
 
@@ -42,7 +42,7 @@ def test_install_clears_disabled_flag(tmp_path, monkeypatch):
     binary = _stub_binary(tmp_path)
     monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
     with patch.object(control, "_launchctl_reload"):
-        control.install(port=8765)
+        control.install(port=18765)
     assert not paths.disabled_flag().exists()
 
 
@@ -51,7 +51,7 @@ def test_install_is_idempotent_when_service_already_loaded(tmp_path, monkeypatch
     binary = _stub_binary(tmp_path)
     monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
     with patch.object(control, "_launchctl_bootout") as bo, patch.object(control, "_launchctl_bootstrap") as bs:
-        control.install(port=8765)
+        control.install(port=18765)
     # Reload bootouts first so a stale plist doesn't make bootstrap exit 5.
     bo.assert_called_once()
     bs.assert_called_once()
@@ -64,7 +64,7 @@ def test_install_wraps_entry_point_inside_service_venv(tmp_path, monkeypatch):
     binary = _stub_binary(tmp_path)
     monkeypatch.setattr(control, "_provision_service_venv", lambda: str(binary))
     with patch.object(control, "_launchctl_reload"):
-        control.install(port=8765)
+        control.install(port=18765)
     text = paths.wrapper_script().read_text()
     assert str(binary) in text
 
@@ -294,7 +294,7 @@ def test_install_raises_helpful_error_when_uv_missing(tmp_path, monkeypatch):
     import pytest
 
     with pytest.raises(control.MissingUv):
-        control.install(port=8765)
+        control.install(port=18765)
 
 
 def test_logs_prints_last_n_lines(tmp_path, monkeypatch, capsys):

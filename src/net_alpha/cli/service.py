@@ -12,7 +12,7 @@ service_app = typer.Typer(no_args_is_help=True, help="Manage the always-on local
 
 
 @service_app.command("install")
-def install_cmd(port: int = typer.Option(8765, "--port", help="Port to bind on (default 8765).")):
+def install_cmd(port: int = typer.Option(18765, "--port", help="Port to bind on (default 18765).")):
     control.install(port=port)
     typer.echo(f"Installed. Service running on http://127.0.0.1:{port}")
 
@@ -81,7 +81,7 @@ def status_cmd(json: bool = typer.Option(False, "--json", help="Emit JSON for sc
 
 
 @service_app.command("run", hidden=True)
-def run_cmd(port: int = typer.Option(8765, "--port", help="Port to bind on (default 8765).")):
+def run_cmd(port: int = typer.Option(18765, "--port", help="Port to bind on (default 18765).")):
     """Internal entry-point invoked by the launchd wrapper. Not for direct use."""
     from net_alpha.cli.service_run import run
 

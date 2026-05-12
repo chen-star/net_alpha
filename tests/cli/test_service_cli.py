@@ -11,7 +11,7 @@ def test_install_subcommand_calls_control_install():
     with patch("net_alpha.service.control.install") as inst:
         result = runner.invoke(app, ["service", "install"])
     assert result.exit_code == 0, result.output
-    inst.assert_called_once_with(port=8765)
+    inst.assert_called_once_with(port=18765)
 
 
 def test_install_with_custom_port():

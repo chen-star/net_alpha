@@ -136,7 +136,7 @@ def _status_running() -> bool:
     return s.installed and s.running and not s.disabled
 
 
-def _post_control(action: str, port: int = 8765) -> None:
+def _post_control(action: str, port: int = 18765) -> None:
     data = urllib.parse.urlencode({"action": action}).encode()
     req = urllib.request.Request(
         f"http://127.0.0.1:{port}/settings/service/control",
@@ -162,7 +162,7 @@ class MissingUv(RuntimeError):
     """Raised when service install is requested but uv is not on PATH."""
 
 
-def install(*, port: int = 8765) -> None:
+def install(*, port: int = 18765) -> None:
     if not _uv_available():
         raise MissingUv(
             "The always-on service requires uv. Install it from "

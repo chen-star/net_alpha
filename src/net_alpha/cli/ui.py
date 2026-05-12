@@ -10,7 +10,7 @@ from net_alpha.config import Settings
 from net_alpha.web.app import create_app
 
 
-def pick_free_port(start: int = 8765, end: int = 8775) -> int:
+def pick_free_port(start: int = 18765, end: int = 18775) -> int:
     """Return the first free port in [start, end] on localhost.
 
     Raises RuntimeError if all ports are in use.
@@ -38,7 +38,7 @@ def run(
     _s = _ctrl.status()
     if _s.installed and _s.running and not _s.disabled:
         # Service already running — just open the browser at the running endpoint
-        url = f"http://127.0.0.1:{port or 8765}/"
+        url = f"http://127.0.0.1:{port or 18765}/"
         typer.echo(f"net-alpha service is already running — opening {url}")
         if not no_browser:
             webbrowser.open(url)

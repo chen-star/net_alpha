@@ -171,7 +171,7 @@ Key files: `backup/` (paths, manifest, crypto, retention, bundle, restore),
 
 `src/net_alpha/web/` is an optional FastAPI subpackage providing a local browser UI. It only calls existing public seams (`Repository`, engine functions, `csv_loader`, `BrokerParser`, audit/portfolio/planner pure functions) — **no business logic in `web/`**. Templates use Jinja with HTMX for fragment swaps and Alpine for tiny client state. Static assets (htmx, alpine, ApexCharts, Lucide icons, SortableJS, built `app.css`, Inter + JetBrains Mono fonts) are vendored under `web/static/` — no CDN at runtime, no node, no npm.
 
-Launch with `net-alpha ui`. Picks a free port in 8765–8775 (override with `--port`), binds to loopback only, dies on Ctrl-C. UI deps are in the `[ui]` optional group (FastAPI, uvicorn, Jinja2, python-multipart, yfinance); install with `uv sync --extra ui`.
+Launch with `net-alpha ui`. Picks a free port in 18765–18775 (override with `--port`), binds to loopback only, dies on Ctrl-C. UI deps are in the `[ui]` optional group (FastAPI, uvicorn, Jinja2, python-multipart, yfinance); install with `uv sync --extra ui`.
 
 Asset rebuild targets in the `Makefile`: `build-css` (Tailwind via `pytailwindcss`), `vendor-fonts`, `vendor-apex`, `vendor-lucide` (pinned to v0.469.0), `vendor-sortable` (SortableJS pinned to v1.15.2 for Plan-tab drag-to-reorder).
 

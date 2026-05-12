@@ -26,7 +26,7 @@ def test_full_lifecycle_artifacts(tmp_path, monkeypatch):
 
     with patch.object(control, "_launchctl_bootstrap"), patch.object(control, "_launchctl_bootout"):
         # Step 1: install
-        control.install(port=8765)
+        control.install(port=18765)
         assert paths.plist_file().exists(), "plist should exist after install"
         assert paths.wrapper_script().exists(), "wrapper should exist after install"
         assert paths.sandbox_profile().exists(), "sandbox profile should exist after install"
@@ -120,7 +120,7 @@ def test_status_after_lifecycle(tmp_path, monkeypatch):
 
     with patch.object(control, "_launchctl_bootstrap"), patch.object(control, "_launchctl_bootout"):
         # After install: installed and running
-        control.install(port=8765)
+        control.install(port=18765)
         with patch.object(control, "_launchctl_print", return_value="state = running\n\tpid = 12345\n"):
             s = control.status()
         assert s.installed is True

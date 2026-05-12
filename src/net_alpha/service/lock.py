@@ -1,7 +1,7 @@
 """Single-instance lock via a pid file.
 
 Keeps the user from accidentally booting two service processes that
-fight over port 8765.
+fight over port 18765.
 """
 
 from __future__ import annotations
