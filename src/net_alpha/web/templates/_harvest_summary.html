@@ -4,7 +4,9 @@
   <div class="label-uc mb-2">Harvest plan</div>
   <form hx-get="/tax/harvest/plan" hx-trigger="change delay:200ms"
         hx-target="#harvest-summary" hx-swap="outerHTML"
+        hx-indicator="#harvest-form-spinner"
         class="flex flex-wrap gap-3 items-baseline text-sm">
+    <span id="harvest-form-spinner">{% include "_spinner.html" %}</span>
     <label class="inline-flex items-center gap-1">
       <input type="radio" name="mode" value="auto"
              {% if mode == 'auto' %}checked{% endif %}> Auto

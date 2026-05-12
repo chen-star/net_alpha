@@ -19,6 +19,7 @@
   {% endif %}
 
   <form hx-post="/sim" hx-target="#sim-result" hx-swap="innerHTML"
+        hx-indicator="#sim-submit-spinner"
         x-data="{ action: '{{ action_pref if action_pref else ('sell' if harvest_mode else 'sell') }}' }"
         hx-on::after-request="
           if (event.detail.successful) {
@@ -102,7 +103,10 @@
       </div>
     </div>
     <div class="mt-4 text-right">
-      <button type="submit" class="btn">Run sim</button>
+      <button type="submit" class="btn inline-flex items-center gap-2">
+        <span id="sim-submit-spinner">{% include "_spinner.html" %}</span>
+        Run sim
+      </button>
     </div>
   </form>
 

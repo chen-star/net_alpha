@@ -10,7 +10,9 @@
       hx-swap="innerHTML"
       hx-push-url="true"
       hx-trigger="change from:select, change from:input[type=checkbox]"
+      hx-indicator="#portfolio-toolbar-spinner"
       class="kpi-card flex gap-3 flex-wrap items-end text-sm">
+  <span id="portfolio-toolbar-spinner">{% include "_spinner.html" %}</span>
 {% else %}
 <form method="get" action="{{ toolbar_action }}"
       class="kpi-card flex gap-3 flex-wrap items-end text-sm">

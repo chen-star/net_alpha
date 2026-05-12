@@ -22,6 +22,7 @@
           aria-haspopup="listbox"
           :aria-expanded="open"
           title="{{ accounts_selected | join(', ') }}">
+    {% include "_spinner.html" %}
     <span>{{ label }}</span>
     <span class="text-[9px] text-label-3">▾</span>
   </button>
