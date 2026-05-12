@@ -47,6 +47,11 @@
   <script src="/static/htmx.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/holdings_filter.js?v={{ asset_v }}" defer></script>
   <script src="/static/positions_search.js?v={{ asset_v }}" defer></script>
+  {# palette.js must run BEFORE alpine.min.js so window.paletteOverlay is
+     defined by the time Alpine's first init pass evaluates the overlay's
+     x-data attribute. Defer scripts execute in document order. #}
+  <script id="palette-index" type="application/json">{{ palette_index() | tojson }}</script>
+  <script src="/static/palette.js?v={{ asset_v }}" defer></script>
   <script src="/static/alpine.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/vendor/apexcharts/apexcharts.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/charts.js?v={{ asset_v }}" defer></script>
@@ -56,8 +61,6 @@
   <script src="/static/keyboard.js?v={{ asset_v }}" defer></script>
   <script src="/static/vendor/sortablejs/Sortable.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/plan_reorder.js?v={{ asset_v }}" defer></script>
-  <script id="palette-index" type="application/json">{{ palette_index() | tojson }}</script>
-  <script src="/static/palette.js?v={{ asset_v }}" defer></script>
 </head>
 <body class="min-h-screen flex flex-col bg-bg text-text"
       x-data

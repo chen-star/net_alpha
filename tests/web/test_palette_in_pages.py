@@ -31,10 +31,9 @@ def test_palette_index_script_renders(client, path):
     m = SCRIPT_RE.search(resp.text)
     assert m, f"{path}: <script id='palette-index'> missing"
     blob = json.loads(m.group(1))
-    assert "pages" in blob
-    assert "tickers" in blob
-    assert isinstance(blob["pages"], list)
-    assert isinstance(blob["tickers"], list)
+    for key in ("pages", "tickers", "actions", "findings"):
+        assert key in blob, f"{path}: bootstrap blob missing '{key}'"
+        assert isinstance(blob[key], list), f"{path}: '{key}' must be a list"
 
 
 def test_palette_json_escapes_script_close_tag(client):
@@ -90,4 +89,36 @@ def test_palette_input_traps_tab_key(client):
     assert "@keydown.tab.prevent" in resp.text, (
         "palette input missing @keydown.tab.prevent — Tab key would escape "
         "the open modal, violating role='dialog' aria-modal='true' contract"
+    )
+
+
+def test_palette_x_data_invokes_window_factory(client):
+    """Regression guard: x-data must call ``window.paletteOverlay()``.
+
+    Alpine 3's expression evaluator does NOT resolve bare global
+    identifiers — ``x-data="paletteOverlay()"`` throws
+    "ReferenceError: paletteOverlay is not defined" even when the
+    factory is on window. The ``window.`` prefix is the only form
+    Alpine's eval will follow into the global scope. Alpine.data()
+    name-based registration is also flaky here because palette.js
+    loads via ``defer`` and the alpine:init dispatch races the
+    listener registration."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert 'x-data="window.paletteOverlay()"' in resp.text, (
+        "palette overlay must bind via x-data=\"window.paletteOverlay()\". "
+        "The factory is hoisted onto window by palette.js — see the "
+        "bottom of static/palette.js."
+    )
+
+
+def test_palette_js_exposes_factory_on_window(client):
+    """The JS file backing the overlay must export ``paletteOverlay`` on
+    window — if this assertion fails and the x-data attribute still calls
+    paletteOverlay(), every page break a ReferenceError at Alpine init."""
+    resp = client.get("/static/palette.js?v=test")
+    assert resp.status_code == 200
+    assert "window.paletteOverlay = paletteOverlay" in resp.text, (
+        "palette.js must expose paletteOverlay on window so Alpine's "
+        "x-data eval scope can resolve it."
     )
