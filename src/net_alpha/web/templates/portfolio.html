@@ -7,7 +7,7 @@
     <div>
       <h1>Portfolio</h1>
       <div class="text-[13px] text-label-2 mt-[3px]">
-        {% if selected_account %}{{ selected_account }}{% else %}All accounts{% endif %} ·
+        {% if selected_accounts %}{{ selected_accounts | join(', ') }}{% else %}All accounts{% endif %} ·
         {{ selected_period|default('YTD')|upper }}
       </div>
     </div>
@@ -17,8 +17,9 @@
   {% if not imports %}
     {% include "_portfolio_empty_state.html" %}
   {% else %}
+    {%- set _body_qs %}period={{ selected_period }}{% for _a in selected_accounts %}&account={{ _a|urlencode }}{% endfor %}{%- endset -%}
     <div id="portfolio-body"
-         hx-get="/portfolio/body?period={{ selected_period }}&account={{ selected_account }}"
+         hx-get="/portfolio/body?{{ _body_qs }}"
          hx-trigger="load" hx-swap="innerHTML"></div>
   {% endif %}
 {% endblock %}

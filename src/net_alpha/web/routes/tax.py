@@ -23,6 +23,7 @@ from net_alpha.portfolio.tax_planner import (
 )
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
+from net_alpha.web.account_filter import parse_accounts
 from net_alpha.web.dependencies import (
     get_pricing_service,
     get_repository,
@@ -35,7 +36,7 @@ router = APIRouter()
 def get_tax(
     request: Request,
     view: str | None = None,
-    account: str | None = None,
+    account: list[str] = Query(default_factory=list),
     year: int | None = None,
     ticker: str | None = None,
     confidence: str | None = None,
@@ -61,16 +62,23 @@ def get_tax(
         target = f"/positions?{urlencode(params)}"
         return RedirectResponse(url=target, status_code=301)
 
+    accounts: list[str] = parse_accounts(account)
+    account_filter_active: bool = bool(accounts)
+    # Legacy single-account value: kept for templates (positions/portfolio) that
+    # still use selected_account (singular) in HTMX fragment URLs.
+    single_account: str | None = accounts[0] if len(accounts) == 1 else None
+
     # Normalise tab-level view key for context / template branching.
     _TAB_VIEWS = {"wash-sales", "projection", "performance"}
     # Inner sub-views for the wash-sales tab (table / calendar toggle).
     _WASH_SUB_VIEWS = {"table", "calendar"}
 
     prefs = repo.list_user_preferences()
-    filter_id = None
-    if account:
+    filter_id: int | None = None
+    if len(accounts) == 1:
+        target_acct = accounts[0]
         for a in repo.list_accounts():
-            if f"{a.broker}/{a.label}" == account:
+            if f"{a.broker}/{a.label}" == target_acct:
                 filter_id = a.id
                 break
     profile = resolve_effective_profile(prefs=prefs, filter_account_id=filter_id)
@@ -89,11 +97,17 @@ def get_tax(
         inner_view = "table"
         tab_view = "wash-sales"
 
+    accounts_available = sorted({imp.account_display for imp in repo.list_imports()})
+
     ctx: dict = {
         "request": request,
         "view": tab_view,
         "active_page": "tax",
-        "selected_account": account or "",
+        "selected_accounts": accounts,
+        "accounts_available": accounts_available,
+        "account_filter_active": account_filter_active,
+        # Legacy single-value kept for templates that still reference selected_account.
+        "selected_account": single_account or "",
         "selected_year": year,
         "profile": profile,
         "page_key": "/tax",
@@ -108,7 +122,7 @@ def get_tax(
             _wash_sales_context(
                 repo,
                 ticker=ticker,
-                account=account,
+                accounts=accounts,
                 year=year,
                 confidence=confidence,
                 sort=sort,
@@ -120,13 +134,18 @@ def get_tax(
         ctx["view"] = inner_view
         ctx["tab_view"] = tab_view
         ctx["chips_clear_urls"] = _build_chips_clear_urls(request)
+        # Re-inject multi-account context keys so outer ctx wins over whatever
+        # _wash_sales_context emitted (they now agree, but be explicit).
+        ctx["selected_accounts"] = accounts
+        ctx["accounts_available"] = accounts_available
+        ctx["account_filter_active"] = account_filter_active
     elif view == "projection":
         cfg = request.app.state.tax_brackets_cfg
         proj_ctx = _build_projection_ctx(request, repo, cfg)
         ctx.update(proj_ctx)
     elif view == "performance":
         cfg = request.app.state.tax_brackets_cfg
-        perf_ctx = _build_performance_ctx(request, repo, cfg, year=year, account=account)
+        perf_ctx = _build_performance_ctx(request, repo, cfg, year=year, accounts=accounts)
         ctx.update(perf_ctx)
 
     return request.app.state.templates.TemplateResponse(request, "tax.html", ctx)
@@ -137,6 +156,7 @@ def harvest_plan(
     request: Request,
     repo: Repository = Depends(get_repository),
     pricing: PricingService = Depends(get_pricing_service),
+    account: list[str] = Query(default_factory=list),
     mode: str = "auto",
     custom_budget: str = "",
     exclude_locked: bool = True,
@@ -150,6 +170,10 @@ def harvest_plan(
       - auto: target = realized_gains_ytd + 3000
       - custom: target = custom_budget
       - manual: selection comes from `pick` query params (symbol::account_label)
+
+    Note: compute_harvest_queue and build_plan take account_id: int | None (not
+    accounts: list[str]). When multiple accounts are selected, we degrade to
+    all-accounts (account_id=None). Task 11 will widen these helpers.
     """
     from datetime import date
     from decimal import Decimal, InvalidOperation
@@ -163,6 +187,17 @@ def harvest_plan(
         summarize_manual_picks,
     )
 
+    accounts: list[str] = parse_accounts(account)
+    account_filter_active: bool = bool(accounts)
+    # Single-account: resolve to ID. Multi-select degrades to None (all-accounts).
+    account_id: int | None = None
+    if len(accounts) == 1:
+        target_acct = accounts[0]
+        for a in repo.list_accounts():
+            if f"{a.broker}/{a.label}" == target_acct:
+                account_id = a.id
+                break
+
     today = date.today()
     rows = compute_harvest_queue(
         repo=repo,
@@ -170,6 +205,7 @@ def harvest_plan(
         as_of=today,
         etf_pairs=request.app.state.etf_pairs,
         etf_replacements=request.app.state.etf_replacements,
+        account_id=account_id,
         only_harvestable=False,
     )
 
@@ -258,17 +294,23 @@ def harvest_plan(
             "has_tax_config": brackets is not None,
             "pagination": pagination,
             "picks": pick or [],
+            "account_filter_active": account_filter_active,
+            "selected_accounts": accounts,
         },
     )
 
 
 def _build_chips_clear_urls(request: Request) -> dict[str, str]:
-    """Per-chip URLs that drop one filter key from the current query string."""
-    params = dict(request.query_params)
+    """Per-chip URLs that drop one filter key from the current query string.
+
+    Uses multi_items() so repeated keys (e.g. ?account=A&account=B) are
+    preserved correctly — dict(query_params) would collapse them to the last value.
+    """
+    params = list(request.query_params.multi_items())
     urls: dict[str, str] = {}
     for key in ("ticker", "account", "confidence"):
-        if key in params:
-            remaining = {k: v for k, v in params.items() if k != key}
+        if any(k == key for k, _ in params):
+            remaining = [(k, v) for k, v in params if k != key]
             urls[key] = f"/tax?{urlencode(remaining)}" if remaining else "/tax"
     return urls
 
@@ -311,7 +353,7 @@ def _build_performance_ctx(
     repo: Repository,
     cfg: TaxConfig | None,
     year: int | None,
-    account: str | None,
+    accounts: list[str],
 ) -> dict:
     """Build the template context for the performance tab body fragment."""
     from net_alpha.portfolio.after_tax import Period, compute_after_tax
@@ -323,11 +365,18 @@ def _build_performance_ctx(
     else:
         period_obj = Period.ytd(today.year)
 
+    account_filter_active: bool = bool(accounts)
+
     # Load §1256 year-end MTM rows — available regardless of tax config.
-    mtm_rows = repo.section_1256_mtm_rows(period_obj, account=account)
+    mtm_rows = repo.section_1256_mtm_rows(period_obj, accounts=accounts or None)
     mtm_rows.sort(key=lambda r: (r.tax_year, r.ticker, r.position_key))
 
-    ctx: dict = {"request": request, "tax_brackets_cfg": cfg, "mtm_rows": mtm_rows}
+    ctx: dict = {
+        "request": request,
+        "tax_brackets_cfg": cfg,
+        "mtm_rows": mtm_rows,
+        "account_filter_active": account_filter_active,
+    }
     if cfg is None:
         ctx["breakdown"] = None
         ctx["has_tax_config"] = False
@@ -347,7 +396,7 @@ def _build_performance_ctx(
     # carryforward semantics don't apply to a multi-year aggregate view.
     cf = get_effective_carryforward(repo, period_obj.year) if period_obj.year is not None else None
 
-    breakdown = compute_after_tax(repo, period_obj, account, brackets, carryforward=cf)
+    breakdown = compute_after_tax(repo, period_obj, brackets=brackets, accounts=accounts or None, carryforward=cf)
     ctx["breakdown"] = breakdown
     ctx["has_tax_config"] = True
     return ctx

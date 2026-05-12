@@ -37,6 +37,7 @@
 {% endmacro %}
 
 <div class="grid grid-cols-12 gap-[10px]" data-profile="{{ _profile.profile if _profile else 'active' }}">
+{% set _acct_qs %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
 
   {# ── Command-center header: hero on the left (4 cols × 2 rows on lg+),
        four small KPIs auto-flow into the 2×2 area to the right. ───────── #}
@@ -45,7 +46,7 @@
     <div class="label-uc">TOTAL ACCOUNT VALUE
       <button type="button"
               class="ml-1 inline-flex align-middle text-label-3 hover:text-label-1 cursor-pointer"
-              hx-get="/portfolio/explain/account-value?account={{ selected_account|default('') }}"
+              hx-get="/portfolio/explain/account-value?{{ _acct_qs[1:] }}"
               hx-target="#explain-account-value"
               hx-swap="innerHTML"
               aria-label="How is this calculated?"
@@ -80,7 +81,7 @@
     <div class="label-uc">Total Return
       <button type="button"
               class="ml-1 inline-flex align-middle text-label-3 hover:text-label-1 cursor-pointer"
-              hx-get="/portfolio/explain/total-return?period={{ selected_period|default('ytd') }}&account={{ selected_account|default('') }}"
+              hx-get="/portfolio/explain/total-return?period={{ selected_period|default('ytd') }}{{ _acct_qs }}"
               hx-target="#explain-total-return"
               hx-swap="innerHTML"
               aria-label="How is this calculated?"
@@ -138,7 +139,7 @@
     <div class="label-uc">Unrealized P/L
       <button type="button"
               class="ml-1 inline-flex align-middle text-label-3 hover:text-label-1 cursor-pointer"
-              hx-get="/portfolio/explain/unrealized?account={{ selected_account|default('') }}"
+              hx-get="/portfolio/explain/unrealized?{{ _acct_qs[1:] }}"
               hx-target="#explain-unrealized"
               hx-swap="innerHTML"
               aria-label="How is this calculated?"

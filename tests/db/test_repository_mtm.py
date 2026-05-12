@@ -38,7 +38,7 @@ def _row(year=2025, key="SPX|4000.0|2026-06-19|C|x", account="x"):
 
 def test_save_and_read_back_round_trip(repo):
     repo.save_section_1256_mtm([_row()])
-    rows = repo.section_1256_mtm_rows(Period.for_year(2025), account=None)
+    rows = repo.section_1256_mtm_rows(Period.for_year(2025))
     assert len(rows) == 1
     assert rows[0].fmv == Decimal("150")
     assert rows[0].unrealized_pnl == Decimal("50.00")
@@ -48,14 +48,14 @@ def test_save_and_read_back_round_trip(repo):
 def test_save_is_idempotent_on_repeat(repo):
     repo.save_section_1256_mtm([_row()])
     repo.save_section_1256_mtm([_row()])  # second call must not duplicate
-    rows = repo.section_1256_mtm_rows(Period.for_year(2025), account=None)
+    rows = repo.section_1256_mtm_rows(Period.for_year(2025))
     assert len(rows) == 1
 
 
 def test_clear_removes_all(repo):
     repo.save_section_1256_mtm([_row()])
     repo.clear_section_1256_mtm()
-    rows = repo.section_1256_mtm_rows(Period.for_year(2025), account=None)
+    rows = repo.section_1256_mtm_rows(Period.for_year(2025))
     assert rows == []
 
 
@@ -66,9 +66,9 @@ def test_pnl_sums_unrealized_within_period(repo):
             _row(year=2025, key="K2"),
         ]
     )
-    pnl_2025 = repo.section_1256_mtm_pnl(Period.for_year(2025), account=None)
+    pnl_2025 = repo.section_1256_mtm_pnl(Period.for_year(2025))
     assert pnl_2025 == Decimal("50.00")
-    pnl_life = repo.section_1256_mtm_pnl(Period.lifetime(), account=None)
+    pnl_life = repo.section_1256_mtm_pnl(Period.lifetime())
     assert pnl_life == Decimal("100.00")
 
 
@@ -83,7 +83,7 @@ def test_account_filter(repo):
     a = _row(year=2025, key="K1", account="x")
     b = _row(year=2025, key="K2", account="y")
     repo.save_section_1256_mtm([a, b])
-    rows_x = repo.section_1256_mtm_rows(Period.for_year(2025), account="x")
-    rows_y = repo.section_1256_mtm_rows(Period.for_year(2025), account="y")
+    rows_x = repo.section_1256_mtm_rows(Period.for_year(2025), accounts=["x"])
+    rows_y = repo.section_1256_mtm_rows(Period.for_year(2025), accounts=["y"])
     assert len(rows_x) == 1 and rows_x[0].position_key == "K1"
     assert len(rows_y) == 1 and rows_y[0].position_key == "K2"

@@ -717,7 +717,7 @@ def test_account_value_series_forward_fills_through_today_when_quotes_lag():
             trade_id="t1",
         ),
     ]
-    cash_points = build_cash_balance_series(events=cash_events, trades=trades, account=None, period=None)
+    cash_points = build_cash_balance_series(events=cash_events, trades=trades, period=None)
     event_dates = sorted({t.date for t in trades} | {e.event_date for e in cash_events})
     eval_dates = build_eval_dates(period=None, today=today, event_dates=event_dates)
 

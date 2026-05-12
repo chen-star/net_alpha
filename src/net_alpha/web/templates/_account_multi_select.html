@@ -1,0 +1,68 @@
+{# Multi-account checkbox dropdown.
+   Args:
+     accounts_available: list[str] of "broker/label" display names.
+     accounts_selected:  list[str] subset of accounts_available.
+     name (kwarg):        form field name (default "account"). #}
+{% macro account_multi_select(accounts_available, accounts_selected, name="account") -%}
+{%- set total = accounts_available | length -%}
+{%- set picked = accounts_selected | length -%}
+{%- if picked == 0 -%}
+  {%- set label = "All accounts" -%}
+{%- elif picked == 1 -%}
+  {%- set label = accounts_selected[0] -%}
+{%- else -%}
+  {%- set label = picked ~ " of " ~ total ~ " accounts" -%}
+{%- endif -%}
+<div class="relative" x-data="accountMultiSelect()" data-testid="account-multi-select">
+  <button type="button"
+          class="bg-surface text-text rounded-md px-2 py-1 text-[12px] inline-flex items-center gap-1"
+          style="border:0.5px solid var(--color-hairline);{% if picked %}border-color:var(--color-accent);{% endif %}"
+          @click="open = !open"
+          @keydown.escape.stop="open = false"
+          aria-haspopup="listbox"
+          :aria-expanded="open"
+          title="{{ accounts_selected | join(', ') }}">
+    <span>{{ label }}</span>
+    <span class="text-[9px] text-label-3">▾</span>
+  </button>
+  <div x-show="open"
+       x-cloak
+       @click.outside="open = false"
+       class="absolute right-0 mt-1 bg-bg border rounded shadow-lg z-10 p-2 min-w-[220px]"
+       style="box-shadow: var(--shadow-pane); border-color: var(--color-hairline);"
+       role="listbox">
+    <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface-2 text-[13px] font-semibold">
+      <input type="checkbox"
+             data-role="master"
+             {% if picked == total and total > 0 %}checked{% endif %}
+             @change="toggleAll($event.target.checked)">
+      <span>All accounts</span>
+    </label>
+    <hr class="my-1" style="border-color: var(--color-hairline);">
+    {% for a in accounts_available %}
+    <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface-2 text-[13px]">
+      <input type="checkbox" name="{{ name }}" value="{{ a }}" {% if a in accounts_selected %}checked{% endif %} @change="onToggle()">
+      <span>{{ a }}</span>
+    </label>
+    {% endfor %}
+  </div>
+</div>
+<script>
+function accountMultiSelect() {
+  return {
+    open: false,
+    _timer: null,
+    onToggle() {
+      // Debounce 200ms then submit the parent form.
+      clearTimeout(this._timer);
+      this._timer = setTimeout(() => this.$el.closest('form').submit(), 200);
+    },
+    toggleAll(checked) {
+      const root = this.$el;
+      root.querySelectorAll('input[type=checkbox][name]').forEach(cb => { cb.checked = checked; });
+      this.onToggle();
+    },
+  };
+}
+</script>
+{%- endmacro %}

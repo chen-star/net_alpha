@@ -29,13 +29,13 @@ def _trade(d, action, gross, account="Schwab/x", ticker="SPIR"):
 
 
 def test_empty_inputs_yield_empty_series():
-    pts = build_cash_balance_series(events=[], trades=[], account=None, period=None)
+    pts = build_cash_balance_series(events=[], trades=[], period=None)
     assert pts == []
 
 
 def test_single_deposit_jumps_balance_and_contributions():
     events = [_ev(dt.date(2026, 3, 4), "transfer_in", 300.0, description="DEPOSIT")]
-    pts = build_cash_balance_series(events=events, trades=[], account=None, period=None)
+    pts = build_cash_balance_series(events=events, trades=[], period=None)
     assert len(pts) == 1
     assert pts[0].cash_balance == Decimal("300")
     assert pts[0].cumulative_contributions == Decimal("300")
@@ -44,7 +44,7 @@ def test_single_deposit_jumps_balance_and_contributions():
 def test_buy_decreases_balance_but_not_contributions():
     events = [_ev(dt.date(2026, 3, 4), "transfer_in", 300.0)]
     trades = [_trade(dt.date(2026, 3, 5), "Buy", -158.80)]
-    pts = build_cash_balance_series(events=events, trades=trades, account=None, period=None)
+    pts = build_cash_balance_series(events=events, trades=trades, period=None)
     assert pts[-1].cash_balance == Decimal("141.20")
     assert pts[-1].cumulative_contributions == Decimal("300")
 
@@ -58,7 +58,7 @@ def test_sweep_in_and_sweep_out_are_cash_neutral():
         _ev(dt.date(2026, 4, 22), "sweep_out", 4460.97, description="Sweep to Futures"),
         _ev(dt.date(2026, 4, 24), "sweep_in", 307.00, description="Sweep from Futures"),
     ]
-    pts = build_cash_balance_series(events=events, trades=[], account=None, period=None)
+    pts = build_cash_balance_series(events=events, trades=[], period=None)
     assert pts[0].cash_balance == Decimal("0")
     assert pts[1].cash_balance == Decimal("0")
 
@@ -68,7 +68,7 @@ def test_dividend_does_not_change_contributions():
         _ev(dt.date(2026, 3, 4), "transfer_in", 100.0),
         _ev(dt.date(2026, 3, 31), "dividend", 4.47, description="SQQQ"),
     ]
-    pts = build_cash_balance_series(events=events, trades=[], account=None, period=None)
+    pts = build_cash_balance_series(events=events, trades=[], period=None)
     assert pts[-1].cash_balance == Decimal("104.47")
     assert pts[-1].cumulative_contributions == Decimal("100")
 
@@ -78,7 +78,7 @@ def test_account_filter_excludes_other_accounts():
         _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
         _ev(dt.date(2026, 3, 4), "transfer_in", 999.0, account="Schwab/B"),
     ]
-    pts = build_cash_balance_series(events=events, trades=[], account="Schwab/A", period=None)
+    pts = build_cash_balance_series(events=events, trades=[], accounts=["Schwab/A"], period=None)
     assert pts[-1].cash_balance == Decimal("100")
 
 
@@ -88,7 +88,7 @@ def test_period_clip_excludes_events_after_window():
         _ev(dt.date(2026, 6, 1), "transfer_in", 200.0),
     ]
     # period = (2026, 2027) means YTD 2026
-    pts = build_cash_balance_series(events=events, trades=[], account=None, period=(2026, 2027))
+    pts = build_cash_balance_series(events=events, trades=[], period=(2026, 2027))
     # The 2025 event sets the opening balance carried into 2026.
     # The 2026 event makes the balance jump.
     assert pts[-1].cash_balance == Decimal("1200")
@@ -101,14 +101,14 @@ def test_put_assignment_uses_gross_not_cost_basis():
     trades = [_trade(dt.date(2026, 4, 17), "Buy", -300.0)]
     # Override cost_basis to 213 (basis-adjusted for premium); gross stays -300.
     trades[0].cost_basis = 213.0
-    pts = build_cash_balance_series(events=[], trades=trades, account=None, period=None)
+    pts = build_cash_balance_series(events=[], trades=trades, period=None)
     assert pts[-1].cash_balance == Decimal("-300")
 
 
 def test_legacy_trade_without_gross_falls_back_to_proceeds_or_cost_basis():
     trades = [_trade(dt.date(2026, 1, 5), "Sell", 824.96)]
     trades[0].gross_cash_impact = None  # simulate pre-migration row
-    pts = build_cash_balance_series(events=[], trades=trades, account=None, period=None)
+    pts = build_cash_balance_series(events=[], trades=trades, period=None)
     assert pts[-1].cash_balance == Decimal("824.96")
 
 
@@ -120,7 +120,6 @@ def test_kpis_zero_inputs():
         events=[],
         trades=[],
         holdings_value=Decimal("0"),
-        account=None,
         period=None,
     )
     assert kpi.cash_balance == Decimal("0")
@@ -136,7 +135,6 @@ def test_kpis_simple_deposit_and_holdings():
         events=events,
         trades=[],
         holdings_value=Decimal("250"),
-        account=None,
         period=None,
     )
     # cash 1000 + holdings 250 = 1250 account_value, contrib 1000 → growth 250
@@ -163,7 +161,6 @@ def test_kpis_period_net_contributions_excludes_pre_period_transfers():
         events=events,
         trades=[],
         holdings_value=Decimal("0"),
-        account=None,
         period=(2026, 2027),  # YTD 2026
     )
     # Lifetime cumulative — used by growth math, unchanged.
@@ -178,7 +175,6 @@ def test_kpis_period_net_contributions_equals_lifetime_when_no_period():
         events=events,
         trades=[],
         holdings_value=Decimal("0"),
-        account=None,
         period=None,
     )
     assert kpi.period_net_contributions == kpi.net_contributions == Decimal("1000")
@@ -190,7 +186,6 @@ def test_kpis_growth_pct_none_when_no_contributions():
         events=events,
         trades=[],
         holdings_value=Decimal("0"),
-        account=None,
         period=None,
     )
     assert kpi.net_contributions == Decimal("0")
@@ -203,7 +198,7 @@ def test_kpis_growth_pct_none_when_no_contributions():
 def test_cash_allocation_slice_returns_current_balance():
     events = [_ev(dt.date(2026, 3, 4), "transfer_in", 100.0)]
     trades = [_trade(dt.date(2026, 3, 5), "Buy", -25.0)]
-    sl = cash_allocation_slice(events=events, trades=trades, account=None)
+    sl = cash_allocation_slice(events=events, trades=trades)
     assert sl == Decimal("75")
 
 
@@ -224,7 +219,7 @@ def test_security_transfer_in_contributes_zero_cash_delta():
         basis_source="transfer_in",
         option_details=None,
     )
-    pts = build_cash_balance_series(events=[], trades=[transfer_trade], account=None, period=None)
+    pts = build_cash_balance_series(events=[], trades=[transfer_trade], period=None)
     # No cash events and only a share-quantity transfer → empty/zero series.
     assert pts == [] or pts[-1].cash_balance == Decimal("0")
 
@@ -243,7 +238,7 @@ def test_security_transfer_out_contributes_zero_cash_delta():
         basis_source="transfer_out",
         option_details=None,
     )
-    pts = build_cash_balance_series(events=[], trades=[transfer_trade], account=None, period=None)
+    pts = build_cash_balance_series(events=[], trades=[transfer_trade], period=None)
     assert pts == [] or pts[-1].cash_balance == Decimal("0")
 
 
@@ -284,7 +279,6 @@ def test_total_return_uses_period_starting_value():
         events=events,
         trades=[],
         holdings_value=Decimal("51020.18"),
-        account=None,
         period=(2026, 2027),
         period_starting_value=Decimal("50000"),
     )
@@ -312,10 +306,86 @@ def test_total_return_lifetime_unchanged_when_starting_value_zero():
         events=events,
         trades=[],
         holdings_value=Decimal("60000"),
-        account=None,
         period=None,
         period_starting_value=Decimal("0"),
     )
     # ending = 50000 + 60000 = 110000; starting = 0; contributions = 50000
     # Total Return = 110000 − 0 − 50000 = 60000
     assert kpis.growth == Decimal("60000")
+
+
+# ---------------------------------------------------------------------------
+# Tests for accounts= list filter (multi-account widening)
+# ---------------------------------------------------------------------------
+
+
+def test_build_cash_balance_series_accounts_list_filters_single():
+    """accounts=['Schwab/A'] filters to only Schwab/A events."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 4), "transfer_in", 999.0, account="Schwab/B"),
+    ]
+    result = build_cash_balance_series(events=events, trades=[], accounts=["Schwab/A"], period=None)
+    assert result[-1].cash_balance == Decimal("100")
+
+
+def test_build_cash_balance_series_two_accounts_equals_all():
+    """accounts=['Schwab/A', 'Schwab/B'] with account=None equals account=None."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 5), "transfer_in", 200.0, account="Schwab/B"),
+    ]
+    all_ = build_cash_balance_series(events=events, trades=[], period=None)
+    both = build_cash_balance_series(events=events, trades=[], accounts=["Schwab/A", "Schwab/B"], period=None)
+    assert all_ == both
+
+
+def test_build_cash_balance_series_empty_accounts_means_all():
+    """accounts=[] is treated as 'no filter' — same as account=None."""
+    events = [_ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A")]
+    all_ = build_cash_balance_series(events=events, trades=[], period=None)
+    empty = build_cash_balance_series(events=events, trades=[], accounts=[], period=None)
+    assert all_ == empty
+
+
+def test_compute_cash_kpis_accounts_list_filters_single():
+    """accounts=['Schwab/A'] filters to only Schwab/A events."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 4), "transfer_in", 999.0, account="Schwab/B"),
+    ]
+    result = compute_cash_kpis(
+        events=events,
+        trades=[],
+        holdings_value=Decimal("0"),
+        accounts=["Schwab/A"],
+        period=None,
+    )
+    assert result.cash_balance == Decimal("100")
+
+
+def test_compute_cash_kpis_two_accounts_equals_all():
+    """accounts=['Schwab/A', 'Schwab/B'] with account=None equals no filter."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 5), "transfer_in", 200.0, account="Schwab/B"),
+    ]
+    all_ = compute_cash_kpis(events=events, trades=[], holdings_value=Decimal("0"), period=None)
+    both = compute_cash_kpis(
+        events=events,
+        trades=[],
+        holdings_value=Decimal("0"),
+        accounts=["Schwab/A", "Schwab/B"],
+        period=None,
+    )
+    assert all_ == both
+
+
+def test_cash_allocation_slice_accounts_list_filters_single():
+    """accounts=['Schwab/A'] filters to only Schwab/A events."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 4), "transfer_in", 999.0, account="Schwab/B"),
+    ]
+    result = cash_allocation_slice(events=events, trades=[], accounts=["Schwab/A"])
+    assert result == Decimal("100")

@@ -2,7 +2,8 @@
 {% set sym_qs %}{{ selected_symbols|join(',') }}{% endset %}
 {% set _sort = sort|default('market_value') %}
 {% set _dir = dir|default('desc') %}
-{% set qs %}period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}&symbols={{ sym_qs|urlencode }}&sort={{ _sort }}&dir={{ _dir }}{% endset %}
+{% set _acct_qs %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
+{% set qs %}period={{ selected_period }}{{ _acct_qs }}&group_options={{ group_options }}&symbols={{ sym_qs|urlencode }}&sort={{ _sort }}&dir={{ _dir }}{% endset %}
 {% set qs_full %}{{ qs }}&show={{ show }}&page_size={{ page_size }}{% endset %}
 
 {# Macro: a sortable column header. Toggles direction when re-clicked, otherwise
@@ -12,7 +13,7 @@
   {% set new_dir = 'asc' if (cur and _dir == 'desc') else 'desc' %}
   <th {% if align %}class="{{ align }}"{% endif %} {% if tooltip %}title="{{ tooltip }}"{% endif %}>
     <a href="#"
-       hx-get="/portfolio/positions?period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}&symbols={{ sym_qs|urlencode }}&show={{ show }}&page_size={{ page_size }}&sort={{ key }}&dir={{ new_dir }}&page=1"
+       hx-get="/portfolio/positions?period={{ selected_period }}{{ _acct_qs }}&group_options={{ group_options }}&symbols={{ sym_qs|urlencode }}&show={{ show }}&page_size={{ page_size }}&sort={{ key }}&dir={{ new_dir }}&page=1"
        hx-target="#holdings-positions" hx-swap="innerHTML"
        onclick="event.preventDefault()"
        class="cursor-pointer {% if cur %}text-text{% else %}hover:text-text{% endif %}"
@@ -74,7 +75,7 @@
     <span class="text-[11px] text-label-2 ml-1">
       {{ total_rows }} {% if show == 'all' %}total{% else %}open{% endif %}
       {% if selected_symbols %}· {{ selected_symbols|length }} symbol{% if selected_symbols|length != 1 %}s{% endif %} filtered{% endif %}
-      · account: {% if selected_account %}{{ selected_account }}{% else %}all{% endif %}
+      · account: {% if selected_accounts and selected_accounts | length == 1 %}{{ selected_accounts[0] }}{% elif selected_accounts and selected_accounts | length > 1 %}{{ selected_accounts | length }} accounts{% else %}all{% endif %}
     </span>
   </div>
 

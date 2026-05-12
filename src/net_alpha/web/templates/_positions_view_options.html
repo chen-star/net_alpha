@@ -14,7 +14,8 @@
     {% include "_empty_state_hero.html" %}
   {% endwith %}
 {% else %}
+  {% set _acct_qs %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
   <div id="holdings-options" class="panel"
-       hx-get="/holdings/options?account={{ selected_account }}"
+       hx-get="/holdings/options?{{ _acct_qs[1:] }}"
        hx-trigger="load" hx-swap="innerHTML"></div>
 {% endif %}

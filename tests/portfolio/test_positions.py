@@ -46,9 +46,7 @@ def _quote(symbol, price):
 def test_single_lot_single_buy_no_sells():
     trades = [_trade()]
     lots = [_lot()]
-    rows = compute_open_positions(
-        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None, account=None
-    )
+    rows = compute_open_positions(trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None)
     assert len(rows) == 1
     r = rows[0]
     assert r.symbol == "SPY"
@@ -70,9 +68,7 @@ def test_position_with_sell_reduces_cash_sunk():
     # Lot stored with full original buy quantity — engine never decrements lots
     # when sells happen; compute_open_positions FIFO-consumes them at read time.
     lots = [_lot(quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
-    rows = compute_open_positions(
-        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 520)}, period=None, account=None
-    )
+    rows = compute_open_positions(trades=trades, lots=lots, prices={"SPY": _quote("SPY", 520)}, period=None)
     r = rows[0]
     assert r.qty == Decimal("50")
     assert r.open_cost == Decimal("20000")
@@ -87,9 +83,7 @@ def test_position_fully_closed_by_sells_excluded_from_open():
         ),
     ]
     lots = [_lot(quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
-    rows = compute_open_positions(
-        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 520)}, period=None, account=None
-    )
+    rows = compute_open_positions(trades=trades, lots=lots, prices={"SPY": _quote("SPY", 520)}, period=None)
     # Fully closed → no open row.
     assert rows == []
 
@@ -105,7 +99,6 @@ def test_position_closed_via_gl_when_trade_sells_missing():
         lots=lots,
         prices={"SPY": _quote("SPY", 520)},
         period=None,
-        account=None,
         gl_closures={("Schwab Tax", "SPY"): 100.0},
     )
     assert rows == []
@@ -123,7 +116,6 @@ def test_gl_closures_take_precedence_when_larger_than_trade_sells():
         lots=lots,
         prices={"SPY": _quote("SPY", 520)},
         period=None,
-        account=None,
         gl_closures={("Schwab Tax", "SPY"): 80.0},
     )
     assert len(rows) == 1
@@ -133,7 +125,7 @@ def test_gl_closures_take_precedence_when_larger_than_trade_sells():
 def test_missing_price_yields_none_market_value_and_unrealized():
     trades = [_trade()]
     lots = [_lot()]
-    rows = compute_open_positions(trades=trades, lots=lots, prices={}, period=None, account=None)
+    rows = compute_open_positions(trades=trades, lots=lots, prices={}, period=None)
     r = rows[0]
     assert r.market_value is None
     assert r.unrealized_pl is None
@@ -149,7 +141,7 @@ def test_account_filter_drops_other_accounts():
         _lot(id="l2", account="Schwab IRA", quantity=10.0, cost_basis=4_000.0, adjusted_basis=4_000.0),
     ]
     rows = compute_open_positions(
-        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None, account="Schwab Tax"
+        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None, accounts=["Schwab Tax"]
     )
     assert len(rows) == 1
     assert rows[0].qty == Decimal("100")
@@ -164,9 +156,7 @@ def test_accounts_field_lists_all_holders():
         _lot(id="l1", account="Schwab Tax"),
         _lot(id="l2", account="Schwab IRA", quantity=10.0, cost_basis=4_000.0, adjusted_basis=4_000.0),
     ]
-    rows = compute_open_positions(
-        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None, account=None
-    )
+    rows = compute_open_positions(trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None)
     r = rows[0]
     assert set(r.accounts) == {"Schwab Tax", "Schwab IRA"}
 
@@ -187,9 +177,7 @@ def test_transfer_in_user_set_basis_counts_toward_cash_sunk():
         ),
     ]
     lots = [_lot(id="l_xfer", quantity=100.0, cost_basis=40_000.0, adjusted_basis=40_000.0)]
-    rows = compute_open_positions(
-        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None, account=None
-    )
+    rows = compute_open_positions(trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None)
     assert len(rows) == 1
     assert rows[0].cash_sunk_per_share == Decimal("400")  # 40000 / 100
     assert rows[0].open_cost == Decimal("40000")
@@ -224,9 +212,7 @@ def test_accounts_chip_excludes_fully_closed_account_history():
             date=dt.date(2026, 1, 10),
         ),
     ]
-    rows = compute_open_positions(
-        trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None, account=None
-    )
+    rows = compute_open_positions(trades=trades, lots=lots, prices={"SPY": _quote("SPY", 460)}, period=None)
     assert len(rows) == 1
     assert set(rows[0].accounts) == {"Schwab IRA"}
     assert rows[0].account_chip == "Schwab IRA"
@@ -249,7 +235,6 @@ def test_period_filter_scopes_realized_pl():
         lots=lots,
         prices={"SPY": _quote("SPY", 460)},
         period=(2026, 2027),
-        account=None,
     )
     assert rows[0].realized_pl == Decimal("2000")
     # Lifetime: should see both sells = +5000
@@ -258,7 +243,6 @@ def test_period_filter_scopes_realized_pl():
         lots=lots,
         prices={"SPY": _quote("SPY", 460)},
         period=None,
-        account=None,
     )
     assert rows[0].realized_pl == Decimal("5000")
 
@@ -276,7 +260,6 @@ def test_option_lots_excluded_from_qty_and_basis():
         lots=lots,
         prices={"SPY": _quote("SPY", 460)},
         period=None,
-        account=None,
     )
     # Only the equity lot contributes to qty
     assert rows[0].qty == Decimal("100")
@@ -299,7 +282,7 @@ def test_open_short_put_only_surfaces_underlying_with_zero_qty():
         basis_source="option_short_open",
         option_details=OptionDetails(strike=20.0, expiry=dt.date(2026, 1, 16), call_put="P"),
     )
-    rows = compute_open_positions(trades=[sto], lots=[], prices={}, period=None, account=None)
+    rows = compute_open_positions(trades=[sto], lots=[], prices={}, period=None)
     assert len(rows) == 1
     r = rows[0]
     assert r.symbol == "UUUU"
@@ -333,7 +316,7 @@ def test_round_trip_short_put_does_not_surface_after_close():
         option_details=opt,
         date=dt.date(2026, 1, 9),
     )
-    rows = compute_open_positions(trades=[sto, btc], lots=[], prices={}, period=None, account=None)
+    rows = compute_open_positions(trades=[sto, btc], lots=[], prices={}, period=None)
     assert rows == []
 
 
@@ -355,7 +338,7 @@ def test_open_long_call_alongside_equity_shows_both_signals():
         date=dt.date(2025, 7, 14),
     )
     rows = compute_open_positions(
-        trades=[eq_buy, bto], lots=[eq_lot], prices={"TSLA": _quote("TSLA", 350)}, period=None, account=None
+        trades=[eq_buy, bto], lots=[eq_lot], prices={"TSLA": _quote("TSLA", 350)}, period=None
     )
     [tsla] = rows
     assert tsla.qty == Decimal("1")
@@ -520,10 +503,119 @@ def test_transfer_in_basis_feeds_cash_invested():
         adjusted_basis=4855.65,
         date=dt.date(2025, 4, 14),
     )
-    rows = compute_open_positions(
-        trades=[transfer], lots=[lot], prices={"SPY": _quote("SPY", 500)}, period=None, account=None
-    )
+    rows = compute_open_positions(trades=[transfer], lots=[lot], prices={"SPY": _quote("SPY", 500)}, period=None)
     assert len(rows) == 1
     r = rows[0]
     assert abs(r.avg_basis - Decimal("441.42")) < Decimal("0.01")
     assert abs(r.cash_sunk_per_share - Decimal("441.42")) < Decimal("0.01")
+
+
+# ---------------------------------------------------------------------------
+# accounts= list-filter tests (Task 4: multi-account filter widening)
+# ---------------------------------------------------------------------------
+
+
+def test_compute_open_positions_accounts_list_single_filter():
+    """accounts=['Tax'] filters to only Tax positions."""
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0),
+        _trade(id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0),
+    ]
+    lots = [
+        _lot(
+            id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0, adjusted_basis=1000.0
+        ),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    prices = {"SPY": _quote("SPY", 120)}
+    result = compute_open_positions(trades=trades, lots=lots, prices=prices, accounts=["Tax"])
+    assert len(result) == 1
+    assert result[0].account_chip == "Tax"
+    assert result[0].qty == Decimal("10")
+
+
+def test_compute_open_positions_two_accounts_equals_all():
+    """accounts=['Tax', 'IRA'] returns same result as no account filter."""
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0),
+        _trade(id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0),
+    ]
+    lots = [
+        _lot(
+            id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0, adjusted_basis=1000.0
+        ),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    prices = {"SPY": _quote("SPY", 120)}
+    all_p = compute_open_positions(trades=trades, lots=lots, prices=prices)
+    both = compute_open_positions(trades=trades, lots=lots, prices=prices, accounts=["Tax", "IRA"])
+    assert [(p.symbol, p.account_chip) for p in all_p] == [(p.symbol, p.account_chip) for p in both]
+
+
+def test_compute_open_option_positions_accounts_list_single_filter():
+    """accounts=['Tax'] filters to only Tax option positions."""
+    from net_alpha.models.domain import OptionDetails
+    from net_alpha.portfolio.positions import compute_open_option_positions
+
+    opt = OptionDetails(strike=400.0, expiry=dt.date(2026, 6, 18), call_put="C")
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", action="Buy", quantity=1.0, cost_basis=500.0, option_details=opt),
+        _trade(id="t2", account="IRA", ticker="SPY", action="Buy", quantity=1.0, cost_basis=500.0, option_details=opt),
+    ]
+    lots = [
+        _lot(
+            id="l1",
+            trade_id="t1",
+            account="Tax",
+            ticker="SPY",
+            quantity=1.0,
+            cost_basis=500.0,
+            adjusted_basis=500.0,
+            option_details=opt,
+        ),
+        _lot(
+            id="l2",
+            trade_id="t2",
+            account="IRA",
+            ticker="SPY",
+            quantity=1.0,
+            cost_basis=500.0,
+            adjusted_basis=500.0,
+            option_details=opt,
+        ),
+    ]
+    result = compute_open_option_positions(trades, lots, accounts=["Tax"])
+    assert all(r.account == "Tax" for r in result)
+
+
+def test_compute_closed_lots_accounts_list_filters_correctly():
+    """compute_closed_lots: new `accounts` param filters just like `account_display` (singular)."""
+    import datetime as _dt
+
+    from net_alpha.models.realized_gl import RealizedGLLot
+    from net_alpha.portfolio.positions import compute_closed_lots
+
+    def _gl_lot(account: str, ticker: str) -> RealizedGLLot:
+        return RealizedGLLot(
+            account_display=account,
+            symbol_raw=ticker,
+            ticker=ticker,
+            closed_date=_dt.date(2025, 6, 1),
+            opened_date=_dt.date(2025, 1, 1),
+            quantity=10.0,
+            proceeds=1100.0,
+            cost_basis=1000.0,
+            unadjusted_cost_basis=1000.0,
+            wash_sale=False,
+            disallowed_loss=0.0,
+            term="ST",
+        )
+
+    gl_lots = [_gl_lot("Tax", "SPY"), _gl_lot("IRA", "SPY")]
+
+    filtered = compute_closed_lots(gl_lots, accounts=["Tax"])
+    assert len(filtered) == 1
+    assert filtered[0].account == "Tax"
+
+    both = compute_closed_lots(gl_lots, accounts=["Tax", "IRA"])
+    assert len(both) == 2

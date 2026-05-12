@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import date
 from decimal import Decimal
 
@@ -259,7 +259,7 @@ def compute_open_option_positions(
     lots: Iterable[Lot],
     *,
     ticker: str | None = None,
-    account: str | None = None,
+    accounts: Sequence[str] | None = None,
     gl_closures: dict[tuple[str, str], float] | None = None,
     gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
 ) -> list[OpenOptionRow]:
@@ -275,9 +275,10 @@ def compute_open_option_positions(
     """
     trades_list = list(trades)
     lots_list = list(lots)
-    if account:
-        trades_list = [t for t in trades_list if t.account == account]
-        lots_list = [lot for lot in lots_list if lot.account == account]
+    _filter = set(accounts) if accounts else None
+    if _filter is not None:
+        trades_list = [t for t in trades_list if t.account in _filter]
+        lots_list = [lot for lot in lots_list if lot.account in _filter]
 
     rows: list[OpenOptionRow] = []
 
@@ -423,7 +424,7 @@ def compute_open_positions(
     lots: Iterable[Lot],
     prices: dict[str, Quote],
     period: tuple[int, int] | None = None,  # (year_start, year_end_exclusive); None = all time
-    account: str | None = None,
+    accounts: Sequence[str] | None = None,
     include_closed: bool = False,
     gl_closures: dict[tuple[str, str], float] | None = None,
     gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
@@ -445,15 +446,16 @@ def compute_open_positions(
     gl_lots_list = list(gl_lots) if gl_lots is not None else None
 
     # Account scope
-    if account:
-        trades = [t for t in trades if t.account == account]
-        lots = [lot for lot in lots if lot.account == account]
-        gl_closures = {k: v for k, v in (gl_closures or {}).items() if k[0] == account} if gl_closures else None
+    _filter = set(accounts) if accounts else None
+    if _filter is not None:
+        trades = [t for t in trades if t.account in _filter]
+        lots = [lot for lot in lots if lot.account in _filter]
+        gl_closures = {k: v for k, v in (gl_closures or {}).items() if k[0] in _filter} if gl_closures else None
         gl_option_closures = (
-            {k: v for k, v in (gl_option_closures or {}).items() if k[0] == account} if gl_option_closures else None
+            {k: v for k, v in (gl_option_closures or {}).items() if k[0] in _filter} if gl_option_closures else None
         )
         if gl_lots_list is not None:
-            gl_lots_list = [g for g in gl_lots_list if g.account_display == account]
+            gl_lots_list = [g for g in gl_lots_list if g.account_display in _filter]
 
     # Normalise GL option closures: the repo returns expiry as an ISO string,
     # but Trade.option_details.expiry is a date object — coerce so keys match.
@@ -716,21 +718,21 @@ def compute_closed_lots(
     gl_lots: Iterable[RealizedGLLot],
     *,
     period: tuple[int, int] | None = None,
-    account_display: str | None = None,
+    accounts: Sequence[str] | None = None,
 ) -> list[ClosedLotRow]:
     """Aggregate Realized G/L lots into ClosedLotRow records for the Closed tab.
 
     ``period`` is ``(year_start_inclusive, year_end_exclusive)`` matched against
-    each lot's ``closed_date.year`` — None means lifetime. ``account_display``
-    filters to a single account when provided.
+    each lot's ``closed_date.year`` — None means lifetime.
 
     Sorted by close date descending so the most recent closures land at the
     top. Realized P/L is ``proceeds - cost_basis`` (Schwab GL data already has
     wash-sale adjustments folded into the cost basis when applicable).
     """
+    _filter = set(accounts) if accounts else None
     out: list[ClosedLotRow] = []
     for lot in gl_lots:
-        if account_display is not None and lot.account_display != account_display:
+        if _filter is not None and lot.account_display not in _filter:
             continue
         if period is not None and not (period[0] <= lot.closed_date.year < period[1]):
             continue

@@ -936,6 +936,17 @@ class Repository:
             raise RuntimeError(f"no account row for {display!r}")
         return row.id
 
+    def _account_ids_for_displays(self, s: Session, displays: Sequence[str]) -> list[int]:
+        """Resolve a list of 'broker/label' display strings to account IDs.
+        Unknown displays are silently dropped."""
+        out: list[int] = []
+        for d in displays:
+            try:
+                out.append(self._account_id_for_display(s, d))
+            except RuntimeError:
+                continue
+        return out
+
     # ----- Realized G/L methods (schema v2) -----
 
     def add_gl_lots(self, account: Account, import_id: int, lots: list[RealizedGLLot]) -> int:
@@ -1687,13 +1698,16 @@ class Repository:
     def list_exempt_matches(
         self,
         *,
-        account: str | None = None,
+        accounts: Sequence[str] | None = None,
         year: int | None = None,
     ) -> list[ExemptMatchRow]:
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
             stmt = select(ExemptMatchRow)
-            if account is not None:
-                stmt = stmt.where((ExemptMatchRow.loss_account == account) | (ExemptMatchRow.buy_account == account))
+            if effective:
+                stmt = stmt.where(
+                    ExemptMatchRow.loss_account.in_(effective) | ExemptMatchRow.buy_account.in_(effective)
+                )
             if year is not None:
                 stmt = stmt.where(ExemptMatchRow.loss_sale_date.startswith(f"{year}-"))
             return list(session.exec(stmt).all())
@@ -1745,21 +1759,21 @@ class Repository:
     def list_section_1256_classifications(
         self,
         *,
-        account: str | None = None,
+        accounts: Sequence[str] | None = None,
         year: int | None = None,
     ) -> list[Section1256ClassificationRow]:
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
-            if account is not None or year is not None:
+            if effective or year is not None:
                 # Join to TradeRow to apply account/year filters
                 stmt = select(Section1256ClassificationRow).join(
                     TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id
                 )
-                if account is not None:
-                    try:
-                        acct_id = self._account_id_for_display(session, account)
-                    except RuntimeError:
+                if effective:
+                    acct_ids = self._account_ids_for_displays(session, effective)
+                    if not acct_ids:
                         return []
-                    stmt = stmt.where(TradeRow.account_id == acct_id)
+                    stmt = stmt.where(TradeRow.account_id.in_(acct_ids))
                 if year is not None:
                     stmt = stmt.where(TradeRow.trade_date.startswith(f"{year}-"))
             else:
@@ -1802,14 +1816,15 @@ class Repository:
             session.exec(Section1256MTMRow.__table__.delete())
             session.commit()
 
-    def section_1256_mtm_rows(self, period, account: str | None) -> list[Section1256MTM]:
+    def section_1256_mtm_rows(self, period, accounts: Sequence[str] | None = None) -> list[Section1256MTM]:
         """Return MTM rows filtered by period and optional account."""
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
             stmt = select(Section1256MTMRow)
             if period.kind == "year" and period.year is not None:
                 stmt = stmt.where(Section1256MTMRow.tax_year == period.year)
-            if account is not None:
-                stmt = stmt.where(Section1256MTMRow.account == account)
+            if effective:
+                stmt = stmt.where(Section1256MTMRow.account.in_(effective))
             rows = session.exec(stmt).all()
             return [
                 Section1256MTM(
@@ -1828,9 +1843,9 @@ class Repository:
                 for r in rows
             ]
 
-    def section_1256_mtm_pnl(self, period, account: str | None) -> Decimal:
+    def section_1256_mtm_pnl(self, period, accounts: Sequence[str] | None = None) -> Decimal:
         """Sum of unrealized_pnl across all MTM rows matching period and account."""
-        rows = self.section_1256_mtm_rows(period, account)
+        rows = self.section_1256_mtm_rows(period, accounts=accounts)
         total = Decimal("0")
         for r in rows:
             total += r.unrealized_pnl
@@ -1859,23 +1874,23 @@ class Repository:
 
     # ---- After-tax helpers (Task 17) ----
 
-    def realized_pnl_split(self, period, account: str | None) -> dict[str, Decimal]:
+    def realized_pnl_split(self, period, accounts: Sequence[str] | None = None) -> dict[str, Decimal]:
         """Return {'short_term': Decimal, 'long_term': Decimal} for closed non-§1256 lots.
 
         Draws from RealizedGLLotRow (broker-sourced Realized G/L CSV).
         Term is determined by the broker-supplied `term` column ("Short Term" / "Long Term").
         P&L per lot = proceeds - cost_basis (uses the wash-sale-adjusted cost_basis column).
         """
+        effective: list[str] = list(accounts) if accounts else []
         st = Decimal("0")
         lt = Decimal("0")
         with Session(self.engine) as session:
             stmt = select(RealizedGLLotRow)
-            if account:
-                try:
-                    acct_id = self._account_id_for_display(session, account)
-                except RuntimeError:
+            if effective:
+                acct_ids = self._account_ids_for_displays(session, effective)
+                if not acct_ids:
                     return {"short_term": Decimal("0"), "long_term": Decimal("0")}
-                stmt = stmt.where(RealizedGLLotRow.account_id == acct_id)
+                stmt = stmt.where(RealizedGLLotRow.account_id.in_(acct_ids))
             if period.kind != "lifetime":
                 stmt = stmt.where(RealizedGLLotRow.closed_date.startswith(f"{period.year}-"))
             # Exclude broad-based index option lots (§1256 contracts) — these are
@@ -1896,23 +1911,23 @@ class Repository:
                     st += pnl
         return {"short_term": st, "long_term": lt}
 
-    def section_1256_pnl(self, period, account: str | None) -> Decimal:
+    def section_1256_pnl(self, period, accounts: Sequence[str] | None = None) -> Decimal:
         """Total realized P&L for §1256 contracts in the period.
 
         Draws from Section1256ClassificationRow (engine-derived). The realized_pnl
         field is the net gain/loss already; 60/40 LT/ST split is applied by
         compute_after_tax, not here.
         """
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
             stmt = select(Section1256ClassificationRow).join(
                 TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id
             )
-            if account:
-                try:
-                    acct_id = self._account_id_for_display(session, account)
-                except RuntimeError:
+            if effective:
+                acct_ids = self._account_ids_for_displays(session, effective)
+                if not acct_ids:
                     return Decimal("0")
-                stmt = stmt.where(TradeRow.account_id == acct_id)
+                stmt = stmt.where(TradeRow.account_id.in_(acct_ids))
             if period.kind != "lifetime":
                 stmt = stmt.where(TradeRow.trade_date.startswith(f"{period.year}-"))
             rows = session.exec(stmt).all()
@@ -1921,16 +1936,16 @@ class Repository:
                 total += Decimal(str(r.realized_pnl))
         return total
 
-    def wash_sale_disallowed_total(self, period, account: str | None) -> Decimal:
+    def wash_sale_disallowed_total(self, period, accounts: Sequence[str] | None = None) -> Decimal:
         """Total disallowed loss amount for wash-sale violations in the period.
 
         Draws from WashSaleViolationRow. Account filter matches violations where
         the loss account OR the triggering buy account is the specified account.
         """
-        by_kind = self.wash_sale_disallowed_by_kind(period, account)
+        by_kind = self.wash_sale_disallowed_by_kind(period, accounts=accounts)
         return sum(by_kind.values(), Decimal("0"))
 
-    def wash_sale_disallowed_by_kind(self, period, account: str | None) -> dict[str, Decimal]:
+    def wash_sale_disallowed_by_kind(self, period, accounts: Sequence[str] | None = None) -> dict[str, Decimal]:
         """Disallowed loss totals split by ``WashSaleViolation.kind``.
 
         Returns ``{"deferred": <amount>, "permanent_ira": <amount>}``. The
@@ -1940,15 +1955,16 @@ class Repository:
         basis. Always returns both keys (zero when none present) so callers
         can format without conditional logic.
         """
+        effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
             stmt = select(WashSaleViolationRow.kind, WashSaleViolationRow.disallowed_loss)
-            if account:
-                try:
-                    acct_id = self._account_id_for_display(session, account)
-                except RuntimeError:
+            if effective:
+                acct_ids = self._account_ids_for_displays(session, effective)
+                if not acct_ids:
                     return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
                 stmt = stmt.where(
-                    (WashSaleViolationRow.loss_account_id == acct_id) | (WashSaleViolationRow.buy_account_id == acct_id)
+                    WashSaleViolationRow.loss_account_id.in_(acct_ids)
+                    | WashSaleViolationRow.buy_account_id.in_(acct_ids)
                 )
             if period.kind != "lifetime":
                 stmt = stmt.where(WashSaleViolationRow.loss_sale_date.startswith(f"{period.year}-"))

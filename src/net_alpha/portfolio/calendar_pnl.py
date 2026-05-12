@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import date
 from decimal import Decimal
 
@@ -15,13 +15,14 @@ def monthly_realized_pl(
     trades: Iterable[Trade],
     year: int,
     ticker: str | None,
-    account: str | None,
+    accounts: Sequence[str] | None = None,
 ) -> list[MonthlyPnl]:
     """Return 12 MonthlyPnl rows (Jan..Dec) of realized sell P&L for `year`.
 
     Filters: trades not in `year`, not Sell, missing proceeds/cost, mismatching
     ticker, or mismatching account are excluded.
     """
+    _filter = set(accounts) if accounts else None
     buckets: dict[int, dict[str, Decimal | int]] = {
         m: {"gain": Decimal("0"), "loss": Decimal("0"), "count": 0} for m in range(1, 13)
     }
@@ -34,7 +35,7 @@ def monthly_realized_pl(
             continue
         if ticker is not None and t.ticker != ticker:
             continue
-        if account is not None and t.account != account:
+        if _filter is not None and t.account not in _filter:
             continue
         pl = Decimal(str(t.proceeds)) - Decimal(str(t.cost_basis))
         bucket = buckets[t.date.month]
@@ -59,7 +60,7 @@ def monthly_realized_pl_series(
     *,
     trades: Iterable[Trade],
     period: tuple[int, int] | None,
-    account: str | None,
+    accounts: Sequence[str] | None = None,
     today: date,
 ) -> list[MonthlyPnlPoint]:
     """Return a chronological list of monthly realized-P&L points.
@@ -93,7 +94,7 @@ def monthly_realized_pl_series(
             trades=trade_list,
             year=year,
             ticker=None,
-            account=account,
+            accounts=accounts,
         )
         return [
             MonthlyPnlPoint(

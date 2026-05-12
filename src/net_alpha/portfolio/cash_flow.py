@@ -7,7 +7,7 @@ date, folds over events, emits one point per event date.
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from decimal import Decimal
 
 from net_alpha.models.domain import CashEvent, Trade
@@ -66,18 +66,19 @@ def build_cash_balance_series(
     *,
     events: Iterable[CashEvent],
     trades: Iterable[Trade],
-    account: str | None,
+    accounts: Sequence[str] | None = None,
     period: tuple[int, int] | None,
 ) -> list[CashBalancePoint]:
     """Return one point per distinct event date, with running cash balance.
 
-    `account=None` includes all accounts. `period=None` includes everything.
+    `accounts=None` includes all accounts. `period=None` includes everything.
     `period=(y, y+1)` restricts the *displayed* points to year `y`; events
     before `y` still contribute to the opening balance carried into year `y`.
     """
+    _filter = set(accounts) if accounts else None
     # Filter by account first.
-    events_list = [e for e in events if account is None or e.account == account]
-    trades_list = [t for t in trades if account is None or t.account == account]
+    events_list = [e for e in events if _filter is None or e.account in _filter]
+    trades_list = [t for t in trades if _filter is None or t.account in _filter]
 
     # Build (date, balance_delta, contrib_delta) tuples.
     rows: list[tuple[dt.date, Decimal, Decimal]] = []
@@ -123,15 +124,16 @@ def compute_cash_kpis(
     events: Iterable[CashEvent],
     trades: Iterable[Trade],
     holdings_value: Decimal,
-    account: str | None,
+    accounts: Sequence[str] | None = None,
     period: tuple[int, int] | None,
     period_starting_value: Decimal = Decimal("0"),
 ) -> CashFlowKPIs:
     """Single-shot summary used by the KPI strip."""
+    _filter = set(accounts) if accounts else None
     series = build_cash_balance_series(
         events=events,
         trades=trades,
-        account=account,
+        accounts=accounts,
         period=period,
     )
     if series:
@@ -151,7 +153,7 @@ def compute_cash_kpis(
         period_end_excl = dt.date(period[1], 1, 1)
         period_contrib = Decimal("0")
         for e in events:
-            if account is not None and e.account != account:
+            if _filter is not None and e.account not in _filter:
                 continue
             if not (period_start <= e.event_date < period_end_excl):
                 continue
@@ -179,7 +181,7 @@ def cash_allocation_slice(
     *,
     events: Iterable[CashEvent],
     trades: Iterable[Trade],
-    account: str | None,
+    accounts: Sequence[str] | None = None,
 ) -> Decimal:
     """Return the current cash balance (lifetime, no period clip).
 
@@ -188,7 +190,7 @@ def cash_allocation_slice(
     series = build_cash_balance_series(
         events=events,
         trades=trades,
-        account=account,
+        accounts=accounts,
         period=None,
     )
     return series[-1].cash_balance if series else Decimal("0")

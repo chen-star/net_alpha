@@ -71,9 +71,7 @@
     </table>
   </div>
 
-  {% set _qs = '&view=closed' %}
-  {% if selected_period %}{% set _qs = _qs + '&period=' + selected_period %}{% endif %}
-  {% if selected_account %}{% set _qs = _qs + '&account=' + selected_account %}{% endif %}
+  {% set _qs %}&view=closed{% if selected_period %}&period={{ selected_period }}{% endif %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
   {% set page_base_url = '/positions' %}
   {% set page_extra_qs = _qs %}
   {% set page_target = '#positions-tab-content' %}

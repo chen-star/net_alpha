@@ -1,18 +1,20 @@
 {# Wash-sales tab content — inner body for the /tax wash-sales tab.
    Context variables expected: view, filter_ticker, filter_account, filter_year,
    filter_confidence, tickers, accounts, years, selected_year,
+   selected_accounts, accounts_available, account_filter_active,
    plus table-view keys: violations, summary, groups, expand_default, lag_days, source_label, sort, order, next_lag_order
    or calendar-view keys: markers
 #}
+{% import "_account_multi_select.html" as macros_acc %}
 
 {# Unified filter bar — fields used by both views #}
-{% set _has_filters = filter_ticker or filter_account or filter_confidence or filter_year_explicit %}
+{% set _has_filters = filter_ticker or selected_accounts or filter_confidence or filter_year_explicit %}
 <details class="mb-4" {% if _has_filters %}open{% endif %}>
   <summary class="cursor-pointer text-sm text-label-2 mb-2 select-none">
     <span class="text-label-1 font-medium">Filter</span>
-    {% if _has_filters %}<span class="text-label-3">— {% if filter_ticker %}{{ filter_ticker }} · {% endif %}{% if filter_account %}{{ filter_account }} · {% endif %}{% if filter_year %}{{ filter_year }} · {% endif %}{% if filter_confidence %}{{ filter_confidence }}{% endif %}</span>{% endif %}
+    {% if _has_filters %}<span class="text-label-3">— {% if filter_ticker %}{{ filter_ticker }} · {% endif %}{% if selected_accounts %}{{ selected_accounts|join(', ') }} · {% endif %}{% if filter_year %}{{ filter_year }} · {% endif %}{% if filter_confidence %}{{ filter_confidence }}{% endif %}</span>{% endif %}
   </summary>
-<form method="get" class="panel flex gap-3 flex-wrap items-end">
+<form method="get" action="/tax" class="panel flex gap-3 flex-wrap items-end">
   <input type="hidden" name="view" value="{{ view }}"/>
   <div>
     <label class="block label-uc">Ticker</label>
@@ -25,12 +27,7 @@
   </div>
   <div>
     <label class="block label-uc">Account</label>
-    <input type="text" name="account" value="{{ filter_account }}" list="account-list"
-           class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-40"
-           style="border:0.5px solid var(--color-hairline);"/>
-    <datalist id="account-list">
-      {% for a in accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
-    </datalist>
+    {{ macros_acc.account_multi_select(accounts_available, selected_accounts) }}
   </div>
   <div>
     <label class="block label-uc">Year</label>
@@ -80,8 +77,8 @@
               class="ml-1 hover:text-text">&#10007;</button>
     </span>
   {% endif %}
-  {% if filter_account %}
-    <span class="chip">account: {{ filter_account }}
+  {% if selected_accounts %}
+    <span class="chip">account: {{ selected_accounts|join(', ') }}
       <button type="button" aria-label="Remove account filter"
               hx-get="{{ chips_clear_urls.account }}" hx-target="body" hx-push-url="true"
               class="ml-1 hover:text-text">&#10007;</button>
@@ -135,7 +132,7 @@
 
 {# View toggle — segmented control. Preserve filters when toggling. #}
 {% set _year_qs = 0 if all_years else (filter_year or selected_year) %}
-{% set qs_no_view %}ticker={{ filter_ticker|urlencode }}&account={{ filter_account|urlencode }}&year={{ _year_qs }}&confidence={{ filter_confidence|urlencode }}{% endset %}
+{% set qs_no_view %}ticker={{ filter_ticker|urlencode }}{% for a in selected_accounts %}&account={{ a|urlencode }}{% endfor %}&year={{ _year_qs }}&confidence={{ filter_confidence|urlencode }}{% endset %}
 <div class="seg mb-4 inline-flex">
   <a href="/tax?view=table&{{ qs_no_view }}"
      class="px-3 py-1.5 text-sm {% if view == 'table' %}seg-active{% endif %}">Table</a>
