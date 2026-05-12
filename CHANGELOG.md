@@ -2,6 +2,115 @@
 
 
 
+## v0.64.0 (2026-05-12)
+
+### Chore
+
+* chore(docs): refresh GitNexus stats in AGENTS.md and CLAUDE.md
+
+Auto-generated metadata refresh from the most recent npx gitnexus
+analyze run. No functional changes. ([`9aea02d`](https://github.com/chen-star/net_alpha/commit/9aea02d8d77a889bf503a1ab7a15b61f3e4f653f))
+
+### Feature
+
+* feat(palette): jump to verify findings, Sim sell/buy actions, expanded pages
+
+PAGES grows from 8 → 14 (adds /verify, /wash-sales, /tax/harvest/plan,
+/tax/projection-config, /settings/accounts, /backup). The index now
+emits two new kinds:
+
+  * Action — &#34;Sim sell SYM&#34; / &#34;Sim buy SYM&#34; per held symbol, routing
+    to /sim?ticker=SYM&amp;action=… so the user can pre-fill the simulator
+    from the palette
+  * Finding — up to MAX_FINDINGS=20 rows from the latest verify run
+    (capped so a noisy week doesn&#39;t bloat every page render); all link
+    to /verify and are searchable by rule_id, scope, or severity
+
+JS rank() / recentItems() / commit() learn the new kinds; Findings are
+deliberately not persisted to recents (they&#39;re ephemeral per run).
+loadIndex() back-fills the new keys for older bootstrap blobs.
+
+6 new tests cover page coverage, action-emission-only-for-held,
+finding pull from latest run, MAX_FINDINGS cap. ([`4064e9d`](https://github.com/chen-star/net_alpha/commit/4064e9d0e53efccd4a19e1e30c7a849db1ef9472))
+
+* feat(verify): inline &#34;Why?&#34; explainer + one-click suppress + freshness banner
+
+Polish on top of the verify engine merge. Each verify_finding row now
+expands to a rule-specific explanation (with a /reconciliation deep
+link for BasisRecon/RealizedRecon and an /imports link for
+StaleReference). The same panel hosts a &#34;Suppress for 1 year&#34; form that
+appends to ~/.net_alpha/config.yaml (idempotent on rule_id+scope,
+preserving other top-level keys) and re-runs verify so the finding
+disappears immediately. The /verify dashboard gets a freshness banner
+for the broker All-Positions CSV (never-uploaded vs &gt;30 days vs OK),
+and the global header pill tooltip now reports positions CSV age.
+
+10 new tests cover explainer copy, suppress YAML idempotency, and
+banner states. ([`3b16c9a`](https://github.com/chen-star/net_alpha/commit/3b16c9a99af31c35fcded561b07c0c0a2ffabe04))
+
+### Fix
+
+* fix(palette): resolve &#34;paletteOverlay is not defined&#34; at Alpine init
+
+Three things had to align before the ⌘K overlay could mount cleanly:
+
+1. _palette.html: x-data=&#34;paletteOverlay()&#34; → x-data=&#34;window.paletteOverlay()&#34;
+   Alpine 3&#39;s expression evaluator does not resolve bare global
+   identifiers — it does follow window.*.
+2. palette.js: replace the brittle alpine:init listener + fallback
+   dance (Alpine.data registration races the init dispatch under
+   defer loading) with a one-line window.paletteOverlay = paletteOverlay
+   export. Timing-independent.
+3. base.html: move palette.js (and its palette-index JSON) to load
+   BEFORE alpine.min.js. Defer scripts run in document order; Alpine&#39;s
+   first init pass evaluates x-data before subsequent defer scripts
+   execute, so the factory has to be on window already by then.
+
+Two regression tests assert (a) the template uses the window-prefixed
+form and (b) palette.js exposes the factory on window. ([`46d25df`](https://github.com/chen-star/net_alpha/commit/46d25dff06836181ba68047f1ef9c165e3aeb7e2))
+
+### Unknown
+
+* Merge pull request #8 from chen-star/feat/verify-engine-polish
+
+Feat/verify engine polish ([`96a0fe9`](https://github.com/chen-star/net_alpha/commit/96a0fe984e43b16daafb8964ee7406ce3ab40062))
+
+* Merge origin/master: integrate multi-account filter + v0.63.0
+
+Reconciles two parallel feature lines:
+  * origin/master — multi-account filter across Portfolio/Positions/Plan/
+    Tax/Wash Sales/Imports, schema v23 baseline, v0.63.0 release tag.
+  * feat/verify-engine-polish — the 3-layer verification engine plus this
+    session&#39;s polish (inline explainer + suppress, palette upgrades,
+    Alpine init fix), schema bumped to v24 for verify_result /
+    verify_finding / broker_position tables.
+
+Conflict resolution
+-------------------
+src/net_alpha/web/templates/positions.html
+  Both sides edited the toolbar block. Combined: keep this branch&#39;s
+  verify-badge-slot wrapper AND adopt origin&#39;s relaxed gating
+  ({% if imports %} without the selected_view restriction — origin
+  intentionally exposed the toolbar on every view in 3599afe).
+
+Adaptations
+-----------
+src/net_alpha/web/routes/verify.py
+  compute_open_positions(account=None) → accounts=None to match the
+  widened signature from origin&#39;s multi-account work.
+
+tests/verify/golden/test_golden.py
+  Same param rename for compute_kpis(account=None) → accounts=None.
+
+Schema migration ladder auto-merged cleanly: CURRENT_SCHEMA_VERSION=24,
+_migrate_v23_to_v24 is the verify-tables migration, freeze tests assert
+24. Origin&#39;s earlier confusion around v23/v24 was already reverted
+upstream in 037214d, so the merge picks up the corrected v23 baseline
+and our v24 bump sits on top.
+
+All 2164 tests pass on the merged tree. ([`4db1625`](https://github.com/chen-star/net_alpha/commit/4db1625f1f9a793bf702d9156cea86db0e58ef0a))
+
+
 ## v0.63.0 (2026-05-12)
 
 ### Feature
@@ -139,6 +248,80 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f010fb9`](htt
 
 * feat(web): add parse_accounts() helper for multi-account URL filter ([`d870707`](https://github.com/chen-star/net_alpha/commit/d870707c84830b0b09b660ed65c5b09d9ae11f33))
 
+* feat(verify): suppression list (user-acknowledged known issues)
+
+Adds verify/suppress.py with SuppressionRule + load_suppressions() +
+is_suppressed(). Source: &#39;verify.suppress&#39; section in
+~/.net_alpha/config.yaml. Matching is rule_id-exact, scope-prefix
+(&#39;BRK.B&#39; suppresses both &#39;BRK.B/IRA&#39; and &#39;BRK.B/Taxable&#39;), and
+auto-expiring (today &gt; until disqualifies). Malformed entries are
+skipped, never fatal.
+
+Drops the Phase 5 try/except import stub in service/jobs/verify.py
+and switches it to the real is_suppressed call.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`92939a7`](https://github.com/chen-star/net_alpha/commit/92939a77ab16153386e3d044d4cfe4bef54a8d93))
+
+* feat(verify): global header status pill summarizing latest verify run
+
+Anchored on every page via base.html&#39;s topbar, linking to /verify. Status
+mirrors the latest verify_result row: ok/warn/fail/stale, or &#39;grey&#39; when
+no run has been recorded yet. Payload comes from a Jinja global function
+(verify_pill_data) following the same single-LIMIT-1 cheap-read pattern
+used by imports_badge_count and profile_switcher_data.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`295250a`](https://github.com/chen-star/net_alpha/commit/295250a4b62a8d3cee2c54fbb443436b179a1264))
+
+* feat(verify): /verify page, /verify/run, /verify/findings/{id}
+
+Extends the existing verify router (Task 10 shipped only the inline
+/verify/badge fragment). The page lists the latest run summary, the
+embedded findings table, and a 30-row run history; POST /verify/run
+triggers a synchronous run with trigger=&#34;manual&#34; then redirects;
+GET /verify/findings/{id} returns the same findings-table fragment for
+a historical run id (404 if unknown).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a35f557`](https://github.com/chen-star/net_alpha/commit/a35f557c5c17e0c19bd5e58093396d1c0ba79035))
+
+* feat(verify): register weekly Sunday 04:30 verify job in APScheduler
+
+Sunday 04:30 UTC sits 30 min after the daily 04:00 washsale-watch and an
+hour after the 03:30 backup, so the three nightly jobs never overlap.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`307d63c`](https://github.com/chen-star/net_alpha/commit/307d63c074eec18a39f3c0e1fada3972c66c110e))
+
+* feat(verify): job orchestrator + repository persistence (verify_result + findings) ([`bd7fce2`](https://github.com/chen-star/net_alpha/commit/bd7fce248fe5c370129ead20f4ada9848fca758c))
+
+* feat(verify): open-positions reconciler with 30-day staleness gate ([`f40c6c2`](https://github.com/chen-star/net_alpha/commit/f40c6c24e9d6c67bd60704fad0b874039736211d))
+
+* feat(verify): realized-G/L reconciler emits verify_finding rows ([`949c2e7`](https://github.com/chen-star/net_alpha/commit/949c2e7f6db9e76817f27f365970870127cf8e14))
+
+* feat(verify): /imports/positions upload endpoint + broker_position persistence ([`20ea286`](https://github.com/chen-star/net_alpha/commit/20ea286bb4df3505c3662730fe1a9665f7003f44))
+
+* feat(verify): Schwab All-Positions CSV parser with header-date extraction ([`2abe024`](https://github.com/chen-star/net_alpha/commit/2abe024ba5f33e22f8734715b4e743e83cb9b2c5))
+
+* feat(verify): wire badge fragment into /positions shell ([`7eabc8e`](https://github.com/chen-star/net_alpha/commit/7eabc8efec13dfcb52c20f5ca2da7dd6ebba6496))
+
+* feat(verify): /verify/badge HTMX fragment for Overview page ([`20c4101`](https://github.com/chen-star/net_alpha/commit/20c4101f7987d3caf0089d3e80d00a52f2b2d7e8))
+
+* feat(verify): BadgeStatus + run_inline orchestrator (L1 entrypoint) ([`1316519`](https://github.com/chen-star/net_alpha/commit/13165194cfcf29a6a27b6c6145577f4c4637404d))
+
+* feat(verify): XP-1 cross-page invariant + module-level OverviewTotalCache ([`ec2e819`](https://github.com/chen-star/net_alpha/commit/ec2e819ce252f901e34bbb6911611acbe8c6ad7e))
+
+* feat(verify): PL-1, PL-2, PL-3 per-lot invariants (incl. §1223(4) holding period) ([`4b873f8`](https://github.com/chen-star/net_alpha/commit/4b873f8b53b954a39a8ac8d6f98e10ed312d3af0))
+
+* feat(verify): AL-1, AL-2 allocation invariants ([`1528b51`](https://github.com/chen-star/net_alpha/commit/1528b519f7a1c0cda29bfe26d02058fcec8568ec))
+
+* feat(verify): OV-1, OV-2, OV-3 invariant check functions ([`94fbaa3`](https://github.com/chen-star/net_alpha/commit/94fbaa344ffe990b223fef68367483dc6854b668))
+
+* feat(verify): tolerance config (defaults + ~/.net_alpha/config.yaml overrides) ([`bc8ab1f`](https://github.com/chen-star/net_alpha/commit/bc8ab1f69d061b3047637fa9ddb2802b1b1337c6))
+
+* feat(verify): BrokerPosition SQLModel for Schwab All-Positions CSV rows ([`4564add`](https://github.com/chen-star/net_alpha/commit/4564addf958ccf7a33712ff5cc3791c8dbfe0c8c))
+
+* feat(verify): VerifyResult and VerifyFinding SQLModel rows ([`2ad8f1c`](https://github.com/chen-star/net_alpha/commit/2ad8f1c4f21230ed78817909aeb7d9ed4540a987))
+
+* feat(verify): schema v24 adds verify_result, verify_finding, broker_position tables ([`9405165`](https://github.com/chen-star/net_alpha/commit/940516573692bbb2928ab49cb04db8cb2d221eda))
+
 ### Fix
 
 * fix(web): preserve multi-account filter on HTMX URLs + UX gaps from review
@@ -198,6 +381,13 @@ Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`180392e`](htt
 
 ### Style
 
+* style(verify): ruff format golden test runner
+
+Collapse short multi-line f-string assertion messages onto one line so
+ruff format is clean.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9f5e492`](https://github.com/chen-star/net_alpha/commit/9f5e492e9fd85a38522224b13f28dcb9784c60f4))
+
 * style(1091-ira): ruff format migrations.py
 
 Collapse the v22→v23 ALTER TABLE call to a single line so `ruff format
@@ -246,6 +436,64 @@ weren&#39;t updated alongside the bump.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0d15f6a`](https://github.com/chen-star/net_alpha/commit/0d15f6a6f85277b08aa7256033f1f9e584048148))
 
+* test(verify): e2e — trade import → positions import → verify run → page render
+
+Exercises the full Phase 1-6 pipeline through the FastAPI TestClient:
+
+  1. POST /imports (Schwab trade CSV) → trades + lots + wash recompute
+  2. POST /imports/positions → broker_position rows + implicit verify run
+  3. POST /verify/run → manual verify run
+  4. GET /verify renders the latest-run summary
+  5. GET / and /positions ship the verify-badge slot
+  6. GET /verify/badge?page=overview returns a real data-verify-badge fragment
+
+Reuses tests/fixtures/schwab_sample.csv as the trade fixture (the plan&#39;s
+referenced schwab_sample_trades.csv doesn&#39;t exist).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a7c0518`](https://github.com/chen-star/net_alpha/commit/a7c0518c75cae501fe42aee9d94b215f1da62a55))
+
+* test(verify): 4 hand-authored golden KPI snapshots
+
+Adds end-to-end snapshot tests that drive trades through the real
+create_manual_trade → recompute_all_violations → compute_kpis pipeline
+and lock in the resulting KPIs and lot state.
+
+Cases:
+  01_simple_buy_hold  — clean unrealized gain on a single open lot
+  02_partial_sale     — FIFO-consumed partial sale; period realized
+  03_wash_sale_tacking — wash sale: locks in actual engine behavior
+                         (see YAML for two observed quirks worth
+                         chasing later — earliest-candidate wash-sale
+                         match and the GL-only disallowed-loss add-back
+                         path in compute_kpis)
+  04_section_1256     — closed SPX option; gain shows as period_realized
+                        (60/40 split lives in section_1256/classifier.py,
+                         not in compute_kpis)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f58ad0a`](https://github.com/chen-star/net_alpha/commit/f58ad0a83421ae8bbf024fe2ba1f720393678a1e))
+
+* test(verify): Hypothesis property tests for OV-*, AL-1, PL-1, PL-2
+
+Adds 5 property tests that exercise the same invariant functions used at
+L1 render-time against generated portfolio shapes. The same functions
+verify the badge and these tests, guaranteeing the two agree on what
+&#34;correct&#34; means.
+
+- max_examples=50 per test (~0.8s total)
+- Tolerance is widened to (0.10 abs, 0.001 rel) to absorb float rounding
+  across multi-lot sums
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a95fb33`](https://github.com/chen-star/net_alpha/commit/a95fb33ebe5fae8dee13912214c0a5916bfecb8c))
+
+* test(verify): guard service uninstall leaves no verify residue
+
+Two guards: (1) outside scheduler.py and control.py no service-layer module
+may mention &#39;verify&#39;, so a future launchd-plist drift is loud; (2) a smoke
+test that calls control.uninstall() inside a temp HOME to ensure no
+verify-specific cleanup path raises.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ec1b11f`](https://github.com/chen-star/net_alpha/commit/ec1b11f7ab8a0abee4b28c2784c0bab136e469f6))
+
 ### Unknown
 
 * Merge pull request #7 from chen-star/worktree-feat+multi-account-filter
@@ -259,6 +507,8 @@ that bump only exists in the original repo&#39;s uncommitted working tree —
 the worktree branched from origin/master where the source is still v23.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`037214d`](https://github.com/chen-star/net_alpha/commit/037214d6b47449a70363c8a256890bc10eb07444))
+
+* Merge feat/verify-engine: Overview/Positions verification engine (3-layer: invariants + broker recon + Hypothesis) ([`48f5f56`](https://github.com/chen-star/net_alpha/commit/48f5f566eceafd074a019a6b79d3ac56e5988b0a))
 
 
 ## v0.62.0 (2026-05-11)
