@@ -1,15 +1,24 @@
 {% set active_page = '' %}
 {% extends "base.html" %}
+{% import "_account_multi_select.html" as macros_acc %}
 {% block title %}Imports · net-alpha{% endblock %}
 {% block content %}
-  <h1 class="text-2xl mb-4">Imports</h1>
+  <div class="flex items-end justify-between flex-wrap gap-3 mb-4">
+    <h1 class="text-2xl">Imports</h1>
+    <form method="get" action="/imports/_legacy_page" class="flex gap-3 items-end text-sm">
+      <div>
+        <label class="label-uc sr-only">Account</label>
+        {{ macros_acc.account_multi_select(accounts_available, selected_accounts) }}
+      </div>
+    </form>
+  </div>
   <div class="mb-4">
     {% include "_drop_zone.html" %}
   </div>
 
   {% include "_data_hygiene.html" %}
 
-  <div id="imports-table">
+  <div id="imports-table" data-testid="imports-table">
     {% include "_imports_table.html" %}
   </div>
 {% endblock %}
