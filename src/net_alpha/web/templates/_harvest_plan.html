@@ -58,6 +58,12 @@
       &middot; against ordinary income (capped $3K):
       <span class="num">${{ "%.2f"|format(plan.ordinary_offset_used|float) }}</span>
     </div>
+    {% if account_filter_active %}
+    <div class="text-[11px] text-warn mt-2"
+         data-testid="offset-taxpayer-caveat">
+      Offset budget is taxpayer-level. Candidate lots are filtered to your selected accounts, but offset capacity (§1211 cap, §1212(b) carryforward) is shared across all accounts.
+    </div>
+    {% endif %}
   </div>
 
   {% if rows %}
