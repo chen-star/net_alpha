@@ -14,7 +14,12 @@
 
   {% include "_harvest_summary.html" %}
 
-  {# Taxpayer caveat moves to /tax page level (B2 — Task 9). #}
+  {# B2: taxpayer-level offset caveat — shared partial. Rendered here because
+     this fragment is loaded via HTMX into /positions?view=at-loss (the new
+     home for the harvest plan after the Phase 1 IA move). The page-level
+     copy in tax.html covers /tax routes; both call the same template so
+     there's a single source of truth for the caveat copy. #}
+  {% include "_taxpayer_caveat.html" %}
 
   <div id="harvest-table">
   {% if rows %}

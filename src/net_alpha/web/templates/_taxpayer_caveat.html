@@ -1,0 +1,17 @@
+{# B2: Single-source taxpayer-level offset caveat. Rendered once at the top
+   of /tax when an account filter is active. Replaces the inline blocks
+   previously embedded in _harvest_plan.html and _tax_wash_sales_tab.html.
+
+   Caller must set:
+     account_filter_active : bool
+     selected_accounts     : list[str]
+#}
+{% if account_filter_active %}
+<div data-testid="taxpayer-caveat"
+     class="panel mb-3 px-3 py-2 text-[12px] text-warn">
+  Offset budget is taxpayer-level. Filtered candidate lots reflect the
+  selected account{% if selected_accounts|length != 1 %}s{% endif %}
+  {% if selected_accounts|length == 1 %}(<strong>{{ selected_accounts[0] }}</strong>){% endif %},
+  but offset capacity (§1211 cap, §1212(b) carryforward) is shared across all accounts.
+</div>
+{% endif %}

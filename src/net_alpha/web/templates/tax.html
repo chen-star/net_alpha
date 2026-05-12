@@ -43,6 +43,9 @@
       </div>
     </form>
     {% endif %}
+    {# B2: page-level taxpayer caveat — replaces inline blocks formerly embedded in
+       _harvest_plan.html and _tax_wash_sales_tab.html. #}
+    {% include "_taxpayer_caveat.html" %}
     <nav class="tabs mb-4" role="tablist">
       {% set tabs = [
         ("wash-sales", "Wash sales"),
