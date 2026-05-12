@@ -1,15 +1,17 @@
 {% extends "base.html" %}
 {% set active_page = 'tax' %}
+{# NOTE: This template is no longer rendered. /wash-sales 301-redirects to /tax
+   which uses tax.html + _tax_wash_sales_tab.html instead. Kept for reference only. #}
 {% block title %}Wash sales · net-alpha{% endblock %}
 {% block content %}
   <h1 class="text-2xl mb-4">Wash sales</h1>
 
   {# Unified filter bar — fields used by both views #}
-  {% set _has_filters = filter_ticker or filter_account or filter_confidence or filter_year_explicit %}
+  {% set _has_filters = filter_ticker or account_filter_active or filter_confidence or filter_year_explicit %}
   <details class="mb-4" {% if _has_filters %}open{% endif %}>
     <summary class="cursor-pointer text-sm text-label-2 mb-2 select-none">
       <span class="text-label-1 font-medium">Filter</span>
-      {% if _has_filters %}<span class="text-label-3">— {% if filter_ticker %}{{ filter_ticker }} · {% endif %}{% if filter_account %}{{ filter_account }} · {% endif %}{% if filter_year %}{{ filter_year }} · {% endif %}{% if filter_confidence %}{{ filter_confidence }}{% endif %}</span>{% endif %}
+      {% if _has_filters %}<span class="text-label-3">— {% if filter_ticker %}{{ filter_ticker }} · {% endif %}{% if selected_accounts %}{{ selected_accounts|join(', ') }} · {% endif %}{% if filter_year %}{{ filter_year }} · {% endif %}{% if filter_confidence %}{{ filter_confidence }}{% endif %}</span>{% endif %}
     </summary>
   <form method="get" class="panel flex gap-3 flex-wrap items-end">
     <input type="hidden" name="view" value="{{ view }}"/>
@@ -24,11 +26,14 @@
     </div>
     <div>
       <label class="block label-uc">Account</label>
-      <input type="text" name="account" value="{{ filter_account }}" list="account-list"
+      {% for a in (selected_accounts or []) %}
+        <input type="hidden" name="account" value="{{ a }}"/>
+      {% endfor %}
+      <input type="text" name="account" value="" list="account-list"
              class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-40"
              style="border:0.5px solid var(--color-hairline);"/>
       <datalist id="account-list">
-        {% for a in accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+        {% for a in (accounts_available or []) %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
       </datalist>
     </div>
     <div>

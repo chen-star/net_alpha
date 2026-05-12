@@ -64,8 +64,8 @@ def get_tax(
 
     accounts: list[str] = parse_accounts(account)
     account_filter_active: bool = bool(accounts)
-    # Single-account bridge: _wash_sales_context still takes account: str | None.
-    # Task 11 will widen it to accept accounts: list[str].
+    # Legacy single-account value: kept for templates (positions/portfolio) that
+    # still use selected_account (singular) in HTMX fragment URLs.
     single_account: str | None = accounts[0] if len(accounts) == 1 else None
 
     # Normalise tab-level view key for context / template branching.
@@ -122,7 +122,7 @@ def get_tax(
             _wash_sales_context(
                 repo,
                 ticker=ticker,
-                account=single_account,
+                accounts=accounts,
                 year=year,
                 confidence=confidence,
                 sort=sort,
@@ -134,7 +134,8 @@ def get_tax(
         ctx["view"] = inner_view
         ctx["tab_view"] = tab_view
         ctx["chips_clear_urls"] = _build_chips_clear_urls(request)
-        # Re-inject multi-account context keys (wash_sales_context may overwrite some).
+        # Re-inject multi-account context keys so outer ctx wins over whatever
+        # _wash_sales_context emitted (they now agree, but be explicit).
         ctx["selected_accounts"] = accounts
         ctx["accounts_available"] = accounts_available
         ctx["account_filter_active"] = account_filter_active
