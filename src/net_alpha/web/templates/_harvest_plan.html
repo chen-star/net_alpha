@@ -12,64 +12,11 @@
 #}
 <section id="harvest-queue-region" class="space-y-3">
 
-  <div class="panel p-3">
-    <div class="label-uc mb-2">Harvest plan</div>
-    <form hx-get="/tax/harvest/plan" hx-trigger="change delay:200ms"
-          hx-target="#harvest-queue-region" hx-swap="outerHTML"
-          class="flex flex-wrap gap-3 items-baseline text-sm">
-      <label class="inline-flex items-center gap-1">
-        <input type="radio" name="mode" value="auto"
-               {% if mode == 'auto' %}checked{% endif %}> Auto
-        <span class="text-label-2 text-[11px]"
-              title="Gross YTD gains (winners only, before losses). Used to size the harvest budget — not net realized P/L.">
-          (${{ "{:,.0f}".format(plan.realized_gains_ytd|float|abs) }} YTD gross gains
-          + $3,000 ordinary cap)
-        </span>
-      </label>
-      <label class="inline-flex items-center gap-1">
-        <input type="radio" name="mode" value="custom"
-               {% if mode == 'custom' %}checked{% endif %}> Custom
-        <input type="number" name="custom_budget" min="0" step="100"
-               value="{{ custom_budget }}"
-               class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[12px] w-28"
-               style="border:0.5px solid var(--color-hairline);"
-               oninput="this.form.querySelector('input[value=custom]').checked = true">
-      </label>
-      <label class="inline-flex items-center gap-1">
-        <input type="checkbox" name="exclude_locked" value="1"
-               {% if exclude_locked %}checked{% endif %}>
-        Exclude locked
-      </label>
-    </form>
+  {% include "_harvest_summary.html" %}
 
-    <div class="mt-3 text-[13px] text-label-1 leading-[1.55]">
-      Selected: <span class="num font-semibold">{{ plan.selected|length }}</span>
-      of {{ rows|length }} candidates
-      &middot; <span class="num text-neg">−${{ "%.2f"|format(plan.total_loss_harvested|float|abs) }}</span>
-      loss harvested
-      {% if has_tax_config %}
-        &middot; tax saved (est.): <span class="num text-pos">${{ "%.2f"|format(plan.estimated_tax_saved|float) }}</span>
-      {% else %}
-        &middot; <a href="/tax?view=projection" class="text-label-2 underline">configure tax rates</a> to see tax-saved estimates
-      {% endif %}
-    </div>
-    <div class="text-[11px] text-label-2 mt-1">
-      Offsets gains: <span class="num">${{ "%.2f"|format(plan.gain_offset_used|float) }}</span>
-      &middot; against ordinary income (capped $3K):
-      <span class="num">${{ "%.2f"|format(plan.ordinary_offset_used|float) }}</span>
-    </div>
-    {% if account_filter_active %}
-    <div class="text-[11px] text-warn mt-2"
-         data-testid="offset-taxpayer-caveat">
-      {% if selected_accounts | default([]) | length == 1 %}
-        Offset budget is taxpayer-level. Candidate lots below are filtered to <strong>{{ selected_accounts[0] }}</strong>, but offset capacity (§1211 cap, §1212(b) carryforward) is shared across all accounts.
-      {% else %}
-        Offset budget is taxpayer-level. Multi-account harvest candidates are not yet partitioned by account; the list below covers all accounts. Filtering will arrive in a follow-up.
-      {% endif %}
-    </div>
-    {% endif %}
-  </div>
+  {# Taxpayer caveat moves to /tax page level (B2 — Task 9). #}
 
+  <div id="harvest-table">
   {% if rows %}
   <table class="net-table">
     <thead class="sticky top-0 z-10 bg-bg">
@@ -94,7 +41,7 @@
                  {% if _checked %}checked{% endif %}
                  hx-get="/tax/harvest/plan?mode=manual"
                  hx-trigger="change"
-                 hx-target="#harvest-queue-region"
+                 hx-target="#harvest-summary"
                  hx-swap="outerHTML"
                  hx-include="[name='pick']:checked,[name='exclude_locked']">
         </td>
@@ -109,7 +56,8 @@
             <span class="chip-unclear" style="color: var(--color-pos); background: rgba(48,209,88,0.14);">clear</span>
           {% endif %}
         </td>
-        <td class="r num">
+        {% set _acct_slug = row.account_label|replace('/', '__')|replace(' ', '_') %}
+        <td id="tax-saved-{{ row.symbol }}-{{ _acct_slug }}" class="r num">
           {% if has_tax_config %}
           {% set _ts = tax_saved_by_key[(row.symbol, row.account_label)] %}
             <span class="text-pos">${{ "%.2f"|format(_ts|float) }}</span>
@@ -137,5 +85,6 @@
   {% else %}
     <p class="text-label-2 text-[13px]">No harvestable candidates right now.</p>
   {% endif %}
+  </div>
 
 </section>

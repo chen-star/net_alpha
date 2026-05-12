@@ -279,6 +279,43 @@ def harvest_plan(
         "page_size_options": (10, 25, 50, 100),
     }
 
+    has_tax_config = brackets is not None
+
+    # A2.3: HTMX-target-aware response. When the summary is the target,
+    # return only the summary partial plus OOB fragments for the per-row
+    # tax-saved cells (no full table re-render → no scroll jump).
+    hx_target = request.headers.get("HX-Target") or ""
+    if hx_target == "harvest-summary":
+        oob_cells_parts: list[str] = []
+        if has_tax_config:
+            for row in rows:
+                key = (row.symbol, row.account_label)
+                ts = tax_saved_by_key.get(key)
+                if ts is None:
+                    continue
+                acct_slug = (
+                    row.account_label.replace("/", "__").replace(" ", "_")
+                )
+                cell_id = f"tax-saved-{row.symbol}-{acct_slug}"
+                oob_cells_parts.append(
+                    f'<td id="{cell_id}" hx-swap-oob="true" class="r num">'
+                    f'<span class="text-pos">${ts:.2f}</span>'
+                    f"</td>"
+                )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_harvest_summary.html",
+            {
+                "plan": plan,
+                "rows": rows,
+                "mode": mode,
+                "custom_budget": budget_str,
+                "exclude_locked": exclude_locked,
+                "has_tax_config": has_tax_config,
+                "oob_cells": "".join(oob_cells_parts),
+            },
+        )
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_harvest_plan.html",
@@ -291,7 +328,7 @@ def harvest_plan(
             "mode": mode,
             "custom_budget": budget_str,
             "exclude_locked": exclude_locked,
-            "has_tax_config": brackets is not None,
+            "has_tax_config": has_tax_config,
             "pagination": pagination,
             "picks": pick or [],
             "account_filter_active": account_filter_active,

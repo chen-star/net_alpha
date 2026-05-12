@@ -1,0 +1,53 @@
+{# Harvest plan summary tile — splits out of _harvest_plan.html so it can
+   be HTMX-swapped on checkbox toggle without remounting the table (A2.3). #}
+<div id="harvest-summary" class="panel p-3">
+  <div class="label-uc mb-2">Harvest plan</div>
+  <form hx-get="/tax/harvest/plan" hx-trigger="change delay:200ms"
+        hx-target="#harvest-summary" hx-swap="outerHTML"
+        class="flex flex-wrap gap-3 items-baseline text-sm">
+    <label class="inline-flex items-center gap-1">
+      <input type="radio" name="mode" value="auto"
+             {% if mode == 'auto' %}checked{% endif %}> Auto
+      <span class="text-label-2 text-[11px]"
+            title="Gross YTD gains (winners only, before losses). Used to size the harvest budget — not net realized P/L.">
+        (${{ "{:,.0f}".format(plan.realized_gains_ytd|float|abs) }} YTD gross gains
+        + $3,000 ordinary cap)
+      </span>
+    </label>
+    <label class="inline-flex items-center gap-1">
+      <input type="radio" name="mode" value="custom"
+             {% if mode == 'custom' %}checked{% endif %}> Custom
+      <input type="number" name="custom_budget" min="0" step="100"
+             value="{{ custom_budget }}"
+             class="bg-surface text-text rounded-md px-2 py-1 font-mono text-[12px] w-28"
+             style="border:0.5px solid var(--color-hairline);"
+             oninput="this.form.querySelector('input[value=custom]').checked = true">
+    </label>
+    <label class="inline-flex items-center gap-1">
+      <input type="checkbox" name="exclude_locked" value="1"
+             {% if exclude_locked %}checked{% endif %}>
+      Exclude locked
+    </label>
+  </form>
+
+  <div class="mt-3 text-[13px] text-label-1 leading-[1.55]">
+    Selected: <span class="num font-semibold">{{ plan.selected|length }}</span>
+    of {{ rows|length }} candidates
+    &middot; <span class="num text-neg">−${{ "%.2f"|format(plan.total_loss_harvested|float|abs) }}</span>
+    loss harvested
+    {% if has_tax_config %}
+      &middot; tax saved (est.): <span class="num text-pos">${{ "%.2f"|format(plan.estimated_tax_saved|float) }}</span>
+    {% else %}
+      &middot; <a href="/tax?view=projection" class="text-label-2 underline">configure tax rates</a> to see tax-saved estimates
+    {% endif %}
+  </div>
+  <div class="text-[11px] text-label-2 mt-1">
+    Offsets gains: <span class="num">${{ "%.2f"|format(plan.gain_offset_used|float) }}</span>
+    &middot; against ordinary income (capped $3K):
+    <span class="num">${{ "%.2f"|format(plan.ordinary_offset_used|float) }}</span>
+  </div>
+</div>
+
+{# When called via HTMX with HX-Target=harvest-summary, the route also emits
+   per-row OOB tax-saved cell fragments below. #}
+{% if oob_cells %}{{ oob_cells|safe }}{% endif %}
