@@ -15,7 +15,9 @@
       <div class="verify-badge-slot"
            hx-get="/verify/badge?page=positions"
            hx-trigger="load delay:200ms"
-           hx-swap="innerHTML"></div>
+           hx-swap="innerHTML">
+        {% with _skel_variant='pill' %}{% include "_skeleton.html" %}{% endwith %}
+      </div>
       {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
     </div>
   </div>
@@ -90,7 +92,7 @@
       </button>
     </header>
     <div id="positions-pane-body" class="flex-1 overflow-y-auto px-4 py-4">
-      <div class="text-label-2 text-[12px]">Loading…</div>
+      {% with _skel_variant='pane' %}{% include "_skeleton.html" %}{% endwith %}
     </div>
   </aside>
 {% endblock %}

@@ -687,3 +687,56 @@ td.rail-col { position: relative; padding: 0 0 0 8px; }
 }
 .pair-annot--roll { color: #9cc4ff; border-color: #3a4a5a; }
 .pair-annot--assign { color: #e8b85a; border-color: #5a4a2a; }
+
+/* ---------------------------------------------------------------
+ * Skeleton loaders (A3)
+ * --------------------------------------------------------------- */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton-block,
+.skeleton-pill {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 0%,
+    var(--color-surface-2) 50%,
+    var(--color-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  border: 0.5px solid var(--color-hairline);
+}
+
+/* ---------------------------------------------------------------
+ * Inline spinner (A5)
+ * --------------------------------------------------------------- */
+@keyframes spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.spinner-inline {
+  display: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-hairline);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+.htmx-request .spinner-inline,
+.htmx-request.spinner-inline {
+  display: inline-block;
+}
+
+/* ---------------------------------------------------------------
+ * Search input focus ring (A4)
+ * --------------------------------------------------------------- */
+.input-search:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-bg),
+    0 0 0 4px var(--color-accent);
+}

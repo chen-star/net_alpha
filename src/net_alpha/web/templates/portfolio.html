@@ -45,7 +45,9 @@
       <div class="verify-badge-slot"
            hx-get="/verify/badge?page=overview"
            hx-trigger="load delay:200ms"
-           hx-swap="innerHTML"></div>
+           hx-swap="innerHTML">
+        {% with _skel_variant='pill' %}{% include "_skeleton.html" %}{% endwith %}
+      </div>
       {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
     </div>
   </div>
@@ -56,6 +58,12 @@
     {%- set _body_qs %}period={{ selected_period }}{% for _a in selected_accounts %}&account={{ _a|urlencode }}{% endfor %}{%- endset -%}
     <div id="portfolio-body"
          hx-get="/portfolio/body?{{ _body_qs }}"
-         hx-trigger="load" hx-swap="innerHTML"></div>
+         hx-trigger="load" hx-swap="innerHTML">
+      <div class="space-y-4">
+        {% with _skel_variant='kpi-row' %}{% include "_skeleton.html" %}{% endwith %}
+        {% with _skel_variant='chart-panel' %}{% include "_skeleton.html" %}{% endwith %}
+        {% with _skel_variant='chart-panel' %}{% include "_skeleton.html" %}{% endwith %}
+      </div>
+    </div>
   {% endif %}
 {% endblock %}

@@ -107,6 +107,9 @@
   </form>
 
   <div id="sim-result"></div>
+  <template id="sim-result-skeleton">
+    {% with _skel_variant='result-panel' %}{% include "_skeleton.html" %}{% endwith %}
+  </template>
 
   {% include "_sim_recents.html" %}
 {% endblock %}
