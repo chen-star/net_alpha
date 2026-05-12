@@ -42,16 +42,16 @@ class _StubRepo:
         self._s1256_mtm = s1256_mtm
         self._disallowed = disallowed
 
-    def realized_pnl_split(self, period, account):
+    def realized_pnl_split(self, period, account=None, accounts=None):
         return {"short_term": self._st, "long_term": self._lt}
 
-    def section_1256_pnl(self, period, account):
+    def section_1256_pnl(self, period, account=None, accounts=None):
         return self._s1256
 
-    def section_1256_mtm_pnl(self, period, account):
+    def section_1256_mtm_pnl(self, period, account=None, accounts=None):
         return self._s1256_mtm
 
-    def wash_sale_disallowed_total(self, period, account):
+    def wash_sale_disallowed_total(self, period, account=None, accounts=None):
         return self._disallowed
 
 
@@ -297,3 +297,121 @@ def test_realized_pnl_split_excludes_1256_at_repo_level(tmp_path):
     # Only TSLA should be counted (-1000); SPX excluded.
     assert pnl["short_term"] == Decimal("-1000")
     assert pnl["long_term"] == Decimal("0")
+
+
+def test_compute_after_tax_accounts_list_threads_through_to_repo():
+    """accounts=['A','B'] should pass `accounts=['A','B']` keyword to every repo method."""
+    received: dict[str, object] = {}
+
+    class TrackingRepo:
+        def realized_pnl_split(self, period, account=None, accounts=None):
+            received["realized_pnl_split"] = (account, list(accounts) if accounts else None)
+            return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+
+        def section_1256_pnl(self, period, account=None, accounts=None):
+            received["section_1256_pnl"] = (account, list(accounts) if accounts else None)
+            return Decimal("0")
+
+        def section_1256_mtm_pnl(self, period, account=None, accounts=None):
+            received["section_1256_mtm_pnl"] = (account, list(accounts) if accounts else None)
+            return Decimal("0")
+
+        def wash_sale_disallowed_by_kind(self, period, account=None, accounts=None):
+            received["wash_sale_disallowed_by_kind"] = (account, list(accounts) if accounts else None)
+            return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
+
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Decimal("0.32"),
+        ltcg_rate=Decimal("0.15"),
+        qualified_div_rate=Decimal("0.15"),
+        state_marginal_rate=Decimal("0.09"),
+        niit_enabled=False,
+    )
+    result = compute_after_tax(
+        TrackingRepo(),
+        Period.for_year(2025),
+        account=None,
+        brackets=brackets,
+        accounts=["Schwab/A", "Schwab/B"],
+    )
+    for key in ("realized_pnl_split", "section_1256_pnl", "section_1256_mtm_pnl", "wash_sale_disallowed_by_kind"):
+        assert received[key] == (None, ["Schwab/A", "Schwab/B"]), (
+            f"{key} received {received[key]} instead of (None, ['Schwab/A', 'Schwab/B'])"
+        )
+    # When a multi-account filter is active, account_filter is a comma-joined string.
+    assert result.account_filter == "Schwab/A, Schwab/B"
+
+
+def test_compute_after_tax_single_account_legacy_still_works():
+    """account='Schwab/A' (legacy positional) still routes correctly when accounts is None."""
+    received: dict[str, object] = {}
+
+    class TrackingRepo:
+        def realized_pnl_split(self, period, account=None, accounts=None):
+            received["account_kw"] = account
+            received["accounts_kw"] = list(accounts) if accounts else None
+            return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+        def section_1256_pnl(self, period, account=None, accounts=None):
+            return Decimal("0")
+        def section_1256_mtm_pnl(self, period, account=None, accounts=None):
+            return Decimal("0")
+        def wash_sale_disallowed_by_kind(self, period, account=None, accounts=None):
+            return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
+
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Decimal("0.32"),
+        ltcg_rate=Decimal("0.15"),
+        qualified_div_rate=Decimal("0.15"),
+        state_marginal_rate=Decimal("0.09"),
+        niit_enabled=False,
+    )
+    result = compute_after_tax(
+        TrackingRepo(),
+        Period.for_year(2025),
+        account="Schwab/A",
+        brackets=brackets,
+    )
+    assert received["account_kw"] == "Schwab/A"
+    assert received["accounts_kw"] is None
+    assert result.account_filter == "Schwab/A"
+
+
+def test_compute_after_tax_accounts_empty_means_no_filter():
+    """accounts=[] should NOT thread anything to repo (None passed)."""
+    received: dict[str, object] = {}
+
+    class TrackingRepo:
+        def realized_pnl_split(self, period, account=None, accounts=None):
+            received["account_kw"] = account
+            received["accounts_kw"] = list(accounts) if accounts else None
+            return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+        def section_1256_pnl(self, period, account=None, accounts=None):
+            return Decimal("0")
+        def section_1256_mtm_pnl(self, period, account=None, accounts=None):
+            return Decimal("0")
+        def wash_sale_disallowed_by_kind(self, period, account=None, accounts=None):
+            return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
+
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Decimal("0.32"),
+        ltcg_rate=Decimal("0.15"),
+        qualified_div_rate=Decimal("0.15"),
+        state_marginal_rate=Decimal("0.09"),
+        niit_enabled=False,
+    )
+    result = compute_after_tax(
+        TrackingRepo(),
+        Period.for_year(2025),
+        account=None,
+        brackets=brackets,
+        accounts=[],
+    )
+    assert received["account_kw"] is None
+    assert received["accounts_kw"] is None
+    assert result.account_filter is None

@@ -11,6 +11,7 @@ Out-of-scope simplifications (caveats surface inline):
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -80,19 +81,37 @@ class AfterTaxBreakdown(BaseModel):
 def compute_after_tax(
     repo,
     period: Period,
-    account: str | None,
-    brackets: TaxBrackets,
+    account: str | None = None,
+    brackets: TaxBrackets | None = None,
     carryforward: Carryforward | None = None,
+    *,
+    accounts: Sequence[str] | None = None,
 ) -> AfterTaxBreakdown:
-    pnl = repo.realized_pnl_split(period, account)
+    if brackets is None:
+        raise ValueError("compute_after_tax requires `brackets`")
+    # Normalize: empty list is the same as "no filter"; pass None downstream.
+    effective_accounts: list[str] | None = list(accounts) if accounts else None
+    # Build a stable label for AfterTaxBreakdown.account_filter so the rendered
+    # caveat reads sensibly when multiple accounts are selected.
+    if effective_accounts is not None:
+        account_filter_label: str | None = ", ".join(effective_accounts)
+    elif account:
+        account_filter_label = account
+    else:
+        account_filter_label = None
+
+    pnl = repo.realized_pnl_split(period, account=account, accounts=effective_accounts)
     st_pnl: Decimal = pnl["short_term"]
     lt_pnl: Decimal = pnl["long_term"]
-    sec1256_pnl: Decimal = repo.section_1256_pnl(period, account)
-    sec1256_mtm: Decimal = repo.section_1256_mtm_pnl(period, account)
+    sec1256_pnl: Decimal = repo.section_1256_pnl(period, account=account, accounts=effective_accounts)
+    sec1256_mtm: Decimal = repo.section_1256_mtm_pnl(period, account=account, accounts=effective_accounts)
     disallowed_by_kind = (
-        repo.wash_sale_disallowed_by_kind(period, account)
+        repo.wash_sale_disallowed_by_kind(period, account=account, accounts=effective_accounts)
         if hasattr(repo, "wash_sale_disallowed_by_kind")
-        else {"deferred": repo.wash_sale_disallowed_total(period, account), "permanent_ira": Decimal("0")}
+        else {
+            "deferred": repo.wash_sale_disallowed_total(period, account=account, accounts=effective_accounts),
+            "permanent_ira": Decimal("0"),
+        }
     )
     disallowed_deferred = disallowed_by_kind.get("deferred", Decimal("0"))
     disallowed_permanent = disallowed_by_kind.get("permanent_ira", Decimal("0"))
@@ -188,7 +207,7 @@ def compute_after_tax(
         wash_sale_permanent_total=disallowed_permanent,
         effective_tax_rate=effective_rate,
         period_label=period.label,
-        account_filter=account,
+        account_filter=account_filter_label,
         tax_brackets_used=brackets,
         caveats=caveats,
     )
