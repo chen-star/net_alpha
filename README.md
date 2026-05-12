@@ -76,7 +76,7 @@ net-alpha service install
 net-alpha ui
 ```
 
-The UI runs locally at `http://127.0.0.1:8765`. With the service installed, prices refresh every 4 hours and forward-looking wash-sale checks run daily; without it, `net-alpha ui` runs ephemerally (Ctrl-C to stop).
+The UI runs locally at `http://127.0.0.1:18765` (auto-picks the next free port in 18765–18775). With the service installed, prices refresh every 4 hours, forward-looking wash-sale checks run daily, and a snapshot backup runs at 03:30 UTC; without it, `net-alpha ui` runs ephemerally (Ctrl-C to stop).
 
 > [!TIP]
 > First run? Pick **"Try the demo"** on the welcome screen for a guided tour with sample data — no CSV needed. Replay any time from `/tour`.
@@ -94,7 +94,8 @@ net-alpha schwab.csv --account personal --detail
 
 - **Cross-account intelligence** — match a loss sale on one broker against a repurchase on another in a single pass. The whole point of the tool.
 - **§1091 wash sales** — equities, options (exact contract or same underlying), and ETFs (same ticker or same-index pair). Every match has a **Confirmed / Probable / Unclear** confidence label with rule citation.
-- **§1256 awareness** — index options (SPX, NDX, RUT, VIX, …) are recognized as §1256 contracts: wash-sale-exempt with statutory 60/40 LT/ST classification.
+- **Rev. Rul. 2008-5 IRA traps** — a loss in a taxable account replaced by a substantially-identical buy in an IRA / Roth / 401(k) / HSA is flagged as a `permanent_ira` violation: the loss is disallowed under §1091(a) but §1091(d)'s basis rollover cannot apply, so the loss is **permanently lost**. Surfaced inline on the Plan view as a red watch pill.
+- **§1256 contracts** — index options (SPX, NDX, RUT, VIX, …) are recognized as §1256: wash-sale-exempt, statutory 60/40 LT/ST split per §1256(a)(3), and year-end **mark-to-market** per §1256(a)(1) (FMV cascade: Yahoo option close → Black-Scholes → intrinsic).
 - **§1092 straddles** — `net-alpha straddles` surfaces literal straddles, married puts, non-qualified covered calls (with QCC test), and vertical spreads. Holding-period suspension warnings attach to affected lots.
 - **Bundled "substantially identical" pairs** — major index-tracking ETFs (S&P 500, Nasdaq-100, Russell 2000, …). Extend with your own at `~/.net_alpha/etf_pairs.yaml` (additive, never replaces defaults).
 
@@ -103,8 +104,9 @@ net-alpha schwab.csv --account personal --detail
 - **Pre-trade simulator** — `/sim` shows FIFO lot consumption, realized P&L, and a per-account cross-account wash-sale verdict *before* you execute. Suggestion chips surface the largest unrealized loss, wash-sale risk, and largest unrealized gain.
 - **Lot-selection strategies** — compare **FIFO / LIFO / HIFO / MIN_TAX / MAX_LOSS** side-by-side on a Sell sim, with each strategy's wash-sale verdict computed independently.
 - **Tax-harvest planner** — `/tax/harvest/plan` turns the harvest queue into a ranked, editable plan (greedy by tax saved, capped by §1211's $3,000 ordinary-loss limit). Honors user-declared **PositionTargets** so it never closes something you want to keep.
-- **Forward-looking watchlist** — the always-on service forward-simulates every PositionTarget daily and surfaces wash-sale / §1091 risk inline as colored pills on the Plan view.
+- **Forward-looking watchlist** — the always-on service forward-simulates every PositionTarget daily and surfaces wash-sale / §1091 risk inline as colored pills on the Plan view, distinguishing deferred basis-rollover sales from permanent IRA-trap losses.
 - **Action Inbox** — a single panel rolls urgent items (imminent wash-sale tripwires, §1092 holding-period suspensions, broken reconciliation, missing basis) into one place.
+- **Verify** — a toolbar badge that audits live KPIs against pure-function recomputes (Realized P/L, after-tax, lot counts) and offers one-click jumps to any divergence. Suppressible per finding; refreshed by a weekly Sunday 04:30 service job.
 
 ### Reporting
 
@@ -119,13 +121,15 @@ net-alpha schwab.csv --account personal --detail
 - **100% local, zero-knowledge** — your trade data, accounts, and P&L never leave the box. Symbols are sent to Yahoo Finance for live quotes only; disable with `prices.enable_remote: false`.
 - **No CDN at runtime, no Node** — htmx, Alpine, ApexCharts, Lucide icons, and fonts are vendored under `web/static/`.
 - **Manual trade CRUD** — add, edit, transfer, or delete trades from the web UI; wash sales recompute over the affected window automatically.
+- **Account-typed multi-select** — every toolbar (Portfolio, Positions, Sim, Tax, Imports) has an account multi-select with OR-semantic filtering. Each account carries a `type` (taxable / IRA / Roth / 401(k) / HSA / other) so IRA-trap detection knows which side is tax-advantaged.
+- **Local backups, WAL-safe** — `net-alpha backup` snapshots `~/.net_alpha/` via SQLite's online `.backup()` API (safe while the service writes), with optional AES-256-GCM encryption (`--encrypt`). Daily 03:30 UTC snapshots + inline pre-mutation snapshots before every CSV import, `imports rm`, and `migrate-from-v1`. `net-alpha restore` is CLI-only and never auto-restarts the service.
 
 ## Usage
 
 ### Local web UI (primary surface)
 
 ```bash
-net-alpha ui [--port 8765] [--no-browser] [--reload]
+net-alpha ui [--port 18765] [--no-browser] [--reload]
 ```
 
 | Page | Highlights |
@@ -136,7 +140,7 @@ net-alpha ui [--port 8765] [--no-browser] [--reload]
 | `/tax` | After-tax performance, harvest queue, plan-builder, projection setup, wash-sale + exempt-match listings |
 | `/imports` | Drop-zone upload, preview/commit, per-import detail, data-hygiene buckets |
 | `/ticker/{symbol}` | Per-symbol timeline, lots, reconciliation, lot edit + add-trade forms |
-| `/settings` | Profile, density, ETF pairs, carryforward, service controls, about |
+| `/settings` | Profile, density, ETF pairs, carryforward, accounts + types, backups, service controls, about |
 
 Server-side HTMX + Alpine, dies on Ctrl-C.
 
@@ -158,6 +162,11 @@ net-alpha imports rm 3 --yes
 
 # v1 → v2 schema migration helper (v2.0.x line only)
 net-alpha migrate-from-v1 --yes
+
+# Backups — manual snapshot (encrypted optional), list, restore
+net-alpha backup [--encrypt] [--note "before tax-day cleanup"]
+net-alpha backups
+net-alpha restore <bundle-id> --yes
 ```
 
 ### Adding a broker
@@ -182,7 +191,11 @@ Bundled at launch: **Schwab** (transactions + Realized G/L for audit reconciliat
 
 ### §1256 contracts
 
-Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, …) are exempt from §1091. Closed §1256 P&L is split 60/40 LT/ST per §1256(a)(3), regardless of holding period. Open positions at year-end are **not** marked-to-market in v1; consult your 1099-B / Form 6781.
+Broad-based equity index options (SPX, NDX, RUT, VIX, OEX, XSP, …) are exempt from §1091. Closed §1256 P&L is split 60/40 LT/ST per §1256(a)(3), regardless of holding period. Open positions at year-end are **marked-to-market** per §1256(a)(1), with prior-year MTM used as the new basis per §1256(a)(2). FMV cascade: Yahoo option close → Black-Scholes from underlying + 30-day historical vol → intrinsic if expired. §1256(c) loss-carryback election is out of scope — Form 6781 line 6 directly.
+
+### IRA-trap wash sales (Rev. Rul. 2008-5)
+
+When you sell at a loss in a **taxable** account and buy a substantially-identical security in a **tax-advantaged** account (IRA / Roth / 401(k) / HSA) within ±30 days, §1091(a) still disallows the loss, but §1091(d)'s basis rollover cannot apply (no IRA basis ledger). The detector classifies these as `permanent_ira` violations and surfaces them with their own watch pill — distinct from the deferred-basis `deferred` kind that rolls into the replacement lot.
 
 ### §1092 straddles
 
@@ -198,10 +211,12 @@ Same-underlying offsetting positions caught by IRC §1092:
 
 ## Always-on service
 
-`net-alpha service` is an opt-in launchd-supervised process that hosts the FastAPI app and runs two background jobs:
+`net-alpha service` is an opt-in launchd-supervised process that hosts the FastAPI app and runs four background jobs:
 
 - **`price_refresh`** — every 4 hours, refreshes quotes for held + targeted tickers.
-- **`washsale_watch`** — daily 04:00 + on every manual import. Forward-simulates each PositionTarget and surfaces wash-sale / §1091 risk in the Plan view.
+- **`washsale_watch`** — daily 04:00 + on every manual import. Forward-simulates each PositionTarget and surfaces wash-sale / §1091 risk in the Plan view (deferred vs. `permanent_ira`).
+- **`backup`** — daily at 03:30 UTC. Snapshots `~/.net_alpha/` via SQLite online `.backup()`, prunes per retention (14 daily + 10 pre-mutation + 2 GB cap). Manual bundles are never auto-pruned.
+- **`verify`** — weekly Sunday 04:30. Audits the UI's cached KPIs against pure-function recomputes; surfaces divergences in the Verify badge.
 
 ### Lifecycle
 
@@ -235,8 +250,8 @@ The runtime venv is a **non-editable snapshot** of your project source at instal
 ```
 CSV → BrokerParser → Trade (Pydantic) ──► SQLite (~/.net_alpha/net_alpha.db)
                                               │
-                                              ├─► Wash-sale engine  (incremental ±30-day window)
-                                              ├─► §1256 classifier  (60/40 LT/ST split)
+                                              ├─► Wash-sale engine  (incremental ±30-day window, deferred + permanent_ira)
+                                              ├─► §1256 classifier  (60/40 LT/ST split + year-end MTM)
                                               ├─► §1092 straddle detector
                                               ├─► Reconciliation    (against broker Realized G/L)
                                               └─► Portfolio / planner / pricing  (pure functions)
@@ -246,7 +261,7 @@ CSV → BrokerParser → Trade (Pydantic) ──► SQLite (~/.net_alpha/net_alp
                                             Typer CLI                 FastAPI + HTMX UI
                                                                               │
                                                                 launchd-supervised service
-                                                                  (price_refresh + washsale_watch)
+                                                          (price_refresh + washsale_watch + backup + verify)
 ```
 
 - **Stack** — Python 3.11+, `pydantic` v2, `sqlmodel` over SQLite, `typer` CLI, optional `fastapi` + Jinja + HTMX UI, APScheduler for the service, `ruff`, `pytest`. Managed with `uv`.
