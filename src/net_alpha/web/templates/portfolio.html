@@ -17,8 +17,7 @@
   {% if not imports %}
     {% include "_portfolio_empty_state.html" %}
   {% else %}
-    {%- set _body_qs = "period=" ~ selected_period -%}
-    {%- for _a in selected_accounts -%}{%- set _body_qs = _body_qs ~ "&account=" ~ _a -%}{%- endfor -%}
+    {%- set _body_qs %}period={{ selected_period }}{% for _a in selected_accounts %}&account={{ _a|urlencode }}{% endfor %}{%- endset -%}
     <div id="portfolio-body"
          hx-get="/portfolio/body?{{ _body_qs }}"
          hx-trigger="load" hx-swap="innerHTML"></div>

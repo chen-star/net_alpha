@@ -1,4 +1,5 @@
 """Caveats surface when a multi-account filter is active."""
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient

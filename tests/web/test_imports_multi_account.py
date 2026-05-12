@@ -1,4 +1,5 @@
 """Multi-account filter on the Imports page (new in Task 12)."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -38,20 +39,22 @@ def test_imports_toolbar_renders_account_multi_select_macro(client: TestClient):
     assert 'data-testid="account-multi-select"' in resp.text
 
 
-def test_imports_filtered_to_one_account_excludes_others(
-    client: TestClient, repo
-):
+def test_imports_filtered_to_one_account_excludes_others(client: TestClient, repo):
     """When two accounts exist, filtering to one excludes the other account's table row."""
     from tests.web.conftest import make_buy, seed_import
 
     day = date(2024, 3, 1)
     seed_import(
-        repo, "schwab", "Personal",
+        repo,
+        "schwab",
+        "Personal",
         [make_buy("schwab/Personal", "AAPL", day)],
         csv_filename="personal.csv",
     )
     seed_import(
-        repo, "schwab", "IRA",
+        repo,
+        "schwab",
+        "IRA",
         [make_buy("schwab/IRA", "MSFT", day)],
         csv_filename="ira.csv",
     )

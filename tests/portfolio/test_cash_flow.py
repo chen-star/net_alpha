@@ -336,9 +336,7 @@ def test_build_cash_balance_series_two_accounts_equals_all():
         _ev(dt.date(2026, 3, 5), "transfer_in", 200.0, account="Schwab/B"),
     ]
     all_ = build_cash_balance_series(events=events, trades=[], period=None)
-    both = build_cash_balance_series(
-        events=events, trades=[], accounts=["Schwab/A", "Schwab/B"], period=None
-    )
+    both = build_cash_balance_series(events=events, trades=[], accounts=["Schwab/A", "Schwab/B"], period=None)
     assert all_ == both
 
 
@@ -346,9 +344,7 @@ def test_build_cash_balance_series_empty_accounts_means_all():
     """accounts=[] is treated as 'no filter' — same as account=None."""
     events = [_ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A")]
     all_ = build_cash_balance_series(events=events, trades=[], period=None)
-    empty = build_cash_balance_series(
-        events=events, trades=[], accounts=[], period=None
-    )
+    empty = build_cash_balance_series(events=events, trades=[], accounts=[], period=None)
     assert all_ == empty
 
 
@@ -359,8 +355,11 @@ def test_compute_cash_kpis_accounts_list_filters_single():
         _ev(dt.date(2026, 3, 4), "transfer_in", 999.0, account="Schwab/B"),
     ]
     result = compute_cash_kpis(
-        events=events, trades=[], holdings_value=Decimal("0"),
-        accounts=["Schwab/A"], period=None,
+        events=events,
+        trades=[],
+        holdings_value=Decimal("0"),
+        accounts=["Schwab/A"],
+        period=None,
     )
     assert result.cash_balance == Decimal("100")
 
@@ -371,12 +370,13 @@ def test_compute_cash_kpis_two_accounts_equals_all():
         _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
         _ev(dt.date(2026, 3, 5), "transfer_in", 200.0, account="Schwab/B"),
     ]
-    all_ = compute_cash_kpis(
-        events=events, trades=[], holdings_value=Decimal("0"), period=None
-    )
+    all_ = compute_cash_kpis(events=events, trades=[], holdings_value=Decimal("0"), period=None)
     both = compute_cash_kpis(
-        events=events, trades=[], holdings_value=Decimal("0"),
-        accounts=["Schwab/A", "Schwab/B"], period=None,
+        events=events,
+        trades=[],
+        holdings_value=Decimal("0"),
+        accounts=["Schwab/A", "Schwab/B"],
+        period=None,
     )
     assert all_ == both
 

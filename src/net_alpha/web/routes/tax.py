@@ -301,12 +301,16 @@ def harvest_plan(
 
 
 def _build_chips_clear_urls(request: Request) -> dict[str, str]:
-    """Per-chip URLs that drop one filter key from the current query string."""
-    params = dict(request.query_params)
+    """Per-chip URLs that drop one filter key from the current query string.
+
+    Uses multi_items() so repeated keys (e.g. ?account=A&account=B) are
+    preserved correctly — dict(query_params) would collapse them to the last value.
+    """
+    params = list(request.query_params.multi_items())
     urls: dict[str, str] = {}
     for key in ("ticker", "account", "confidence"):
-        if key in params:
-            remaining = {k: v for k, v in params.items() if k != key}
+        if any(k == key for k, _ in params):
+            remaining = [(k, v) for k, v in params if k != key]
             urls[key] = f"/tax?{urlencode(remaining)}" if remaining else "/tax"
     return urls
 

@@ -1,5 +1,6 @@
 """Multi-account filter behavior on the wash-sales tab — including OR semantics
 for cross-account violations (Rev. Rul. 2008-5 makes this matter)."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -115,8 +116,7 @@ def test_cross_account_violation_appears_under_loss_account_filter(client: TestC
 
     ctx = _wash_sales_context(repo, accounts=[loss_acct], year=2026)
     assert len(ctx["violations"]) == 1, (
-        f"Expected 1 violation under loss-account filter '{loss_acct}', "
-        f"got {len(ctx['violations'])}"
+        f"Expected 1 violation under loss-account filter '{loss_acct}', got {len(ctx['violations'])}"
     )
 
 
@@ -128,8 +128,7 @@ def test_cross_account_violation_appears_under_buy_account_filter(client: TestCl
 
     ctx = _wash_sales_context(repo, accounts=[buy_acct], year=2026)
     assert len(ctx["violations"]) == 1, (
-        f"Expected 1 violation under buy-account filter '{buy_acct}', "
-        f"got {len(ctx['violations'])}"
+        f"Expected 1 violation under buy-account filter '{buy_acct}', got {len(ctx['violations'])}"
     )
 
 
@@ -141,8 +140,7 @@ def test_cross_account_violation_appears_under_both_accounts_filter(client: Test
 
     ctx = _wash_sales_context(repo, accounts=[loss_acct, buy_acct], year=2026)
     assert len(ctx["violations"]) == 1, (
-        f"Expected exactly 1 violation (no double-count) under both-accounts filter, "
-        f"got {len(ctx['violations'])}"
+        f"Expected exactly 1 violation (no double-count) under both-accounts filter, got {len(ctx['violations'])}"
     )
 
 
@@ -154,8 +152,7 @@ def test_cross_account_violation_hidden_under_unrelated_account_filter(client: T
 
     ctx = _wash_sales_context(repo, accounts=["schwab/Other"], year=2026)
     assert len(ctx["violations"]) == 0, (
-        f"Expected 0 violations under unrelated-account filter, "
-        f"got {len(ctx['violations'])}"
+        f"Expected 0 violations under unrelated-account filter, got {len(ctx['violations'])}"
     )
 
 

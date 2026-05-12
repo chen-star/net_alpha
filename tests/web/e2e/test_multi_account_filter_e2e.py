@@ -67,9 +67,7 @@ def test_multi_account_dropdown_renders(page: Page, live_server_seeded: str):
     assert dropdown.count() == 1, "multi-account dropdown must render exactly once"
     # The trigger initially reads "All accounts" when no filter is active.
     trigger_text = dropdown.locator("button").first.inner_text()
-    assert "All accounts" in trigger_text or "of" in trigger_text, (
-        f"Unexpected trigger label: {trigger_text!r}"
-    )
+    assert "All accounts" in trigger_text or "of" in trigger_text, f"Unexpected trigger label: {trigger_text!r}"
 
 
 def test_dropdown_opens_and_closes(page: Page, live_server_seeded: str):
@@ -105,9 +103,7 @@ def test_dropdown_lists_accounts_from_demo_db(page: Page, live_server_seeded: st
     # Per-account checkboxes have name="account"; the master "All accounts" toggle does not.
     account_checkboxes = dropdown.locator("input[type='checkbox'][name='account']")
     count = account_checkboxes.count()
-    assert count >= 2, (
-        f"demo DB seeds taxable + ira accounts; expected ≥2 checkboxes, got {count}"
-    )
+    assert count >= 2, f"demo DB seeds taxable + ira accounts; expected ≥2 checkboxes, got {count}"
 
 
 def test_toggle_account_updates_url(page: Page, live_server_seeded: str):
@@ -127,9 +123,7 @@ def test_toggle_account_updates_url(page: Page, live_server_seeded: str):
 
     # The macro debounces 200 ms then submits the parent form — wait for navigation.
     page.wait_for_url("**/positions?**", timeout=3_000)
-    assert "account=" in page.url, (
-        f"Expected account= in URL after toggling one account off, got: {page.url!r}"
-    )
+    assert "account=" in page.url, f"Expected account= in URL after toggling one account off, got: {page.url!r}"
 
 
 def test_all_accounts_trigger_label_shows_partial_when_one_deselected(page: Page, live_server_seeded: str):
@@ -140,9 +134,7 @@ def test_all_accounts_trigger_label_shows_partial_when_one_deselected(page: Page
 
     # Confirm initial state shows "All accounts" (no filter).
     trigger_initial = dropdown.locator("button").first.inner_text()
-    assert "All accounts" in trigger_initial, (
-        f"Before any filter, expected 'All accounts', got: {trigger_initial!r}"
-    )
+    assert "All accounts" in trigger_initial, f"Before any filter, expected 'All accounts', got: {trigger_initial!r}"
 
     # Open and deselect the first account.
     dropdown.locator("button").first.click()
@@ -161,6 +153,4 @@ def test_all_accounts_trigger_label_shows_partial_when_one_deselected(page: Page
         f"After deselecting one account, label should not be 'All accounts'; got: {trigger_after!r}"
     )
     # And the URL must contain the account= filter parameter.
-    assert "account=" in page.url, (
-        f"Expected account= in URL after partial filter, got: {page.url!r}"
-    )
+    assert "account=" in page.url, f"Expected account= in URL after partial filter, got: {page.url!r}"

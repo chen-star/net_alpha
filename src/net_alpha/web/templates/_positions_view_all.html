@@ -13,11 +13,12 @@
     {% include "_empty_state_hero.html" %}
   {% endwith %}
 {% else %}
+  {% set _acct_qs %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
   <div id="holdings-positions"
-       hx-get="/portfolio/positions?period={{ selected_period }}&account={{ selected_account }}&group_options={{ group_options }}&show=open&page=1"
+       hx-get="/portfolio/positions?period={{ selected_period }}{{ _acct_qs }}&group_options={{ group_options }}&show=open&page=1"
        hx-trigger="load" hx-swap="innerHTML"></div>
 
   <div id="holdings-options" class="panel mt-4"
-       hx-get="/holdings/options?account={{ selected_account }}"
+       hx-get="/holdings/options?{{ _acct_qs[1:] }}"
        hx-trigger="load" hx-swap="innerHTML"></div>
 {% endif %}

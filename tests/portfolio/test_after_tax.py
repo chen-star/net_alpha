@@ -350,10 +350,13 @@ def test_compute_after_tax_single_account_filter_via_accounts():
         def realized_pnl_split(self, period, accounts=None):
             received["accounts_kw"] = list(accounts) if accounts else None
             return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+
         def section_1256_pnl(self, period, accounts=None):
             return Decimal("0")
+
         def section_1256_mtm_pnl(self, period, accounts=None):
             return Decimal("0")
+
         def wash_sale_disallowed_by_kind(self, period, accounts=None):
             return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
 
@@ -384,10 +387,13 @@ def test_compute_after_tax_accounts_empty_means_no_filter():
         def realized_pnl_split(self, period, accounts=None):
             received["accounts_kw"] = list(accounts) if accounts else None
             return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+
         def section_1256_pnl(self, period, accounts=None):
             return Decimal("0")
+
         def section_1256_mtm_pnl(self, period, accounts=None):
             return Decimal("0")
+
         def wash_sale_disallowed_by_kind(self, period, accounts=None):
             return {"deferred": Decimal("0"), "permanent_ira": Decimal("0")}
 

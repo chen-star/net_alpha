@@ -61,7 +61,11 @@
     {% if account_filter_active %}
     <div class="text-[11px] text-warn mt-2"
          data-testid="offset-taxpayer-caveat">
-      Offset budget is taxpayer-level. Candidate lots are filtered to your selected accounts, but offset capacity (§1211 cap, §1212(b) carryforward) is shared across all accounts.
+      {% if selected_accounts | default([]) | length == 1 %}
+        Offset budget is taxpayer-level. Candidate lots below are filtered to <strong>{{ selected_accounts[0] }}</strong>, but offset capacity (§1211 cap, §1212(b) carryforward) is shared across all accounts.
+      {% else %}
+        Offset budget is taxpayer-level. Multi-account harvest candidates are not yet partitioned by account; the list below covers all accounts. Filtering will arrive in a follow-up.
+      {% endif %}
     </div>
     {% endif %}
   </div>

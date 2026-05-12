@@ -10,6 +10,7 @@ Column-type coverage:
   - FK int column:        Section1256ClassificationRow → TradeRow.account_id
   - FK int column:        RealizedGLLotRow.account_id
 """
+
 from __future__ import annotations
 
 import datetime as dt

@@ -263,9 +263,7 @@ def test_monthly_realized_pl_series_accounts_list_single_filter():
         _sell(dt.date(2025, 3, 15), account="Tax", proceeds=1200, cost=1000),
         _sell(dt.date(2025, 3, 20), account="IRA", proceeds=600, cost=500),
     ]
-    result = monthly_realized_pl_series(
-        trades=trades, period=(2025, 2026), accounts=["Tax"], today=today
-    )
+    result = monthly_realized_pl_series(trades=trades, period=(2025, 2026), accounts=["Tax"], today=today)
     mar = next(p for p in result if p.month == 3)
     assert mar.net_pl == Decimal("200")
     assert mar.trade_count == 1
@@ -278,12 +276,8 @@ def test_monthly_realized_pl_series_two_accounts_equals_all():
         _sell(dt.date(2025, 3, 15), account="Tax", proceeds=1200, cost=1000),
         _sell(dt.date(2025, 3, 20), account="IRA", proceeds=600, cost=500),
     ]
-    all_ = monthly_realized_pl_series(
-        trades=trades, period=(2025, 2026), today=today
-    )
-    both = monthly_realized_pl_series(
-        trades=trades, period=(2025, 2026), accounts=["Tax", "IRA"], today=today
-    )
+    all_ = monthly_realized_pl_series(trades=trades, period=(2025, 2026), today=today)
+    both = monthly_realized_pl_series(trades=trades, period=(2025, 2026), accounts=["Tax", "IRA"], today=today)
     assert all_ == both
 
 
@@ -293,12 +287,8 @@ def test_monthly_realized_pl_series_empty_accounts_means_all():
     trades = [
         _sell(dt.date(2025, 3, 15), account="Tax", proceeds=1200, cost=1000),
     ]
-    none_ = monthly_realized_pl_series(
-        trades=trades, period=(2025, 2026), today=today
-    )
-    empty = monthly_realized_pl_series(
-        trades=trades, period=(2025, 2026), accounts=[], today=today
-    )
+    none_ = monthly_realized_pl_series(trades=trades, period=(2025, 2026), today=today)
+    empty = monthly_realized_pl_series(trades=trades, period=(2025, 2026), accounts=[], today=today)
     assert none_ == empty
 
 

@@ -304,9 +304,7 @@ def portfolio_kpis(
     account_id = _resolve_account_id(accounts, repo)
     # Open shorts (CSPs) — used for cash-secured / pledged-cash badges in the
     # Cash KPI tile so the user can see how much of their cash is collateral.
-    scoped_trades_for_shorts = (
-        [t for t in trades if t.account in set(accounts)] if accounts else trades
-    )
+    scoped_trades_for_shorts = [t for t in trades if t.account in set(accounts)] if accounts else trades
     open_shorts = compute_open_short_option_positions(
         scoped_trades_for_shorts,
         gl_option_closures=repo.get_option_gl_closures(),
@@ -356,9 +354,7 @@ def portfolio_kpis(
             trades=scoped_trades_for_cash,
             period=None,  # need full history through the boundary
         )
-        scoped_lots_for_anchor = (
-            [lt for lt in lots if lt.account in set(accounts)] if accounts else lots
-        )
+        scoped_lots_for_anchor = [lt for lt in lots if lt.account in set(accounts)] if accounts else lots
         period_starting_value = account_value_at(
             on=boundary,
             trades=scoped_trades_for_cash,
@@ -789,9 +785,7 @@ def _compute_portfolio_body_context(
     snap = svc.last_snapshot()
 
     gl_lots_all = repo.list_all_gl_lots()
-    gl_lots_scoped = (
-        [g for g in gl_lots_all if g.account_display in set(accounts)] if accounts else gl_lots_all
-    )
+    gl_lots_scoped = [g for g in gl_lots_all if g.account_display in set(accounts)] if accounts else gl_lots_all
     kpis = compute_kpis(
         trades=scoped_trades,
         lots=scoped_lots,
@@ -1132,9 +1126,7 @@ def explain_total_return(
     symbols = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(symbols) if symbols else {}
     gl_lots_all = repo.list_all_gl_lots()
-    gl_lots_scoped = (
-        [g for g in gl_lots_all if g.account_display in accs_set] if accounts else gl_lots_all
-    )
+    gl_lots_scoped = [g for g in gl_lots_all if g.account_display in accs_set] if accounts else gl_lots_all
     kpis_now = compute_kpis(
         trades=trades,
         lots=lots,

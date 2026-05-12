@@ -89,10 +89,7 @@ def _wash_sales_context(
         violations = [v for v in violations if v.ticker == ticker.upper()]
     if accounts:
         accounts_set = set(accounts)
-        violations = [
-            v for v in violations
-            if v.loss_account in accounts_set or v.buy_account in accounts_set
-        ]
+        violations = [v for v in violations if v.loss_account in accounts_set or v.buy_account in accounts_set]
     if effective_year is not None:
         violations = [v for v in violations if v.loss_sale_date and v.loss_sale_date.year == effective_year]
     if confidence:

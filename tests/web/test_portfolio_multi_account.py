@@ -1,4 +1,5 @@
 """HTTP-level multi-account filter behavior on the Portfolio page."""
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -41,3 +42,18 @@ def test_portfolio_toolbar_renders_account_multi_select_macro(client_with_data: 
     assert 'data-testid="account-multi-select"' in resp.text
     # Old single-<select> sentinel removed:
     assert '<select name="account"' not in resp.text
+
+
+def test_portfolio_table_htmx_urls_preserve_multi_account(client_with_data: TestClient):
+    """Regression: HTMX URLs in the portfolio page must carry every selected account.
+
+    When the filter is active, account=schwab/taxable and account=schwab/ira must
+    appear in the rendered HTML (in sort/pagination/explain HTMX attributes). A bug
+    here would silently collapse the multi-account filter on any user interaction.
+    """
+    resp = client_with_data.get("/", params=[("account", "schwab/taxable"), ("account", "schwab/ira")])
+    assert resp.status_code == 200
+    html = resp.text
+    # Both accounts must appear somewhere in the rendered URLs (plain or percent-encoded).
+    assert "account=schwab/taxable" in html or "account=schwab%2Ftaxable" in html
+    assert "account=schwab/ira" in html or "account=schwab%2Fira" in html

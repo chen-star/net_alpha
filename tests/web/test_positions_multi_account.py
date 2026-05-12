@@ -1,4 +1,5 @@
 """HTTP-level multi-account filter behavior on the Positions page."""
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -43,11 +44,11 @@ def test_plan_view_repeated_account_query_returns_200(client: TestClient):
 
 
 def test_plan_toolbar_renders_hidden_account_inputs_for_multi(client: TestClient):
-    """When the Plan toolbar form submits, it must carry multiple account values forward."""
+    """The Plan toolbar form must carry every selected account as a hidden input."""
     resp = client.get(
         "/positions",
         params=[("view", "plan"), ("account", "Schwab/Tax"), ("account", "Schwab/IRA")],
     )
-    # The toolbar should emit a hidden `<input name="account" value="...">` per selected account.
-    # When NO accounts are selected, no hidden inputs.
     assert resp.status_code == 200
+    assert 'name="account" value="Schwab/Tax"' in resp.text
+    assert 'name="account" value="Schwab/IRA"' in resp.text

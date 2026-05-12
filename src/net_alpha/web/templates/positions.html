@@ -11,7 +11,7 @@
         {{ selected_period|default('YTD')|upper }}
       </div>
 </div>
-    {% if imports and selected_view in ('all', 'stocks') %}{% include "_portfolio_toolbar.html" %}{% endif %}
+    {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
   </div>
 
   {# Emit column markers so tests / density.js can read extra_columns regardless

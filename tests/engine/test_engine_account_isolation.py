@@ -15,11 +15,17 @@ from net_alpha.engine import detector, recompute, washsale_watch
 
 
 def _public_funcs(module):
-    return [
-        getattr(module, name)
-        for name in dir(module)
-        if not name.startswith("_") and callable(getattr(module, name)) and getattr(getattr(module, name), "__module__", "") == module.__name__
-    ]
+    out = []
+    for name in dir(module):
+        if name.startswith("_"):
+            continue
+        obj = getattr(module, name)
+        if not callable(obj):
+            continue
+        if getattr(obj, "__module__", "") != module.__name__:
+            continue
+        out.append(obj)
+    return out
 
 
 def test_engine_detector_has_no_accounts_kwarg():
@@ -46,9 +52,7 @@ def test_engine_washsale_watch_has_no_accounts_kwarg():
         sig = inspect.signature(fn)
         if "accounts" in sig.parameters:
             offenders.append(fn.__qualname__)
-    assert not offenders, (
-        f"Engine washsale_watch functions must not accept 'accounts'. Offenders: {offenders}"
-    )
+    assert not offenders, f"Engine washsale_watch functions must not accept 'accounts'. Offenders: {offenders}"
 
 
 def test_engine_recompute_has_no_accounts_kwarg():
@@ -58,6 +62,4 @@ def test_engine_recompute_has_no_accounts_kwarg():
         sig = inspect.signature(fn)
         if "accounts" in sig.parameters:
             offenders.append(fn.__qualname__)
-    assert not offenders, (
-        f"Engine recompute functions must not accept 'accounts'. Offenders: {offenders}"
-    )
+    assert not offenders, f"Engine recompute functions must not accept 'accounts'. Offenders: {offenders}"

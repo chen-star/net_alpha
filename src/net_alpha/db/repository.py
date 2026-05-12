@@ -1816,9 +1816,7 @@ class Repository:
             session.exec(Section1256MTMRow.__table__.delete())
             session.commit()
 
-    def section_1256_mtm_rows(
-        self, period, accounts: Sequence[str] | None = None
-    ) -> list[Section1256MTM]:
+    def section_1256_mtm_rows(self, period, accounts: Sequence[str] | None = None) -> list[Section1256MTM]:
         """Return MTM rows filtered by period and optional account."""
         effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
@@ -1845,9 +1843,7 @@ class Repository:
                 for r in rows
             ]
 
-    def section_1256_mtm_pnl(
-        self, period, accounts: Sequence[str] | None = None
-    ) -> Decimal:
+    def section_1256_mtm_pnl(self, period, accounts: Sequence[str] | None = None) -> Decimal:
         """Sum of unrealized_pnl across all MTM rows matching period and account."""
         rows = self.section_1256_mtm_rows(period, accounts=accounts)
         total = Decimal("0")
@@ -1878,9 +1874,7 @@ class Repository:
 
     # ---- After-tax helpers (Task 17) ----
 
-    def realized_pnl_split(
-        self, period, accounts: Sequence[str] | None = None
-    ) -> dict[str, Decimal]:
+    def realized_pnl_split(self, period, accounts: Sequence[str] | None = None) -> dict[str, Decimal]:
         """Return {'short_term': Decimal, 'long_term': Decimal} for closed non-§1256 lots.
 
         Draws from RealizedGLLotRow (broker-sourced Realized G/L CSV).
@@ -1917,9 +1911,7 @@ class Repository:
                     st += pnl
         return {"short_term": st, "long_term": lt}
 
-    def section_1256_pnl(
-        self, period, accounts: Sequence[str] | None = None
-    ) -> Decimal:
+    def section_1256_pnl(self, period, accounts: Sequence[str] | None = None) -> Decimal:
         """Total realized P&L for §1256 contracts in the period.
 
         Draws from Section1256ClassificationRow (engine-derived). The realized_pnl
@@ -1944,9 +1936,7 @@ class Repository:
                 total += Decimal(str(r.realized_pnl))
         return total
 
-    def wash_sale_disallowed_total(
-        self, period, accounts: Sequence[str] | None = None
-    ) -> Decimal:
+    def wash_sale_disallowed_total(self, period, accounts: Sequence[str] | None = None) -> Decimal:
         """Total disallowed loss amount for wash-sale violations in the period.
 
         Draws from WashSaleViolationRow. Account filter matches violations where
@@ -1955,9 +1945,7 @@ class Repository:
         by_kind = self.wash_sale_disallowed_by_kind(period, accounts=accounts)
         return sum(by_kind.values(), Decimal("0"))
 
-    def wash_sale_disallowed_by_kind(
-        self, period, accounts: Sequence[str] | None = None
-    ) -> dict[str, Decimal]:
+    def wash_sale_disallowed_by_kind(self, period, accounts: Sequence[str] | None = None) -> dict[str, Decimal]:
         """Disallowed loss totals split by ``WashSaleViolation.kind``.
 
         Returns ``{"deferred": <amount>, "permanent_ira": <amount>}``. The

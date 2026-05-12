@@ -983,19 +983,27 @@ def test_compute_kpis_accounts_list_matches_single_account():
         _trade(id="t2", account="IRA", ticker="SPY", action="Buy", quantity=5.0, cost_basis=500.0),
     ]
     lots = [
-        _lot(id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0,
-             cost_basis=1000.0, adjusted_basis=1000.0),
-        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0,
-             cost_basis=500.0, adjusted_basis=500.0),
+        _lot(
+            id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0, adjusted_basis=1000.0
+        ),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0, adjusted_basis=500.0),
     ]
     prices = {"SPY": _quote("SPY", 120)}
     kpis_single = compute_kpis(
-        trades=trades, lots=lots, prices=prices,
-        period_label="Lifetime", period=None, accounts=["Tax"],
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
+        accounts=["Tax"],
     )
     kpis_list = compute_kpis(
-        trades=trades, lots=lots, prices=prices,
-        period_label="Lifetime", period=None, accounts=["Tax"],
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
+        accounts=["Tax"],
     )
     assert kpis_single == kpis_list
 
@@ -1007,19 +1015,26 @@ def test_compute_kpis_accounts_list_two_equals_union():
         _trade(id="t2", account="IRA", ticker="SPY", action="Buy", quantity=5.0, cost_basis=500.0),
     ]
     lots = [
-        _lot(id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0,
-             cost_basis=1000.0, adjusted_basis=1000.0),
-        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0,
-             cost_basis=500.0, adjusted_basis=500.0),
+        _lot(
+            id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0, cost_basis=1000.0, adjusted_basis=1000.0
+        ),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0, cost_basis=500.0, adjusted_basis=500.0),
     ]
     prices = {"SPY": _quote("SPY", 120)}
     kpis_all = compute_kpis(
-        trades=trades, lots=lots, prices=prices,
-        period_label="Lifetime", period=None,
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
     )
     kpis_both = compute_kpis(
-        trades=trades, lots=lots, prices=prices,
-        period_label="Lifetime", period=None, accounts=["Tax", "IRA"],
+        trades=trades,
+        lots=lots,
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
+        accounts=["Tax", "IRA"],
     )
     assert kpis_all == kpis_both
 
@@ -1028,10 +1043,10 @@ def test_compute_kpis_empty_accounts_means_all():
     trades = [_trade(id="t1", account="Tax", ticker="SPY")]
     lots = [_lot(id="l1", trade_id="t1", account="Tax", ticker="SPY")]
     prices = {"SPY": _quote("SPY", 410)}
-    kpis_none = compute_kpis(trades=trades, lots=lots, prices=prices,
-                              period_label="Lifetime", period=None)
-    kpis_empty = compute_kpis(trades=trades, lots=lots, prices=prices,
-                               period_label="Lifetime", period=None, accounts=[])
+    kpis_none = compute_kpis(trades=trades, lots=lots, prices=prices, period_label="Lifetime", period=None)
+    kpis_empty = compute_kpis(
+        trades=trades, lots=lots, prices=prices, period_label="Lifetime", period=None, accounts=[]
+    )
     assert kpis_none == kpis_empty
 
 
@@ -1041,12 +1056,16 @@ def test_compute_wash_impact_accounts_list_or_semantic():
     v_other = _violation(dt.date(2026, 3, 2), loss_account="Other", buy_account="Other")
 
     only_tax = compute_wash_impact(
-        violations=[v_cross, v_other], period_label="YTD",
-        period=(2026, 2027), accounts=["Tax"],
+        violations=[v_cross, v_other],
+        period_label="YTD",
+        period=(2026, 2027),
+        accounts=["Tax"],
     )
     only_ira = compute_wash_impact(
-        violations=[v_cross, v_other], period_label="YTD",
-        period=(2026, 2027), accounts=["IRA"],
+        violations=[v_cross, v_other],
+        period_label="YTD",
+        period=(2026, 2027),
+        accounts=["IRA"],
     )
     assert only_tax.violation_count == 1
     assert only_ira.violation_count == 1
@@ -1054,8 +1073,6 @@ def test_compute_wash_impact_accounts_list_or_semantic():
 
 def test_compute_wash_impact_accounts_list_single_matches_legacy():
     v_cross = _violation(dt.date(2026, 3, 1), loss_account="Tax", buy_account="IRA")
-    result_a = compute_wash_impact(violations=[v_cross], period_label="YTD",
-                                   period=(2026, 2027), accounts=["Tax"])
-    result_b = compute_wash_impact(violations=[v_cross], period_label="YTD",
-                                   period=(2026, 2027), accounts=["Tax"])
+    result_a = compute_wash_impact(violations=[v_cross], period_label="YTD", period=(2026, 2027), accounts=["Tax"])
+    result_b = compute_wash_impact(violations=[v_cross], period_label="YTD", period=(2026, 2027), accounts=["Tax"])
     assert result_a == result_b
