@@ -1,7 +1,13 @@
-<form method="get" action="{{ toolbar_action }}" class="kpi-card flex gap-3 flex-wrap items-end text-sm">
+<form method="get" action="{{ toolbar_action }}"
+      hx-get="/portfolio/body"
+      hx-target="#portfolio-body"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+      hx-trigger="change from:select, change from:input[type=checkbox]"
+      class="kpi-card flex gap-3 flex-wrap items-end text-sm">
   <div>
     <label class="label-uc">Period:</label>
-    <select name="period" onchange="this.form.submit()"
+    <select name="period"
             class="bg-surface text-text rounded-md px-2 py-1 text-[12px]"
             style="border:0.5px solid var(--color-hairline);">
       <option value="ytd" {% if selected_period == 'ytd' %}selected{% endif %}>YTD ({{ current_year }})</option>

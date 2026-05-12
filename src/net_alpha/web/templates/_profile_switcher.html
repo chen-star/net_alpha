@@ -22,7 +22,7 @@
         <input type="hidden" name="density" value="{{ profile.density }}">
         <input type="hidden" name="theme" value="{{ profile.theme }}">
         <span class="text-[12px] flex-1 truncate">{{ a.broker }}/{{ a.label }}</span>
-        <select name="profile" onchange="this.form.submit()"
+        <select name="profile" onchange="this.form.requestSubmit()"
                 class="bg-bg text-text rounded px-1 py-0.5 text-[12px]"
                 style="border:0.5px solid var(--color-hairline);">
           <option value="conservative"{% if current == "conservative" %} selected{% endif %}>Conservative</option>

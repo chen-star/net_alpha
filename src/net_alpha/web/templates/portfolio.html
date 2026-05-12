@@ -3,10 +3,31 @@
 {% block title %}Portfolio · net-alpha{% endblock %}
 {% block topbar_right %}{% endblock %}
 {% block content %}
+  {# A2.2: Alpine helper for the account multi-select dropdown. Loaded
+     unconditionally so it's available in both the toolbar (full state)
+     and stays in scope even if the toolbar lazily appears via HTMX swap.
+     Uses requestSubmit() so HTMX intercepts the parent form's submit. #}
+  <script>
+    function accountMultiSelect() {
+      return {
+        open: false,
+        _timer: null,
+        onToggle() {
+          clearTimeout(this._timer);
+          this._timer = setTimeout(() => this.$el.closest('form').requestSubmit(), 200);
+        },
+        toggleAll(checked) {
+          const root = this.$el;
+          root.querySelectorAll('input[type=checkbox][name]').forEach(cb => { cb.checked = checked; });
+          this.onToggle();
+        },
+      };
+    }
+  </script>
   <div class="flex items-end justify-between flex-wrap gap-3 mb-4">
     <div>
       <h1>Portfolio</h1>
-      <div class="text-[13px] text-label-2 mt-[3px]">
+      <div id="portfolio-subline" class="text-[13px] text-label-2 mt-[3px]">
         {% if selected_accounts %}{{ selected_accounts | join(', ') }}{% else %}All accounts{% endif %} ·
         {{ selected_period|default('YTD')|upper }}
       </div>

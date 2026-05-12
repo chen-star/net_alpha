@@ -53,9 +53,10 @@ function accountMultiSelect() {
     open: false,
     _timer: null,
     onToggle() {
-      // Debounce 200ms then submit the parent form.
+      // Debounce 200ms then submit the parent form via requestSubmit()
+      // so HTMX intercepts the 'submit' event (form.submit() would not).
       clearTimeout(this._timer);
-      this._timer = setTimeout(() => this.$el.closest('form').submit(), 200);
+      this._timer = setTimeout(() => this.$el.closest('form').requestSubmit(), 200);
     },
     toggleAll(checked) {
       const root = this.$el;
