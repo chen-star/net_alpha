@@ -67,6 +67,30 @@ def test_account_select_dispatches_change_not_submit(client: TestClient):
     assert "form.dispatchEvent" in body or "dispatchEvent(new Event" in body
 
 
+def test_positions_toolbar_is_plain_get_form(client: TestClient, builders, repo):
+    """A2.2 fix: the shared toolbar only uses HTMX when the rendering route
+    sets toolbar_hx_target. On Positions, the toolbar must fall back to a
+    plain GET form (otherwise it tries to swap a #portfolio-body that
+    doesn't exist on that page)."""
+    builders.seed_import(
+        repo, "schwab", "lt",
+        [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
+    )
+    res = client.get("/positions")
+    assert res.status_code == 200
+    body = res.text
+    # The form's `action` attr is /positions (existing assertion in test_toolbar_action).
+    assert 'action="/positions"' in body
+    # But the HTMX swap attrs are NOT on the form on this page.
+    # Scope to the toolbar form: look for the kpi-card flex form that doesn't
+    # have hx-get="/portfolio/body".
+    # A coarse but reliable check: hx-get="/portfolio/body" appears at most
+    # zero times on the positions page.
+    assert 'hx-get="/portfolio/body"' not in body
+    # And the period select reverts to the inline submit handler.
+    assert 'onchange="this.form.submit()"' in body
+
+
 def test_portfolio_body_emits_oob_subline_when_htmx(client: TestClient, builders, repo):
     builders.seed_import(
         repo, "schwab", "lt",

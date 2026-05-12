@@ -264,6 +264,8 @@ def portfolio_page(
             "selected_period": selected_period,
             "group_options": group_options,
             "toolbar_action": "/",
+            "toolbar_hx_target": "#portfolio-body",
+            "toolbar_hx_get": "/portfolio/body",
             "price_freshness": price_freshness,
             "price_freshness_label": price_freshness_label,
         },
