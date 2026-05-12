@@ -106,7 +106,7 @@ def test_palette_x_data_invokes_window_factory(client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert 'x-data="window.paletteOverlay()"' in resp.text, (
-        "palette overlay must bind via x-data=\"window.paletteOverlay()\". "
+        'palette overlay must bind via x-data="window.paletteOverlay()". '
         "The factory is hoisted onto window by palette.js — see the "
         "bottom of static/palette.js."
     )
@@ -119,6 +119,5 @@ def test_palette_js_exposes_factory_on_window(client):
     resp = client.get("/static/palette.js?v=test")
     assert resp.status_code == 200
     assert "window.paletteOverlay = paletteOverlay" in resp.text, (
-        "palette.js must expose paletteOverlay on window so Alpine's "
-        "x-data eval scope can resolve it."
+        "palette.js must expose paletteOverlay on window so Alpine's x-data eval scope can resolve it."
     )
