@@ -61,7 +61,7 @@
             <span class="chip-unclear" style="color: var(--color-pos); background: rgba(48,209,88,0.14);">clear</span>
           {% endif %}
         </td>
-        {% set _acct_slug = row.account_label|replace('/', '__')|replace(' ', '_') %}
+        {% set _acct_slug = row.account_label|dom_id_slug %}
         <td id="tax-saved-{{ row.symbol }}-{{ _acct_slug }}" class="r num">
           {% if has_tax_config %}
           {% set _ts = tax_saved_by_key[(row.symbol, row.account_label)] %}
