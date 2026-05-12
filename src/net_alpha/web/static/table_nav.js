@@ -53,4 +53,6 @@
   } else {
     init();
   }
+  // Re-init after HTMX swaps (e.g. harvest pagination, future row insertions).
+  document.body.addEventListener("htmx:afterSwap", init);
 })();

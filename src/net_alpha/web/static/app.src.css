@@ -740,3 +740,11 @@ td.rail-col { position: relative; padding: 0 0 0 8px; }
     0 0 0 2px var(--color-bg),
     0 0 0 4px var(--color-accent);
 }
+
+/* ---------------------------------------------------------------
+ * Focus ring on opt-in keyboard-navigable table rows (A4)
+ * --------------------------------------------------------------- */
+tr[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
