@@ -2,6 +2,93 @@
 
 
 
+## v0.65.1 (2026-05-12)
+
+### Chore
+
+* chore: refresh gitnexus stats and lockfile version
+
+Catches up AGENTS.md / CLAUDE.md gitnexus symbol counts to the current
+index and bumps wash-alpha in uv.lock to the v0.65.0 release.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`90799c0`](https://github.com/chen-star/net_alpha/commit/90799c0428b3729bc2b150d5d84a20e176e39db3))
+
+* chore(ui): move default port from 8765 to 18765
+
+Shifts the free-port scan range, all CLI/service defaults, sandbox
+profile pin, and status pill display to 18765–18775. Existing installs
+need `net-alpha service uninstall &amp;&amp; install` to pick up the new port.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`904830b`](https://github.com/chen-star/net_alpha/commit/904830b29c342a18752e3ae5af2a2ccd33dd42e0))
+
+* chore(pytest): register e2e marker
+
+Silences PytestUnknownMarkWarning emitted when running the Playwright
+golden flows added in the flow-and-clarity-pass. Also enables marker-
+based filtering (e.g. `pytest -m &#39;not e2e&#39;` to skip the slow
+browser-driven tests). ([`e8b96d4`](https://github.com/chen-star/net_alpha/commit/e8b96d44878b7257e91f91c1f2be2d77c1f8e38b))
+
+### Fix
+
+* fix(web): size Verify badge as compact pill on Overview toolbar
+
+The `verify-badge` class had no CSS, so the badge inherited the
+default font-size and rendered with no padding/border — towering
+over the adjacent Period/Account/Prices toolbar. Apply the same
+Tailwind pill utilities used by the header pill so the badge
+matches the toolbar&#39;s visual scale.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`be87edc`](https://github.com/chen-star/net_alpha/commit/be87edccffee67324149ec0219681bcea61ba97f))
+
+### Refactor
+
+* refactor(account): drop redundant spinner from multi-select trigger
+
+The multi-select trigger button sits inside the Portfolio toolbar form
+and lit up via the descendant CSS selector .htmx-request .spinner-inline
+whenever the form fired — duplicating with #portfolio-toolbar-spinner.
+On non-HTMX pages it was dead markup that never animated.
+
+Removed the include from the trigger; the toolbar-wide spinner still
+covers the HTMX path. Updated test_account_multi_select_has_spinner to
+test_portfolio_toolbar_has_spinner so the assertion lands on the page
+where the spinner actually has work to do. ([`dd253c5`](https://github.com/chen-star/net_alpha/commit/dd253c5982703a5d5d3fe614ca904c42b050c0a9))
+
+* refactor(web): consolidate DOM-id slug into dom_id_slug helper
+
+The harvest tax-saved cell IDs ran the account label through a hand-rolled
+`/`→`__`/` `→`_` replace chain in two places (Jinja template + Python
+route OOB builder). Expanded coverage with a regex-based `dom_id_slug`
+helper in `web/format.py`, registered as a Jinja filter, used by both
+sites. Anything outside `[A-Za-z0-9_-]` collapses to `_`.
+
+Why: account labels are user-set via Settings — characters like `:`,
+`#`, or `+` are unlikely in practice but would silently break OOB
+`getElementById` lookup. One source of truth + a permissive filter
+removes the brittleness without changing observable behavior on existing
+labels. ([`ae5a66d`](https://github.com/chen-star/net_alpha/commit/ae5a66dd3b32eeb52fa723464b0b3ea075bb667e))
+
+### Test
+
+* test(harvest): seed real harvest row for stable-cell-ID assertion
+
+test_tax_saved_cells_have_stable_ids previously seeded only an open buy
+and no price quote, so compute_harvest_queue returned empty and both
+nested &#39;if … in body&#39; guards short-circuited to a no-op pass — the test
+asserted nothing meaningful.
+
+Added a _seed_harvest_row helper that materializes lots (stitch +
+recompute) and writes a price_cache quote below basis, mirroring the
+recipe proven by the e2e fixture. The test now positively asserts the
+stable cell id renders against a populated row. ([`6b5e25a`](https://github.com/chen-star/net_alpha/commit/6b5e25a5eb7e85b678a88b49bd801557e3750134))
+
+### Unknown
+
+* Merge pull request #10 from chen-star/worktree-flow-and-clarity-followups
+
+chore: flow-and-clarity follow-ups ([`a3368fa`](https://github.com/chen-star/net_alpha/commit/a3368fa40a52eb5bfd1afbfe294a0efc68be5dc9))
+
+
 ## v0.65.0 (2026-05-12)
 
 ### Ci
