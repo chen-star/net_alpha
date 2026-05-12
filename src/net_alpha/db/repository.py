@@ -2561,6 +2561,248 @@ class Repository:
             )
             return {symbol: row for row, symbol in s.exec(stmt).all()}
 
+    # --- Broker positions (verify engine) ---------------------------------
+
+    def save_broker_positions(self, *, rows: list[dict], as_of_date: str) -> int:
+        """Insert an ImportRecord + N BrokerPosition rows.
+
+        The ``imports`` table has a NOT-NULL ``account_id`` FK so we attach
+        every positions import to a sentinel account (``positions/(multi)``)
+        — the underlying broker_position rows carry their own per-row
+        ``account_label`` so the sentinel is purely a referential-integrity
+        placeholder, never surfaced as a real trading account.
+
+        The ``csv_filename`` is prefixed with ``[positions]`` so the imports
+        page can visibly distinguish positions imports from trade/G&L imports
+        even without a dedicated ``kind`` column on the table.
+
+        Returns the new ImportRecord ``id``.
+        """
+        from net_alpha.verify.models import BrokerPosition
+
+        with Session(self.engine) as s:
+            # Sentinel account for the FK; created lazily on first positions
+            # import. broker="positions", label="(multi)" — distinct enough
+            # from any real broker that it cannot collide.
+            acct = s.exec(
+                select(AccountRow).where(AccountRow.broker == "positions", AccountRow.label == "(multi)")
+            ).first()
+            if acct is None:
+                acct = AccountRow(broker="positions", label="(multi)")
+                s.add(acct)
+                s.flush()
+
+            rec = ImportRecordRow(
+                account_id=acct.id,
+                csv_filename=f"[positions] as of {as_of_date}",
+                csv_sha256=f"positions-{as_of_date}-{len(rows)}",
+                imported_at=datetime.now(UTC),
+                trade_count=len(rows),
+            )
+            s.add(rec)
+            s.flush()
+            for r in rows:
+                s.add(
+                    BrokerPosition(
+                        import_id=rec.id,
+                        account_label=r["account_label"],
+                        symbol=r["symbol"],
+                        qty=r["qty"],
+                        cost_basis=r["cost_basis"],
+                        market_value=r["market_value"],
+                        unrealized_pl=r["unrealized_pl"],
+                        as_of_date=as_of_date,
+                    )
+                )
+            s.commit()
+            return rec.id
+
+    def aggregate_open_positions(self) -> list[dict]:
+        """Sum open-lot qty/basis/market_value per (symbol, account_label).
+
+        Equity-only — option lots are skipped to match the Phase 3 choice in
+        the renderer (broker All-Positions CSV reconciliation compares equity
+        positions only). FIFO-consumes lots by sells + Realized G/L closures
+        so we don't double-count closed lots.
+
+        market_value_total is computed from the cached `latest_price()`; if a
+        symbol has no cached price the contribution is 0 and downstream tolerance
+        comparisons may surface drift — that's intentional (the user can refresh
+        prices and re-run verify).
+
+        Returns a list of dicts with keys: ``symbol``, ``account_label``,
+        ``qty``, ``adjusted_basis_total``, ``market_value_total``.
+        """
+        from net_alpha.portfolio.positions import consume_lots_fifo
+
+        trades = self.all_trades()
+        lots = self.all_lots()
+        gl_closures = self.get_equity_gl_closures()
+        gl_option_closures = self.get_option_gl_closures()
+        consumed = consume_lots_fifo(
+            lots=lots,
+            trades=trades,
+            gl_closures=gl_closures,
+            gl_option_closures=gl_option_closures,
+        )
+
+        price_cache: dict[str, Decimal | None] = {}
+
+        def _price(ticker: str) -> Decimal:
+            if ticker not in price_cache:
+                price_cache[ticker] = self.latest_price(ticker)
+            p = price_cache[ticker]
+            return p if p is not None else Decimal("0")
+
+        out: dict[tuple[str, str], dict] = {}
+        for lot, rem_qty, rem_basis in consumed:
+            if lot.option_details is not None:
+                continue
+            if rem_qty <= 0:
+                continue
+            key = (lot.account, lot.ticker)
+            row = out.get(key)
+            if row is None:
+                row = {
+                    "symbol": lot.ticker,
+                    "account_label": lot.account,
+                    "qty": 0.0,
+                    "adjusted_basis_total": 0.0,
+                    "market_value_total": 0.0,
+                }
+                out[key] = row
+            row["qty"] += float(rem_qty)
+            row["adjusted_basis_total"] += float(rem_basis)
+            row["market_value_total"] += float(rem_qty * _price(lot.ticker))
+        return list(out.values())
+
+    def latest_broker_positions(self) -> tuple[list, str | None]:
+        """Return the most-recent broker_position rows + their as_of_date.
+
+        Empty list + None if no positions CSV has ever been imported. Rows
+        are returned as ``BrokerPosition`` SQLModel instances detached from
+        the session.
+        """
+        from net_alpha.verify.models import BrokerPosition
+
+        with Session(self.engine) as s:
+            max_import = s.exec(text("SELECT MAX(import_id) FROM broker_position")).first()
+            # SQLAlchemy returns a Row; exec().first() on raw text gives a
+            # tuple-like Row, or None on empty results. Guard both shapes.
+            if not max_import or max_import[0] is None:
+                return [], None
+            latest_import_id = max_import[0]
+            rows = list(s.exec(select(BrokerPosition).where(BrokerPosition.import_id == latest_import_id)).all())
+            for r in rows:
+                s.expunge(r)
+            as_of = rows[0].as_of_date if rows else None
+            return rows, as_of
+
+    # --- Verify engine persistence ---
+
+    def save_verify_run(
+        self,
+        *,
+        run_at: str,
+        trigger: str,
+        status: str,
+        duration_ms: int,
+        checks_total: int,
+        checks_passed: int,
+        checks_warned: int,
+        checks_failed: int,
+        reference_age_days: int | None,
+        notes: str,
+        findings: list,
+    ) -> int:
+        """Insert one verify_result + N verify_finding rows in a single transaction.
+
+        Also runs the rolling 90-day cleanup on the indexed ``run_at`` column —
+        keeps the audit table from growing unboundedly while still preserving
+        a useful trend window for the verify history page.
+
+        ``detail_json`` is stored as a JSON string when the finding carries a
+        non-empty detail dict, and as NULL otherwise (avoids "{}" noise).
+        """
+        from net_alpha.verify.models import VerifyFinding, VerifyResult
+
+        with Session(self.engine) as session:
+            vr = VerifyResult(
+                run_at=run_at,
+                trigger=trigger,
+                status=status,
+                duration_ms=duration_ms,
+                checks_total=checks_total,
+                checks_passed=checks_passed,
+                checks_warned=checks_warned,
+                checks_failed=checks_failed,
+                reference_age_days=reference_age_days,
+                notes=notes,
+            )
+            session.add(vr)
+            session.flush()
+            for f in findings:
+                severity = f.severity.value if hasattr(f.severity, "value") else str(f.severity)
+                detail_json = json.dumps(f.detail) if f.detail else None
+                session.add(
+                    VerifyFinding(
+                        run_id=vr.id,
+                        rule_id=f.rule_id,
+                        severity=severity,
+                        scope=f.scope,
+                        ours=f.ours,
+                        theirs=f.theirs,
+                        delta=f.delta,
+                        detail_json=detail_json,
+                    )
+                )
+            # Rolling 90-day cleanup. ``run_at`` is an ISO timestamp string —
+            # SQLite's date() parses the leading YYYY-MM-DD prefix so this
+            # comparison is safe without explicit casting.
+            session.exec(text("DELETE FROM verify_result WHERE run_at < date('now', '-90 days')"))
+            session.commit()
+            return vr.id
+
+    def latest_verify_run(self):
+        """Return the most-recent VerifyResult row (or None)."""
+        from net_alpha.verify.models import VerifyResult
+
+        with Session(self.engine) as session:
+            row = session.exec(select(VerifyResult).order_by(VerifyResult.run_at.desc()).limit(1)).first()
+            if row is not None:
+                session.expunge(row)
+            return row
+
+    def list_verify_runs(self, *, limit: int = 50) -> list:
+        """Return the most-recent ``limit`` VerifyResult rows, newest first."""
+        from net_alpha.verify.models import VerifyResult
+
+        with Session(self.engine) as session:
+            rows = list(session.exec(select(VerifyResult).order_by(VerifyResult.run_at.desc()).limit(limit)).all())
+            for r in rows:
+                session.expunge(r)
+            return rows
+
+    def list_verify_findings(self, *, run_id: int) -> list:
+        """Return every VerifyFinding row attached to a given verify_result.id."""
+        from net_alpha.verify.models import VerifyFinding
+
+        with Session(self.engine) as session:
+            rows = list(session.exec(select(VerifyFinding).where(VerifyFinding.run_id == run_id)).all())
+            for r in rows:
+                session.expunge(r)
+            return rows
+
+    def get_verify_finding(self, finding_id: int):
+        """Return one VerifyFinding row by id (or None)."""
+        from net_alpha.verify.models import VerifyFinding
+
+        with Session(self.engine) as session:
+            row = session.exec(select(VerifyFinding).where(VerifyFinding.id == finding_id)).first()
+            if row is not None:
+                session.expunge(row)
+            return row
+
 
 # ---------------------------------------------------------------------------
 # Legacy / preserved classes — kept for import compatibility

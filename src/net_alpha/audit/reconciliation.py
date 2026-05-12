@@ -74,6 +74,31 @@ def reconcile(
     )
 
 
+def reconcile_all(
+    *,
+    repo: Repository,
+    tolerance: float = DEFAULT_TOLERANCE,
+) -> list[ReconciliationResult]:
+    """Reconcile every (account, symbol) pair the repository knows about.
+
+    Iterates `repo.list_accounts()` × the distinct tickers seen in
+    `repo.get_gl_lots_for_account()` (i.e. only symbols where a broker
+    Realized G/L row exists). Accounts without a broker provider yield
+    UNAVAILABLE results, which downstream callers skip.
+
+    Thin helper consumed by `verify/broker_recon.py::reconcile_realized_gl`
+    — kept in `audit/` so module ownership stays with the reconciliation
+    domain.
+    """
+    out: list[ReconciliationResult] = []
+    for acct in repo.list_accounts():
+        gl_lots = repo.get_gl_lots_for_account(acct.id)
+        symbols = sorted({lot.symbol_raw for lot in gl_lots})
+        for sym in symbols:
+            out.append(reconcile(symbol=sym, account_id=acct.id, repo=repo, tolerance=tolerance))
+    return out
+
+
 def _net_alpha_realized(repo: Repository, account_id: int, symbol: str) -> float:
     """Sum realized P/L for the (account, symbol) pair across all time."""
     total = 0.0

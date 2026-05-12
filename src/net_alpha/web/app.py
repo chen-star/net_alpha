@@ -42,6 +42,7 @@ from net_alpha.web.routes import preferences as preferences_routes
 from net_alpha.web.routes import service as service_routes
 from net_alpha.web.routes import settings as settings_routes
 from net_alpha.web.routes import tax as tax_routes
+from net_alpha.web.routes import verify as verify_routes
 from net_alpha.web.routes.accounts import router as accounts_router
 
 
@@ -195,6 +196,43 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
 
     templates.env.globals["first_visit_modal_data"] = _first_visit_modal_data
 
+    def _verify_pill_data() -> dict[str, str]:
+        """Global header pill payload — latest verify run status + label.
+
+        Returns ``status="grey"`` when no run has been recorded yet. Read once
+        per render (no caching) so the pill reflects the most recent run
+        without a soft-refresh; the underlying ``latest_verify_run`` query is
+        a single indexed-LIMIT-1 select, cheap enough for every page.
+
+        The ``label`` field is the tooltip content; we append the broker
+        positions CSV age so the user can spot a stale reference without
+        opening /verify.
+        """
+        from datetime import date as _date
+
+        from net_alpha.db.repository import Repository as _Repository
+
+        _engine = get_engine(effective_db_path(settings, app.state.demo_mode))
+        repo = _Repository(_engine)
+        latest = repo.latest_verify_run()
+        try:
+            _rows, as_of = repo.latest_broker_positions()
+        except Exception:  # noqa: BLE001 — never fail the header on a DB hiccup
+            as_of = None
+        if as_of:
+            try:
+                age = (_date.today() - _date.fromisoformat(as_of)).days
+                ref_suffix = f" · positions CSV {age}d old"
+            except ValueError:
+                ref_suffix = ""
+        else:
+            ref_suffix = " · no positions CSV uploaded"
+        if latest is None:
+            return {"status": "grey", "label": "never run" + ref_suffix}
+        return {"status": str(latest.status), "label": str(latest.run_at) + ref_suffix}
+
+    templates.env.globals["verify_pill_data"] = _verify_pill_data
+
     def _palette_index() -> dict:
         """Bootstrap blob for the ⌘K palette. Re-built on every render so new
         imports / targets appear immediately on the next navigation.
@@ -250,6 +288,7 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
     app.include_router(portfolio_routes.router)
     app.include_router(trades.router)
     app.include_router(backup_routes.router)
+    app.include_router(verify_routes.router)
     app.include_router(system.router)
 
     system.register_error_handlers(app)

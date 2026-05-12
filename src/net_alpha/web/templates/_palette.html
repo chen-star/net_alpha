@@ -3,7 +3,7 @@
    Reads its index from <script id="palette-index"> emitted by base.html.
 #}
 <div
-  x-data="paletteOverlay()"
+  x-data="window.paletteOverlay()"
   x-cloak
   x-show="open"
   @keydown.escape.window="close()"

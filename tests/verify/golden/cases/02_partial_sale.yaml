@@ -1,0 +1,26 @@
+name: "Partial sale at gain"
+trades:
+  - date: 2025-01-15
+    action: Buy
+    ticker: MSFT
+    qty: 100
+    cost_basis: 40000.00
+    account: Schwab/Taxable
+  - date: 2025-06-15
+    action: Sell
+    ticker: MSFT
+    qty: 30
+    proceeds: 12600.00
+    cost_basis: 12000.00
+    account: Schwab/Taxable
+prices_today:
+  MSFT: 410.00
+expected_kpis:
+  # After FIFO sale of 30 of 100 lot, 70 remain open at original $400 basis.
+  open_position_value: 28700.00   # 70 × 410
+  unrealized: 700.00              # 28700 - 28000
+  period_realized: 600.00         # 12600 - 12000
+expected_lots:
+  - ticker: MSFT
+    quantity: 100   # storage doesn't decrement lot qty on sell; consume_lots_fifo handles open value
+    adjusted_basis: 40000.00

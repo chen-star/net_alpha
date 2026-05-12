@@ -43,6 +43,11 @@ Schema versions:
         diff. The plan_last_seen_at value lives in the existing `meta`
         table as a single row keyed `plan_last_seen_at`; no schema
         change needed for that.
+  v24 — Adds verify_result, verify_finding, and broker_position tables
+        for the Overview/Positions verification engine. verify_result
+        records each L2 background-job run; verify_finding stores each
+        failed/warned check (FK to verify_result); broker_position holds
+        rows parsed from Schwab All-Positions CSVs (FK to imports.id).
 """
 
 from __future__ import annotations
@@ -50,7 +55,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 23
+CURRENT_SCHEMA_VERSION = 24
 
 
 def get_schema_version(session: Session) -> int:
@@ -654,6 +659,70 @@ def _migrate_v22_to_v23(session: Session) -> None:
         session.exec(text("ALTER TABLE wash_sale_violations ADD COLUMN kind TEXT NOT NULL DEFAULT 'deferred'"))
 
 
+def _migrate_v23_to_v24(session: Session) -> None:
+    """v24 — Adds verify_result, verify_finding, broker_position tables for
+    the verification engine (Overview/Positions correctness).
+    """
+    if not _table_exists(session, "verify_result"):
+        session.exec(
+            text(
+                "CREATE TABLE verify_result ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "run_at TEXT NOT NULL, "
+                "trigger TEXT NOT NULL, "
+                "status TEXT NOT NULL, "
+                "duration_ms INTEGER NOT NULL, "
+                "checks_total INTEGER NOT NULL, "
+                "checks_passed INTEGER NOT NULL, "
+                "checks_warned INTEGER NOT NULL, "
+                "checks_failed INTEGER NOT NULL, "
+                "reference_age_days INTEGER, "
+                "notes TEXT"
+                ")"
+            )
+        )
+        session.exec(text("CREATE INDEX ix_verify_result_run_at ON verify_result(run_at)"))
+
+    if not _table_exists(session, "verify_finding"):
+        session.exec(
+            text(
+                "CREATE TABLE verify_finding ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "run_id INTEGER NOT NULL REFERENCES verify_result(id) ON DELETE CASCADE, "
+                "rule_id TEXT NOT NULL, "
+                "severity TEXT NOT NULL, "
+                "scope TEXT NOT NULL, "
+                "ours REAL, "
+                "theirs REAL, "
+                "delta REAL, "
+                "detail_json TEXT"
+                ")"
+            )
+        )
+        session.exec(text("CREATE INDEX ix_verify_finding_run_id ON verify_finding(run_id)"))
+
+    if not _table_exists(session, "broker_position"):
+        session.exec(
+            text(
+                "CREATE TABLE broker_position ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "import_id INTEGER NOT NULL REFERENCES imports(id) ON DELETE CASCADE, "
+                "account_label TEXT NOT NULL, "
+                "symbol TEXT NOT NULL, "
+                "qty REAL NOT NULL, "
+                "cost_basis REAL NOT NULL, "
+                "market_value REAL NOT NULL, "
+                "unrealized_pl REAL NOT NULL, "
+                "as_of_date TEXT NOT NULL"
+                ")"
+            )
+        )
+        session.exec(text("CREATE INDEX ix_broker_position_acct_sym ON broker_position(account_label, symbol)"))
+        session.exec(text("CREATE INDEX ix_broker_position_import ON broker_position(import_id)"))
+
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -673,6 +742,7 @@ def migrate(session: Session) -> None:
         _migrate_v19_to_v20(session)
         _migrate_v20_to_v21(session)
         _migrate_v22_to_v23(session)
+        _migrate_v23_to_v24(session)
         session.commit()
         return
     if current == 1:
@@ -763,6 +833,10 @@ def migrate(session: Session) -> None:
         _migrate_v22_to_v23(session)
         set_schema_version(session, 23)
         current = 23
+    if current < 24:
+        _migrate_v23_to_v24(session)
+        set_schema_version(session, 24)
+        current = 24
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "

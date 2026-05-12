@@ -11,7 +11,13 @@
         {{ selected_period|default('YTD')|upper }}
       </div>
 </div>
-    {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
+    <div class="flex items-center gap-3 flex-wrap">
+      <div class="verify-badge-slot"
+           hx-get="/verify/badge?page=positions"
+           hx-trigger="load delay:200ms"
+           hx-swap="innerHTML"></div>
+      {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
+    </div>
   </div>
 
   {# Emit column markers so tests / density.js can read extra_columns regardless

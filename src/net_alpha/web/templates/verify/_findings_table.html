@@ -1,0 +1,48 @@
+{# Findings table for one verify run.
+   Context: `findings: list[VerifyFinding]`, optional `run: VerifyResult`. #}
+<table class="findings w-full text-[13px] border-collapse">
+  <thead>
+    <tr class="text-left text-label-2 border-b border-hairline">
+      <th class="py-1.5 pr-3 font-medium">Rule</th>
+      <th class="py-1.5 pr-3 font-medium">Severity</th>
+      <th class="py-1.5 pr-3 font-medium">Scope</th>
+      <th class="py-1.5 pr-3 font-medium text-right">Ours</th>
+      <th class="py-1.5 pr-3 font-medium text-right">Broker</th>
+      <th class="py-1.5 pr-3 font-medium text-right">&Delta;</th>
+      <th class="py-1.5 pr-3 font-medium"><span class="sr-only">Actions</span></th>
+    </tr>
+  </thead>
+  {% for f in findings %}
+  <tbody class="finding finding-{{ f.severity }}" x-data="{ open: false }">
+    <tr class="border-b border-hairline"
+        :class="open ? '' : 'last:border-0'">
+      <td class="py-1.5 pr-3"><code class="text-[12px]">{{ f.rule_id }}</code></td>
+      <td class="py-1.5 pr-3"><span class="status-{{ f.severity }}">{{ f.severity }}</span></td>
+      <td class="py-1.5 pr-3">{{ f.scope }}</td>
+      <td class="py-1.5 pr-3 text-right tabular-nums">{{ f.ours if f.ours is not none else '—' }}</td>
+      <td class="py-1.5 pr-3 text-right tabular-nums">{{ f.theirs if f.theirs is not none else '—' }}</td>
+      <td class="py-1.5 pr-3 text-right tabular-nums">{{ f.delta if f.delta is not none else '—' }}</td>
+      <td class="py-1.5 pr-3">
+        <button type="button"
+                class="text-[12px] text-accent hover:underline"
+                data-testid="verify-explain-toggle"
+                aria-expanded="false"
+                :aria-expanded="open.toString()"
+                @click="open = !open">
+          <span x-show="!open">Why?</span>
+          <span x-show="open" x-cloak>Hide</span>
+        </button>
+      </td>
+    </tr>
+    <tr x-show="open" x-cloak class="border-b border-hairline last:border-0">
+      <td colspan="7" class="py-0">
+        {% include "verify/_finding_explain.html" %}
+      </td>
+    </tr>
+  </tbody>
+  {% else %}
+  <tbody>
+    <tr><td colspan="7" class="py-2 text-label-2">No findings &mdash; everything matched within tolerance.</td></tr>
+  </tbody>
+  {% endfor %}
+</table>

@@ -1,0 +1,62 @@
+name: "Wash sale with §1223(4) tacking"
+# NOTE on observed engine behavior (locked in as golden):
+# The detector's _find_candidates() returns ALL within-window candidates sorted
+# by date, FIFO-allocates against the loss quantity, and matches the EARLIEST
+# candidate first. With these trades, the 2024-12-15 buy lot is found within
+# ±30 days of the 2025-01-10 sell (as a "prior" buy), so it gets allocated
+# 100% of the disallowed loss — even though that same lot is what the sell
+# consumed via FIFO. The 2025-01-25 buy doesn't get the wash-sale basis
+# adjustment in this scenario.
+#
+# Net effect:
+#   - 2024-12-15 lot: adjusted_basis = 50000 + 5000 (disallowed) = 55000
+#     (but this lot is FIFO-consumed by the sale, so it doesn't appear in
+#     "open" positions)
+#   - 2025-01-25 lot: adjusted_basis = 46000 (unchanged), 100 shares open
+#
+# This is a known behavior quirk worth chasing later: in §1091, the
+# "replacement" leg is conventionally the lot acquired within ±30 days that
+# REMAINS open after the loss sale, not just the earliest within-window match.
+# Filed as a follow-up for Phase 8+.
+trades:
+  - date: 2024-12-15
+    action: Buy
+    ticker: NVDA
+    qty: 100
+    cost_basis: 50000.00
+    account: Schwab/Taxable
+  - date: 2025-01-10
+    action: Sell
+    ticker: NVDA
+    qty: 100
+    proceeds: 45000.00         # $5000 loss
+    cost_basis: 50000.00
+    account: Schwab/Taxable
+  - date: 2025-01-25            # 15 days after sale — wash sale
+    action: Buy
+    ticker: NVDA
+    qty: 100
+    cost_basis: 46000.00
+    account: Schwab/Taxable
+prices_today:
+  NVDA: 520.00
+expected_kpis:
+  # 2025-01-25 lot (100 sh @ basis $46000) is the only open NVDA after FIFO.
+  open_position_value: 52000.00   # 100 × 520
+  unrealized: 6000.00             # 52000 - 46000 (basis NOT adjusted on this lot)
+  # period_realized = economic loss (-5000). The wash-sale add-back happens
+  # via RealizedGLLot.disallowed_loss in compute_kpis, but synthetic manual
+  # trades produce no GL rows — the engine-detected WashSaleViolation alone
+  # does NOT round-trip into period_realized. Locked in as current behavior.
+  period_realized: -5000.00
+expected_lots:
+  # The 2024-12-15 lot DID get its adjusted_basis bumped by 5000 (to 55000).
+  - ticker: NVDA
+    quantity: 100
+    date: 2024-12-15
+    adjusted_basis: 55000.00
+  # The 2025-01-25 replacement lot is unchanged.
+  - ticker: NVDA
+    quantity: 100
+    date: 2025-01-25
+    adjusted_basis: 46000.00
