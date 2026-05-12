@@ -985,3 +985,88 @@ def test_short_option_closed_via_gl_does_not_contribute_to_unrealized():
     # Without the fix, the OTM short put would contribute +$166.67.
     # With the fix, the GL closure flushes the short → contribution = 0.
     assert kpis.period_unrealized == Decimal("0")
+
+
+def test_compute_kpis_accounts_list_matches_single_account():
+    """accounts=['Tax'] must equal today's account='Tax'."""
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", action="Buy", quantity=10.0, cost_basis=1000.0),
+        _trade(id="t2", account="IRA", ticker="SPY", action="Buy", quantity=5.0, cost_basis=500.0),
+    ]
+    lots = [
+        _lot(id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0,
+             cost_basis=1000.0, adjusted_basis=1000.0),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0,
+             cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    prices = {"SPY": _quote("SPY", 120)}
+    kpis_single = compute_kpis(
+        trades=trades, lots=lots, prices=prices,
+        period_label="Lifetime", period=None, account="Tax",
+    )
+    kpis_list = compute_kpis(
+        trades=trades, lots=lots, prices=prices,
+        period_label="Lifetime", period=None, account=None, accounts=["Tax"],
+    )
+    assert kpis_single == kpis_list
+
+
+def test_compute_kpis_accounts_list_two_equals_union():
+    """accounts=['Tax', 'IRA'] equals account=None (no filter) when those are the only accounts."""
+    trades = [
+        _trade(id="t1", account="Tax", ticker="SPY", action="Buy", quantity=10.0, cost_basis=1000.0),
+        _trade(id="t2", account="IRA", ticker="SPY", action="Buy", quantity=5.0, cost_basis=500.0),
+    ]
+    lots = [
+        _lot(id="l1", trade_id="t1", account="Tax", ticker="SPY", quantity=10.0,
+             cost_basis=1000.0, adjusted_basis=1000.0),
+        _lot(id="l2", trade_id="t2", account="IRA", ticker="SPY", quantity=5.0,
+             cost_basis=500.0, adjusted_basis=500.0),
+    ]
+    prices = {"SPY": _quote("SPY", 120)}
+    kpis_all = compute_kpis(
+        trades=trades, lots=lots, prices=prices,
+        period_label="Lifetime", period=None, account=None,
+    )
+    kpis_both = compute_kpis(
+        trades=trades, lots=lots, prices=prices,
+        period_label="Lifetime", period=None, account=None, accounts=["Tax", "IRA"],
+    )
+    assert kpis_all == kpis_both
+
+
+def test_compute_kpis_empty_accounts_means_all():
+    trades = [_trade(id="t1", account="Tax", ticker="SPY")]
+    lots = [_lot(id="l1", trade_id="t1", account="Tax", ticker="SPY")]
+    prices = {"SPY": _quote("SPY", 410)}
+    kpis_none = compute_kpis(trades=trades, lots=lots, prices=prices,
+                              period_label="Lifetime", period=None, account=None)
+    kpis_empty = compute_kpis(trades=trades, lots=lots, prices=prices,
+                               period_label="Lifetime", period=None, account=None, accounts=[])
+    assert kpis_none == kpis_empty
+
+
+def test_compute_wash_impact_accounts_list_or_semantic():
+    """A cross-account violation (loss=Tax, buy=IRA) must appear under filter ['Tax'] AND ['IRA']."""
+    v_cross = _violation(dt.date(2026, 3, 1), loss_account="Tax", buy_account="IRA")
+    v_other = _violation(dt.date(2026, 3, 2), loss_account="Other", buy_account="Other")
+
+    only_tax = compute_wash_impact(
+        violations=[v_cross, v_other], period_label="YTD",
+        period=(2026, 2027), account=None, accounts=["Tax"],
+    )
+    only_ira = compute_wash_impact(
+        violations=[v_cross, v_other], period_label="YTD",
+        period=(2026, 2027), account=None, accounts=["IRA"],
+    )
+    assert only_tax.violation_count == 1
+    assert only_ira.violation_count == 1
+
+
+def test_compute_wash_impact_accounts_list_single_matches_legacy():
+    v_cross = _violation(dt.date(2026, 3, 1), loss_account="Tax", buy_account="IRA")
+    legacy = compute_wash_impact(violations=[v_cross], period_label="YTD",
+                                  period=(2026, 2027), account="Tax")
+    new = compute_wash_impact(violations=[v_cross], period_label="YTD",
+                               period=(2026, 2027), account=None, accounts=["Tax"])
+    assert legacy == new

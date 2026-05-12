@@ -7,7 +7,7 @@ or None for "Lifetime" (no period filter).
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date as _date
 from decimal import Decimal
@@ -395,7 +395,8 @@ def compute_kpis(
     prices: dict[str, Quote],
     period_label: str,
     period: tuple[int, int] | None,
-    account: str | None,
+    account: str | None = None,
+    accounts: Sequence[str] | None = None,
     gl_lots: Iterable[RealizedGLLot] | None = None,
     as_of: _date | None = None,
 ) -> KpiSet:
@@ -403,11 +404,12 @@ def compute_kpis(
     trades = list(trades)
     lots = list(lots)
     gl_list = list(gl_lots) if gl_lots is not None else None
-    if account:
-        trades = [t for t in trades if t.account == account]
-        lots = [lot for lot in lots if lot.account == account]
+    _filter = set(accounts) if accounts else ({account} if account else None)
+    if _filter is not None:
+        trades = [t for t in trades if t.account in _filter]
+        lots = [lot for lot in lots if lot.account in _filter]
         if gl_list is not None:
-            gl_list = [g for g in gl_list if g.account_display == account]
+            gl_list = [g for g in gl_list if g.account_display in _filter]
 
     period_realized = _realized_in(trades, period, gl_lots=gl_list)
     lifetime_realized = _realized_in(trades, None, gl_lots=gl_list)
@@ -469,11 +471,13 @@ def compute_wash_impact(
     violations: Iterable[WashSaleViolation],
     period_label: str,
     period: tuple[int, int] | None,
-    account: str | None,
+    account: str | None = None,
+    accounts: Sequence[str] | None = None,
 ) -> WashImpact:
     rows = list(violations)
-    if account:
-        rows = [v for v in rows if v.loss_account == account or v.buy_account == account]
+    _filter = set(accounts) if accounts else ({account} if account else None)
+    if _filter is not None:
+        rows = [v for v in rows if v.loss_account in _filter or v.buy_account in _filter]
     if period is not None:
         rows = [v for v in rows if v.loss_sale_date and period[0] <= v.loss_sale_date.year < period[1]]
     disallowed = sum((Decimal(str(v.disallowed_loss)) for v in rows), start=Decimal("0"))
