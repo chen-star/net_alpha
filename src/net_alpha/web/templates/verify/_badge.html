@@ -1,12 +1,16 @@
 {# Renders the inline ✓/⚠/✗ chip for the page toolbar.
    Expects `verify_badge: BadgeStatus` in context. #}
-<span class="verify-badge verify-badge--{{ verify_badge.severity }}"
+<span class="verify-badge verify-badge--{{ verify_badge.severity }} inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[12px] border border-hairline
+             {% if verify_badge.severity == 'ok' %}text-pos
+             {% elif verify_badge.severity == 'warn' or verify_badge.severity == 'stale' %}text-warn
+             {% else %}text-neg{% endif %}"
       data-verify-badge
       data-verify-status="{{ verify_badge.severity }}"
       title="{{ verify_badge.total() }} checks · {{ verify_badge.failed|length }} failed · {{ verify_badge.warned|length }} warned">
-  {% if verify_badge.severity == "ok" %}✓
-  {% elif verify_badge.severity == "warn" %}⚠
-  {% elif verify_badge.severity == "stale" %}⚠
-  {% else %}✗{% endif %}
+  <span aria-hidden="true">
+    {%- if verify_badge.severity == "ok" -%}✓
+    {%- elif verify_badge.severity == "warn" or verify_badge.severity == "stale" -%}⚠
+    {%- else -%}✗{%- endif -%}
+  </span>
   Verify
 </span>
