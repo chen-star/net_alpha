@@ -319,3 +319,88 @@ def test_total_return_lifetime_unchanged_when_starting_value_zero():
     # ending = 50000 + 60000 = 110000; starting = 0; contributions = 50000
     # Total Return = 110000 − 0 − 50000 = 60000
     assert kpis.growth == Decimal("60000")
+
+
+# ---------------------------------------------------------------------------
+# Tests for accounts= list filter (multi-account widening)
+# ---------------------------------------------------------------------------
+
+
+def test_build_cash_balance_series_accounts_list_matches_single_account():
+    """accounts=['Schwab/A'] equals account='Schwab/A' for cash balance series."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 4), "transfer_in", 999.0, account="Schwab/B"),
+    ]
+    legacy = build_cash_balance_series(events=events, trades=[], account="Schwab/A", period=None)
+    new = build_cash_balance_series(
+        events=events, trades=[], account=None, accounts=["Schwab/A"], period=None
+    )
+    assert legacy == new
+
+
+def test_build_cash_balance_series_two_accounts_equals_all():
+    """accounts=['Schwab/A', 'Schwab/B'] with account=None equals account=None."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 5), "transfer_in", 200.0, account="Schwab/B"),
+    ]
+    all_ = build_cash_balance_series(events=events, trades=[], account=None, period=None)
+    both = build_cash_balance_series(
+        events=events, trades=[], account=None, accounts=["Schwab/A", "Schwab/B"], period=None
+    )
+    assert all_ == both
+
+
+def test_build_cash_balance_series_empty_accounts_means_all():
+    """accounts=[] is treated as 'no filter' — same as account=None."""
+    events = [_ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A")]
+    all_ = build_cash_balance_series(events=events, trades=[], account=None, period=None)
+    empty = build_cash_balance_series(
+        events=events, trades=[], account=None, accounts=[], period=None
+    )
+    assert all_ == empty
+
+
+def test_compute_cash_kpis_accounts_list_matches_single_account():
+    """accounts=['Schwab/A'] equals account='Schwab/A' for cash KPIs."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 4), "transfer_in", 999.0, account="Schwab/B"),
+    ]
+    legacy = compute_cash_kpis(
+        events=events, trades=[], holdings_value=Decimal("0"),
+        account="Schwab/A", period=None,
+    )
+    new = compute_cash_kpis(
+        events=events, trades=[], holdings_value=Decimal("0"),
+        account=None, accounts=["Schwab/A"], period=None,
+    )
+    assert legacy == new
+
+
+def test_compute_cash_kpis_two_accounts_equals_all():
+    """accounts=['Schwab/A', 'Schwab/B'] with account=None equals no filter."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 5), "transfer_in", 200.0, account="Schwab/B"),
+    ]
+    all_ = compute_cash_kpis(
+        events=events, trades=[], holdings_value=Decimal("0"), account=None, period=None
+    )
+    both = compute_cash_kpis(
+        events=events, trades=[], holdings_value=Decimal("0"),
+        account=None, accounts=["Schwab/A", "Schwab/B"], period=None,
+    )
+    assert all_ == both
+
+
+def test_cash_allocation_slice_accounts_list_matches_single_account():
+    """accounts=['Schwab/A'] equals account='Schwab/A' for cash allocation slice."""
+    events = [
+        _ev(dt.date(2026, 3, 4), "transfer_in", 100.0, account="Schwab/A"),
+        _ev(dt.date(2026, 3, 4), "transfer_in", 999.0, account="Schwab/B"),
+    ]
+    legacy = cash_allocation_slice(events=events, trades=[], account="Schwab/A")
+    new = cash_allocation_slice(events=events, trades=[], account=None, accounts=["Schwab/A"])
+    assert legacy == new

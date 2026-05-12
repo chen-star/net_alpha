@@ -254,3 +254,70 @@ def test_series_returns_monthly_pnl_point_instances():
         assert isinstance(p, MonthlyPnlPoint)
         assert p.year == 2026
         assert p.net_pl == Decimal("0")
+
+
+# ---------------------------------------------------------------------------
+# Tests for accounts= list filter (multi-account widening)
+# ---------------------------------------------------------------------------
+
+
+def test_monthly_realized_pl_series_accounts_list_matches_single_account():
+    """accounts=['Tax'] equals account='Tax'."""
+    today = dt.date(2025, 12, 31)
+    trades = [
+        _sell(dt.date(2025, 3, 15), account="Tax", proceeds=1200, cost=1000),
+        _sell(dt.date(2025, 3, 20), account="IRA", proceeds=600, cost=500),
+    ]
+    legacy = monthly_realized_pl_series(
+        trades=trades, period=(2025, 2026), account="Tax", today=today
+    )
+    new = monthly_realized_pl_series(
+        trades=trades, period=(2025, 2026), account=None, accounts=["Tax"], today=today
+    )
+    assert legacy == new
+
+
+def test_monthly_realized_pl_series_two_accounts_equals_all():
+    """accounts=['Tax', 'IRA'] with account=None equals account=None."""
+    today = dt.date(2025, 12, 31)
+    trades = [
+        _sell(dt.date(2025, 3, 15), account="Tax", proceeds=1200, cost=1000),
+        _sell(dt.date(2025, 3, 20), account="IRA", proceeds=600, cost=500),
+    ]
+    all_ = monthly_realized_pl_series(
+        trades=trades, period=(2025, 2026), account=None, today=today
+    )
+    both = monthly_realized_pl_series(
+        trades=trades, period=(2025, 2026), account=None, accounts=["Tax", "IRA"], today=today
+    )
+    assert all_ == both
+
+
+def test_monthly_realized_pl_series_empty_accounts_means_all():
+    """accounts=[] is treated as 'no filter' — same as account=None."""
+    today = dt.date(2025, 12, 31)
+    trades = [
+        _sell(dt.date(2025, 3, 15), account="Tax", proceeds=1200, cost=1000),
+    ]
+    none_ = monthly_realized_pl_series(
+        trades=trades, period=(2025, 2026), account=None, today=today
+    )
+    empty = monthly_realized_pl_series(
+        trades=trades, period=(2025, 2026), account=None, accounts=[], today=today
+    )
+    assert none_ == empty
+
+
+def test_monthly_realized_pl_accounts_list_matches_single_account():
+    """monthly_realized_pl: accounts=['schwab/tax'] equals account='schwab/tax'."""
+    from net_alpha.portfolio.calendar_pnl import monthly_realized_pl
+
+    trades = [
+        _sell(dt.date(2026, 6, 10), account="schwab/tax", proceeds=1500, cost=1000),
+        _sell(dt.date(2026, 6, 11), account="schwab/ira", proceeds=2000, cost=1000),
+    ]
+    legacy = monthly_realized_pl(trades=trades, year=2026, ticker=None, account="schwab/tax")
+    new = monthly_realized_pl(
+        trades=trades, year=2026, ticker=None, account=None, accounts=["schwab/tax"]
+    )
+    assert legacy == new

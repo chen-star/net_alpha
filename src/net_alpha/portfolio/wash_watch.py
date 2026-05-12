@@ -12,7 +12,7 @@ that exposes `.all_trades()` returning an iterable of Trade.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import date
 from decimal import Decimal
 from typing import Any, Protocol
@@ -30,6 +30,7 @@ def recent_loss_closes(
     today: date,
     window_days: int = 30,
     account: str | None = None,
+    accounts: Sequence[str] | None = None,
 ) -> list[LossCloseRow]:
     """Sells with realized P/L < 0 whose close_date is in [today - window_days, today].
 
@@ -42,6 +43,7 @@ def recent_loss_closes(
 
     Returns rows sorted by close_date desc.
     """
+    _filter = set(accounts) if accounts else ({account} if account else None)
     earliest = date.fromordinal(today.toordinal() - window_days)
 
     by_symbol: dict[str, list[tuple[date, str, Decimal]]] = defaultdict(list)
@@ -55,7 +57,7 @@ def recent_loss_closes(
         pl = proceeds - basis
         if pl >= 0:
             continue
-        if account and t.account != account:
+        if _filter is not None and t.account not in _filter:
             continue
         by_symbol[t.ticker].append((t.date, t.account, -pl))  # store loss as positive
 
