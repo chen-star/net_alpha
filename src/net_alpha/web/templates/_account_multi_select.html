@@ -53,10 +53,19 @@ function accountMultiSelect() {
     open: false,
     _timer: null,
     onToggle() {
-      // Debounce 200ms then submit the parent form via requestSubmit()
-      // so HTMX intercepts the 'submit' event (form.submit() would not).
+      // Debounce 200ms then notify the parent form so HTMX's
+      // `hx-trigger="change from:..."` listener picks it up. We dispatch
+      // 'change' rather than calling form.requestSubmit() because the
+      // toolbar's hx-trigger does NOT include 'submit' (intentional —
+      // submit would fall through to native form action on HTMX miss
+      // and cause a full page reload).
       clearTimeout(this._timer);
-      this._timer = setTimeout(() => this.$el.closest('form').requestSubmit(), 200);
+      this._timer = setTimeout(() => {
+        const form = this.$el.closest('form');
+        if (form) {
+          form.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }, 200);
     },
     toggleAll(checked) {
       const root = this.$el;

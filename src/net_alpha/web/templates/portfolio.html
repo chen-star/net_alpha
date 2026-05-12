@@ -6,7 +6,11 @@
   {# A2.2: Alpine helper for the account multi-select dropdown. Loaded
      unconditionally so it's available in both the toolbar (full state)
      and stays in scope even if the toolbar lazily appears via HTMX swap.
-     Uses requestSubmit() so HTMX intercepts the parent form's submit. #}
+     Dispatches a 'change' Event on the parent form so HTMX's
+     `hx-trigger="change from:..."` listener picks it up — we deliberately
+     do NOT call requestSubmit() because the toolbar's hx-trigger does
+     not include 'submit', so requestSubmit() would fall through to a
+     native form GET and cause a full page reload. #}
   <script>
     function accountMultiSelect() {
       return {
@@ -14,7 +18,12 @@
         _timer: null,
         onToggle() {
           clearTimeout(this._timer);
-          this._timer = setTimeout(() => this.$el.closest('form').requestSubmit(), 200);
+          this._timer = setTimeout(() => {
+            const form = this.$el.closest('form');
+            if (form) {
+              form.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          }, 200);
         },
         toggleAll(checked) {
           const root = this.$el;

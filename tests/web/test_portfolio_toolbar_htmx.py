@@ -35,12 +35,36 @@ def test_subline_has_stable_id(client: TestClient, builders, repo):
     assert 'id="portfolio-subline"' in res.text
 
 
-def test_account_select_uses_request_submit(client: TestClient):
+def test_account_select_uses_request_submit(client: TestClient, builders, repo):
+    # The profile switcher's per-account <select> uses requestSubmit() — its
+    # form has no explicit hx-trigger so HTMX's default 'submit' trigger
+    # fires. (The account multi-select dropdown, by contrast, dispatches a
+    # 'change' Event — see test_account_select_dispatches_change_not_submit.)
+    # Seed an import so the profile switcher renders in the topbar.
+    builders.seed_import(
+        repo, "schwab", "lt",
+        [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
+    )
     res = client.get("/")
     assert res.status_code == 200
     body = res.text
-    # The Alpine helper must call requestSubmit() so HTMX intercepts.
     assert "requestSubmit()" in body
+
+
+def test_account_select_dispatches_change_not_submit(client: TestClient):
+    """A2.2 bugfix: the multi-select Alpine helper must dispatch a 'change'
+    event on the form (so HTMX's `change from:input[type=checkbox]`
+    listener picks it up), NOT call requestSubmit() — the toolbar's
+    hx-trigger does not include 'submit', so requestSubmit would fall
+    through to a native form GET and cause a full page reload."""
+    res = client.get("/")
+    body = res.text
+    # New behavior: dispatch a change Event on the form.
+    assert "new Event('change'" in body or 'new Event("change"' in body
+    # Old behavior must be gone — no requestSubmit on the multi-select Alpine.
+    # (Other forms in the page may still legitimately use requestSubmit;
+    #  scope this assertion to the accountMultiSelect helper.)
+    assert "form.dispatchEvent" in body or "dispatchEvent(new Event" in body
 
 
 def test_portfolio_body_emits_oob_subline_when_htmx(client: TestClient, builders, repo):
