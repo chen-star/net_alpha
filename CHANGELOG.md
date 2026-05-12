@@ -2,6 +2,18 @@
 
 
 
+## v0.65.2 (2026-05-12)
+
+### Fix
+
+* fix(web): keep Account label inline with dropdown on toolbar
+
+Make the multi-select root inline-block so the Account label and trigger
+button sit on one row, matching the Period control&#39;s layout.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e9f51c1`](https://github.com/chen-star/net_alpha/commit/e9f51c1672172133b5562d0b17e7c20519100611))
+
+
 ## v0.65.1 (2026-05-12)
 
 ### Chore
