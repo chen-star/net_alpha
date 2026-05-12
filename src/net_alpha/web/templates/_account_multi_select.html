@@ -22,6 +22,7 @@
           aria-haspopup="listbox"
           :aria-expanded="open"
           title="{{ accounts_selected | join(', ') }}">
+    {% include "_spinner.html" %}
     <span>{{ label }}</span>
     <span class="text-[9px] text-label-3">▾</span>
   </button>
@@ -53,9 +54,28 @@ function accountMultiSelect() {
     open: false,
     _timer: null,
     onToggle() {
-      // Debounce 200ms then submit the parent form.
+      // Debounce 200ms then notify the parent form. Behavior depends on
+      // whether the form is HTMX-driven:
+      //   * HTMX form (toolbar on Portfolio): dispatch a 'change' Event
+      //     so the toolbar's `hx-trigger="change from:..."` listener
+      //     picks it up. We do NOT call requestSubmit() here because
+      //     the toolbar's hx-trigger excludes 'submit' on purpose —
+      //     submit would fall through to a native form action on an
+      //     HTMX miss and cause a full page reload.
+      //   * Plain GET form (toolbar on Positions and other pages with
+      //     no body fragment endpoint): call requestSubmit() so the
+      //     form actually navigates — a 'change' event alone wouldn't
+      //     trigger submission.
       clearTimeout(this._timer);
-      this._timer = setTimeout(() => this.$el.closest('form').submit(), 200);
+      this._timer = setTimeout(() => {
+        const form = this.$el.closest('form');
+        if (!form) return;
+        if (form.hasAttribute('hx-get') || form.hasAttribute('hx-post')) {
+          form.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+          form.requestSubmit();
+        }
+      }, 200);
     },
     toggleAll(checked) {
       const root = this.$el;

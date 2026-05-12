@@ -1,6 +1,7 @@
 {# Bundled portfolio body: KPIs + curves + allocation.
    Tax planning panels moved to /tax (P1, P9).
    Rendered by /portfolio/body in one shot. #}
+{% if oob_subline_html %}{{ oob_subline_html|safe }}{% endif %}
 
 {# Action Inbox — lazy-loaded; respects the page's account filter. #}
 <div id="inbox-panel"

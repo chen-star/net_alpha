@@ -1,7 +1,25 @@
-<form method="get" action="{{ toolbar_action }}" class="kpi-card flex gap-3 flex-wrap items-end text-sm">
+{# Caller may set toolbar_hx_target (e.g. "#portfolio-body") to enable
+   HTMX-driven swaps. When absent, the toolbar falls back to a plain GET
+   form whose period/account changes do a full page reload (preserving
+   the prior behavior on pages like /positions that have no body
+   fragment endpoint). #}
+{% if toolbar_hx_target %}
+<form method="get" action="{{ toolbar_action }}"
+      hx-get="{{ toolbar_hx_get }}"
+      hx-target="{{ toolbar_hx_target }}"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+      hx-trigger="change from:select, change from:input[type=checkbox]"
+      hx-indicator="#portfolio-toolbar-spinner"
+      class="kpi-card flex gap-3 flex-wrap items-end text-sm">
+  <span id="portfolio-toolbar-spinner">{% include "_spinner.html" %}</span>
+{% else %}
+<form method="get" action="{{ toolbar_action }}"
+      class="kpi-card flex gap-3 flex-wrap items-end text-sm">
+{% endif %}
   <div>
     <label class="label-uc">Period:</label>
-    <select name="period" onchange="this.form.submit()"
+    <select name="period"{% if not toolbar_hx_target %} onchange="this.form.submit()"{% endif %}
             class="bg-surface text-text rounded-md px-2 py-1 text-[12px]"
             style="border:0.5px solid var(--color-hairline);">
       <option value="ytd" {% if selected_period == 'ytd' %}selected{% endif %}>YTD ({{ current_year }})</option>

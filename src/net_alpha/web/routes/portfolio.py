@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import time
 from datetime import date, timedelta
 from datetime import date as _date
@@ -263,6 +264,8 @@ def portfolio_page(
             "selected_period": selected_period,
             "group_options": group_options,
             "toolbar_action": "/",
+            "toolbar_hx_target": "#portfolio-body",
+            "toolbar_hx_get": "/portfolio/body",
             "price_freshness": price_freshness,
             "price_freshness_label": price_freshness_label,
         },
@@ -999,6 +1002,22 @@ def portfolio_body(
     if ctx is None:
         ctx = _compute_portfolio_body_context(request=request, period=period, accounts=accounts, repo=repo, svc=svc)
         cache.set(key, ctx)
+    # A2.2: When the toolbar triggers a body swap, also emit an OOB fragment
+    # for the page H1 subline (which sits outside #portfolio-body).
+    is_htmx = request.headers.get("HX-Request") == "true"
+    if is_htmx:
+        accounts_label = ", ".join(accounts) if accounts else "All accounts"
+        period_label_for_subline = (period or "ytd").upper()
+        oob_subline_html = (
+            f'<div id="portfolio-subline" hx-swap-oob="true" '
+            f'class="text-[13px] text-label-2 mt-[3px]">'
+            f"{html.escape(accounts_label)} · {html.escape(period_label_for_subline)}"
+            f"</div>"
+        )
+        # Don't mutate the cached ctx — build a per-request shallow copy.
+        ctx = {**ctx, "oob_subline_html": oob_subline_html}
+    else:
+        ctx = {**ctx, "oob_subline_html": ""}
     response = request.app.state.templates.TemplateResponse(request, "_portfolio_body.html", ctx)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     logger.debug(

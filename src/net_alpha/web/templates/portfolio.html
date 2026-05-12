@@ -3,10 +3,40 @@
 {% block title %}Portfolio · net-alpha{% endblock %}
 {% block topbar_right %}{% endblock %}
 {% block content %}
+  {# A2.2: Alpine helper for the account multi-select dropdown. Loaded
+     unconditionally so it's available in both the toolbar (full state)
+     and stays in scope even if the toolbar lazily appears via HTMX swap.
+     Dispatches a 'change' Event on the parent form so HTMX's
+     `hx-trigger="change from:..."` listener picks it up — we deliberately
+     do NOT call requestSubmit() because the toolbar's hx-trigger does
+     not include 'submit', so requestSubmit() would fall through to a
+     native form GET and cause a full page reload. #}
+  <script>
+    function accountMultiSelect() {
+      return {
+        open: false,
+        _timer: null,
+        onToggle() {
+          clearTimeout(this._timer);
+          this._timer = setTimeout(() => {
+            const form = this.$el.closest('form');
+            if (form) {
+              form.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          }, 200);
+        },
+        toggleAll(checked) {
+          const root = this.$el;
+          root.querySelectorAll('input[type=checkbox][name]').forEach(cb => { cb.checked = checked; });
+          this.onToggle();
+        },
+      };
+    }
+  </script>
   <div class="flex items-end justify-between flex-wrap gap-3 mb-4">
     <div>
       <h1>Portfolio</h1>
-      <div class="text-[13px] text-label-2 mt-[3px]">
+      <div id="portfolio-subline" class="text-[13px] text-label-2 mt-[3px]">
         {% if selected_accounts %}{{ selected_accounts | join(', ') }}{% else %}All accounts{% endif %} ·
         {{ selected_period|default('YTD')|upper }}
       </div>
@@ -15,7 +45,9 @@
       <div class="verify-badge-slot"
            hx-get="/verify/badge?page=overview"
            hx-trigger="load delay:200ms"
-           hx-swap="innerHTML"></div>
+           hx-swap="innerHTML">
+        {% with _skel_variant='pill' %}{% include "_skeleton.html" %}{% endwith %}
+      </div>
       {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
     </div>
   </div>
@@ -26,6 +58,12 @@
     {%- set _body_qs %}period={{ selected_period }}{% for _a in selected_accounts %}&account={{ _a|urlencode }}{% endfor %}{%- endset -%}
     <div id="portfolio-body"
          hx-get="/portfolio/body?{{ _body_qs }}"
-         hx-trigger="load" hx-swap="innerHTML"></div>
+         hx-trigger="load" hx-swap="innerHTML">
+      <div class="space-y-4">
+        {% with _skel_variant='kpi-row' %}{% include "_skeleton.html" %}{% endwith %}
+        {% with _skel_variant='chart-panel' %}{% include "_skeleton.html" %}{% endwith %}
+        {% with _skel_variant='chart-panel' %}{% include "_skeleton.html" %}{% endwith %}
+      </div>
+    </div>
   {% endif %}
 {% endblock %}
