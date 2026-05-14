@@ -748,3 +748,39 @@ tr[tabindex="0"]:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: -2px;
 }
+
+/* ---------------------------------------------------------------
+ * Overview draggable layout — edit-mode affordances.
+ * --------------------------------------------------------------- */
+.overview-row { position: relative; }
+.row-grip,
+.row-eye {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms;
+  padding: 4px;
+  background: transparent;
+  border: 0;
+  color: var(--color-label-3, #888);
+}
+.row-grip { top: 8px; left: 8px; cursor: grab; }
+.row-eye  { top: 8px; right: 8px; cursor: pointer; }
+[data-edit-mode="on"] .row-grip,
+[data-edit-mode="on"] .row-eye {
+  opacity: 1;
+  pointer-events: auto;
+}
+.row-grip:active { cursor: grabbing; }
+.overview-row-ghost { opacity: 0.4; background: var(--color-surface, #f5f5f5); }
+.row-hidden-placeholder {
+  padding: 14px;
+  text-align: center;
+  color: var(--color-label-3, #888);
+  border: 1px dashed var(--color-border, #ddd);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+@media (max-width: 767px) {
+  .row-grip { display: none; }
+}
