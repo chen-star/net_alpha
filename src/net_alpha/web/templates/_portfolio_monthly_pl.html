@@ -24,6 +24,14 @@
     </div>
   </div>
 
+  {% if monthly_pl_lifetime %}
+    <div class="text-[11px] text-label-3 num mt-1">
+      Lifetime avg ${{ "{:,.0f}".format(monthly_pl_lifetime[0]|float) }}/mo
+      · best <span class="text-pos">+${{ "{:,.0f}".format(monthly_pl_lifetime[1]|float) }}</span> ({{ monthly_pl_lifetime[2] }})
+      · worst <span class="text-neg">−${{ "{:,.0f}".format(monthly_pl_lifetime[3]|float|abs) }}</span> ({{ monthly_pl_lifetime[4] }}).
+    </div>
+  {% endif %}
+
   <script>
   (function () {
     const points = [
@@ -104,9 +112,16 @@
           },
         },
         annotations: {
-          // Zero baseline anchors positive vs negative visually, matching
-          // the "even at $0 we know about this month" intent for empty bars.
-          yaxis: [{ y: 0, strokeDashArray: 0, borderColor: c.label3 }],
+          yaxis: [
+            { y: 0, strokeDashArray: 0, borderColor: c.label3 },
+            {% if monthly_pl_lifetime %}
+            { y: {{ monthly_pl_lifetime[0]|float }},
+              borderColor: c.label3, strokeDashArray: 4,
+              label: { text: "Lifetime avg",
+                       position: "left", offsetX: 80,
+                       style: { color: c.label3, background: "transparent", fontSize: "10px" } } },
+            {% endif %}
+          ],
         },
         series: [{
           name: "Net realized P&L",
