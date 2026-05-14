@@ -1,0 +1,7 @@
+{# Inbox row partial. Includes the existing inbox panel with its HTMX lazy-load. #}
+<div id="inbox-panel"
+     hx-get="/portfolio/inbox{% if account %}?account={{ account }}{% endif %}"
+     hx-trigger="load"
+     hx-swap="outerHTML"
+     class="mb-4">
+</div>

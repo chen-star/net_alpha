@@ -1,0 +1,6 @@
+{# Top Movers row — only render when at least one mover exists. #}
+{% if top_movers and (top_movers.winners or top_movers.losers) %}
+  <div id="portfolio-top-movers" class="panel mb-4">
+    {% include "_portfolio_top_movers.html" %}
+  </div>
+{% endif %}
