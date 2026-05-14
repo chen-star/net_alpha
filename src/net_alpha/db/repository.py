@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -57,8 +58,12 @@ from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.models.splits import LotOverride, Split
 from net_alpha.section_1256.universe import is_section_1256 as _is_section_1256
 from net_alpha.section_1256.universe import load_universe
+from net_alpha.prefs.overview_layout import OverviewLayout as OverviewLayout
+from net_alpha.prefs.overview_layout import default_overview_layout, sanitize as _sanitize_overview_layout
 from net_alpha.targets.models import PositionTarget, TargetUnit
 from net_alpha.targets.tags import normalize_tag, normalize_tags
+
+log = logging.getLogger(__name__)
 
 
 class Repository:
@@ -2181,6 +2186,50 @@ class Repository:
             tags=tags,
             sort_order=row.sort_order,
         )
+
+    # ---- Overview Layout (per-profile row order + hidden set) ----
+
+    def get_overview_layout(self, profile: str) -> OverviewLayout:
+        """Return the saved layout for `profile`, or the default on miss/error."""
+        with Session(self.engine) as s:
+            row = s.exec(
+                text("SELECT layout_json FROM overview_layout WHERE profile = :p").bindparams(p=profile)
+            ).first()
+        if row is None:
+            return default_overview_layout()
+        try:
+            data = json.loads(row[0])
+            raw = OverviewLayout(**data)
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
+            log.warning(
+                "get_overview_layout: bad JSON for %r — falling back to default (%s)",
+                profile,
+                exc,
+            )
+            return default_overview_layout()
+        return _sanitize_overview_layout(raw)
+
+    def set_overview_layout(self, profile: str, layout: OverviewLayout) -> None:
+        """UPSERT the saved layout for `profile`. Sanitizes before write."""
+        clean = _sanitize_overview_layout(layout)
+        payload = json.dumps({"rows": clean.rows, "hidden": clean.hidden})
+        now = datetime.now(UTC).isoformat()
+        with Session(self.engine) as s:
+            s.exec(
+                text(
+                    "INSERT INTO overview_layout(profile, layout_json, updated_at) "
+                    "VALUES (:p, :j, :u) "
+                    "ON CONFLICT(profile) DO UPDATE SET layout_json = :j, updated_at = :u"
+                ).bindparams(p=profile, j=payload, u=now)
+            )
+            s.commit()
+
+    def clear_overview_layout(self, profile: str) -> None:
+        with Session(self.engine) as s:
+            s.exec(
+                text("DELETE FROM overview_layout WHERE profile = :p").bindparams(p=profile)
+            )
+            s.commit()
 
     # ---- Carryforward derivation adapters ----
 
