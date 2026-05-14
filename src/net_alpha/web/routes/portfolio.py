@@ -7,8 +7,9 @@ from datetime import date as _date
 from decimal import Decimal
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from fastapi import status as fastapi_status
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from loguru import logger
 from sqlmodel import Session
 
@@ -55,6 +56,7 @@ from net_alpha.portfolio.tax_planner import (
 )
 from net_alpha.portfolio.top_movers import build_top_movers
 from net_alpha.portfolio.wash_watch import recent_loss_closes
+from net_alpha.prefs.overview_layout import OverviewLayout
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
 from net_alpha.web.account_filter import parse_accounts
@@ -1031,6 +1033,57 @@ def portfolio_body(
         accounts,
     )
     return response
+
+
+@router.post("/portfolio/layout/reorder", status_code=fastapi_status.HTTP_204_NO_CONTENT)
+async def portfolio_layout_reorder(
+    request: Request,
+    repo: Repository = Depends(get_repository),
+) -> Response:
+    form_data = await request.form()
+    row: list[str] = list(form_data.getlist("row"))
+    raw_accounts: list[str] = list(form_data.getlist("account")) + list(request.query_params.getlist("account"))
+    accounts = parse_accounts(raw_accounts)
+    profile = _resolve_profile(repo, accounts)
+    current = repo.get_overview_layout(profile.profile)
+    new_layout = OverviewLayout(rows=row, hidden=current.hidden)
+    repo.set_overview_layout(profile.profile, new_layout)
+    return Response(status_code=204)
+
+
+@router.post("/portfolio/layout/visibility", status_code=fastapi_status.HTTP_204_NO_CONTENT)
+def portfolio_layout_visibility(
+    row: str = Form(...),
+    hidden: str = Form(...),
+    account: list[str] = Form(default_factory=list),
+    repo: Repository = Depends(get_repository),
+) -> Response:
+    accounts = parse_accounts(account)
+    profile = _resolve_profile(repo, accounts)
+    current = repo.get_overview_layout(profile.profile)
+    want_hidden = hidden.lower() == "true"
+    new_hidden = list(current.hidden)
+    if want_hidden and row not in new_hidden:
+        new_hidden.append(row)
+    elif not want_hidden and row in new_hidden:
+        new_hidden.remove(row)
+    new_layout = OverviewLayout(rows=current.rows, hidden=new_hidden)
+    repo.set_overview_layout(profile.profile, new_layout)
+    return Response(status_code=204)
+
+
+@router.post("/portfolio/layout/reset")
+def portfolio_layout_reset(
+    request: Request,
+    account: list[str] = Form(default_factory=list),
+    repo: Repository = Depends(get_repository),
+) -> Response:
+    accounts = parse_accounts(account)
+    profile = _resolve_profile(repo, accounts)
+    repo.clear_overview_layout(profile.profile)
+    if request.headers.get("HX-Request") == "true":
+        return Response(status_code=204, headers={"HX-Redirect": "/"})
+    return RedirectResponse(url="/", status_code=303)
 
 
 def _resolve_inbox_rates(tax: TaxConfig | None) -> tuple[Decimal, Decimal]:

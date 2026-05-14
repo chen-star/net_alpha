@@ -64,8 +64,7 @@ def test_post_reorder_writes_new_order(seeded_client):
     client, repo = seeded_client
     r = client.post(
         "/portfolio/layout/reorder",
-        data=[("row", "kpis"), ("row", "inbox"), ("row", "curves"),
-              ("row", "monthly_pl"), ("row", "allocation"), ("row", "top_movers")],
+        data={"row": ["kpis", "inbox", "curves", "monthly_pl", "allocation", "top_movers"]},
     )
     assert r.status_code == 204
     layout = repo.get_overview_layout("active")
@@ -84,8 +83,7 @@ def test_post_reorder_preserves_hidden_set(seeded_client):
     )
     client.post(
         "/portfolio/layout/reorder",
-        data=[("row", "kpis"), ("row", "inbox"), ("row", "curves"),
-              ("row", "monthly_pl"), ("row", "allocation"), ("row", "top_movers")],
+        data={"row": ["kpis", "inbox", "curves", "monthly_pl", "allocation", "top_movers"]},
     )
     assert repo.get_overview_layout("active").hidden == ["top_movers"]
 
@@ -94,7 +92,7 @@ def test_post_reorder_drops_unknown_rows(seeded_client):
     client, repo = seeded_client
     r = client.post(
         "/portfolio/layout/reorder",
-        data=[("row", "kpis"), ("row", "garbage"), ("row", "inbox")],
+        data={"row": ["kpis", "garbage", "inbox"]},
     )
     assert r.status_code == 204
     layout = repo.get_overview_layout("active")
