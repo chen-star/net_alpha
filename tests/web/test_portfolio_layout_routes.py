@@ -210,3 +210,16 @@ def test_body_omits_hidden_rows_when_not_in_edit_mode(seeded_client):
     r = client.get("/portfolio/body")
     assert r.status_code == 200
     assert 'data-row-key="top_movers"' not in r.text
+
+
+def test_overview_layout_js_is_served(seeded_client):
+    client, _ = seeded_client
+    r = client.get("/static/overview_layout.js")
+    assert r.status_code == 200
+    assert "/portfolio/layout/reorder" in r.text
+
+
+def test_base_template_loads_overview_layout_js(seeded_client):
+    client, _ = seeded_client
+    r = client.get("/")
+    assert "/static/overview_layout.js" in r.text
