@@ -1058,6 +1058,15 @@ def portfolio_layout_visibility(
     account: list[str] = Form(default_factory=list),
     repo: Repository = Depends(get_repository),
 ) -> Response:
+    """Toggle a single row's visibility in the current profile's overview layout.
+
+    Body params:
+    - ``row``: a KNOWN_ROWS key (unknown keys are silently dropped by sanitize).
+    - ``hidden``: ``"true"`` to hide the row, ``"false"`` to show it.
+
+    Idempotent: hiding an already-hidden row or showing an already-visible row
+    is a no-op. Always returns 204.
+    """
     accounts = parse_accounts(account)
     profile = _resolve_profile(repo, accounts)
     current = repo.get_overview_layout(profile.profile)
