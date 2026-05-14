@@ -1018,6 +1018,9 @@ def portfolio_body(
         ctx = {**ctx, "oob_subline_html": oob_subline_html}
     else:
         ctx = {**ctx, "oob_subline_html": ""}
+    profile = _resolve_profile(repo, accounts)
+    layout = repo.get_overview_layout(profile.profile)
+    ctx = {**ctx, "layout": layout, "edit_mode": False}
     response = request.app.state.templates.TemplateResponse(request, "_portfolio_body.html", ctx)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     logger.debug(
