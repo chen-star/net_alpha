@@ -95,6 +95,21 @@
         no contributions
       {% endif %}
     </div>
+    {% if lifetime_kpis is defined and lifetime_kpis is not none and total_account_value is not none and cash_kpis is defined and cash_kpis %}
+      {% set _lifetime_delta = total_account_value - cash_kpis.net_contributions %}
+      <div class="text-[11px] text-label-3 mt-[2px]"
+           title="Account value today minus lifetime net contributed. The total dollars your decisions have added since you opened this account.">
+        Lifetime
+        {% if _lifetime_delta < 0 %}
+          <span class="num text-neg">−${{ "%.2f"|format(_lifetime_delta|float|abs) }}</span>
+        {% else %}
+          <span class="num text-pos">+${{ "%.2f"|format(_lifetime_delta|float) }}</span>
+        {% endif %}
+        {% if cash_kpis.net_contributions and cash_kpis.net_contributions|float > 0 %}
+          ({% if _lifetime_delta < 0 %}−{% else %}+{% endif %}{{ "%.1f"|format((_lifetime_delta|float|abs / cash_kpis.net_contributions|float) * 100) }}%)
+        {% endif %}
+      </div>
+    {% endif %}
     <div id="explain-total-return"></div>
   </div>
 
@@ -124,6 +139,17 @@
         · economic {% if kpis.period_realized_economic < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized_economic|float|abs) }}
       {% endif %}
     </div>
+    {% if lifetime_kpis is defined and lifetime_kpis is not none %}
+      <div class="text-[11px] text-label-3 mt-[2px]"
+           title="Cumulative recognized realized P/L (sells, expirations, assignments) since your first trade.">
+        Lifetime
+        {% if lifetime_kpis.lifetime_realized_economic < 0 %}
+          <span class="num text-neg">−${{ "%.2f"|format(lifetime_kpis.lifetime_realized_economic|float|abs) }}</span>
+        {% else %}
+          <span class="num text-pos">+${{ "%.2f"|format(lifetime_kpis.lifetime_realized_economic|float) }}</span>
+        {% endif %}
+      </div>
+    {% endif %}
   </div>
 
   <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="unrealized"

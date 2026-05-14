@@ -383,3 +383,112 @@ def test_monthly_pl_omits_lifetime_footnote_on_lifetime_view(tmp_path):
     r = client.get("/portfolio/body?period=lifetime&account=")
     assert r.status_code == 200
     assert "Lifetime avg $" not in r.text
+
+
+def test_kpi_tiles_show_lifetime_subtitle_on_period(tmp_path):
+    """KPI tiles show Lifetime subtitles on period-scoped views."""
+    from datetime import date, datetime
+
+    from net_alpha.config import Settings
+    from net_alpha.db.connection import get_engine, init_db
+    from net_alpha.db.repository import Repository
+    from net_alpha.models.domain import ImportRecord, Trade
+
+    # Initialize DB and add test data with a Buy + Sell to generate realized P&L.
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+
+    # Add a buy and sell trade to generate realized P&L.
+    account = repo.get_or_create_account("Schwab", "Test")
+    trades = [
+        Trade(
+            account="Schwab/Test",
+            date=date(2026, 1, 15),
+            ticker="AAPL",
+            action="Buy",
+            quantity=10.0,
+            proceeds=None,
+            cost_basis=18000.0,
+        ),
+        Trade(
+            account="Schwab/Test",
+            date=date(2026, 2, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=10.0,
+            proceeds=20000.0,
+            cost_basis=18000.0,
+        ),
+    ]
+    record = ImportRecord(
+        account_id=account.id,
+        csv_filename="test.csv",
+        csv_sha256="test",
+        imported_at=datetime.now(),
+        trade_count=2,
+    )
+    repo.add_import(account, record, trades, cash_events=[])
+
+    # Test with period=ytd — should include the lifetime subtitles.
+    client = _client(tmp_path)
+    r = client.get("/portfolio/body?period=ytd&account=")
+    assert r.status_code == 200
+    # Tooltips uniquely identify our two new subtitles.
+    assert "Account value today minus lifetime net contributed" in r.text
+    assert "Cumulative recognized realized P/L" in r.text
+
+
+def test_kpi_tiles_hide_lifetime_subtitle_on_lifetime_view(tmp_path):
+    """KPI tiles hide Lifetime subtitles when viewing Lifetime scope."""
+    from datetime import date, datetime
+
+    from net_alpha.config import Settings
+    from net_alpha.db.connection import get_engine, init_db
+    from net_alpha.db.repository import Repository
+    from net_alpha.models.domain import ImportRecord, Trade
+
+    # Initialize DB and add test data with a Buy + Sell to generate realized P&L.
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+
+    # Add a buy and sell trade to generate realized P&L.
+    account = repo.get_or_create_account("Schwab", "Test")
+    trades = [
+        Trade(
+            account="Schwab/Test",
+            date=date(2026, 1, 15),
+            ticker="AAPL",
+            action="Buy",
+            quantity=10.0,
+            proceeds=None,
+            cost_basis=18000.0,
+        ),
+        Trade(
+            account="Schwab/Test",
+            date=date(2026, 2, 15),
+            ticker="AAPL",
+            action="Sell",
+            quantity=10.0,
+            proceeds=20000.0,
+            cost_basis=18000.0,
+        ),
+    ]
+    record = ImportRecord(
+        account_id=account.id,
+        csv_filename="test.csv",
+        csv_sha256="test",
+        imported_at=datetime.now(),
+        trade_count=2,
+    )
+    repo.add_import(account, record, trades, cash_events=[])
+
+    # Lifetime view should NOT include the lifetime subtitles.
+    client = _client(tmp_path)
+    r = client.get("/portfolio/body?period=lifetime&account=")
+    assert r.status_code == 200
+    assert "Account value today minus lifetime net contributed" not in r.text
+    assert "Cumulative recognized realized P/L" not in r.text
