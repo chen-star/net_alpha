@@ -537,12 +537,20 @@ def _setup_trade_data(tmp_path):
 
 
 def test_equity_curve_brush_renders_on_period_view(tmp_path):
+    """The body renders a deferred slot that lazy-loads the brush; the actual
+    brush element ships from /portfolio/equity-curve/brush after first paint."""
     _setup_trade_data(tmp_path)
     client = _client(tmp_path)
     r = client.get("/portfolio/body?period=ytd")
     assert r.status_code == 200
-    assert 'id="equity-chart-lifetime"' in r.text
-    assert "Lifetime shape" in r.text
+    # Body emits the placeholder + lazy-load trigger
+    assert 'id="equity-brush-slot"' in r.text
+    assert "/portfolio/equity-curve/brush" in r.text
+    # And the fragment itself renders the actual brush element
+    brush = client.get("/portfolio/equity-curve/brush?period=ytd")
+    assert brush.status_code == 200
+    assert 'id="equity-chart-lifetime"' in brush.text
+    assert "Lifetime shape" in brush.text
 
 
 def test_equity_curve_brush_absent_on_lifetime_view(tmp_path):
@@ -550,4 +558,10 @@ def test_equity_curve_brush_absent_on_lifetime_view(tmp_path):
     client = _client(tmp_path)
     r = client.get("/portfolio/body?period=lifetime")
     assert r.status_code == 200
+    # No deferred slot is emitted on Lifetime view (the brush is meaningless there).
+    assert 'id="equity-brush-slot"' not in r.text
     assert 'id="equity-chart-lifetime"' not in r.text
+    # And the brush endpoint short-circuits to empty when called for Lifetime.
+    brush = client.get("/portfolio/equity-curve/brush?period=lifetime")
+    assert brush.status_code == 200
+    assert 'id="equity-chart-lifetime"' not in brush.text

@@ -754,6 +754,55 @@ def holdings_short_options_legacy(
     return holdings_options(request, account=account, repo=repo)
 
 
+@router.get("/portfolio/equity-curve/brush", response_class=HTMLResponse)
+def portfolio_equity_curve_brush(
+    request: Request,
+    period: str | None = None,
+    account: list[str] = Query(default_factory=list),
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Lifetime brush strip for the equity curve.
+
+    Split out of ``/portfolio/body`` because building the lifetime account-
+    value series dominates cold-load latency (~1.8s). The main body returns
+    immediately with a placeholder and this endpoint paints the brush async.
+    """
+    accounts: list[str] = parse_accounts(account)
+    today = date.today()
+    period_tuple, _ = _parse_period(period, today.year)
+    if period_tuple is None:
+        # Lifetime view doesn't show a brush — return an empty fragment.
+        return HTMLResponse("")
+    points = _get_or_compute_lifetime_curve(
+        request=request,
+        accounts=accounts,
+        repo=repo,
+        svc=svc,
+    )
+    period_t, _ = _parse_period(period, today.year)
+    # We need the YTD period's first/last date for the initial brush range.
+    if period_t is not None:
+        period_start = date(period_t[0], 1, 1)
+        period_end = min(date(period_t[1], 1, 1) - timedelta(days=1), today)
+    else:
+        period_start = points[0].on if points else today
+        period_end = points[-1].on if points else today
+    import_years = {imp.imported_at.year for imp in repo.list_imports()}
+    available_years = sorted(import_years | {today.year}, reverse=True)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_portfolio_equity_brush.html",
+        {
+            "lifetime_account_points": points,
+            "current_year": today.year,
+            "available_years": available_years,
+            "period_start": period_start,
+            "period_end": period_end,
+        },
+    )
+
+
 @router.get("/portfolio/equity-curve", response_class=HTMLResponse)
 def portfolio_equity_curve(
     request: Request,
@@ -1027,12 +1076,14 @@ def _compute_portfolio_body_context(
     )
 
     if period_tuple is not None:
-        lifetime_account_points = _get_or_compute_lifetime_curve(
-            request=request,
-            accounts=accounts,
-            repo=repo,
-            svc=svc,
-        )
+        # The lifetime account-value series (brush strip) needs historical
+        # closes for every (ticker, date) and dominates cold-load latency
+        # (~1.8s of a 3s body request). It's loaded lazily via the
+        # /portfolio/equity-curve/brush endpoint instead; the template falls
+        # back to a placeholder that hx-gets it after first paint.
+        # The other lifetime stats below are cheap pure-data ops, so they
+        # stay inline and the cash/monthly footnotes paint immediately.
+        lifetime_account_points = None
         lifetime_cash_points = build_cash_balance_series(
             events=cash_events,
             trades=scoped_trades,
@@ -1053,11 +1104,13 @@ def _compute_portfolio_body_context(
             period=None,
             gl_lots=gl_lots_scoped,
         )
+        defer_lifetime_brush = True
     else:
         lifetime_account_points = None
         cash_lifetime_extremes = None
         monthly_pl_lifetime = None
         lifetime_kpis = None
+        defer_lifetime_brush = False
 
     return {
         "kpis": kpis,
@@ -1089,6 +1142,7 @@ def _compute_portfolio_body_context(
         "selected_accounts": accounts,
         "account_filter_active": bool(accounts),
         "lifetime_account_points": lifetime_account_points,
+        "defer_lifetime_brush": defer_lifetime_brush,
         "cash_lifetime_extremes": cash_lifetime_extremes,
         "monthly_pl_lifetime": monthly_pl_lifetime,
         "lifetime_kpis": lifetime_kpis,

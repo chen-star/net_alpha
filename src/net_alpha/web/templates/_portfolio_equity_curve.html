@@ -1,17 +1,21 @@
 {# Inputs:
    account_points: list[AccountValuePoint]           -- selected-period series
    lifetime_account_points: list[AccountValuePoint]  -- full lifetime series; falsy in Lifetime view
+   defer_lifetime_brush: bool                         -- true → lazy-load via HTMX (the lifetime series costs ~1.8s to compute)
    benchmark_points: list[BenchmarkPoint]
    benchmark_symbol: str
    period_label: str                                  -- e.g. "YTD 2025", "2024", "Lifetime"
    current_year: int                                  -- for ytd snap detection
    available_years: list[int]                         -- snap targets for the brush
+   selected_period: str                               -- echoed into the lazy-load URL
+   selected_accounts: list[str]                       -- echoed into the lazy-load URL
 #}
 
 {% set has_data = account_points and account_points|length >= 2 %}
 {% set missing_dates_count = account_points|selectattr('account_value', 'none')|list|length if account_points else 0 %}
 {% set _lap = lifetime_account_points | default(none) %}
 {% set has_brush = _lap and _lap|length >= 2 %}
+{% set defer_brush = defer_lifetime_brush | default(false) %}
 
 <div class="panel-head">
   <h4>Equity curve</h4>
@@ -27,7 +31,17 @@
   <div class="text-label-2 text-[13px] py-4">No deposits yet in {{ period_label }}.</div>
 {% else %}
   <div id="equity-chart" style="height: 218px;"></div>
-  {% if has_brush %}
+  {% if defer_brush %}
+    {# Lazy-load the lifetime brush strip — see endpoint and template
+       _portfolio_equity_brush.html for details. #}
+    <div id="equity-brush-slot"
+         hx-get="/portfolio/equity-curve/brush?period={{ selected_period }}{% for a in selected_accounts %}&account={{ a }}{% endfor %}"
+         hx-trigger="load"
+         hx-swap="outerHTML"
+         style="min-height: 56px;">
+      <div class="text-[10px] text-label-3 mt-1" aria-hidden="true">Loading lifetime context…</div>
+    </div>
+  {% elif has_brush %}
     <div id="equity-chart-lifetime"
          data-testid="equity-brush"
          data-current-year="{{ current_year }}"

@@ -1,0 +1,138 @@
+{# Lazy-loaded equity-curve lifetime brush strip.
+
+   Inputs:
+     lifetime_account_points: list[AccountValuePoint]
+     current_year:            int
+     available_years:         list[int]
+     period_start, period_end: date  -- initial brush selection range
+
+   Rendered by /portfolio/equity-curve/brush (deferred from the main body so
+   the ~1.8s lifetime account-value compute doesn't block first paint).
+#}
+{% set _lap = lifetime_account_points %}
+{% if _lap and _lap|length >= 2 %}
+<div id="equity-chart-lifetime"
+     data-testid="equity-brush"
+     data-current-year="{{ current_year }}"
+     data-available-years='{{ available_years|tojson }}'
+     data-period-start="{{ period_start.isoformat() }}"
+     data-period-end="{{ period_end.isoformat() }}"
+     style="height: 56px; margin-top: 6px;"
+     aria-label="Lifetime context — drag to change period. The strip's vertical scale is independent of the main chart."></div>
+<div class="text-[10px] text-label-3 mt-1">Lifetime shape · drag the selection to change period.</div>
+
+<script>
+(function () {
+  const lifetimePoints = [
+    {% for p in _lap %}
+      { on: "{{ p.on.isoformat() }}",
+        account: {{ (p.account_value|float) if p.account_value is not none else 'null' }} }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+  const brushState = { min: null, max: null };
+
+  function snapPeriodFromRange(minMs, maxMs) {
+    const el = document.querySelector("#equity-chart-lifetime");
+    const currentYear = parseInt(el.dataset.currentYear, 10);
+    const years = JSON.parse(el.dataset.availableYears);
+    const mid = new Date((minMs + maxMs) / 2);
+    const y = mid.getUTCFullYear();
+    if (y === currentYear) return "ytd";
+    if (years.indexOf(y) !== -1) return String(y);
+    let best = years[0], bestDist = Math.abs(y - years[0]);
+    for (const cand of years) {
+      const d = Math.abs(y - cand);
+      if (d < bestDist) { best = cand; bestDist = d; }
+    }
+    return best === currentYear ? "ytd" : String(best);
+  }
+
+  function dispatchPeriodChange(period) {
+    const sel = document.querySelector('form select[name="period"]');
+    if (!sel) return;
+    if (sel.value === period) return;
+    sel.value = period;
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function buildBrushOpts() {
+    const el = document.querySelector("#equity-chart-lifetime");
+    const periodStart = new Date(el.dataset.periodStart).getTime();
+    const periodEnd   = new Date(el.dataset.periodEnd).getTime();
+    brushState.min = periodStart;
+    brushState.max = periodEnd;
+
+    return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
+      chart: {
+        id: "equity-brush",
+        type: "line",
+        height: 56,
+        toolbar: { show: false },
+        zoom: { enabled: false },
+        selection: {
+          enabled: true,
+          type: "x",
+          xaxis: { min: periodStart, max: periodEnd },
+          fill: { color: window.netAlphaChartTheme.colors.pos, opacity: 0.18 },
+          stroke: { width: 1, color: window.netAlphaChartTheme.colors.pos },
+        },
+        events: {
+          selection: function (_chartCtx, { xaxis }) {
+            brushState.min = xaxis.min;
+            brushState.max = xaxis.max;
+          },
+        },
+      },
+      colors: [window.netAlphaChartTheme.colors.label3],
+      stroke: { width: 1.5, curve: "smooth", lineCap: "round" },
+      fill: { type: "solid", opacity: 0 },
+      legend: { show: false },
+      dataLabels: { enabled: false },
+      xaxis: {
+        type: "datetime",
+        labels: { show: false },
+        axisTicks: { show: false },
+        axisBorder: { show: false },
+      },
+      yaxis: { labels: { show: false }, axisTicks: { show: false }, axisBorder: { show: false } },
+      grid: { show: false, padding: { top: 0, right: 0, bottom: 0, left: 0 } },
+      tooltip: { enabled: false },
+      series: [{
+        name: "Lifetime",
+        data: lifetimePoints.map(p => ({ x: p.on, y: p.account })),
+      }],
+      states: { active: { allowMultipleDataPointsSelection: false } },
+    });
+  }
+
+  function render() {
+    const brush = document.querySelector("#equity-chart-lifetime");
+    if (!brush) return;
+    brush.innerHTML = "";
+    const brushChart = new ApexCharts(brush, buildBrushOpts());
+    brushChart.render();
+
+    let releaseTimer = null;
+    brush.addEventListener("pointerup", () => {
+      clearTimeout(releaseTimer);
+      releaseTimer = setTimeout(() => {
+        if (brushState.min == null || brushState.max == null) return;
+        const period = snapPeriodFromRange(brushState.min, brushState.max);
+        dispatchPeriodChange(period);
+      }, 80);
+    });
+  }
+
+  if (window.ApexCharts && window.netAlphaChartTheme) {
+    window.netAlphaChartTheme.register(render);
+  } else {
+    const iv = setInterval(() => {
+      if (window.ApexCharts && window.netAlphaChartTheme) {
+        clearInterval(iv);
+        window.netAlphaChartTheme.register(render);
+      }
+    }, 50);
+  }
+})();
+</script>
+{% endif %}

@@ -199,7 +199,11 @@ def test_body_respects_saved_order(seeded_client):
     assert body.index('data-row-key="kpis"') < body.index('data-row-key="inbox"')
 
 
-def test_body_omits_hidden_rows_when_not_in_edit_mode(seeded_client):
+def test_body_hides_hidden_rows_when_not_in_edit_mode(seeded_client):
+    """Hidden rows are emitted as compact placeholders so Edit layout can
+    surface them — but they're class-marked ``overview-row-hidden`` so CSS
+    keeps them out of the layout until the user enters edit mode. They never
+    render their full content (still a perf saving)."""
     client, repo = seeded_client
     repo.set_overview_layout(
         "active",
@@ -210,7 +214,13 @@ def test_body_omits_hidden_rows_when_not_in_edit_mode(seeded_client):
     )
     r = client.get("/portfolio/body")
     assert r.status_code == 200
-    assert 'data-row-key="top_movers"' not in r.text
+    # Row is present so it can be surfaced in edit mode...
+    assert 'data-row-key="top_movers"' in r.text
+    # ...but marked hidden so CSS keeps it out of the layout.
+    assert "overview-row-hidden" in r.text
+    # And the full content stub (the top-movers panel template) is NOT
+    # rendered — only the lightweight placeholder.
+    assert "Top movers" not in r.text or "row-hidden-placeholder" in r.text
 
 
 def test_overview_layout_js_is_served(seeded_client):

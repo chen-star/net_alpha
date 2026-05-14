@@ -39,9 +39,12 @@
     {{ macros_acc.account_multi_select(accounts_available, selected_accounts) }}
   </div>
   <div class="ml-auto flex items-center gap-2">
-    {# Edit layout / Done / Reset controls — client-side Alpine; no form submission. #}
+    {# Edit layout / Done / Reset controls — client-side Alpine; no form submission.
+       Sized to match the Period / Account selects on the same row (px-2 py-1
+       text-[12px]) so the right end of the toolbar doesn't tower over the left. #}
     <button type="button"
-            class="btn-ghost text-sm"
+            class="rounded-md px-2 py-1 text-[12px] bg-surface text-text inline-flex items-center"
+            style="border:0.5px solid var(--color-hairline);"
             x-show="!editing"
             @click="
               editing = true;
@@ -52,7 +55,7 @@
       Edit layout
     </button>
     <button type="button"
-            class="btn text-sm"
+            class="rounded-md px-2 py-1 text-[12px] bg-indigo text-white inline-flex items-center"
             x-show="editing"
             @click="
               editing = false;
@@ -63,7 +66,8 @@
       Done
     </button>
     <button type="button"
-            class="btn-ghost text-sm text-label-2"
+            class="rounded-md px-2 py-1 text-[12px] bg-surface text-label-2 inline-flex items-center"
+            style="border:0.5px solid var(--color-hairline);"
             x-show="editing"
             @click="
               if (!confirm('Reset Overview layout to the default for this profile?')) return;

@@ -1,10 +1,10 @@
 {# Inputs: cash_points: list[CashBalancePoint] (each has .on: date, .cash_balance: Decimal,
            .cumulative_contributions: Decimal),
-           year: int #}
+           period_label: str (e.g. "YTD 2026", "2024", "Lifetime") #}
 
 <div class="panel-head">
   <h4>Cash &amp; Contributions</h4>
-  <span class="meta">Cash balance + net contributed · {{ year }}</span>
+  <span class="meta">Cash balance + net contributed · {{ period_label }}</span>
 </div>
 
 {% if cash_points|length == 0 %}
@@ -12,7 +12,7 @@
 {% else %}
   {# data-series-solid / data-series-dashed: stable hooks for tests + future JS
      readers (§5.12 P7). Solid line = cash balance; dashed = net contributed. #}
-  <div id="cash-chart-{{ year }}"
+  <div id="cash-chart"
        data-series-solid="cash_balance"
        data-series-dashed="net_contributed"
        style="height: 218px;"></div>
@@ -97,9 +97,10 @@
         yaxis: {
           labels: {
             formatter: (v) => {
+              if (v == null) return "—";
               const n = Math.round(v);
-              const sign = n >= 0 ? "+" : "−";
               const abs = Math.abs(n);
+              const sign = n < 0 ? "−" : "";
               if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(0) + "k";
               return sign + "$" + abs;
             },
@@ -116,7 +117,8 @@
               borderColor: window.netAlphaChartTheme.colors.label3,
               strokeDashArray: 4,
               label: { text: "Lifetime min",
-                       position: "left", offsetX: 80,
+                       position: "right", offsetX: -8, offsetY: -4,
+                       borderWidth: 0,
                        style: { color: window.netAlphaChartTheme.colors.label3,
                                 background: "transparent",
                                 fontSize: "10px" } } },
@@ -124,7 +126,8 @@
               borderColor: window.netAlphaChartTheme.colors.label3,
               strokeDashArray: 4,
               label: { text: "Lifetime max",
-                       position: "left", offsetX: 80,
+                       position: "right", offsetX: -8, offsetY: -4,
+                       borderWidth: 0,
                        style: { color: window.netAlphaChartTheme.colors.label3,
                                 background: "transparent",
                                 fontSize: "10px" } } },
@@ -136,7 +139,7 @@
     }
 
     function render() {
-      const el = document.querySelector("#cash-chart-{{ year }}");
+      const el = document.querySelector("#cash-chart");
       if (!el) return;
       el.innerHTML = "";
       const chart = new ApexCharts(el, buildOpts());

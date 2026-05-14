@@ -753,6 +753,15 @@ tr[tabindex="0"]:focus-visible {
  * Overview draggable layout — edit-mode affordances.
  * --------------------------------------------------------------- */
 .overview-row { position: relative; }
+/* Hidden rows are emitted server-side so Edit layout can surface them,
+   but stay completely out of the layout until the user enters edit mode. */
+[data-edit-mode="off"] .overview-row-hidden { display: none; }
+[data-edit-mode="on"]  .overview-row-hidden {
+  outline: 1px dashed var(--color-hairline, rgba(255,255,255,0.08));
+  outline-offset: -1px;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
 .row-grip,
 .row-eye {
   position: absolute;
@@ -761,10 +770,10 @@ tr[tabindex="0"]:focus-visible {
   pointer-events: none;
   transition: opacity 120ms, background-color 120ms;
   padding: 4px;
-  background: transparent;
-  border: 0;
+  background: var(--color-surface, rgba(0,0,0,0.4));
+  border: 0.5px solid var(--color-hairline, rgba(255,255,255,0.08));
   border-radius: 6px;
-  color: var(--color-label-3, #888);
+  color: var(--color-label-2, #aaa);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -777,14 +786,17 @@ tr[tabindex="0"]:focus-visible {
   pointer-events: auto;
 }
 .row-grip:hover,
-.row-eye:hover { background: rgba(255, 255, 255, 0.08); }
+.row-eye:hover {
+  background: var(--color-surface-2, rgba(255, 255, 255, 0.08));
+  color: var(--color-text, #fff);
+}
 .row-grip:active { cursor: grabbing; }
 .overview-row-ghost { opacity: 0.4; background: var(--color-surface, #f5f5f5); }
 .row-hidden-placeholder {
   padding: 14px;
   text-align: center;
   color: var(--color-label-3, #888);
-  border: 1px dashed var(--color-border, #ddd);
+  border: 1px dashed var(--color-hairline, rgba(255,255,255,0.16));
   border-radius: 8px;
   margin-bottom: 1rem;
 }

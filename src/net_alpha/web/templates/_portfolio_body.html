@@ -16,33 +16,47 @@
 <div id="overview-rows" data-edit-mode="off">
   {% set _visible_count = layout.rows | reject('in', layout.hidden) | list | length %}
   {% if _visible_count == 0 %}
-    <div class="row-hidden-placeholder">
-      All Overview rows are hidden. Click <strong>Edit layout</strong> to restore.
+    <div class="row-hidden-placeholder mb-4">
+      All Overview rows are hidden. Click <strong>Edit layout</strong> in the toolbar to restore them.
     </div>
   {% endif %}
+  {# Hidden rows are emitted as compact placeholders so Edit layout can
+     surface them — clicking the eye on a placeholder reloads the page so
+     the row's full content can be rendered server-side. Visible rows render
+     content; clicking the eye there flips to a client-rendered placeholder
+     and POSTs the new visibility without a reload. #}
   {% for key in layout.rows %}
     {% set _hidden = key in layout.hidden %}
-    {% if edit_mode or not _hidden %}
-      <div class="overview-row" data-row-key="{{ key }}"
-           x-data='{ hidden: {{ _hidden|tojson }} }'>
-        <button class="row-grip" data-handle aria-label="Drag to reorder" type="button">
-          <img src="/static/icons/grip-vertical.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="">
-        </button>
-        <button class="row-eye" aria-label="Toggle visibility" type="button"
-                @click="hidden = !hidden; fetch('/portfolio/layout/visibility', {
+    <div class="overview-row{% if _hidden %} overview-row-hidden{% endif %}"
+         data-row-key="{{ key }}"
+         x-data='{ hidden: {{ _hidden|tojson }} }'>
+      <button class="row-grip" data-handle aria-label="Drag to reorder" type="button">
+        <img src="/static/icons/grip-vertical.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="">
+      </button>
+      <button class="row-eye" aria-label="Toggle visibility" type="button"
+              @click="
+                const wasHidden = hidden;
+                hidden = !hidden;
+                $el.closest('.overview-row').classList.toggle('overview-row-hidden', hidden);
+                fetch('/portfolio/layout/visibility', {
                   method: 'POST',
                   headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                   body: new URLSearchParams({row: '{{ key }}', hidden: String(hidden)})
-                })">
-          <img src="/static/icons/eye.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="Show" x-show="!hidden">
-          <img src="/static/icons/eye-off.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="Hide" x-show="hidden">
-        </button>
-        {% if _hidden %}
-          <div class="row-hidden-placeholder">Hidden · click eye to restore</div>
-        {% else %}
+                }).then(() => { if (wasHidden) window.location.reload(); });
+              ">
+        <img src="/static/icons/eye.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="Show" x-show="!hidden">
+        <img src="/static/icons/eye-off.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="Hide" x-show="hidden">
+      </button>
+      {% if _hidden %}
+        <div class="row-hidden-placeholder">{{ key|replace('_', ' ')|capitalize }} hidden · click the eye to restore</div>
+      {% else %}
+        <div x-show="!hidden">
           {% include _row_templates[key] %}
-        {% endif %}
-      </div>
-    {% endif %}
+        </div>
+        <div class="row-hidden-placeholder" x-show="hidden" style="display:none">
+          {{ key|replace('_', ' ')|capitalize }} hidden · click the eye to restore
+        </div>
+      {% endif %}
+    </div>
   {% endfor %}
 </div>
