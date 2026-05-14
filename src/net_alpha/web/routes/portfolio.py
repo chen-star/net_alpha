@@ -34,11 +34,12 @@ from net_alpha.portfolio.account_value import (
     build_eval_dates,
 )
 from net_alpha.portfolio.allocation import build_allocation
-from net_alpha.portfolio.calendar_pnl import monthly_realized_pl_series
+from net_alpha.portfolio.calendar_pnl import monthly_pl_lifetime_stats, monthly_realized_pl_series
 from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
     cash_allocation_slice,
+    cash_balance_extremes,
     compute_cash_kpis,
 )
 from net_alpha.portfolio.freshness import compute_price_freshness
@@ -93,6 +94,79 @@ def _warm_historical_for_curve(
     warm_start = min(eval_dates) - timedelta(days=_CURVE_WARM_PADDING_DAYS)
     warm_end = max(eval_dates)
     svc.warm_historical_range(tickers, warm_start, warm_end)
+
+
+def _build_lifetime_account_points(
+    *,
+    repo: Repository,
+    svc: PricingService,
+    accounts: list[str],
+    request: Request,
+) -> list:
+    """Compute the lifetime account-value series for the given account scope.
+
+    Pure-from-DB. The expensive bits (Yahoo history fan-out) sit inside
+    ``build_account_value_series`` + ``_warm_historical_for_curve``; this function
+    just stitches the inputs together. Callers should go through
+    ``_get_or_compute_lifetime_curve`` to share the result across period switches.
+    """
+    today = date.today()
+    all_trades = repo.all_trades()
+    all_lots = repo.all_lots()
+    if accounts:
+        accs_set = set(accounts)
+        scoped_trades = [t for t in all_trades if t.account in accs_set]
+        scoped_lots = [lot for lot in all_lots if lot.account in accs_set]
+    else:
+        scoped_trades = all_trades
+        scoped_lots = all_lots
+
+    cash_events = repo.list_cash_events(account_id=None)
+    if accounts:
+        cash_events = [e for e in cash_events if e.account in set(accounts)]
+
+    cash_points = build_cash_balance_series(events=cash_events, trades=scoped_trades, period=None)
+    event_dates = sorted({t.date for t in scoped_trades} | {e.event_date for e in cash_events})
+    eval_dates = build_eval_dates(period=None, today=today, event_dates=event_dates)
+
+    benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
+    _warm_historical_for_curve(
+        svc=svc,
+        eval_dates=eval_dates,
+        equity_lots=scoped_lots,
+        benchmark_symbol=benchmark_symbol,
+    )
+    return build_account_value_series(
+        trades=scoped_trades,
+        lots=scoped_lots,
+        cash_points=cash_points,
+        eval_dates=eval_dates,
+        get_close=svc.get_historical_close,
+    )
+
+
+def _get_or_compute_lifetime_curve(
+    *,
+    request: Request,
+    accounts: list[str],
+    repo: Repository,
+    svc: PricingService,
+) -> list:
+    """Memoized lifetime account-value series, keyed independently of period.
+
+    Invalidates on ``fragment_revision`` bump — same trigger as the body cache,
+    so an import / split-sync / manual-trade refreshes it. Period switches in
+    the same session reuse the result.
+    """
+    cache = request.app.state.fragment_cache
+    revision = request.app.state.fragment_revision
+    key = ("/portfolio/body/lifetime_curve", tuple(sorted(accounts)), revision)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    points = _build_lifetime_account_points(repo=repo, svc=svc, accounts=accounts, request=request)
+    cache.set(key, points)
+    return points
 
 
 def _resolve_profile(repo: Repository, accounts: list[str]):
@@ -774,6 +848,9 @@ def _compute_portfolio_body_context(
     """Heavy compute behind /portfolio/body. Pure function of (DB rows, prices,
     period, accounts); cached by portfolio_body keyed on the fragment revision."""
     today = date.today()
+    current_year = today.year
+    import_years = {imp.imported_at.year for imp in repo.list_imports()}
+    available_years = sorted(import_years | {current_year}, reverse=True)
     period_tuple, period_label = _parse_period(period, today.year)
 
     all_trades = repo.all_trades()
@@ -949,6 +1026,39 @@ def _compute_portfolio_body_context(
         (body_total_account_value - cash_kpis.net_contributions) if body_total_account_value is not None else None
     )
 
+    if period_tuple is not None:
+        lifetime_account_points = _get_or_compute_lifetime_curve(
+            request=request,
+            accounts=accounts,
+            repo=repo,
+            svc=svc,
+        )
+        lifetime_cash_points = build_cash_balance_series(
+            events=cash_events,
+            trades=scoped_trades,
+            period=None,
+        )
+        cash_lifetime_extremes = cash_balance_extremes(lifetime_cash_points)
+        lifetime_monthly_pl = monthly_realized_pl_series(
+            trades=scoped_trades,
+            period=None,
+            today=today,
+        )
+        monthly_pl_lifetime = monthly_pl_lifetime_stats(lifetime_monthly_pl)
+        lifetime_kpis = compute_kpis(
+            trades=scoped_trades,
+            lots=scoped_lots,
+            prices=prices,
+            period_label="Lifetime",
+            period=None,
+            gl_lots=gl_lots_scoped,
+        )
+    else:
+        lifetime_account_points = None
+        cash_lifetime_extremes = None
+        monthly_pl_lifetime = None
+        lifetime_kpis = None
+
     return {
         "kpis": kpis,
         "snapshot": snap,
@@ -978,6 +1088,12 @@ def _compute_portfolio_body_context(
         "selected_period": period or "ytd",
         "selected_accounts": accounts,
         "account_filter_active": bool(accounts),
+        "lifetime_account_points": lifetime_account_points,
+        "cash_lifetime_extremes": cash_lifetime_extremes,
+        "monthly_pl_lifetime": monthly_pl_lifetime,
+        "lifetime_kpis": lifetime_kpis,
+        "current_year": current_year,
+        "available_years": available_years,
     }
 
 
