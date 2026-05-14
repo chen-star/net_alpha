@@ -1,4 +1,5 @@
 """Route tests for /portfolio/layout/* and layout-aware /portfolio/body."""
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime

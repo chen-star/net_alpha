@@ -1,4 +1,5 @@
 """Repository tests for overview_layout."""
+
 from __future__ import annotations
 
 from sqlmodel import Session, text
@@ -52,10 +53,12 @@ def test_clear_overview_layout_returns_to_default(tmp_path):
 def test_get_overview_layout_recovers_from_corrupt_json(tmp_path):
     repo, engine = _repo(tmp_path)
     with Session(engine) as s:
-        s.exec(text(
-            "INSERT INTO overview_layout(profile, layout_json, updated_at) "
-            "VALUES ('active', '{garbage', '2026-05-13T00:00:00')"
-        ))
+        s.exec(
+            text(
+                "INSERT INTO overview_layout(profile, layout_json, updated_at) "
+                "VALUES ('active', '{garbage', '2026-05-13T00:00:00')"
+            )
+        )
         s.commit()
     assert repo.get_overview_layout("active") == default_overview_layout()
 

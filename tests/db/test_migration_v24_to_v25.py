@@ -1,4 +1,5 @@
 """Migration v24 → v25: create overview_layout table."""
+
 from __future__ import annotations
 
 from sqlmodel import Session, text
@@ -7,7 +8,6 @@ from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.migrations import (
     CURRENT_SCHEMA_VERSION,
     _migrate_v24_to_v25,
-    get_schema_version,
     set_schema_version,
 )
 

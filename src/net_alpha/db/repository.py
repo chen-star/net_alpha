@@ -56,10 +56,11 @@ from net_alpha.models.domain import (
 from net_alpha.models.preferences import AccountPreference
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.models.splits import LotOverride, Split
+from net_alpha.prefs.overview_layout import OverviewLayout as OverviewLayout
+from net_alpha.prefs.overview_layout import default_overview_layout
+from net_alpha.prefs.overview_layout import sanitize as _sanitize_overview_layout
 from net_alpha.section_1256.universe import is_section_1256 as _is_section_1256
 from net_alpha.section_1256.universe import load_universe
-from net_alpha.prefs.overview_layout import OverviewLayout as OverviewLayout
-from net_alpha.prefs.overview_layout import default_overview_layout, sanitize as _sanitize_overview_layout
 from net_alpha.targets.models import PositionTarget, TargetUnit
 from net_alpha.targets.tags import normalize_tag, normalize_tags
 
@@ -2226,9 +2227,7 @@ class Repository:
 
     def clear_overview_layout(self, profile: str) -> None:
         with Session(self.engine) as s:
-            s.exec(
-                text("DELETE FROM overview_layout WHERE profile = :p").bindparams(p=profile)
-            )
+            s.exec(text("DELETE FROM overview_layout WHERE profile = :p").bindparams(p=profile))
             s.commit()
 
     # ---- Carryforward derivation adapters ----
