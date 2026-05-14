@@ -134,19 +134,23 @@
       {% if kpis.period_realized < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized|float|abs) }}{% if metric_refs is defined and metric_refs.realized_period is defined %}{{ provenance_link(metric_refs.realized_period) }}{% endif %}
     </div>
     <div class="text-[11px] text-label-2 mt-1">
-      {{ kpis.period_label }}
-      {% if kpis.period_realized_economic != kpis.period_realized %}
-        · economic {% if kpis.period_realized_economic < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized_economic|float|abs) }}
+      {{ kpis.period_label }}{% if kpis.period_realized_economic != kpis.period_realized %}
+        · cash-netted {% if kpis.period_realized_economic < 0 %}−{% else %}+{% endif %}${{ "%.2f"|format(kpis.period_realized_economic|float|abs) }}
+        <span class="text-label-3" title="The figure above is tax-recognized P/L (wash-sale-disallowed losses added back to basis — matches Schwab and Form 8949). This “cash-netted” figure subtracts those add-backs, showing the actual cash you netted from realized trades.">(?)</span>
       {% endif %}
     </div>
     {% if lifetime_kpis is defined and lifetime_kpis is not none %}
+      {# Use the same tax-recognized number that the Lifetime view shows as
+         its main figure (`period_realized`), so toggling Period to Lifetime
+         doesn't reveal a different "Lifetime" total. The economic /
+         cash-netted variant is documented in the panel's title attribute. #}
       <div class="text-[11px] text-label-3 mt-[2px]"
-           title="Cumulative recognized realized P/L (sells, expirations, assignments) since your first trade.">
+           title="Cumulative tax-recognized realized P/L since your first trade — matches the value shown when you switch Period to Lifetime.">
         Lifetime
-        {% if lifetime_kpis.lifetime_realized_economic < 0 %}
-          <span class="num text-neg">−${{ "%.2f"|format(lifetime_kpis.lifetime_realized_economic|float|abs) }}</span>
+        {% if lifetime_kpis.period_realized < 0 %}
+          <span class="num text-neg">−${{ "%.2f"|format(lifetime_kpis.period_realized|float|abs) }}</span>
         {% else %}
-          <span class="num text-pos">+${{ "%.2f"|format(lifetime_kpis.lifetime_realized_economic|float) }}</span>
+          <span class="num text-pos">+${{ "%.2f"|format(lifetime_kpis.period_realized|float) }}</span>
         {% endif %}
       </div>
     {% endif %}

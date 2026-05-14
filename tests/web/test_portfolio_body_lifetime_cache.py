@@ -1,15 +1,17 @@
-"""Cache regression test for the lifetime equity-curve helper.
+"""Regression test for body load latency.
 
-The expensive ``_build_lifetime_account_points`` helper must be called at most
-once regardless of how many period-switches the user makes within the same
-fragment-revision window.
+The lifetime equity-curve brush strip was removed entirely (it duplicated the
+Period dropdown and the lifetime account-value compute it required dominated
+cold body latency). This test pins that the helper that drove that cost has
+been deleted, and that body requests never touch the historical-prices warm
+path. If a future change reintroduces it without the lazy-load discipline,
+this test should be the canary.
 """
 
 from __future__ import annotations
 
 import os
 from datetime import date, datetime
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -27,17 +29,12 @@ os.environ.setdefault("NETALPHA_SKIP_SCHEDULER", "1")
 
 @pytest.fixture
 def client_with_trade(tmp_path):
-    """TestClient wired to a temp DB that has one buy trade dated in the past.
-
-    This ensures ``_build_lifetime_account_points`` actually has data to
-    process, so the real implementation runs and the cache can be exercised.
-    """
+    """TestClient wired to a temp DB that has one buy trade dated in the past."""
     settings = Settings(data_dir=tmp_path)
     engine = get_engine(settings.db_path)
     init_db(engine)
     repo = Repository(engine)
 
-    # Seed an account + import + trade dated two years ago.
     account = repo.get_or_create_account("Schwab", "Tax")
     trade = Trade(
         account="Schwab/Tax",
@@ -61,32 +58,36 @@ def client_with_trade(tmp_path):
     return TestClient(app)
 
 
-def test_lifetime_curve_built_at_most_once_across_period_switches(client_with_trade):
-    """Three body requests across two distinct periods must build the lifetime
-    curve at most once — the cache should amortize it after the first call.
-    """
-    with patch(
-        "net_alpha.web.routes.portfolio._build_lifetime_account_points",
-        wraps=__import__(
-            "net_alpha.web.routes.portfolio", fromlist=["_build_lifetime_account_points"]
-        )._build_lifetime_account_points,
-    ) as spy:
-        past_year = date.today().year - 1
+def test_lifetime_curve_helpers_removed():
+    """The expensive ``_build_lifetime_account_points`` /
+    ``_get_or_compute_lifetime_curve`` helpers are gone with the brush. If
+    they reappear, also reintroduce a cache or lazy-load discipline so cold
+    body latency doesn't regress."""
+    from net_alpha.web.routes import portfolio as P
 
-        # First request: YTD
-        r1 = client_with_trade.get("/portfolio/body?period=ytd")
-        assert r1.status_code == 200
+    assert not hasattr(P, "_build_lifetime_account_points")
+    assert not hasattr(P, "_get_or_compute_lifetime_curve")
 
-        # Second request: a past year (different period)
-        r2 = client_with_trade.get(f"/portfolio/body?period={past_year}")
-        assert r2.status_code == 200
 
-        # Third request: YTD again
-        r3 = client_with_trade.get("/portfolio/body?period=ytd")
-        assert r3.status_code == 200
+def test_body_does_not_fan_out_historical_prices(client_with_trade, monkeypatch):
+    """The body endpoint must not call the historical-prices warm path,
+    which was the dominant cold-load cost when the brush existed."""
+    from net_alpha.pricing.service import PricingService
 
-        # The lifetime builder should have been called at most once — the cache
-        # amortizes it across period switches within the same revision window.
-        assert spy.call_count <= 1, (
-            f"_build_lifetime_account_points called {spy.call_count} times; expected ≤1 (cached after first call)"
-        )
+    called = {"n": 0}
+    original = PricingService.warm_historical_range
+
+    def spy(self, *args, **kwargs):
+        called["n"] += 1
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(PricingService, "warm_historical_range", spy)
+
+    r1 = client_with_trade.get("/portfolio/body?period=ytd")
+    assert r1.status_code == 200
+    r2 = client_with_trade.get(f"/portfolio/body?period={date.today().year - 1}")
+    assert r2.status_code == 200
+    # Body uses the YTD account-value series, which does warm — once per
+    # period. But it should NOT warm a second time for the lifetime brush
+    # (the brush is gone). Two requests on two periods → ≤ 2 warm calls.
+    assert called["n"] <= 2, f"warm_historical_range called {called['n']}× (expected ≤2)"

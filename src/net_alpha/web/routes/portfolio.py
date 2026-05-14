@@ -96,79 +96,6 @@ def _warm_historical_for_curve(
     svc.warm_historical_range(tickers, warm_start, warm_end)
 
 
-def _build_lifetime_account_points(
-    *,
-    repo: Repository,
-    svc: PricingService,
-    accounts: list[str],
-    request: Request,
-) -> list:
-    """Compute the lifetime account-value series for the given account scope.
-
-    Pure-from-DB. The expensive bits (Yahoo history fan-out) sit inside
-    ``build_account_value_series`` + ``_warm_historical_for_curve``; this function
-    just stitches the inputs together. Callers should go through
-    ``_get_or_compute_lifetime_curve`` to share the result across period switches.
-    """
-    today = date.today()
-    all_trades = repo.all_trades()
-    all_lots = repo.all_lots()
-    if accounts:
-        accs_set = set(accounts)
-        scoped_trades = [t for t in all_trades if t.account in accs_set]
-        scoped_lots = [lot for lot in all_lots if lot.account in accs_set]
-    else:
-        scoped_trades = all_trades
-        scoped_lots = all_lots
-
-    cash_events = repo.list_cash_events(account_id=None)
-    if accounts:
-        cash_events = [e for e in cash_events if e.account in set(accounts)]
-
-    cash_points = build_cash_balance_series(events=cash_events, trades=scoped_trades, period=None)
-    event_dates = sorted({t.date for t in scoped_trades} | {e.event_date for e in cash_events})
-    eval_dates = build_eval_dates(period=None, today=today, event_dates=event_dates)
-
-    benchmark_symbol = request.app.state.pricing_config.benchmark_symbol
-    _warm_historical_for_curve(
-        svc=svc,
-        eval_dates=eval_dates,
-        equity_lots=scoped_lots,
-        benchmark_symbol=benchmark_symbol,
-    )
-    return build_account_value_series(
-        trades=scoped_trades,
-        lots=scoped_lots,
-        cash_points=cash_points,
-        eval_dates=eval_dates,
-        get_close=svc.get_historical_close,
-    )
-
-
-def _get_or_compute_lifetime_curve(
-    *,
-    request: Request,
-    accounts: list[str],
-    repo: Repository,
-    svc: PricingService,
-) -> list:
-    """Memoized lifetime account-value series, keyed independently of period.
-
-    Invalidates on ``fragment_revision`` bump — same trigger as the body cache,
-    so an import / split-sync / manual-trade refreshes it. Period switches in
-    the same session reuse the result.
-    """
-    cache = request.app.state.fragment_cache
-    revision = request.app.state.fragment_revision
-    key = ("/portfolio/body/lifetime_curve", tuple(sorted(accounts)), revision)
-    cached = cache.get(key)
-    if cached is not None:
-        return cached
-    points = _build_lifetime_account_points(repo=repo, svc=svc, accounts=accounts, request=request)
-    cache.set(key, points)
-    return points
-
-
 def _resolve_profile(repo: Repository, accounts: list[str]):
     prefs = repo.list_user_preferences()
     filter_id = _resolve_account_id(accounts, repo)
@@ -754,55 +681,6 @@ def holdings_short_options_legacy(
     return holdings_options(request, account=account, repo=repo)
 
 
-@router.get("/portfolio/equity-curve/brush", response_class=HTMLResponse)
-def portfolio_equity_curve_brush(
-    request: Request,
-    period: str | None = None,
-    account: list[str] = Query(default_factory=list),
-    repo: Repository = Depends(get_repository),
-    svc: PricingService = Depends(get_pricing_service),
-) -> HTMLResponse:
-    """Lifetime brush strip for the equity curve.
-
-    Split out of ``/portfolio/body`` because building the lifetime account-
-    value series dominates cold-load latency (~1.8s). The main body returns
-    immediately with a placeholder and this endpoint paints the brush async.
-    """
-    accounts: list[str] = parse_accounts(account)
-    today = date.today()
-    period_tuple, _ = _parse_period(period, today.year)
-    if period_tuple is None:
-        # Lifetime view doesn't show a brush — return an empty fragment.
-        return HTMLResponse("")
-    points = _get_or_compute_lifetime_curve(
-        request=request,
-        accounts=accounts,
-        repo=repo,
-        svc=svc,
-    )
-    period_t, _ = _parse_period(period, today.year)
-    # We need the YTD period's first/last date for the initial brush range.
-    if period_t is not None:
-        period_start = date(period_t[0], 1, 1)
-        period_end = min(date(period_t[1], 1, 1) - timedelta(days=1), today)
-    else:
-        period_start = points[0].on if points else today
-        period_end = points[-1].on if points else today
-    import_years = {imp.imported_at.year for imp in repo.list_imports()}
-    available_years = sorted(import_years | {today.year}, reverse=True)
-    return request.app.state.templates.TemplateResponse(
-        request,
-        "_portfolio_equity_brush.html",
-        {
-            "lifetime_account_points": points,
-            "current_year": today.year,
-            "available_years": available_years,
-            "period_start": period_start,
-            "period_end": period_end,
-        },
-    )
-
-
 @router.get("/portfolio/equity-curve", response_class=HTMLResponse)
 def portfolio_equity_curve(
     request: Request,
@@ -1076,14 +954,11 @@ def _compute_portfolio_body_context(
     )
 
     if period_tuple is not None:
-        # The lifetime account-value series (brush strip) needs historical
-        # closes for every (ticker, date) and dominates cold-load latency
-        # (~1.8s of a 3s body request). It's loaded lazily via the
-        # /portfolio/equity-curve/brush endpoint instead; the template falls
-        # back to a placeholder that hx-gets it after first paint.
-        # The other lifetime stats below are cheap pure-data ops, so they
-        # stay inline and the cash/monthly footnotes paint immediately.
-        lifetime_account_points = None
+        # The brush strip was removed (it duplicated the Period dropdown and
+        # the lifetime account-value compute it required dominated cold body
+        # latency). The remaining lifetime stats below are cheap pure-data
+        # ops, so they stay inline and feed the cash/monthly footnotes and
+        # the per-tile "Lifetime …" subtext on the KPI row.
         lifetime_cash_points = build_cash_balance_series(
             events=cash_events,
             trades=scoped_trades,
@@ -1104,13 +979,10 @@ def _compute_portfolio_body_context(
             period=None,
             gl_lots=gl_lots_scoped,
         )
-        defer_lifetime_brush = True
     else:
-        lifetime_account_points = None
         cash_lifetime_extremes = None
         monthly_pl_lifetime = None
         lifetime_kpis = None
-        defer_lifetime_brush = False
 
     return {
         "kpis": kpis,
@@ -1141,8 +1013,6 @@ def _compute_portfolio_body_context(
         "selected_period": period or "ytd",
         "selected_accounts": accounts,
         "account_filter_active": bool(accounts),
-        "lifetime_account_points": lifetime_account_points,
-        "defer_lifetime_brush": defer_lifetime_brush,
         "cash_lifetime_extremes": cash_lifetime_extremes,
         "monthly_pl_lifetime": monthly_pl_lifetime,
         "lifetime_kpis": lifetime_kpis,
@@ -1194,6 +1064,14 @@ def portfolio_body(
     layout = repo.get_overview_layout(profile.profile)
     ctx = {**ctx, "layout": layout, "edit_mode": False}
     response = request.app.state.templates.TemplateResponse(request, "_portfolio_body.html", ctx)
+    if is_htmx:
+        # Push the canonical Overview URL (/) instead of the fragment URL,
+        # so reloads and shares of the current state land back on a full page.
+        from urllib.parse import quote
+        qs_parts = [f"period={period or 'ytd'}"]
+        for a in accounts:
+            qs_parts.append(f"account={quote(a, safe='')}")
+        response.headers["HX-Push-Url"] = "/?" + "&".join(qs_parts)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     logger.debug(
         "portfolio_body: {:.0f} ms cache_hit={} period={} accounts={!r}",

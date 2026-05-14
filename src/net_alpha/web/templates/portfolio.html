@@ -42,12 +42,11 @@
       </div>
     </div>
     <div class="flex items-center gap-3 flex-wrap">
-      <div class="verify-badge-slot"
-           hx-get="/verify/badge?page=overview"
-           hx-trigger="load delay:200ms"
-           hx-swap="innerHTML">
-        {% with _skel_variant='pill' %}{% include "_skeleton.html" %}{% endwith %}
-      </div>
+      {# The page-level verify badge is intentionally omitted here — the
+         topbar "Data check: …" pill (see base.html) already conveys the
+         same status site-wide, so duplicating it next to the toolbar made
+         the header feel cluttered and ambiguous (two chips, one with no
+         tooltip explaining what was being verified). #}
       {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
     </div>
   </div>

@@ -437,7 +437,10 @@ def test_kpi_tiles_show_lifetime_subtitle_on_period(tmp_path):
     assert r.status_code == 200
     # Tooltips uniquely identify our two new subtitles.
     assert "Account value today minus lifetime net contributed" in r.text
-    assert "Cumulative recognized realized P/L" in r.text
+    # The Realized P/L Lifetime subtext was retitled to point users at the
+    # value they see when switching Period to Lifetime — covered by the
+    # tooltip on that subtitle.
+    assert "matches the value shown when you switch Period to Lifetime" in r.text
 
 
 def test_kpi_tiles_hide_lifetime_subtitle_on_lifetime_view(tmp_path):
@@ -491,7 +494,7 @@ def test_kpi_tiles_hide_lifetime_subtitle_on_lifetime_view(tmp_path):
     r = client.get("/portfolio/body?period=lifetime&account=")
     assert r.status_code == 200
     assert "Account value today minus lifetime net contributed" not in r.text
-    assert "Cumulative recognized realized P/L" not in r.text
+    assert "matches the value shown when you switch Period to Lifetime" not in r.text
 
 
 def _setup_trade_data(tmp_path):
@@ -536,32 +539,18 @@ def _setup_trade_data(tmp_path):
     repo.add_import(account, record, [trade], cash_events=cash_events)
 
 
-def test_equity_curve_brush_renders_on_period_view(tmp_path):
-    """The body renders a deferred slot that lazy-loads the brush; the actual
-    brush element ships from /portfolio/equity-curve/brush after first paint."""
+def test_equity_curve_omits_brush_strip(tmp_path):
+    """The lifetime brush strip was removed — the Period dropdown handles the
+    same re-period intent more clearly, and the strip's lifetime account-value
+    compute dominated cold body-load latency. The body must no longer ship
+    any brush DOM nodes or hit the /portfolio/equity-curve/brush endpoint."""
     _setup_trade_data(tmp_path)
     client = _client(tmp_path)
-    r = client.get("/portfolio/body?period=ytd")
-    assert r.status_code == 200
-    # Body emits the placeholder + lazy-load trigger
-    assert 'id="equity-brush-slot"' in r.text
-    assert "/portfolio/equity-curve/brush" in r.text
-    # And the fragment itself renders the actual brush element
-    brush = client.get("/portfolio/equity-curve/brush?period=ytd")
-    assert brush.status_code == 200
-    assert 'id="equity-chart-lifetime"' in brush.text
-    assert "Lifetime shape" in brush.text
-
-
-def test_equity_curve_brush_absent_on_lifetime_view(tmp_path):
-    _setup_trade_data(tmp_path)
-    client = _client(tmp_path)
-    r = client.get("/portfolio/body?period=lifetime")
-    assert r.status_code == 200
-    # No deferred slot is emitted on Lifetime view (the brush is meaningless there).
-    assert 'id="equity-brush-slot"' not in r.text
-    assert 'id="equity-chart-lifetime"' not in r.text
-    # And the brush endpoint short-circuits to empty when called for Lifetime.
-    brush = client.get("/portfolio/equity-curve/brush?period=lifetime")
-    assert brush.status_code == 200
-    assert 'id="equity-chart-lifetime"' not in brush.text
+    for period in ("ytd", "lifetime"):
+        r = client.get(f"/portfolio/body?period={period}")
+        assert r.status_code == 200, period
+        assert 'id="equity-brush-slot"' not in r.text, period
+        assert 'id="equity-chart-lifetime"' not in r.text, period
+        assert "/portfolio/equity-curve/brush" not in r.text, period
+    # The endpoint itself is gone too.
+    assert client.get("/portfolio/equity-curve/brush?period=ytd").status_code == 404

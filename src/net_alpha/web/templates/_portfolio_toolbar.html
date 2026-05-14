@@ -4,11 +4,13 @@
    the prior behavior on pages like /positions that have no body
    fragment endpoint). #}
 {% if toolbar_hx_target %}
+{# hx-push-url is intentionally NOT "true": HTMX would push the fragment URL
+   (toolbar_hx_get), which reload-breaks the page. /portfolio/body sets a
+   canonical HX-Push-Url header so the address bar shows the parent URL. #}
 <form method="get" action="{{ toolbar_action }}"
       hx-get="{{ toolbar_hx_get }}"
       hx-target="{{ toolbar_hx_target }}"
       hx-swap="innerHTML"
-      hx-push-url="true"
       hx-trigger="change from:select, change from:input[type=checkbox]"
       hx-indicator="#portfolio-toolbar-spinner"
       class="kpi-card flex gap-3 flex-wrap items-end text-sm"
@@ -40,10 +42,11 @@
   </div>
   <div class="ml-auto flex items-center gap-2">
     {# Edit layout / Done / Reset controls — client-side Alpine; no form submission.
-       Sized to match the Period / Account selects on the same row (px-2 py-1
-       text-[12px]) so the right end of the toolbar doesn't tower over the left. #}
+       Sized + line-height-matched to the Period/Account selects on the same
+       row (px-2 py-1 text-[12px] leading-[18px]) so the toolbar reads as one
+       row of equal-height controls instead of a button towering over selects. #}
     <button type="button"
-            class="rounded-md px-2 py-1 text-[12px] bg-surface text-text inline-flex items-center"
+            class="overview-edit-btn rounded-md px-2 py-1 text-[12px] leading-[18px] bg-surface text-text inline-flex items-center"
             style="border:0.5px solid var(--color-hairline);"
             x-show="!editing"
             @click="
@@ -55,7 +58,7 @@
       Edit layout
     </button>
     <button type="button"
-            class="rounded-md px-2 py-1 text-[12px] bg-indigo text-white inline-flex items-center"
+            class="overview-edit-btn rounded-md px-2 py-1 text-[12px] leading-[18px] bg-indigo text-white inline-flex items-center"
             x-show="editing"
             @click="
               editing = false;
@@ -66,7 +69,7 @@
       Done
     </button>
     <button type="button"
-            class="rounded-md px-2 py-1 text-[12px] bg-surface text-label-2 inline-flex items-center"
+            class="overview-edit-btn rounded-md px-2 py-1 text-[12px] leading-[18px] bg-surface text-label-2 inline-flex items-center"
             style="border:0.5px solid var(--color-hairline);"
             x-show="editing"
             @click="

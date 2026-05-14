@@ -22,7 +22,11 @@ def test_toolbar_form_has_hx_get(client: TestClient, builders, repo):
     # HTMX attributes on the form
     assert 'hx-get="/portfolio/body"' in body
     assert 'hx-target="#portfolio-body"' in body
-    assert 'hx-push-url="true"' in body
+    # hx-push-url is intentionally absent: HTMX would push the fragment URL
+    # (/portfolio/body?…) into the address bar, which reload-breaks the page.
+    # /portfolio/body now sets a canonical `/?…` URL via the HX-Push-Url
+    # response header on HTMX requests instead.
+    assert 'hx-push-url="true"' not in body
     # No more inline full-reload trigger on the period select
     assert 'onchange="this.form.submit()"' not in body
 
@@ -97,6 +101,40 @@ def test_positions_toolbar_is_plain_get_form(client: TestClient, builders, repo)
     assert 'hx-get="/portfolio/body"' not in body
     # And the period select reverts to the inline submit handler.
     assert 'onchange="this.form.submit()"' in body
+
+
+def test_portfolio_body_sets_canonical_hx_push_url(client: TestClient, builders, repo):
+    """When the toolbar HTMX-swaps the body, the response must set
+    HX-Push-Url to a canonical `/?…` URL, so reloads and shares land back
+    on the full Overview page (not the body fragment endpoint)."""
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
+    )
+    res = client.get(
+        "/portfolio/body?period=lifetime&account=schwab/lt",
+        headers={"HX-Request": "true", "HX-Target": "portfolio-body"},
+    )
+    assert res.status_code == 200
+    push = res.headers.get("HX-Push-Url", "")
+    assert push.startswith("/?")
+    assert "period=lifetime" in push
+    assert "account=schwab%2Flt" in push
+
+
+def test_portfolio_body_no_hx_push_url_on_direct_get(client: TestClient, builders, repo):
+    """Direct (non-HTMX) GETs do not set HX-Push-Url — only HTMX swaps need it."""
+    builders.seed_import(
+        repo,
+        "schwab",
+        "lt",
+        [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
+    )
+    res = client.get("/portfolio/body?period=ytd")
+    assert res.status_code == 200
+    assert "HX-Push-Url" not in res.headers
 
 
 def test_portfolio_body_emits_oob_subline_when_htmx(client: TestClient, builders, repo):

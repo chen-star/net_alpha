@@ -20,7 +20,10 @@ def test_portfolio_body_skeleton_renders_initially(client: TestClient, builders,
     assert 'data-skeleton="kpi-row"' in body or 'class="skeleton' in body
 
 
-def test_verify_badge_slot_has_skeleton(client: TestClient, builders, repo):
+def test_verify_badge_slot_removed_from_overview(client: TestClient, builders, repo):
+    """The page-level verify badge slot was removed from /. The topbar
+    "Data check: …" pill (base.html) now surfaces the same status, so the
+    slot's skeleton is no longer rendered."""
     builders.seed_import(
         repo,
         "schwab",
@@ -29,9 +32,7 @@ def test_verify_badge_slot_has_skeleton(client: TestClient, builders, repo):
     )
     res = client.get("/")
     body = res.text
-    # Pill-sized skeleton inside the verify-badge-slot before the badge loads.
-    assert 'class="verify-badge-slot"' in body
-    assert "skeleton-pill" in body
+    assert 'class="verify-badge-slot"' not in body
 
 
 def test_positions_pane_has_skeleton(client: TestClient, builders, repo):

@@ -12,12 +12,8 @@
       </div>
 </div>
     <div class="flex items-center gap-3 flex-wrap">
-      <div class="verify-badge-slot"
-           hx-get="/verify/badge?page=positions"
-           hx-trigger="load delay:200ms"
-           hx-swap="innerHTML">
-        {% with _skel_variant='pill' %}{% include "_skeleton.html" %}{% endwith %}
-      </div>
+      {# Page-level verify badge removed — the topbar "Data check: …" pill
+         (see base.html) conveys the same status site-wide. #}
       {% if imports %}{% include "_portfolio_toolbar.html" %}{% endif %}
     </div>
   </div>

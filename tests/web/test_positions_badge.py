@@ -8,10 +8,16 @@ XP-1 cross-page check is reachable.
 from __future__ import annotations
 
 
-def test_positions_shell_includes_badge_placeholder(client):
+def test_positions_shell_omits_page_level_badge(client):
+    """The page-level verify badge was removed from /positions (and the
+    Overview page) — the topbar "Data check: …" pill in base.html now
+    surfaces the same status site-wide, and the duplicate chip was
+    confusing users. The badge endpoint still exists for callers that
+    want it; just the page-level slot in this template is gone."""
     resp = client.get("/positions")
     assert resp.status_code == 200
-    assert 'hx-get="/verify/badge?page=positions"' in resp.text
+    assert 'hx-get="/verify/badge?page=positions"' not in resp.text
+    assert 'verify-badge-slot' not in resp.text
 
 
 def test_positions_badge_fragment_renders(client):

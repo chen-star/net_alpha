@@ -749,6 +749,18 @@ tr[tabindex="0"]:focus-visible {
   outline-offset: -2px;
 }
 
+/* The overview toolbar mixes <select> (native rendering, slightly variable
+   height) with <button> controls. Forcing the same content-box vertical
+   metrics keeps Edit layout / Done flush with the Period and Account
+   selects in the same row, even across themes / DPRs. */
+.overview-edit-btn,
+form.kpi-card select,
+form.kpi-card [data-testid="account-multi-select"] > button {
+  box-sizing: border-box;
+  height: 26px;
+  line-height: 18px;
+}
+
 /* ---------------------------------------------------------------
  * Overview draggable layout — edit-mode affordances.
  * --------------------------------------------------------------- */
@@ -778,8 +790,18 @@ tr[tabindex="0"]:focus-visible {
   align-items: center;
   justify-content: center;
 }
-.row-grip { top: 8px; left: 8px; cursor: grab; }
-.row-eye  { top: 8px; right: 8px; cursor: pointer; }
+/* In edit mode, push the grip and eye outside the panel left/right edges so
+   they never overlap the panel header text (e.g. "Action inbox"). The
+   overview-row already has position:relative so absolute coordinates are
+   relative to the row, and we reserve gutter space below. */
+.row-grip { top: 8px; left: -32px; cursor: grab; }
+.row-eye  { top: 8px; right: -32px; cursor: pointer; }
+[data-edit-mode="on"] {
+  /* Reserve a 32px gutter on each side so the grip/eye sit in their own
+     column instead of colliding with the panel chrome. */
+  padding-left: 32px;
+  padding-right: 32px;
+}
 [data-edit-mode="on"] .row-grip,
 [data-edit-mode="on"] .row-eye {
   opacity: 1;
