@@ -1087,6 +1087,15 @@ def portfolio_layout_reset(
     account: list[str] = Form(default_factory=list),
     repo: Repository = Depends(get_repository),
 ) -> Response:
+    """Reset the current profile's overview layout to the default row order.
+
+    Deletes the saved ``overview_layout`` row for the profile so the next read
+    returns ``default_overview_layout()``.
+
+    HTMX callers (``HX-Request: true``) receive a 204 with an ``HX-Redirect``
+    header pointing at ``/`` so the full page reloads cleanly. Non-HTMX callers
+    receive a 303 redirect to ``/``.
+    """
     accounts = parse_accounts(account)
     profile = _resolve_profile(repo, accounts)
     repo.clear_overview_layout(profile.profile)
