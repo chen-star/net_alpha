@@ -55,7 +55,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 24
+CURRENT_SCHEMA_VERSION = 25
 
 
 def get_schema_version(session: Session) -> int:
@@ -723,6 +723,21 @@ def _migrate_v23_to_v24(session: Session) -> None:
     session.commit()
 
 
+def _migrate_v24_to_v25(session: Session) -> None:
+    """Add overview_layout table (per-profile row order + hidden set)."""
+    session.exec(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS overview_layout (
+                profile     TEXT NOT NULL PRIMARY KEY,
+                layout_json TEXT NOT NULL,
+                updated_at  TEXT NOT NULL
+            )
+            """
+        )
+    )
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -743,6 +758,7 @@ def migrate(session: Session) -> None:
         _migrate_v20_to_v21(session)
         _migrate_v22_to_v23(session)
         _migrate_v23_to_v24(session)
+        _migrate_v24_to_v25(session)
         session.commit()
         return
     if current == 1:
@@ -837,6 +853,10 @@ def migrate(session: Session) -> None:
         _migrate_v23_to_v24(session)
         set_schema_version(session, 24)
         current = 24
+    if current < 25:
+        _migrate_v24_to_v25(session)
+        set_schema_version(session, 25)
+        current = 25
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "
