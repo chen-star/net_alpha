@@ -1,12 +1,17 @@
 {# Inputs:
-   account_points: list[AccountValuePoint]  -- new dual-line series source
+   account_points: list[AccountValuePoint]           -- selected-period series
+   lifetime_account_points: list[AccountValuePoint]  -- full lifetime series; falsy in Lifetime view
    benchmark_points: list[BenchmarkPoint]
    benchmark_symbol: str
-   period_label: str                         -- e.g. "YTD 2025", "2024", "Lifetime"
+   period_label: str                                  -- e.g. "YTD 2025", "2024", "Lifetime"
+   current_year: int                                  -- for ytd snap detection
+   available_years: list[int]                         -- snap targets for the brush
 #}
 
 {% set has_data = account_points and account_points|length >= 2 %}
 {% set missing_dates_count = account_points|selectattr('account_value', 'none')|list|length if account_points else 0 %}
+{% set _lap = lifetime_account_points | default(none) %}
+{% set has_brush = _lap and _lap|length >= 2 %}
 
 <div class="panel-head">
   <h4>Equity curve</h4>
@@ -22,6 +27,18 @@
   <div class="text-label-2 text-[13px] py-4">No deposits yet in {{ period_label }}.</div>
 {% else %}
   <div id="equity-chart" style="height: 218px;"></div>
+  {% if has_brush %}
+    <div id="equity-chart-lifetime"
+         data-testid="equity-brush"
+         data-current-year="{{ current_year }}"
+         data-available-years='{{ available_years|tojson }}'
+         data-period-start="{{ account_points[0].on.isoformat() }}"
+         data-period-end="{{ account_points[-1].on.isoformat() }}"
+         style="height: 56px; margin-top: 6px;"
+         aria-label="Lifetime context — drag to change period. The strip's vertical scale is independent of the main chart.">
+    </div>
+    <div class="text-[10px] text-label-3 mt-1">Lifetime shape · drag the selection to change period.</div>
+  {% endif %}
   <div class="text-label-3 text-[11px] mt-1">
     Option positions are valued at cost basis on this chart; today's mark-to-market shows on the Holdings panel.
   </div>
@@ -38,23 +55,31 @@
         }{% if not loop.last %},{% endif %}
       {% endfor %}
     ];
+    {% if has_brush %}
+    const lifetimePoints = [
+      {% for p in _lap %}
+        { on: "{{ p.on.isoformat() }}",
+          account: {{ (p.account_value|float) if p.account_value is not none else 'null' }} }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+    // Selection range tracked in IIFE scope so the brush's `events.selection`
+    // (continuous, fires while dragging) and the chart container's pointerup
+    // (fires once on release) can read the same value.
+    const brushState = { min: null, max: null };
+    {% endif %}
 
     const contribSeries = points.map(p => ({ x: p.on, y: p.contrib }));
     const accountSeries = points.map(p => ({ x: p.on, y: p.account }));
 
-    // Single area for account_value with a sign-aware color and the
-    // contributions line drawn on top. (The "two stacked clipped areas"
-    // approach in the spec turns out to render unevenly across ApexCharts
-    // versions; this fallback was named explicitly in the spec.)
     const series = [
       { name: "Contributions", type: "line", data: contribSeries },
       { name: "Account value", type: "area", data: accountSeries },
     ];
 
-    function buildOpts() {
+    function buildMainOpts() {
       const colors = [
-        window.netAlphaChartTheme.colors.label3,   // contributions baseline
-        window.netAlphaChartTheme.colors.pos,      // account value (green by default)
+        window.netAlphaChartTheme.colors.label3,
+        window.netAlphaChartTheme.colors.pos,
       ];
       const widths = [2, 2];
       const dashArr = [4, 0];
@@ -63,12 +88,9 @@
       const isLight = document.documentElement.getAttribute("data-theme") === "light";
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
         chart: {
+          id: "equity-main",
           type: "line",
           height: 218,
-          // Drag-to-zoom stays enabled (auto-scales y); the floating Apex
-          // toolbar with its generic +/−/pan/home icons is hidden because it
-          // clashes visually with the rest of the dashboard chrome. Use the
-          // page period selector to change scope; double-click resets zoom.
           zoom: { enabled: true, type: "x", autoScaleYaxis: true },
           toolbar: { show: false },
         },
@@ -83,20 +105,9 @@
         xaxis: {
           type: "datetime",
           labels: {
-            // `format: "MMM"` collapses every day in the same month to the
-            // same string, so adjacent auto-paced ticks emit duplicates
-            // ("Jan / Feb / Feb / Mar / Mar / …"). Apex's datetimeFormatter
-            // honors the picked granularity instead — at YTD daily scale it
-            // formats each tick as "Jan 15" / "Feb 04", which is unique.
             datetimeUTC: false,
-            // Use the same MMM-d shape at every Apex granularity bucket so
-            // ticks read consistently as "Jan 15 / Feb 1 / Feb 15 …" instead
-            // of mixing bare-month and day-of-month labels.
             datetimeFormatter: {
-              year: "MMM d, yyyy",
-              month: "MMM d",
-              day: "MMM d",
-              hour: "MMM d",
+              year: "MMM d, yyyy", month: "MMM d", day: "MMM d", hour: "MMM d",
             },
             hideOverlappingLabels: true,
             rotate: 0,
@@ -144,12 +155,106 @@
       });
     }
 
+    {% if has_brush %}
+    function snapPeriodFromRange(minMs, maxMs) {
+      const el = document.querySelector("#equity-chart-lifetime");
+      const currentYear = parseInt(el.dataset.currentYear, 10);
+      const years = JSON.parse(el.dataset.availableYears);
+      const mid = new Date((minMs + maxMs) / 2);
+      const y = mid.getUTCFullYear();
+      if (y === currentYear) return "ytd";
+      if (years.indexOf(y) !== -1) return String(y);
+      let best = years[0], bestDist = Math.abs(y - years[0]);
+      for (const cand of years) {
+        const d = Math.abs(y - cand);
+        if (d < bestDist) { best = cand; bestDist = d; }
+      }
+      return best === currentYear ? "ytd" : String(best);
+    }
+
+    function dispatchPeriodChange(period) {
+      const sel = document.querySelector('form select[name="period"]');
+      if (!sel) return;
+      if (sel.value === period) return;
+      sel.value = period;
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    function buildBrushOpts() {
+      const el = document.querySelector("#equity-chart-lifetime");
+      const periodStart = new Date(el.dataset.periodStart).getTime();
+      const periodEnd   = new Date(el.dataset.periodEnd).getTime();
+      brushState.min = periodStart;
+      brushState.max = periodEnd;
+
+      return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
+        chart: {
+          id: "equity-brush",
+          type: "line",
+          height: 56,
+          toolbar: { show: false },
+          zoom: { enabled: false },
+          selection: {
+            enabled: true,
+            type: "x",
+            xaxis: { min: periodStart, max: periodEnd },
+            fill: { color: window.netAlphaChartTheme.colors.pos, opacity: 0.18 },
+            stroke: { width: 1, color: window.netAlphaChartTheme.colors.pos },
+          },
+          events: {
+            selection: function (_chartCtx, { xaxis }) {
+              brushState.min = xaxis.min;
+              brushState.max = xaxis.max;
+            },
+          },
+        },
+        colors: [window.netAlphaChartTheme.colors.label3],
+        stroke: { width: 1.5, curve: "smooth", lineCap: "round" },
+        fill: { type: "solid", opacity: 0 },
+        legend: { show: false },
+        dataLabels: { enabled: false },
+        xaxis: {
+          type: "datetime",
+          labels: { show: false },
+          axisTicks: { show: false },
+          axisBorder: { show: false },
+        },
+        yaxis: { labels: { show: false }, axisTicks: { show: false }, axisBorder: { show: false } },
+        grid: { show: false, padding: { top: 0, right: 0, bottom: 0, left: 0 } },
+        tooltip: { enabled: false },
+        series: [{
+          name: "Lifetime",
+          data: lifetimePoints.map(p => ({ x: p.on, y: p.account })),
+        }],
+        states: { active: { allowMultipleDataPointsSelection: false } },
+      });
+    }
+    {% endif %}
+
     function render() {
-      const el = document.querySelector("#equity-chart");
-      if (!el) return;
-      el.innerHTML = "";
-      const chart = new ApexCharts(el, buildOpts());
-      chart.render();
+      const main = document.querySelector("#equity-chart");
+      if (!main) return;
+      main.innerHTML = "";
+      const mainChart = new ApexCharts(main, buildMainOpts());
+      mainChart.render();
+
+      {% if has_brush %}
+      const brush = document.querySelector("#equity-chart-lifetime");
+      if (!brush) return;
+      brush.innerHTML = "";
+      const brushChart = new ApexCharts(brush, buildBrushOpts());
+      brushChart.render();
+
+      let releaseTimer = null;
+      brush.addEventListener("pointerup", () => {
+        clearTimeout(releaseTimer);
+        releaseTimer = setTimeout(() => {
+          if (brushState.min == null || brushState.max == null) return;
+          const period = snapPeriodFromRange(brushState.min, brushState.max);
+          dispatchPeriodChange(period);
+        }, 80);
+      });
+      {% endif %}
     }
 
     if (window.ApexCharts && window.netAlphaChartTheme) {

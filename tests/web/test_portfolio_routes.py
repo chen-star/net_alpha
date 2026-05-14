@@ -492,3 +492,62 @@ def test_kpi_tiles_hide_lifetime_subtitle_on_lifetime_view(tmp_path):
     assert r.status_code == 200
     assert "Account value today minus lifetime net contributed" not in r.text
     assert "Cumulative recognized realized P/L" not in r.text
+
+
+def _setup_trade_data(tmp_path):
+    """Insert a buy trade + cash event so lifetime_account_points is non-empty."""
+    from datetime import date, datetime
+
+    from net_alpha.config import Settings
+    from net_alpha.db.connection import get_engine, init_db
+    from net_alpha.db.repository import Repository
+    from net_alpha.models.domain import CashEvent, ImportRecord, Trade
+
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+
+    account = repo.get_or_create_account("Schwab", "Test")
+    trade = Trade(
+        account="Schwab/Test",
+        date=date(2026, 1, 15),
+        ticker="AAPL",
+        action="Buy",
+        quantity=10.0,
+        proceeds=None,
+        cost_basis=18000.0,
+    )
+    record = ImportRecord(
+        account_id=account.id,
+        csv_filename="test.csv",
+        csv_sha256="brush_test",
+        imported_at=datetime.now(),
+        trade_count=1,
+    )
+    cash_events = [
+        CashEvent(
+            account="Schwab/Test",
+            event_date=date(2026, 1, 15),
+            kind="transfer_in",
+            amount=18000.0,
+        )
+    ]
+    repo.add_import(account, record, [trade], cash_events=cash_events)
+
+
+def test_equity_curve_brush_renders_on_period_view(tmp_path):
+    _setup_trade_data(tmp_path)
+    client = _client(tmp_path)
+    r = client.get("/portfolio/body?period=ytd")
+    assert r.status_code == 200
+    assert 'id="equity-chart-lifetime"' in r.text
+    assert "Lifetime shape" in r.text
+
+
+def test_equity_curve_brush_absent_on_lifetime_view(tmp_path):
+    _setup_trade_data(tmp_path)
+    client = _client(tmp_path)
+    r = client.get("/portfolio/body?period=lifetime")
+    assert r.status_code == 200
+    assert 'id="equity-chart-lifetime"' not in r.text
