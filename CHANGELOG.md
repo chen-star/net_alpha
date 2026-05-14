@@ -2,6 +2,34 @@
 
 
 
+## v0.67.2 (2026-05-14)
+
+### Fix
+
+* fix(web): overview UI follow-ups — account URL push, Verify duplication, lifetime KPI consistency, edit-mode chrome
+
+- Account selector now pushes the canonical /?period=…&amp;account=… URL (set
+  via HX-Push-Url response header), instead of the /portfolio/body fragment
+  endpoint URL — reloads and shares no longer land on the bare fragment.
+- Removed the duplicate page-level &#34;Verify&#34; badge from /, /positions; the
+  topbar &#34;Data check: …&#34; pill already covers the same state site-wide.
+- Realized P/L lifetime subtitle now uses the same tax-recognized number
+  the Lifetime view&#39;s main shows (period_realized, not lifetime_realized_
+  economic), so toggling Period→Lifetime doesn&#39;t reveal a different
+  &#34;Lifetime&#34; total. Renamed the inline alternate from &#34;economic&#34; to
+  &#34;cash-netted&#34; with an explanatory tooltip.
+- Edit-mode chrome: grip + eye now sit in dedicated 32px gutters outside
+  the panel so they no longer overlap the &#34;Action Inbox&#34; / panel headers;
+  buttons have a subtle backdrop + hairline border to be readable.
+- Edit layout / Done / Reset buttons get explicit height:26px line-height:
+  18px to match the Period/Account selects on the same row.
+- Removed the lifetime equity-curve brush strip entirely: it duplicated
+  the Period dropdown and the lifetime account-value compute it required
+  dominated cold body latency. Cold YTD body now ~1.2s (was 3.1s).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0d30e41`](https://github.com/chen-star/net_alpha/commit/0d30e4104dfd2cd0a7254822392ab4a8a001f27b))
+
+
 ## v0.67.1 (2026-05-14)
 
 ### Fix
