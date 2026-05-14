@@ -188,3 +188,91 @@ def test_portfolio_body_renders_monthly_pl_panel_lifetime(tmp_path):
     assert 'id="portfolio-monthly-pl"' in html
     assert "Lifetime" in html
     assert "No realized closes in" in html
+
+
+def test_cash_curve_renders_lifetime_footnote_on_period(tmp_path):
+    """Cash curve renders lifetime min/max footnote only on period-scoped views."""
+    from datetime import date, datetime
+
+    from net_alpha.config import Settings
+    from net_alpha.db.connection import get_engine, init_db
+    from net_alpha.db.repository import Repository
+    from net_alpha.models.domain import CashEvent, ImportRecord, Trade
+
+    # Initialize DB and add test data (a buy trade generates cash data).
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+
+    # Add a simple buy trade to generate cash history.
+    account = repo.get_or_create_account("Schwab", "Test")
+    trade = Trade(
+        account="Schwab/Test",
+        date=date(2026, 1, 15),
+        ticker="AAPL",
+        action="Buy",
+        quantity=10.0,
+        proceeds=None,
+        cost_basis=18000.0,
+    )
+    record = ImportRecord(
+        account_id=account.id,
+        csv_filename="test.csv",
+        csv_sha256="test",
+        imported_at=datetime.now(),
+        trade_count=1,
+    )
+    # add_import requires cash_events for cash_lifetime_extremes to be non-None
+    cash_events = [CashEvent(account="Schwab/Test", event_date=date(2026, 1, 15), kind="transfer_in", amount=18000.0)]
+    repo.add_import(account, record, [trade], cash_events=cash_events)
+
+    # Now test the fragment with period=ytd.
+    client = _client(tmp_path)
+    r = client.get("/portfolio/body?period=ytd&account=")
+    assert r.status_code == 200
+    assert "Lifetime min $" in r.text
+    assert "· max $" in r.text
+
+
+def test_cash_curve_omits_lifetime_footnote_on_lifetime_view(tmp_path):
+    """Cash curve footnote is omitted when viewing Lifetime scope."""
+    from datetime import date, datetime
+
+    from net_alpha.config import Settings
+    from net_alpha.db.connection import get_engine, init_db
+    from net_alpha.db.repository import Repository
+    from net_alpha.models.domain import CashEvent, ImportRecord, Trade
+
+    # Initialize DB and add test data.
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+
+    # Add a simple buy trade to generate cash history.
+    account = repo.get_or_create_account("Schwab", "Test")
+    trade = Trade(
+        account="Schwab/Test",
+        date=date(2026, 1, 15),
+        ticker="AAPL",
+        action="Buy",
+        quantity=10.0,
+        proceeds=None,
+        cost_basis=18000.0,
+    )
+    record = ImportRecord(
+        account_id=account.id,
+        csv_filename="test.csv",
+        csv_sha256="test",
+        imported_at=datetime.now(),
+        trade_count=1,
+    )
+    cash_events = [CashEvent(account="Schwab/Test", event_date=date(2026, 1, 15), kind="transfer_in", amount=18000.0)]
+    repo.add_import(account, record, [trade], cash_events=cash_events)
+
+    # Lifetime view should NOT include the footnote.
+    client = _client(tmp_path)
+    r = client.get("/portfolio/body?period=lifetime&account=")
+    assert r.status_code == 200
+    assert "Lifetime min $" not in r.text

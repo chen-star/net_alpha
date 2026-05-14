@@ -17,6 +17,13 @@
        data-series-dashed="net_contributed"
        style="height: 218px;"></div>
 
+    {% if cash_lifetime_extremes %}
+      <div class="text-[11px] text-label-3 num mt-1">
+        Lifetime min ${{ "{:,.0f}".format(cash_lifetime_extremes[0]|float) }} ({{ cash_lifetime_extremes[1].isoformat() }})
+        · max ${{ "{:,.0f}".format(cash_lifetime_extremes[2]|float) }} ({{ cash_lifetime_extremes[3].isoformat() }}).
+      </div>
+    {% endif %}
+
   <script>
   (function () {
     const series = [
@@ -101,6 +108,28 @@
         tooltip: {
           x: { format: "yyyy-MM-dd" },
           y: { formatter: (v) => v == null ? "—" : "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
+        },
+        annotations: {
+          yaxis: [
+            {% if cash_lifetime_extremes %}
+            { y: {{ cash_lifetime_extremes[0]|float }},
+              borderColor: window.netAlphaChartTheme.colors.label3,
+              strokeDashArray: 4,
+              label: { text: "Lifetime min",
+                       position: "left", offsetX: 80,
+                       style: { color: window.netAlphaChartTheme.colors.label3,
+                                background: "transparent",
+                                fontSize: "10px" } } },
+            { y: {{ cash_lifetime_extremes[2]|float }},
+              borderColor: window.netAlphaChartTheme.colors.label3,
+              strokeDashArray: 4,
+              label: { text: "Lifetime max",
+                       position: "left", offsetX: 80,
+                       style: { color: window.netAlphaChartTheme.colors.label3,
+                                background: "transparent",
+                                fontSize: "10px" } } },
+            {% endif %}
+          ],
         },
         series: series,
       });
