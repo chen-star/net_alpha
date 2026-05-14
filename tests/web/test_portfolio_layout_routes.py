@@ -172,3 +172,41 @@ def test_post_reset_non_htmx_redirects_303(seeded_client):
     assert r.status_code == 303
     assert r.headers["location"] == "/"
     assert repo.get_overview_layout("active") == default_overview_layout()
+
+
+def test_body_renders_with_default_layout_when_none_saved(seeded_client):
+    client, _ = seeded_client
+    r = client.get("/portfolio/body")
+    assert r.status_code == 200
+    body = r.text
+    assert body.index('data-row-key="inbox"') < body.index('data-row-key="kpis"')
+    assert body.index('data-row-key="kpis"') < body.index('data-row-key="curves"')
+
+
+def test_body_respects_saved_order(seeded_client):
+    client, repo = seeded_client
+    repo.set_overview_layout(
+        "active",
+        OverviewLayout(
+            rows=["kpis", "inbox", "curves", "monthly_pl", "allocation", "top_movers"],
+            hidden=[],
+        ),
+    )
+    r = client.get("/portfolio/body")
+    assert r.status_code == 200
+    body = r.text
+    assert body.index('data-row-key="kpis"') < body.index('data-row-key="inbox"')
+
+
+def test_body_omits_hidden_rows_when_not_in_edit_mode(seeded_client):
+    client, repo = seeded_client
+    repo.set_overview_layout(
+        "active",
+        OverviewLayout(
+            rows=["inbox", "kpis", "curves", "monthly_pl", "allocation", "top_movers"],
+            hidden=["top_movers"],
+        ),
+    )
+    r = client.get("/portfolio/body")
+    assert r.status_code == 200
+    assert 'data-row-key="top_movers"' not in r.text

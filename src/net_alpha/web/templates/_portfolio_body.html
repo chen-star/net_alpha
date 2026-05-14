@@ -1,62 +1,48 @@
-{# Bundled portfolio body: KPIs + curves + allocation.
-   Tax planning panels moved to /tax (P1, P9).
-   Rendered by /portfolio/body in one shot. #}
+{# Iterates over the user's per-profile Overview layout, rendering one
+   row at a time via per-key partials. `layout` comes from /portfolio/body.
+   Hidden rows are omitted when edit_mode is off (no HTMX request for them).
+   In edit mode (purely client-side via Alpine), hidden rows render as a
+   placeholder users can click to restore. #}
 {% if oob_subline_html %}{{ oob_subline_html|safe }}{% endif %}
 
-{# Action Inbox — lazy-loaded; respects the page's account filter. #}
-<div id="inbox-panel"
-     hx-get="/portfolio/inbox{% if account %}?account={{ account }}{% endif %}"
-     hx-trigger="load"
-     hx-swap="outerHTML"
-     class="mb-4">
+{% set _row_templates = {
+  "inbox":      "_portfolio_row_inbox.html",
+  "kpis":       "_portfolio_row_kpis.html",
+  "curves":     "_portfolio_row_curves.html",
+  "monthly_pl": "_portfolio_row_monthly_pl.html",
+  "allocation": "_portfolio_row_allocation.html",
+  "top_movers": "_portfolio_row_top_movers.html",
+} %}
+<div id="overview-rows" data-edit-mode="off">
+  {% set _visible_count = layout.rows | reject('in', layout.hidden) | list | length %}
+  {% if _visible_count == 0 %}
+    <div class="row-hidden-placeholder">
+      All Overview rows are hidden. Click <strong>Edit layout</strong> to restore.
+    </div>
+  {% endif %}
+  {% for key in layout.rows %}
+    {% set _hidden = key in layout.hidden %}
+    {% if edit_mode or not _hidden %}
+      <div class="overview-row" data-row-key="{{ key }}"
+           x-data='{ hidden: {{ _hidden|tojson }} }'>
+        <button class="row-grip" data-handle aria-label="Drag to reorder" type="button">
+          <i data-lucide="grip-vertical"></i>
+        </button>
+        <button class="row-eye" aria-label="Toggle visibility" type="button"
+                @click="hidden = !hidden; fetch('/portfolio/layout/visibility', {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                  body: new URLSearchParams({row: '{{ key }}', hidden: String(hidden)})
+                })">
+          <i data-lucide="eye" x-show="!hidden"></i>
+          <i data-lucide="eye-off" x-show="hidden"></i>
+        </button>
+        {% if _hidden %}
+          <div class="row-hidden-placeholder">Hidden · click eye to restore</div>
+        {% else %}
+          {% include _row_templates[key] %}
+        {% endif %}
+      </div>
+    {% endif %}
+  {% endfor %}
 </div>
-
-<div id="portfolio-kpis" class="mb-4">
-  {% include "_portfolio_kpis.html" %}
-</div>
-
-{# Top row: equity is the primary "am I winning?" chart; cash is operational
-   context. 3:2 (60/40) gives the cash + contributions chart enough room to
-   read its second series clearly while keeping equity visually dominant. #}
-<div class="grid gap-3 mb-4" style="grid-template-columns: 3fr 2fr;">
-  <div id="portfolio-equity" class="panel">
-    {% include "_portfolio_equity_curve.html" %}
-  </div>
-  <div id="portfolio-cash" class="panel">
-    {% include "_portfolio_cash_curve.html" %}
-  </div>
-</div>
-
-{# Monthly realized P&L — full-width bar chart pairing with the equity curve.
-   Reads `monthly_pl_points` + `period_label` set by the bundled body handler.
-   Honors the page Period (YTD / specific year / Lifetime) and Account
-   filters identically to the equity curve above. #}
-<div id="portfolio-monthly-pl" class="panel mb-4">
-  {% include "_portfolio_monthly_pl.html" %}
-</div>
-
-{# Allocation row: existing concentration donut on the left, the cash-vs-
-   positions deployment chart on the right. 2/3 + 1/3 split keeps the chip
-   leaderboard breathing while giving the deployment panel enough room for
-   its hero stat + legend. #}
-<div class="grid gap-3 mb-4" style="grid-template-columns: 2fr 1fr;">
-  <div id="portfolio-allocation" class="panel">
-    {% include "_portfolio_allocation.html" %}
-  </div>
-  <div id="portfolio-deployment" class="panel">
-    {% include "_portfolio_deployment.html" %}
-  </div>
-</div>
-
-{# Top Movers panel — only render when at least one mover exists. #}
-{% if top_movers and (top_movers.winners or top_movers.losers) %}
-  <div id="portfolio-top-movers" class="panel mb-4">
-    {% include "_portfolio_top_movers.html" %}
-  </div>
-{% endif %}
-
-{# Wash-sale watch (continuous detection list) moved to the Tax page wash-sales
-   tab — that's its natural home. The Action Inbox at the top of this page is
-   different: it surfaces time-bound *action* signals (safe-to-rebuy, LT
-   countdown, expirations) that auto-disappear once their window passes. #}
-{# Tax planning panels (offset budget + year-end projection) moved to /tax (P9). #}
