@@ -26,7 +26,7 @@
       <div class="overview-row" data-row-key="{{ key }}"
            x-data='{ hidden: {{ _hidden|tojson }} }'>
         <button class="row-grip" data-handle aria-label="Drag to reorder" type="button">
-          <i data-lucide="grip-vertical"></i>
+          <img src="/static/icons/grip-vertical.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="">
         </button>
         <button class="row-eye" aria-label="Toggle visibility" type="button"
                 @click="hidden = !hidden; fetch('/portfolio/layout/visibility', {
@@ -34,8 +34,8 @@
                   headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                   body: new URLSearchParams({row: '{{ key }}', hidden: String(hidden)})
                 })">
-          <i data-lucide="eye" x-show="!hidden"></i>
-          <i data-lucide="eye-off" x-show="hidden"></i>
+          <img src="/static/icons/eye.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="Show" x-show="!hidden">
+          <img src="/static/icons/eye-off.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="Hide" x-show="hidden">
         </button>
         {% if _hidden %}
           <div class="row-hidden-placeholder">Hidden · click eye to restore</div>

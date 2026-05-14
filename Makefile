@@ -49,7 +49,8 @@ LUCIDE_ICONS := \
 	arrow-up arrow-down move-vertical \
 	search chevron-down x ellipsis \
 	refresh-cw database download \
-	external-link
+	external-link \
+	grip-vertical eye eye-off
 
 vendor-lucide:
 	@mkdir -p src/net_alpha/web/static/icons
