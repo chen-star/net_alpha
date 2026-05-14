@@ -2,6 +2,29 @@
 
 
 
+## v0.67.1 (2026-05-14)
+
+### Fix
+
+* fix(web): overview slow load, edit-layout chrome, verify-pill copy, lifetime-overlay formatting
+
+- Defer the lifetime account-value brush (~1.8s Yahoo fetches) to a new
+  /portfolio/equity-curve/brush endpoint that hx-loads after first paint;
+  cold YTD body drops from ~3.1s to ~1.2s.
+- Edit layout: shrink the toolbar button to match Period/Account selects,
+  ship hidden rows as compact placeholders so Edit layout can surface them,
+  and make the grip/eye affordances visible (subtle backdrop + border).
+- Verify pill: relabel each state as &#34;Data check: …&#34; with an explanatory
+  tooltip so the header reads as a self-audit, not an action prompt.
+- Cash curve: fix trailing-dot header (use period_label, not undefined year),
+  drop the &#34;+&#34; prefix on positive Y-axis values, and move the
+  Lifetime min/max annotation labels off mid-chart (offsetX:80) to the
+  right edge with no border.
+- Monthly P&amp;L: same right-edge fix for the Lifetime avg annotation.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`14593df`](https://github.com/chen-star/net_alpha/commit/14593dfdcb590fd2f002df4b127660befa00c963))
+
+
 ## v0.67.0 (2026-05-14)
 
 ### Feature
