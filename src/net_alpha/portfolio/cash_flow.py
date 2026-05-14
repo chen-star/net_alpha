@@ -194,3 +194,19 @@ def cash_allocation_slice(
         period=None,
     )
     return series[-1].cash_balance if series else Decimal("0")
+
+
+def cash_balance_extremes(
+    points: Sequence[CashBalancePoint],
+) -> tuple[Decimal, dt.date, Decimal, dt.date] | None:
+    """Return (min_balance, min_date, max_balance, max_date) over a cash series.
+
+    Ties: the earliest date wins for both min and max. Returns ``None`` when the
+    input is empty. Used by the Overview cash-curve panel to render dashed
+    lifetime reference lines while the chart itself stays period-scoped.
+    """
+    if not points:
+        return None
+    mn_p = min(points, key=lambda p: (p.cash_balance, p.on))
+    mx_p = max(points, key=lambda p: (p.cash_balance, -p.on.toordinal()))
+    return mn_p.cash_balance, mn_p.on, mx_p.cash_balance, mx_p.on

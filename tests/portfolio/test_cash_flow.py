@@ -389,3 +389,54 @@ def test_cash_allocation_slice_accounts_list_filters_single():
     ]
     result = cash_allocation_slice(events=events, trades=[], accounts=["Schwab/A"])
     assert result == Decimal("100")
+
+
+# Tests for cash_balance_extremes
+
+
+def test_cash_balance_extremes_empty():
+    from net_alpha.portfolio.cash_flow import cash_balance_extremes
+
+    assert cash_balance_extremes([]) is None
+
+
+def test_cash_balance_extremes_single_point():
+    from net_alpha.portfolio.cash_flow import cash_balance_extremes
+    from net_alpha.portfolio.models import CashBalancePoint
+
+    pts = [
+        CashBalancePoint(on=dt.date(2024, 1, 1), cash_balance=Decimal("500"), cumulative_contributions=Decimal("500"))
+    ]
+    assert cash_balance_extremes(pts) == (Decimal("500"), dt.date(2024, 1, 1), Decimal("500"), dt.date(2024, 1, 1))
+
+
+def test_cash_balance_extremes_multi_point():
+    from net_alpha.portfolio.cash_flow import cash_balance_extremes
+    from net_alpha.portfolio.models import CashBalancePoint
+
+    pts = [
+        CashBalancePoint(on=dt.date(2024, 1, 1), cash_balance=Decimal("1000"), cumulative_contributions=Decimal("0")),
+        CashBalancePoint(on=dt.date(2024, 6, 1), cash_balance=Decimal("250"), cumulative_contributions=Decimal("0")),
+        CashBalancePoint(on=dt.date(2025, 3, 1), cash_balance=Decimal("4200"), cumulative_contributions=Decimal("0")),
+        CashBalancePoint(on=dt.date(2025, 9, 1), cash_balance=Decimal("3000"), cumulative_contributions=Decimal("0")),
+    ]
+    assert cash_balance_extremes(pts) == (
+        Decimal("250"),
+        dt.date(2024, 6, 1),
+        Decimal("4200"),
+        dt.date(2025, 3, 1),
+    )
+
+
+def test_cash_balance_extremes_tie_earliest_wins():
+    from net_alpha.portfolio.cash_flow import cash_balance_extremes
+    from net_alpha.portfolio.models import CashBalancePoint
+
+    pts = [
+        CashBalancePoint(on=dt.date(2024, 1, 1), cash_balance=Decimal("100"), cumulative_contributions=Decimal("0")),
+        CashBalancePoint(on=dt.date(2024, 2, 1), cash_balance=Decimal("100"), cumulative_contributions=Decimal("0")),
+        CashBalancePoint(on=dt.date(2024, 3, 1), cash_balance=Decimal("100"), cumulative_contributions=Decimal("0")),
+    ]
+    mn, mn_date, mx, mx_date = cash_balance_extremes(pts)
+    assert mn == Decimal("100") and mn_date == dt.date(2024, 1, 1)
+    assert mx == Decimal("100") and mx_date == dt.date(2024, 1, 1)
