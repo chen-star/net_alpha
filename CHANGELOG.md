@@ -2,6 +2,115 @@
 
 
 
+## v0.66.0 (2026-05-14)
+
+### Documentation
+
+* docs(readme): refresh to reflect current project status
+
+- Default UI port 8765 → 18765 (matches 904830b)
+- §1256: open positions are now marked-to-market per §1256(a)(1) (schema v21)
+- Add Rev. Rul. 2008-5 IRA-trap detection (permanent_ira kind)
+- Add Verify badge and weekly verify service job
+- Add account-typed multi-select (taxable / IRA / Roth / 401(k) / HSA)
+- Add local backup / restore subsystem and daily 03:30 UTC backup job
+- Architecture diagram and service job list updated to four jobs
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`295744c`](https://github.com/chen-star/net_alpha/commit/295744c1b714c15105cbd37bc9d390ca18257430))
+
+### Feature
+
+* feat(web): edit-mode CSS for overview draggable layout
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f08199b`](https://github.com/chen-star/net_alpha/commit/f08199b59a4ae5effb5b7c7e3e43b7a10717fae1))
+
+* feat(web): SortableJS glue for overview drag-to-reorder
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`440bfaa`](https://github.com/chen-star/net_alpha/commit/440bfaa63d4ac0d4787d8cef7d196da785e813d3))
+
+* feat(web): Edit layout / Done / Reset toolbar controls
+
+Adds `x-data=&#34;{ editing: false }&#34;` to the toolbar form and three
+client-side-only buttons: Edit layout (btn-ghost, visible when not
+editing), Done (btn, visible when editing), and Reset to default
+(btn-ghost muted, visible when editing). Toggling editing flips
+`#overview-rows[data-edit-mode]` and dispatches
+`overview:edit-mode-change` for future Sortable wiring.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`33c065b`](https://github.com/chen-star/net_alpha/commit/33c065b664ec730cb00b62c6c2ec586da7f7d61a))
+
+* feat(web): iterate overview body over layout.rows
+
+Rewrites _portfolio_body.html to loop over `layout.rows`, rendering
+each row via its _portfolio_row_*.html partial. Hidden rows are
+suppressed in normal mode; `data-row-key` + Alpine `hidden` state
+power the edit-mode eye-toggle. Adds three DOM-assertion tests that
+verify default order, saved order, and hidden-row suppression.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a41ba6e`](https://github.com/chen-star/net_alpha/commit/a41ba6e243970f1af57b3700cab3f440dc7c48d7))
+
+* feat(web): POST /portfolio/layout/reset
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`121a744`](https://github.com/chen-star/net_alpha/commit/121a7441f9f55960542dea5037aaf26ea043b893))
+
+* feat(web): POST /portfolio/layout/visibility
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`36c6ddc`](https://github.com/chen-star/net_alpha/commit/36c6ddc2cf0702cb41382ee33e04c7086b8203d3))
+
+* feat(web): POST /portfolio/layout/reorder
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1a4c3aa`](https://github.com/chen-star/net_alpha/commit/1a4c3aa173a6d741be8296ff7e6ea6d5ee6a77b9))
+
+* feat(web): pass overview_layout into /portfolio/body context
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0ebd770`](https://github.com/chen-star/net_alpha/commit/0ebd770a7b2a91956af103b37766e92ff923b098))
+
+* feat(repo): read/write overview_layout per profile
+
+Also updates five stale CURRENT_SCHEMA_VERSION==24 sentinels in prior
+migration test files to reflect the new v25 baseline.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b198106`](https://github.com/chen-star/net_alpha/commit/b198106f64676f84fc795b55579be8b751afdf9a))
+
+* feat(prefs): add overview_layout pure module
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`16da684`](https://github.com/chen-star/net_alpha/commit/16da684d05795c04118e66842fd76784fc2bbee7))
+
+* feat(db): add overview_layout table (schema v25)
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`449fc4f`](https://github.com/chen-star/net_alpha/commit/449fc4fc7a447f87847e2968b6126d91258a4a1f))
+
+### Fix
+
+* fix(web): render grip + eye icons via vendored Lucide SVGs
+
+The initial edit-mode template used &lt;i data-lucide=&#34;...&#34;&gt; tags, but this
+project ships pre-rendered SVGs (lucide-static) rather than the Lucide JS
+runtime. The unreplaced &lt;i&gt; tags collapsed to 0x0, making the grip + eye
+buttons invisible (8x8 with no content). Vendor grip-vertical, eye, and
+eye-off SVGs and swap to the project&#39;s &lt;img src=&#34;...&#34;&gt; + icon-mono pattern.
+Also raise button z-index and add hover affordance so the affordances
+read clearly over panel content.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`bc31e9d`](https://github.com/chen-star/net_alpha/commit/bc31e9d4cad833a8a321d4afdfd7e2dd17f97317))
+
+### Refactor
+
+* refactor(web): extract per-row partials for overview body
+
+Six new _portfolio_row_*.html partials wrap the existing panel
+includes — inbox, kpis, curves, monthly_pl, allocation, top_movers.
+Not yet referenced; app behaviour is unchanged.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d0c3e0e`](https://github.com/chen-star/net_alpha/commit/d0c3e0e5e49bb70eb4208416477a3601ee285949))
+
+### Style
+
+* style: ruff lint + format fixups for overview_layout
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9b0bd8a`](https://github.com/chen-star/net_alpha/commit/9b0bd8a8984c4ad588fa057dac4958927030fc27))
+
+
 ## v0.65.2 (2026-05-12)
 
 ### Fix
