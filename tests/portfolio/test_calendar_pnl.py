@@ -304,3 +304,64 @@ def test_monthly_realized_pl_accounts_list_filters_correctly():
     jun = next(m for m in result if m.month == 6)
     assert jun.net_pl == Decimal("500")
     assert jun.trade_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Tests for monthly_pl_lifetime_stats — lifetime reference line helper
+# ---------------------------------------------------------------------------
+
+
+def _pt(year: int, month: int, net_pl: str) -> MonthlyPnlPoint:
+    n = Decimal(net_pl)
+    return MonthlyPnlPoint(
+        year=year,
+        month=month,
+        net_pl=n,
+        gross_gain=n if n >= 0 else Decimal("0"),
+        gross_loss=Decimal("0") if n >= 0 else -n,
+        trade_count=1,
+    )
+
+
+def test_monthly_pl_lifetime_stats_empty():
+    from net_alpha.portfolio.calendar_pnl import monthly_pl_lifetime_stats
+
+    assert monthly_pl_lifetime_stats([]) is None
+
+
+def test_monthly_pl_lifetime_stats_single_month():
+    from net_alpha.portfolio.calendar_pnl import monthly_pl_lifetime_stats
+
+    pts = [_pt(2024, 3, "150.00")]
+    assert monthly_pl_lifetime_stats(pts) == (
+        Decimal("150.00"),
+        Decimal("150.00"),
+        "Mar 2024",
+        Decimal("150.00"),
+        "Mar 2024",
+    )
+
+
+def test_monthly_pl_lifetime_stats_mixed_sign():
+    from net_alpha.portfolio.calendar_pnl import monthly_pl_lifetime_stats
+
+    pts = [
+        _pt(2024, 1, "100"),
+        _pt(2024, 2, "-300"),
+        _pt(2024, 3, "200"),
+        _pt(2024, 4, "0"),
+    ]
+    avg, best, best_label, worst, worst_label = monthly_pl_lifetime_stats(pts)
+    assert avg == Decimal("0")
+    assert best == Decimal("200") and best_label == "Mar 2024"
+    assert worst == Decimal("-300") and worst_label == "Feb 2024"
+
+
+def test_monthly_pl_lifetime_stats_all_zero():
+    from net_alpha.portfolio.calendar_pnl import monthly_pl_lifetime_stats
+
+    pts = [_pt(2024, 1, "0"), _pt(2024, 2, "0"), _pt(2024, 3, "0")]
+    avg, best, best_label, worst, worst_label = monthly_pl_lifetime_stats(pts)
+    assert avg == Decimal("0")
+    assert best == Decimal("0") and best_label == "Jan 2024"
+    assert worst == Decimal("0") and worst_label == "Jan 2024"

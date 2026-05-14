@@ -127,3 +127,29 @@ def monthly_realized_pl_series(
         max_month = today.month if year == end_year else 12
         out.extend(_year_points(year, max_month=max_month))
     return out
+
+
+_MONTH_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def _month_label(p: MonthlyPnlPoint) -> str:
+    return f"{_MONTH_ABBR[p.month - 1]} {p.year}"
+
+
+def monthly_pl_lifetime_stats(
+    points: Sequence[MonthlyPnlPoint],
+) -> tuple[Decimal, Decimal, str, Decimal, str] | None:
+    """Return (avg, best, best_label, worst, worst_label) over a monthly P&L
+    series. Ties: earliest month wins (preserves chronological reading).
+
+    Returns ``None`` when the input is empty. ``avg`` is the simple mean of
+    ``net_pl`` over all months in the series, including zero-P&L months
+    (lifetime-mean intent). Labels are formatted ``"Mon YYYY"``.
+    """
+    if not points:
+        return None
+    total = sum((p.net_pl for p in points), start=Decimal("0"))
+    avg = total / Decimal(len(points))
+    best = max(points, key=lambda p: (p.net_pl, -p.year * 12 - p.month))
+    worst = min(points, key=lambda p: (p.net_pl, p.year * 12 + p.month))
+    return avg, best.net_pl, _month_label(best), worst.net_pl, _month_label(worst)
