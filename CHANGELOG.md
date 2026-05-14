@@ -2,6 +2,54 @@
 
 
 
+## v0.67.0 (2026-05-14)
+
+### Feature
+
+* feat(web): equity-curve brush strip with drag-to-reperiod
+
+Adds a paired ApexCharts brush strip below the main equity curve when
+lifetime_account_points is present (period != lifetime). The strip shows
+the lifetime account-value series, highlights the current period&#39;s range,
+and on pointer release snaps to YTD or a calendar year and dispatches a
+change event on the period &lt;select&gt; to trigger the existing HTMX flow.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d483c6a`](https://github.com/chen-star/net_alpha/commit/d483c6a7db6140710286de55e56985da53e160a1))
+
+* feat(web): lifetime subtitle on Total Return + Realized P/L KPI tiles ([`cc00b6a`](https://github.com/chen-star/net_alpha/commit/cc00b6a822181f43c92ac7670f6fddbee3a73c4d))
+
+* feat(web): monthly P/L lifetime-avg reference line + best/worst footnote ([`5ef98c6`](https://github.com/chen-star/net_alpha/commit/5ef98c6b73ca45a0ede2049c2dfd3773efc139fd))
+
+* feat(web): cash curve lifetime min/max reference lines + footnote ([`82ff2e9`](https://github.com/chen-star/net_alpha/commit/82ff2e9065108550eeca080885c3e44289c079b5))
+
+* feat(web): cache lifetime equity curve + lifetime stats in portfolio body ctx
+
+Adds `_build_lifetime_account_points` + `_get_or_compute_lifetime_curve`
+(module-level, fragment_cache-backed) so period switches never recompute the
+expensive lifetime equity-curve fan-out. Extends `_compute_portfolio_body_context`
+with six new ctx keys (lifetime_account_points, cash_lifetime_extremes,
+monthly_pl_lifetime, lifetime_kpis, current_year, available_years) and a
+cache regression test that asserts ≤1 builder call across three period requests.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`522a811`](https://github.com/chen-star/net_alpha/commit/522a811828322dc0a28be5fd6b9991c6414747bc))
+
+* feat(portfolio): monthly_pl_lifetime_stats helper for lifetime reference line ([`ab936e7`](https://github.com/chen-star/net_alpha/commit/ab936e7e0947195752828bcbbd1ac9c7742b7150))
+
+* feat(portfolio): cash_balance_extremes helper for lifetime reference markers ([`3805de4`](https://github.com/chen-star/net_alpha/commit/3805de48199af97f082c89d3b9cf789a7fe9a4b1))
+
+### Fix
+
+* fix(web): sign-correct monthly P/L lifetime best/worst footnote
+
+If every month was profitable the &#34;worst&#34; month is still a gain — but
+the prior template hardcoded `text-neg` + `−$` prefix on `worst`, and
+symmetrically green `+$` on `best`. Branch on sign for both. Drop the
+unnecessary `raise_server_exceptions=False` in the cache test so route
+failures surface real tracebacks.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0b9832e`](https://github.com/chen-star/net_alpha/commit/0b9832eb2504c3f1094d9dc1e645d6ced46a1060))
+
+
 ## v0.66.0 (2026-05-14)
 
 ### Documentation
