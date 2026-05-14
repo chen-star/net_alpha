@@ -58,7 +58,7 @@ def client_with_trade(tmp_path):
     repo.add_import(account, record, [trade])
 
     app = create_app(settings)
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app)
 
 
 def test_lifetime_curve_built_at_most_once_across_period_switches(client_with_trade):

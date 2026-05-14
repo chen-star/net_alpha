@@ -25,10 +25,12 @@
   </div>
 
   {% if monthly_pl_lifetime %}
+    {% set _best_neg = monthly_pl_lifetime[1]|float < 0 %}
+    {% set _worst_neg = monthly_pl_lifetime[3]|float < 0 %}
     <div class="text-[11px] text-label-3 num mt-1">
       Lifetime avg ${{ "{:,.0f}".format(monthly_pl_lifetime[0]|float) }}/mo
-      · best <span class="text-pos">+${{ "{:,.0f}".format(monthly_pl_lifetime[1]|float) }}</span> ({{ monthly_pl_lifetime[2] }})
-      · worst <span class="text-neg">−${{ "{:,.0f}".format(monthly_pl_lifetime[3]|float|abs) }}</span> ({{ monthly_pl_lifetime[4] }}).
+      · best <span class="{% if _best_neg %}text-neg{% else %}text-pos{% endif %}">{% if _best_neg %}−{% else %}+{% endif %}${{ "{:,.0f}".format(monthly_pl_lifetime[1]|float|abs) }}</span> ({{ monthly_pl_lifetime[2] }})
+      · worst <span class="{% if _worst_neg %}text-neg{% else %}text-pos{% endif %}">{% if _worst_neg %}−{% else %}+{% endif %}${{ "{:,.0f}".format(monthly_pl_lifetime[3]|float|abs) }}</span> ({{ monthly_pl_lifetime[4] }}).
     </div>
   {% endif %}
 
