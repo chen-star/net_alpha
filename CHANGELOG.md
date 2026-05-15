@@ -2,6 +2,25 @@
 
 
 
+## v0.67.3 (2026-05-15)
+
+### Fix
+
+* fix(web): overview account filter applies to lazy-loaded Action Inbox
+
+The Inbox row template referenced an undefined `account` (singular) variable,
+so the lazy-load URL never carried the toolbar&#39;s account selection — the
+Inbox count stayed identical to the all-accounts total after filtering.
+Use the `accounts` list from the body context and repeat `account=` once
+per selection so the inbox endpoint&#39;s `Query(list[str])` parser receives
+every entry.
+
+Also pick up two pre-existing ruff-format violations on master so CI is
+green again.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`06de2b6`](https://github.com/chen-star/net_alpha/commit/06de2b6438bb4062c9327ca0f876df9143b622cc))
+
+
 ## v0.67.2 (2026-05-14)
 
 ### Fix
