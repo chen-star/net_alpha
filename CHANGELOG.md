@@ -2,6 +2,20 @@
 
 
 
+## v0.67.4 (2026-05-15)
+
+### Fix
+
+* fix(web): overview UI follow-ups — account dropdown clip, hero tile, slim positions dropzone, favicon
+
+- Toolbar account multi-select panel was clipped by `.kpi-card { overflow:hidden }`. Override `form.kpi-card { overflow: visible }` so popovers anchored inside the toolbar render outside its bounds.
+- Demote the Schwab All-Positions dropzone to a slim utility row so it no longer reads as a duplicate of the primary CSV intake above it.
+- Fill the previously near-empty TOTAL ACCOUNT VALUE hero tile with a holdings-vs-cash split bar, lifetime delta vs net contributed, and a snapshot timestamp.
+- Add an SVG favicon (matches the in-app brand-mark gradient + α glyph), wire &lt;link rel=&#34;icon&#34;&gt;/apple-touch-icon/theme-color into base.html, and serve `/favicon.ico` from the SVG so bare-URL prefetch no longer 404s.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`536f95d`](https://github.com/chen-star/net_alpha/commit/536f95dabc0cd7b4233a974d1b72f1a2ee863752))
+
+
 ## v0.67.3 (2026-05-15)
 
 ### Fix
