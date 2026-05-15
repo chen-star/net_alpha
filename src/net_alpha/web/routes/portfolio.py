@@ -1068,6 +1068,7 @@ def portfolio_body(
         # Push the canonical Overview URL (/) instead of the fragment URL,
         # so reloads and shares of the current state land back on a full page.
         from urllib.parse import quote
+
         qs_parts = [f"period={period or 'ytd'}"]
         for a in accounts:
             qs_parts.append(f"account={quote(a, safe='')}")

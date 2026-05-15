@@ -1,6 +1,8 @@
-{# Inbox row partial. Includes the existing inbox panel with its HTMX lazy-load. #}
+{# Inbox row partial. Includes the existing inbox panel with its HTMX lazy-load.
+   `accounts` is the plural list from the body context — repeat `account=` so
+   the inbox endpoint's `list[str] = Query(...)` parser sees every selection. #}
 <div id="inbox-panel"
-     hx-get="/portfolio/inbox{% if account %}?account={{ account }}{% endif %}"
+     hx-get="/portfolio/inbox{% if accounts %}?{% for a in accounts %}{% if not loop.first %}&{% endif %}account={{ a|urlencode }}{% endfor %}{% endif %}"
      hx-trigger="load"
      hx-swap="outerHTML"
      class="mb-4">

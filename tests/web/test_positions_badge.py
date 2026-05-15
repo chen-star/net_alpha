@@ -17,7 +17,7 @@ def test_positions_shell_omits_page_level_badge(client):
     resp = client.get("/positions")
     assert resp.status_code == 200
     assert 'hx-get="/verify/badge?page=positions"' not in resp.text
-    assert 'verify-badge-slot' not in resp.text
+    assert "verify-badge-slot" not in resp.text
 
 
 def test_positions_badge_fragment_renders(client):
