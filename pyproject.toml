@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wash-alpha"
-version = "0.67.4"
+version = "0.67.5"
 description = "Cross-account wash sale detection for stocks, options, and ETFs — local-first, IRS Pub 550 rules, with a tax-harvest planner and pre-trade simulator."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -80,6 +80,7 @@ ui = [
     "uvicorn[standard]>=0.30",
     "yfinance>=0.2.40",
 ]
+
 
 
 

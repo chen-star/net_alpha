@@ -2,6 +2,29 @@
 
 
 
+## v0.67.5 (2026-05-15)
+
+### Fix
+
+* fix(web): redesign hero tile composition + lifetime strips
+
+Replace the cluttered text rows on the TOTAL ACCOUNT VALUE tile with two
+labeled stacked-bar visualizations:
+
+- Composition strip — Holdings (indigo) vs Cash (violet). Brand-gradient
+  pair so it doesn&#39;t collide with the green used for gains elsewhere
+  on the page.
+- Lifetime strip — Contributed (muted) baseline vs Earned (green) or
+  Lost (red). For gains, the bar&#39;s full width is total account value
+  with growth as the bright tail; for losses, it&#39;s the contributed
+  amount with the loss painted in red.
+
+Each strip carries an uppercase section header (with the totals line)
+and a color-keyed legend row beneath.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c677332`](https://github.com/chen-star/net_alpha/commit/c677332db92832966e33f896a6e7bd200785fb9d))
+
+
 ## v0.67.4 (2026-05-15)
 
 ### Fix
