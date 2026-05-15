@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}net-alpha{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{ asset_v }}">
+  <link rel="alternate icon" type="image/svg+xml" href="/static/favicon.svg?v={{ asset_v }}">
+  <link rel="apple-touch-icon" href="/static/favicon.svg?v={{ asset_v }}">
+  <meta name="theme-color" content="#5E5CE6">
   {# FOUC-prevention: resolve theme preference and apply data-theme to <html>
      before any stylesheet loads. Reads localStorage first (client cache),
      then falls back to the server-rendered ProfileSettings.theme, then to

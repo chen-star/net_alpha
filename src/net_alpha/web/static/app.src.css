@@ -761,6 +761,12 @@ form.kpi-card [data-testid="account-multi-select"] > button {
   line-height: 18px;
 }
 
+/* The toolbar reuses .kpi-card for its visual shell, but .kpi-card sets
+   overflow:hidden — which clips the account multi-select dropdown panel
+   (position:absolute, anchored inside the toolbar). Toolbar forms host
+   popovers, so unconditionally allow overflow on form.kpi-card. */
+form.kpi-card { overflow: visible; }
+
 /* ---------------------------------------------------------------
  * Overview draggable layout — edit-mode affordances.
  * --------------------------------------------------------------- */

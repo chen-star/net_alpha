@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from importlib.resources import files
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
@@ -125,6 +126,15 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
     templates_dir = files("net_alpha.web") / "templates"
 
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+    # Bare /favicon.ico request from browsers that pre-load it before parsing
+    # <link rel="icon"> tags. Serve the SVG directly so the console doesn't
+    # show a 404 on every page load.
+    _favicon_path = str(static_dir / "favicon.svg")
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    def _favicon() -> FileResponse:
+        return FileResponse(_favicon_path, media_type="image/svg+xml")
     templates = Jinja2Templates(directory=str(templates_dir))
     templates.env.globals["disclaimer"] = disclaimer_render()
     templates.env.globals["price_disclosure"] = (

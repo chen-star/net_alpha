@@ -64,6 +64,56 @@
         <span class="text-label-3">—</span>
       {% endif %}
     </div>
+    {# Composition + lifetime ribbon — fills the otherwise-empty body of the
+       hero tile with the two questions a user actually asks first: "what's
+       in this number?" (holdings vs cash) and "am I up vs what I put in?". #}
+    {% if total_account_value is defined and total_account_value is not none and cash_kpis is defined and cash_kpis %}
+      {% set _holdings = (kpis.open_position_value|float) if kpis and kpis.open_position_value is not none else 0 %}
+      {% set _cash = cash_kpis.cash_balance|float %}
+      {% set _tav = total_account_value|float %}
+      {% set _holdings_pct = (_holdings / _tav * 100) if _tav > 0 else 0 %}
+      {% set _cash_pct = 100 - _holdings_pct if _tav > 0 else 0 %}
+      <div class="mt-3">
+        <div class="h-[6px] rounded-full overflow-hidden flex" style="background: var(--color-hairline);"
+             title="Holdings vs cash share of total account value">
+          <div style="width: {{ _holdings_pct|round(0,'floor')|int }}%; background: var(--color-pos); height: 100%;"></div>
+          <div style="width: {{ _cash_pct|round(0,'ceil')|int }}%; background: var(--color-info); height: 100%;"></div>
+        </div>
+        <div class="flex items-center justify-between mt-1 text-[11px]">
+          <span class="text-label-2">
+            <span class="num text-label-1">${{ "{:,.0f}".format(_holdings) }}</span>
+            holdings
+            <span class="text-label-3">· {{ _holdings_pct|round(0,'floor')|int }}%</span>
+          </span>
+          <span class="text-label-2">
+            <span class="num text-label-1">${{ "{:,.0f}".format(_cash) }}</span>
+            cash
+            <span class="text-label-3">· {{ _cash_pct|round(0,'ceil')|int }}%</span>
+          </span>
+        </div>
+      </div>
+      {% if vs_contributed_delta is defined and vs_contributed_delta is not none and cash_kpis.net_contributions and cash_kpis.net_contributions|float > 0 %}
+        {% set _delta = vs_contributed_delta|float %}
+        {% set _contrib = cash_kpis.net_contributions|float %}
+        <div class="mt-3 text-[11px] text-label-2"
+             title="Total account value today minus lifetime net contributed (deposits − withdrawals). What your decisions have added since the account opened.">
+          Lifetime vs contributed
+          {% if _delta < 0 %}
+            <span class="num text-neg">−${{ "{:,.2f}".format(_delta|abs) }}</span>
+            <span class="text-neg">({{ "%.1f"|format((_delta|abs / _contrib) * 100) }}%)</span>
+          {% else %}
+            <span class="num text-pos">+${{ "{:,.2f}".format(_delta) }}</span>
+            <span class="text-pos">(+{{ "%.1f"|format((_delta / _contrib) * 100) }}%)</span>
+          {% endif %}
+          <span class="text-label-3">on ${{ "{:,.0f}".format(_contrib) }} contributed</span>
+        </div>
+      {% endif %}
+      {% if snapshot is defined and snapshot.fetched_at %}
+        <div class="text-[10px] text-label-3 mt-2 uppercase tracking-wide">
+          As of {{ snapshot.fetched_at.strftime('%b %-d · %-I:%M %p') }}
+        </div>
+      {% endif %}
+    {% endif %}
     <div id="explain-account-value"></div>
   </div>
 

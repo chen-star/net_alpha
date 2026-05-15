@@ -1,12 +1,14 @@
-{# Second drop zone — for the Schwab All-Positions CSV (verify reference).
+{# Secondary drop zone — for the Schwab All-Positions CSV (verify reference).
+   Rendered as a slim utility row (not a full dropzone) so it's clearly
+   subordinate to the main Transactions / Realized G/L dropzone above.
    Posts directly to /imports/positions which writes broker_position rows
    tagged with the as-of date parsed from the CSV's first line. #}
 <form id="positions-import-form"
       action="/imports/positions"
       method="post"
       enctype="multipart/form-data">
-  <div class="relative border-2 border-dashed rounded-lg p-8 text-center bg-surface"
-       style="border-color: var(--color-hairline-strong);"
+  <div class="flex items-center gap-3 rounded-md px-3 py-2 bg-surface text-[12px] text-label-2 cursor-pointer hover:bg-surface-2"
+       style="border:0.5px solid var(--color-hairline);"
        id="positions-drop-zone"
        onclick="document.getElementById('positions-csv-input').click()"
        ondragover="event.preventDefault(); this.classList.add('bg-surface-2');"
@@ -17,11 +19,18 @@
                const inp = document.getElementById('positions-csv-input');
                inp.files = dt.files;
                document.getElementById('positions-import-form').submit();">
-    <p>Drop your Schwab <strong>All-Positions</strong> CSV here
-       or <a class="text-primary underline cursor-pointer">click to browse</a></p>
-    <p class="text-xs text-label-2 mt-1">
-      positions reference &middot; used by the verify engine to cross-check broker totals
-    </p>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+         class="shrink-0 text-label-3" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <span class="flex-1 truncate">
+      Optional: drop a Schwab <strong class="text-text">All-Positions</strong> CSV
+      <span class="text-label-3">— used by the verify engine to cross-check broker totals</span>
+    </span>
+    <a class="text-primary underline shrink-0">click to browse</a>
     <input type="file"
            id="positions-csv-input"
            name="file"
