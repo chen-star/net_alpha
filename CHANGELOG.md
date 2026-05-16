@@ -2,6 +2,40 @@
 
 
 
+## v0.67.6 (2026-05-16)
+
+### Fix
+
+* fix(web): overview UI follow-ups — dropdown label, lifetime palette, plan defaults, long-option expiry, same-day ordering
+
+- Account multi-select: button label is now reactively computed from
+  checkbox state via $root (not $el — inside @change on a checkbox,
+  $el is the checkbox itself, so the descendant query was empty).
+- Hero tile lifetime strip: Contributed segment uses a neutral light
+  gray so it&#39;s unambiguously distinct from the green Earned segment
+  (cyan vs green was indistinguishable under reduced-color vision).
+- Cash strip: free portion uses violet (matching the Composition tile)
+  instead of green, leaving green exclusively for gains.
+- Plan view: default sort flipped from alphabetical to manual order so
+  the drag-to-reorder list renders in the user&#39;s curated sequence by
+  default.
+- Plan row change indicator: dot renders inline with the symbol on the
+  same line instead of stacking above it.
+- Ticker timeline:
+  * Same-day rows order opens before closes (BTO before STC, STO before
+    BTC) instead of by trade-id alphabetical.
+  * Long-option BTO/STC pairs now render pairing chips alongside short
+    pairs.
+  * Long-option BTO labels read &#34;Buy to Open&#34; and STCs &#34;Sell to Close&#34;
+    instead of bare &#34;Buy&#34;/&#34;Sell&#34;.
+  * Long-option expiries with no STC trade are now synthesized as
+    Sell-to-Close-by-Expiry rows (proceeds = 0, basis from GL) so the
+    user sees the realized loss in the timeline. The dedup logic no
+    longer treats BTO Buys as closes, which was suppressing the synth.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`53da91c`](https://github.com/chen-star/net_alpha/commit/53da91c9301e5d19c80bd2eac58296553dd36d0e))
+
+
 ## v0.67.5 (2026-05-15)
 
 ### Fix
