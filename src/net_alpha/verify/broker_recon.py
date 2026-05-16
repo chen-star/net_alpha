@@ -54,6 +54,45 @@ def _reference_age_days(as_of_iso: str, today: _date) -> int:
     return (today - _date.fromisoformat(as_of_iso)).days
 
 
+def _expected_section_1256(
+    *,
+    symbol: str,
+    earliest_open_date: _date | None,
+    snapshot_date: _date,
+    universe: set[str],
+) -> bool:
+    """True iff `symbol` is a §1256 underlying AND the snapshot date falls in
+    a strictly later calendar year than the position's earliest open date.
+
+    After Dec 31 of the open year, Schwab applies §1256(a)(1) mark-to-market
+    to its reported cost basis; our open-lot basis stays at original cost.
+    The resulting divergence is expected, not a failure.
+    """
+    if symbol not in universe:
+        return False
+    if earliest_open_date is None:
+        return False
+    return snapshot_date.year > earliest_open_date.year
+
+
+def _earliest_open_dates(repo: Any) -> dict[tuple[str, str], _date]:
+    """Return {(account, ticker): earliest acquired_date} across all equity lots."""
+    out: dict[tuple[str, str], _date] = {}
+    for lot in repo.all_lots():
+        if lot.option_details is not None:
+            continue
+        key = (lot.account, lot.ticker)
+        cur = out.get(key)
+        if cur is None or lot.acquired_date < cur:
+            out[key] = lot.acquired_date
+    return out
+
+
+def _expected_cross_account(*args: Any, **kwargs: Any) -> bool:
+    """Placeholder — real implementation lands in Task 4 (cross-account annotation)."""
+    raise NotImplementedError("_expected_cross_account: implemented in Task 4")
+
+
 def reconcile_open_positions(
     *,
     repo: Any,
@@ -92,6 +131,11 @@ def reconcile_open_positions(
             )
         )
         # Continue — comparison findings are still useful as advisory context.
+
+    from net_alpha.section_1256.universe import load_universe
+
+    section_1256_universe = load_universe()
+    earliest_opens = _earliest_open_dates(repo)
 
     # Build key→row maps for O(1) lookup on each side.
     broker = {(bp.account_label, bp.symbol): bp for bp in bp_rows}
@@ -146,6 +190,22 @@ def reconcile_open_positions(
             scope=scope,
         )
         if b_result.severity != Severity.OK:
+            detail = dict(b_result.detail)
+            detail["expected_section_1256"] = _expected_section_1256(
+                symbol=sym,
+                earliest_open_date=earliest_opens.get((acct, sym)),
+                snapshot_date=_date.fromisoformat(as_of),
+                universe=section_1256_universe,
+            )
+            b_result = InvariantResult(
+                rule_id=b_result.rule_id,
+                severity=b_result.severity,
+                scope=b_result.scope,
+                ours=b_result.ours,
+                theirs=b_result.theirs,
+                delta=b_result.delta,
+                detail=detail,
+            )
             findings.append(b_result)
         # Market value.
         mv_result = _compare(
