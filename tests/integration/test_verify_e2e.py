@@ -80,17 +80,16 @@ def test_full_pipeline_trade_import_then_positions_import_then_verify(client: Te
     assert r.status_code == 200
     assert "Latest run" in r.text, "verify page didn't render the latest-run summary section"
 
-    # 5) Overview & Positions pages ship the verify-badge slot. The actual
-    #    badge HTML is hx-get-loaded on the client; the page-side contract
-    #    is just "the slot is present with the data-verify-badge marker is
-    #    served by /verify/badge".
+    # 5) Overview & Positions pages surface the verify status via the
+    #    global topbar "Data check: …" pill (see base.html →
+    #    verify/_header_pill.html). The per-page badge slot was retired —
+    #    tests/web/test_overview_badge.py and test_positions_badge.py
+    #    pin that intentional removal.
     for path in ("/", "/positions"):
         r = client.get(path)
         assert r.status_code == 200, f"{path} returned {r.status_code}"
-        # Either the inline slot div or the rendered badge — both carry the
-        # marker via either the hx-get URL or the data-verify-badge attribute.
-        assert "verify/badge" in r.text or "data-verify-badge" in r.text, (
-            f"{path} is missing the verify-badge slot/marker"
+        assert "data-verify-pill" in r.text, (
+            f"{path} is missing the global verify pill marker"
         )
 
     # 6) The /verify/badge endpoint itself renders a real badge with the
