@@ -2,6 +2,21 @@
 
 
 
+## v0.67.7 (2026-05-16)
+
+### Fix
+
+* fix(tests): update verify-e2e to assert new global pill marker
+
+The per-page verify-badge slot was retired on / and /positions in favor
+of the global topbar &#34;Data check: …&#34; pill (base.html → verify/_header_pill.html).
+The two web/ unit tests already pin that removal; the integration test
+step #5 was missed and still asserted the old verify/badge / data-verify-badge
+markers, breaking CI on every push since the UI refactor.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c602b68`](https://github.com/chen-star/net_alpha/commit/c602b684a891718a71b5fc55bf3f0b0eb9db2c81))
+
+
 ## v0.67.6 (2026-05-16)
 
 ### Fix
