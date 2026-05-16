@@ -2,6 +2,72 @@
 
 
 
+## v0.68.0 (2026-05-16)
+
+### Feature
+
+* feat(verify): render muted &#39;expected&#39; badges on annotated findings
+
+BasisRecon findings carrying expected_section_1256 or
+expected_cross_account now render a muted &#39;· expected&#39; badge in the
+findings table with an inline tooltip explaining why the divergence is
+not a true error. Severity classification is unchanged.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2e1fdb0`](https://github.com/chen-star/net_alpha/commit/2e1fdb0842190d7bea7621135c13e24219ed6cea))
+
+* feat(verify): annotate BasisRecon with cross-account wash-sale flag
+
+When a §1091 violation has its loss leg in account A and replacement in
+account B, our adjusted_basis on (A, symbol) and (B, symbol) reflects a
+rollover Schwab&#39;s per-account positions CSV cannot independently compute.
+The BasisRecon divergence is expected; detail.expected_cross_account
+records this. Surfacing as a muted badge lands in the next task.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`23fe7bf`](https://github.com/chen-star/net_alpha/commit/23fe7bf3d64e3bc80b1a5a52c0816bf7914941d4))
+
+* feat(verify): annotate BasisRecon with §1256 year-end MTM flag
+
+Schwab applies §1256(a)(1) mark-to-market on Dec 31 each year; our open-lot
+basis stays at original cost. After a year-end crosses for a position in
+the §1256 universe, the resulting BasisRecon divergence is expected.
+
+The detail dict now carries expected_section_1256; severity classification
+is unchanged. Surfacing as a muted badge lands in a follow-up task.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`18894e6`](https://github.com/chen-star/net_alpha/commit/18894e664295c585a53a93b37ac4ca11680dfcdf))
+
+* feat(import): accept Schwab per-account positions CSV
+
+parse_positions_csv now dispatches on the header line. The existing
+all-accounts format is unchanged; the per-account format (&#34;Positions for
+account &lt;LABEL&gt; as of ...&#34;) synthesizes account_label from the header,
+filters cash/futures/options/total rows, and emits the same downstream
+row shape.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8cc68ed`](https://github.com/chen-star/net_alpha/commit/8cc68edfb87c0b02be11e3990bb26491c265a035))
+
+### Fix
+
+* fix(web): drop-zone copy reflects both positions CSV formats
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`39632ec`](https://github.com/chen-star/net_alpha/commit/39632ec583d5ccf6fe97fec70b71f616e918b635))
+
+### Test
+
+* test(integration): per-account positions CSV upload → annotated finding
+
+Adds an end-to-end test that uploads the per-account positions fixture,
+runs verify, and asserts the BasisRecon finding&#39;s detail_json carries
+expected_section_1256=True for an SPX lot opened the prior year.
+
+Also fixes a Lot attribute name in _earliest_open_dates: the model field
+is `lot.date`, not `lot.acquired_date`. The Task 3 unit tests passed
+because they used MagicMock; the integration test caught the real attr
+name mismatch.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`473f1e2`](https://github.com/chen-star/net_alpha/commit/473f1e286231baa69682c1397b754b202ce770a6))
+
+
 ## v0.67.7 (2026-05-16)
 
 ### Fix
