@@ -18,7 +18,23 @@
         :class="open ? '' : 'last:border-0'">
       <td class="py-1.5 pr-3"><code class="text-[12px]">{{ f.rule_id }}</code></td>
       <td class="py-1.5 pr-3"><span class="status-{{ f.severity }}">{{ f.severity }}</span></td>
-      <td class="py-1.5 pr-3">{{ f.scope }}</td>
+      <td class="py-1.5 pr-3">
+        {{ f.scope }}
+        {% set d = f.detail or {} %}
+        {% if d.get('expected_section_1256') %}
+          <span class="ml-1 px-1.5 py-0.5 rounded text-[11px] bg-surface-2 text-label-2"
+                data-testid="expected-badge"
+                title="Schwab applies §1256(a)(1) mark-to-market on Dec 31 each year; our open-lot basis stays at original cost. This divergence is expected after a year-end crosses.">
+            expected · §1256 MTM
+          </span>
+        {% elif d.get('expected_cross_account') %}
+          <span class="ml-1 px-1.5 py-0.5 rounded text-[11px] bg-surface-2 text-label-2"
+                data-testid="expected-badge"
+                title="A §1091 wash-sale violation has its loss and replacement legs in different accounts. Schwab's per-account positions CSV cannot see the opposite leg, so this basis divergence is expected.">
+            expected · cross-account
+          </span>
+        {% endif %}
+      </td>
       <td class="py-1.5 pr-3 text-right tabular-nums">{{ f.ours if f.ours is not none else '—' }}</td>
       <td class="py-1.5 pr-3 text-right tabular-nums">{{ f.theirs if f.theirs is not none else '—' }}</td>
       <td class="py-1.5 pr-3 text-right tabular-nums">{{ f.delta if f.delta is not none else '—' }}</td>

@@ -10,6 +10,7 @@ Surface:
 
 from __future__ import annotations
 
+import json
 from datetime import date, timedelta
 from typing import Any
 
@@ -24,6 +25,40 @@ from net_alpha.verify.badge import run_inline
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 
 router = APIRouter()
+
+
+class _FindingView:
+    """Lightweight wrapper around a ``VerifyFinding`` that exposes the
+    parsed ``detail`` dict alongside the original row's fields.
+
+    ``VerifyFinding`` is a strict SQLModel/Pydantic table-model, so we
+    can't tack new attributes onto its instances. Templates read
+    ``f.detail`` to surface annotations like ``expected_section_1256``
+    / ``expected_cross_account``; everything else falls through to the
+    underlying row via ``__getattr__``.
+    """
+
+    __slots__ = ("_row", "detail")
+
+    def __init__(self, row: Any, detail: dict):
+        self._row = row
+        self.detail = detail
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._row, name)
+
+
+def _attach_detail(findings: list) -> list:
+    """Wrap each finding so its ``detail_json`` is exposed as a parsed
+    ``.detail`` dict for templates."""
+    out: list[_FindingView] = []
+    for f in findings:
+        try:
+            detail = json.loads(f.detail_json) if f.detail_json else {}
+        except (ValueError, TypeError):
+            detail = {}
+        out.append(_FindingView(f, detail))
+    return out
 
 
 def _build_lot_adapters(
@@ -179,7 +214,7 @@ def verify_index(
     """Render the verify dashboard: latest run summary + history + findings."""
     latest = repo.latest_verify_run()
     history = repo.list_verify_runs(limit=30)
-    findings = repo.list_verify_findings(run_id=latest.id) if latest else []
+    findings = _attach_detail(repo.list_verify_findings(run_id=latest.id)) if latest else []
     return request.app.state.templates.TemplateResponse(
         request,
         "verify/index.html",
@@ -291,7 +326,7 @@ def verify_findings(
     run = next((r for r in runs if r.id == run_id), None)
     if run is None:
         raise HTTPException(status_code=404, detail="run not found")
-    findings = repo.list_verify_findings(run_id=run_id)
+    findings = _attach_detail(repo.list_verify_findings(run_id=run_id))
     return request.app.state.templates.TemplateResponse(
         request,
         "verify/_findings_table.html",
