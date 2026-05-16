@@ -88,9 +88,30 @@ def _earliest_open_dates(repo: Any) -> dict[tuple[str, str], _date]:
     return out
 
 
-def _expected_cross_account(*args: Any, **kwargs: Any) -> bool:
-    """Placeholder — real implementation lands in Task 4 (cross-account annotation)."""
-    raise NotImplementedError("_expected_cross_account: implemented in Task 4")
+def _expected_cross_account(
+    *,
+    account_label: str,
+    symbol: str,
+    violations: list[Any],
+    trades_by_id: dict[str, Any],
+) -> bool:
+    """True iff any wash-sale violation on `symbol` has its loss leg and buy
+    leg in different accounts AND `account_label` is one of those two accounts.
+
+    Schwab's per-account positions CSV cannot see the opposite leg, so a basis
+    divergence here is expected — our adjusted_basis reflects a §1091 rollover
+    Schwab can't independently compute.
+    """
+    for v in violations:
+        loss = trades_by_id.get(str(v.loss_trade_id))
+        buy = trades_by_id.get(str(v.buy_trade_id))
+        if loss is None or buy is None:
+            continue
+        if loss.account == buy.account:
+            continue
+        if account_label in (loss.account, buy.account):
+            return True
+    return False
 
 
 def reconcile_open_positions(
@@ -136,6 +157,7 @@ def reconcile_open_positions(
 
     section_1256_universe = load_universe()
     earliest_opens = _earliest_open_dates(repo)
+    trades_by_id = {str(t.id): t for t in repo.all_trades()}
 
     # Build key→row maps for O(1) lookup on each side.
     broker = {(bp.account_label, bp.symbol): bp for bp in bp_rows}
@@ -196,6 +218,12 @@ def reconcile_open_positions(
                 earliest_open_date=earliest_opens.get((acct, sym)),
                 snapshot_date=_date.fromisoformat(as_of),
                 universe=section_1256_universe,
+            )
+            detail["expected_cross_account"] = _expected_cross_account(
+                account_label=acct,
+                symbol=sym,
+                violations=repo.get_violations_for_ticker(sym),
+                trades_by_id=trades_by_id,
             )
             b_result = InvariantResult(
                 rule_id=b_result.rule_id,
