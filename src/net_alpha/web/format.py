@@ -55,11 +55,21 @@ def display_action(t: Trade, *, assigned_from: OptionDetails | None = None) -> s
         return f"Closed by Assignment {_format_option_suffix(t.option_details)}"
     if t.basis_source == "option_short_close_expiry" and t.option_details is not None:
         return f"Closed by Expiry {_format_option_suffix(t.option_details)}"
+    if t.basis_source == "option_long_close_expiry" and t.option_details is not None:
+        return f"Closed by Expiry {_format_option_suffix(t.option_details)}"
     if t.option_details is not None:
         if t.basis_source == "option_short_open":
             return f"Sell to Open {_format_option_suffix(t.option_details)}"
         if t.basis_source == "option_short_close":
             return f"Buy to Close {_format_option_suffix(t.option_details)}"
+        # Long-option opens/closes have no special basis_source — derive from
+        # action verb so the timeline reads "Buy to Open" / "Sell to Close"
+        # instead of bare "Buy" / "Sell".
+        action_lc = t.action.lower()
+        if action_lc == "buy":
+            return f"Buy to Open {_format_option_suffix(t.option_details)}"
+        if action_lc == "sell":
+            return f"Sell to Close {_format_option_suffix(t.option_details)}"
         return f"{t.action} {_format_option_suffix(t.option_details)}"
     return t.action
 

@@ -87,6 +87,33 @@ def _is_stock_sell(trade) -> bool:
     return trade.option_details is None and trade.action.lower() == "sell"
 
 
+def _is_long_option_open(trade) -> bool:
+    """BTO of a long option: has option_details, action=Buy, and no
+    short-option basis_source claim."""
+    if trade.option_details is None:
+        return False
+    if trade.basis_source in _ALL_OPT_SOURCES:
+        return False
+    return trade.action.lower() == "buy"
+
+
+def _is_long_option_close(trade) -> bool:
+    """STC of a long option: has option_details, action=Sell, and no
+    short-option basis_source claim."""
+    if trade.option_details is None:
+        return False
+    if trade.basis_source in _ALL_OPT_SOURCES:
+        return False
+    return trade.action.lower() == "sell"
+
+
+def _long_option_pair_key(trade) -> str | None:
+    if not (_is_long_option_open(trade) or _is_long_option_close(trade)):
+        return None
+    opt = trade.option_details
+    return f"LONGOPT|{trade.account}|{trade.ticker}|{opt.strike}|{opt.expiry.isoformat()}|{opt.call_put}"
+
+
 def _attribute_sells_to_lots(rows, lots):
     """FIFO walk: for each stock SELL, return [(lot_id, qty_consumed), ...].
 
@@ -159,6 +186,56 @@ def _apply_option_pairs(rows: list, out: dict[str, PairFields]) -> None:
                 pair_cap=cap,
                 partner_trade_id=first_close_id,
             )
+        for i, r in enumerate(closes, start=1):
+            cap = "bottom" if i == len(closes) else "none"
+            out[r.trade.id] = PairFields(
+                pair_key=key,
+                pair_role="close",
+                pair_position=(i, len(closes)) if len(closes) > 1 else (1, 1),
+                pair_cap=cap,
+                partner_trade_id=first_open_id,
+            )
+
+
+def _apply_long_option_pairs(rows: list, out: dict[str, PairFields]) -> None:
+    """Group long-option (BTO/STC) opens and closes by pair-key.
+
+    Mirrors :func:`_apply_option_pairs` but for the long side, which the
+    short-option detector skips. Pair-key matches account + contract details
+    so a roll into a different strike / expiry stays unpaired.
+    """
+    opt_groups: dict[str, list] = defaultdict(list)
+    for r in rows:
+        key = _long_option_pair_key(r.trade)
+        if key is not None:
+            opt_groups[key].append(r)
+
+    for key, group in opt_groups.items():
+        opens = [r for r in group if _is_long_option_open(r.trade)]
+        closes = [r for r in group if _is_long_option_close(r.trade)]
+        opens.sort(key=lambda r: r.trade.date)
+        closes.sort(key=lambda r: r.trade.date)
+        first_open_id = opens[0].trade.id if opens else None
+        first_close_id = closes[0].trade.id if closes else None
+
+        for i, r in enumerate(opens, start=1):
+            cap: PairCap = "top" if i == 1 else "none"
+            if not closes:
+                # No matching close yet — render as still_open like stock lots.
+                out[r.trade.id] = PairFields(
+                    pair_key=key,
+                    pair_role="still_open",
+                    pair_cap=cap,
+                    partner_trade_id=None,
+                )
+            else:
+                out[r.trade.id] = PairFields(
+                    pair_key=key,
+                    pair_role="open",
+                    pair_position=(i, len(opens)) if len(opens) > 1 else (1, 1),
+                    pair_cap=cap,
+                    partner_trade_id=first_close_id,
+                )
         for i, r in enumerate(closes, start=1):
             cap = "bottom" if i == len(closes) else "none"
             out[r.trade.id] = PairFields(
@@ -384,6 +461,7 @@ def compute_pair_fields(
 
     out: dict[str, PairFields] = {}
     _apply_option_pairs(rows, out)
+    _apply_long_option_pairs(rows, out)
     _apply_stock_lot_pairs(rows, list(lots), open_lot_ids, out)
     _apply_roll_annotations(rows, out)
     _apply_assignment_links(rows, assignment_closes_list, out)

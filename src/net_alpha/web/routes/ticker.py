@@ -77,15 +77,38 @@ def _build_timeline_rows(
         if t.basis_source == "option_short_close_assigned" and t.option_details is not None:
             assigned_close_by_key[(t.date, t.account, t.ticker)] = t.option_details
 
-    # --- Index BTC / STC trade closures so we don't duplicate via GL ---
+    # --- Index BTC / STC / assigned-close trade closures so we don't
+    # duplicate them via the GL-based synthesis below. A Buy with
+    # option_details is only a *close* when it's a short-side close
+    # (BTC / expiry / assigned) or a put-assignment Buy; a bare BTO
+    # Buy must NOT match here, otherwise its eventual long expiry never
+    # gets a synthesized close row. STC of a long option (Sell with
+    # option_details and no short-open basis_source) is the long-side
+    # close and counts here too. ---
+    _SHORT_CLOSE_SRCS = {
+        "option_short_close",
+        "option_short_close_expiry",
+        "option_short_close_assigned",
+        "put_assignment",
+    }
+    _SHORT_OPEN_SRCS = {"option_short_open", "option_short_open_assigned"}
+    # Track which option keys have a SHORT open (STO) — used to decide
+    # whether a synthesized close should be Buy-side (short expiry) or
+    # Sell-side (long expiry, proceeds = 0).
+    short_open_keys: set[tuple[str, float, date, str]] = set()
     closed_keys_in_trades: set[tuple[str, float, date, str]] = set()
     for t in trades:
         if t.option_details is None:
             continue
-        if t.action.lower() != "buy":
-            continue  # only closes on the buy side (BTC, including assigned-close)
         opt = t.option_details
-        closed_keys_in_trades.add((t.ticker, opt.strike, opt.expiry, opt.call_put))
+        key = (t.ticker, opt.strike, opt.expiry, opt.call_put)
+        if t.basis_source in _SHORT_OPEN_SRCS:
+            short_open_keys.add(key)
+            continue
+        is_short_close = t.action.lower() == "buy" and t.basis_source in _SHORT_CLOSE_SRCS
+        is_long_close = t.action.lower() == "sell" and t.basis_source not in _SHORT_OPEN_SRCS
+        if is_short_close or is_long_close:
+            closed_keys_in_trades.add(key)
 
     # --- Index STO premium per (account, ticker, strike, expiry, cp) so each
     # BTC row can show the close-event gain/loss. We accept multiple STOs
@@ -143,24 +166,64 @@ def _build_timeline_rows(
         if synth_key in seen_synth:
             continue
         seen_synth.add(synth_key)
-        synth = Trade(
-            account=gl.account_display,
-            date=gl.closed_date,
-            ticker=gl.ticker,
-            action="Buy",  # closing a short = buy-side
-            quantity=abs(float(gl.quantity)),
-            cost_basis=float(gl.cost_basis),
-            proceeds=None,
-            basis_source="option_short_close_expiry",
-            option_details=OptionDetails(
-                strike=float(gl.option_strike),
-                expiry=expiry,
-                call_put=gl.option_call_put,
-            ),
-        )
+        # Short side (STO at open): synth is a Buy with proceeds=None.
+        # Long side (BTO at open, no STO seen): synth is a Sell with
+        # proceeds=0 so the row reads "Closed by Expiry" with the full
+        # premium booked as a realized loss.
+        is_short = key in short_open_keys
+        if is_short:
+            synth = Trade(
+                account=gl.account_display,
+                date=gl.closed_date,
+                ticker=gl.ticker,
+                action="Buy",
+                quantity=abs(float(gl.quantity)),
+                cost_basis=float(gl.cost_basis),
+                proceeds=None,
+                basis_source="option_short_close_expiry",
+                option_details=OptionDetails(
+                    strike=float(gl.option_strike),
+                    expiry=expiry,
+                    call_put=gl.option_call_put,
+                ),
+            )
+        else:
+            synth = Trade(
+                account=gl.account_display,
+                date=gl.closed_date,
+                ticker=gl.ticker,
+                action="Sell",
+                quantity=abs(float(gl.quantity)),
+                cost_basis=float(gl.cost_basis),
+                proceeds=float(gl.proceeds or 0.0),
+                basis_source="option_long_close_expiry",
+                option_details=OptionDetails(
+                    strike=float(gl.option_strike),
+                    expiry=expiry,
+                    call_put=gl.option_call_put,
+                ),
+            )
         rows.append(TimelineRow(trade=synth, gain_loss=_row_gain_loss(synth)))
 
-    rows.sort(key=lambda r: (r.trade.date, r.trade.id))
+    _CLOSE_OPT_SOURCES = {
+        "option_short_close",
+        "option_short_close_expiry",
+        "option_short_close_assigned",
+    }
+
+    def _is_close_action(t: Trade) -> bool:
+        # Short options: opens go before closes regardless of action verb.
+        if t.basis_source in _CLOSE_OPT_SOURCES:
+            return True
+        if t.basis_source in {"option_short_open", "option_short_open_assigned"}:
+            return False
+        # Long options + stock: Sell = close, Buy = open.
+        return t.action.lower() == "sell"
+
+    # Sort by (date, open-before-close, id). Same-day pairs render the
+    # opening leg first so the close (Sell to Close / Buy to Close) reads
+    # naturally as the subsequent action.
+    rows.sort(key=lambda r: (r.trade.date, 1 if _is_close_action(r.trade) else 0, r.trade.id))
 
     # --- Pairing pass: compute PairFields and rebuild rows with `pair` set. ---
     assignment_closes = [t for t in trades if t.basis_source == "option_short_close_assigned"]

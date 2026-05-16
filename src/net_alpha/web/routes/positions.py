@@ -189,7 +189,7 @@ def positions_page(
         import dataclasses as _dc
 
         selected_tag_param = request.query_params.get("tag") or None
-        sort_key_param = request.query_params.get("sort") or "alpha"
+        sort_key_param = request.query_params.get("sort") or "manual"
         plan_view, _pos_by_sym = _build_plan_view_for_request(
             repo, pricing, accounts, selected_tag_param, sort_key_param
         )
@@ -419,7 +419,7 @@ def _build_plan_view_for_request(
     pricing: PricingService,
     accounts: list[str],
     selected_tag: str | None = None,
-    sort_key: str = "alpha",
+    sort_key: str = "manual",
 ) -> tuple[PlanView, dict[str, PositionRow]]:
     """Compute the PlanView used by both GET ?view=plan and the POST/DELETE
     fragment refreshes. Pulls trades, lots, prices, cash events, CSP collateral,
@@ -504,7 +504,7 @@ def _render_plan_body(
     page: int = 1,
     page_size: int = 25,
     selected_tag: str | None = None,
-    sort_key: str = "alpha",
+    sort_key: str = "manual",
 ) -> HTMLResponse:
     import dataclasses as _dc
 
@@ -636,7 +636,7 @@ def plan_mark_seen(
     from net_alpha.portfolio.plan_diff import SnapshotRow
 
     plan_view, pos_by_sym = _build_plan_view_for_request(
-        repo, pricing, accounts=[], selected_tag=None, sort_key="alpha"
+        repo, pricing, accounts=[], selected_tag=None, sort_key="manual"
     )
     watch_results = repo.watch_results_by_target()
     diff_rows = _build_plan_diff_rows(plan_view, pos_by_sym, watch_results)

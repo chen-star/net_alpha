@@ -135,6 +135,7 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
     @app.get("/favicon.ico", include_in_schema=False)
     def _favicon() -> FileResponse:
         return FileResponse(_favicon_path, media_type="image/svg+xml")
+
     templates = Jinja2Templates(directory=str(templates_dir))
     templates.env.globals["disclaimer"] = disclaimer_render()
     templates.env.globals["price_disclosure"] = (
