@@ -76,15 +76,20 @@ def _expected_section_1256(
 
 
 def _earliest_open_dates(repo: Any) -> dict[tuple[str, str], _date]:
-    """Return {(account, ticker): earliest acquired_date} across all equity lots."""
+    """Return {(account, ticker): earliest acquired_date} across all equity lots.
+
+    Reads the raw acquisition date (``lot.date``) — IRC §1223(4) wash-sale
+    tacking does not affect the §1256 year-end-MTM heuristic, which keys off
+    when the position was actually opened in the broker's books.
+    """
     out: dict[tuple[str, str], _date] = {}
     for lot in repo.all_lots():
         if lot.option_details is not None:
             continue
         key = (lot.account, lot.ticker)
         cur = out.get(key)
-        if cur is None or lot.acquired_date < cur:
-            out[key] = lot.acquired_date
+        if cur is None or lot.date < cur:
+            out[key] = lot.date
     return out
 
 

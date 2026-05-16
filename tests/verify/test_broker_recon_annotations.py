@@ -106,7 +106,7 @@ def _lot(account: str, ticker: str, acquired_date: date):
     lot.account = account
     lot.ticker = ticker
     lot.option_details = None
-    lot.acquired_date = acquired_date
+    lot.date = acquired_date
     return lot
 
 
