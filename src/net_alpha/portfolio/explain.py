@@ -589,13 +589,17 @@ def _classify_cash_events(cash_events_on_date) -> tuple[Decimal, list[CashEventR
     Mirrors ``portfolio/cash_flow.py::_event_contrib_delta`` semantics — only
     ``transfer_in`` / ``transfer_out`` count as contributions in this codebase
     (dividends/interest/fees are non-contribution cash flow and are skipped).
+    Imports the public ``CONTRIB_*_KINDS`` sets so the convention has a single
+    source of truth.
     """
+    from net_alpha.portfolio.cash_flow import CONTRIB_INFLOW_KINDS, CONTRIB_OUTFLOW_KINDS
+
     total = Decimal("0")
     rows: list[CashEventRow] = []
     for e in cash_events_on_date:
-        if e.kind == "transfer_in":
+        if e.kind in CONTRIB_INFLOW_KINDS:
             signed = Decimal(str(e.amount))
-        elif e.kind == "transfer_out":
+        elif e.kind in CONTRIB_OUTFLOW_KINDS:
             signed = -abs(Decimal(str(e.amount)))
         else:
             continue

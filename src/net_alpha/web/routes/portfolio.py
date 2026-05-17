@@ -1485,7 +1485,7 @@ def explain_equity_point(
     in the same filtered series), then calls the pure-function builder
     and renders ``_explain_equity_point.html``.
     """
-    from net_alpha.portfolio.cash_flow import _CONTRIB_INFLOW, _CONTRIB_OUTFLOW
+    from net_alpha.portfolio.cash_flow import CONTRIB_INFLOW_KINDS, CONTRIB_OUTFLOW_KINDS
     from net_alpha.portfolio.explain import build_equity_point_breakdown
     from net_alpha.portfolio.positions import consume_lots_fifo
 
@@ -1560,22 +1560,28 @@ def explain_equity_point(
             )
 
     trades_on = [t for t in trades if t.date == on]
-    cash_on_date = [e for e in cash_events if e.event_date == on and e.kind in ("transfer_in", "transfer_out")]
+    cash_on_date = [
+        e
+        for e in cash_events
+        if e.event_date == on and (e.kind in CONTRIB_INFLOW_KINDS or e.kind in CONTRIB_OUTFLOW_KINDS)
+    ]
     dividends_on_date = [e for e in cash_events if e.event_date == on and e.kind == "dividend"]
     violations = [v for v in repo.all_violations() if v.loss_sale_date == on]
     exempt_matches = [em for em in repo.list_exempt_matches() if _safe_iso_to_date(em.loss_sale_date) == on]
 
-    # Starting "contributed-to-date" snapshot — sum signed contributions
-    # (transfer_in minus transfer_out) through `on`. Mirrors the sign
-    # convention in `cash_flow._event_contrib_delta`.
-    contributed_to_date = Decimal("0")
-    for e in cash_events:
-        if e.event_date > on:
-            continue
-        if e.kind in _CONTRIB_INFLOW:
-            contributed_to_date += Decimal(str(e.amount))
-        elif e.kind in _CONTRIB_OUTFLOW:
-            contributed_to_date -= Decimal(str(e.amount))
+    # Starting "contributed-to-date" snapshot — reuse the lifetime cash-balance
+    # series (which already folds contributions via the canonical
+    # `cash_flow._event_contrib_delta` convention) and pick the last point
+    # whose date is ``<= on``. Single source of truth, no parallel walk.
+    cash_points_lifetime = build_cash_balance_series(
+        events=cash_events,
+        trades=trades,
+        period=None,
+    )
+    contributed_to_date = next(
+        (p.cumulative_contributions for p in reversed(cash_points_lifetime) if p.on <= on),
+        Decimal("0"),
+    )
 
     breakdown = build_equity_point_breakdown(
         on=on,
