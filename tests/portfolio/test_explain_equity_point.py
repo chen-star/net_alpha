@@ -348,3 +348,85 @@ def test_unreconciled_delta_exposes_residual():
         delta_account_value=Decimal("100"),
     )
     assert b.residual == Decimal("100.00")
+
+
+def test_all_four_components_reconcile_to_delta():
+    """Positive proof: a day with non-zero trade P&L, contributions, dividends,
+    and MTM all sum to delta_account_value with residual == 0.
+    """
+    on = date(2026, 5, 10)
+    prev = date(2026, 5, 9)
+
+    # Sell trade: $1,200 realized.
+    trade = _make_sell_trade(
+        on=on,
+        ticker="AAPL",
+        qty=Decimal("100"),
+        proceeds=Decimal("18200"),
+        basis=Decimal("17000"),
+    )
+
+    # transfer_in: +$5,000 contributions.
+    contrib_event = CashEvent(
+        account="Brokerage",
+        event_date=on,
+        kind="transfer_in",
+        amount=5000.0,
+        ticker=None,
+        description="ACH transfer",
+    )
+
+    # Dividend: +$12.34.
+    div_event = CashEvent(
+        account="Brokerage",
+        event_date=on,
+        kind="dividend",
+        amount=12.34,
+        ticker="MSFT",
+        description="Qualified dividend",
+    )
+
+    # One open lot (SPY): 10 shares, prev close 500 → close 502 = +$20 MTM.
+    lots = [
+        Lot(
+            id="L1",
+            trade_id="t-spy",
+            account="Brokerage",
+            ticker="SPY",
+            date=date(2026, 1, 6),
+            quantity=10.0,
+            cost_basis=5000.0,
+            adjusted_basis=5000.0,
+        ),
+    ]
+    closes = {
+        ("SPY", prev): Decimal("500.00"),
+        ("SPY", on): Decimal("502.00"),  # +$20 on 10 shares
+    }
+
+    def get_close(sym: str, d: date):
+        return closes.get((sym, d))
+
+    realized_expected = Decimal("1200.00")
+    contributions_expected = Decimal("5000")
+    dividends_expected = Decimal("12.34")
+    mtm_expected = Decimal("20.00")
+    delta = realized_expected + contributions_expected + dividends_expected + mtm_expected
+
+    b = build_equity_point_breakdown(
+        on=on,
+        previous_on=prev,
+        trades_on_date=[trade],
+        cash_events_on_date=[contrib_event],
+        dividend_events_on_date=[div_event],
+        open_lots_prev_day=lots,
+        violations_on_date=[],
+        exempt_matches_on_date=[],
+        get_close=get_close,
+        delta_account_value=delta,
+    )
+    assert b.realized_pnl == realized_expected
+    assert b.contributions == contributions_expected
+    assert b.dividends == dividends_expected
+    assert b.delta_unrealized == mtm_expected
+    assert b.residual == Decimal("0")
