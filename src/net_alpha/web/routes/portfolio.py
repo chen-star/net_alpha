@@ -33,14 +33,17 @@ from net_alpha.portfolio.account_value import (
     build_account_value_series,
     build_eval_dates,
 )
+from net_alpha.portfolio.models import AccountValuePoint
 from net_alpha.portfolio.allocation import build_allocation
 from net_alpha.portfolio.calendar_pnl import monthly_pl_lifetime_stats, monthly_realized_pl_series
 from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
+    build_cash_deployment_series,
     cash_allocation_slice,
     cash_balance_extremes,
     compute_cash_kpis,
+    compute_chart_head_kpis,
 )
 from net_alpha.portfolio.freshness import compute_price_freshness
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
@@ -899,6 +902,16 @@ def _compute_portfolio_body_context(
         eval_dates=account_eval_dates,
         get_close=svc.get_historical_close,
     )
+    # Cash deployment series (free / pledged / invested) — feeds the new
+    # stacked-area cash chart. Reuses the AccountValuePoint date axis so the
+    # equity and cash charts align tick-for-tick.
+    cash_deployment_points = build_cash_deployment_series(
+        account_points=account_points,
+        trades=scoped_trades,
+        events=cash_events,
+        accounts=accounts,
+        with_pledged=True,
+    )
 
     benchmark_points: list = []
 
@@ -967,6 +980,31 @@ def _compute_portfolio_body_context(
             period=None,
         )
         cash_lifetime_extremes = cash_balance_extremes(lifetime_cash_points)
+        # Lifetime cash deployment series — feeds compute_chart_head_kpis'
+        # lifetime min/max KPI line, which only reads free_cash + pledged.
+        # We synthesize cheap zero-priced AccountValuePoints off the lifetime
+        # cash series so build_cash_deployment_series can reuse its date axis
+        # without invoking the historical pricing pipeline (the lifetime
+        # account-value compute used to dominate cold body latency — see the
+        # comment on the brush-strip removal above).
+        lifetime_avps = [
+            AccountValuePoint(
+                on=p.on,
+                contributions=p.cumulative_contributions,
+                holdings_value=Decimal("0"),
+                cash_balance=p.cash_balance,
+                account_value=p.cash_balance,
+                net_pl=Decimal("0"),
+            )
+            for p in lifetime_cash_points
+        ]
+        lifetime_cash_deployment = build_cash_deployment_series(
+            account_points=lifetime_avps,
+            trades=scoped_trades,
+            events=cash_events,
+            accounts=accounts,
+            with_pledged=True,
+        )
         lifetime_monthly_pl = monthly_realized_pl_series(
             trades=scoped_trades,
             period=None,
@@ -983,8 +1021,16 @@ def _compute_portfolio_body_context(
         )
     else:
         cash_lifetime_extremes = None
+        lifetime_cash_deployment = []
         monthly_pl_lifetime = None
         lifetime_kpis = None
+
+    chart_head_kpis = compute_chart_head_kpis(
+        account_points=account_points,
+        cash_deployment_points=cash_deployment_points,
+        lifetime_cash_points=lifetime_cash_deployment,
+        period_starting_value=cash_kpis.period_starting_value,
+    )
 
     return {
         "kpis": kpis,
@@ -997,6 +1043,8 @@ def _compute_portfolio_body_context(
         "today": today,
         "cash_kpis": cash_kpis,
         "cash_points": cash_points,
+        "cash_deployment_points": cash_deployment_points,
+        "chart_head_kpis": chart_head_kpis,
         "cash_slice": cash_slice,
         "metric_refs": _build_metric_refs(period_tuple, period_label, account_id),
         "offset_budget": offset_budget,
