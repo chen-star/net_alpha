@@ -292,3 +292,36 @@ def test_first_point_in_series_returns_starting_snapshot():
     assert b.previous_on is None
     assert b.starting_holdings_count == 1
     assert b.starting_contributed_to_date == Decimal("17500")
+
+
+def test_missing_close_for_held_ticker_populates_unpriced():
+    on = date(2026, 5, 10)
+    prev = date(2026, 5, 9)
+    lots = [
+        Lot(
+            id="L1",
+            trade_id="t-illiq",
+            account="Brokerage",
+            ticker="ILLIQ",
+            date=date(2026, 1, 5),
+            quantity=10.0,
+            cost_basis=500.0,
+            adjusted_basis=500.0,
+        ),
+    ]
+    b = build_equity_point_breakdown(
+        on=on,
+        previous_on=prev,
+        trades_on_date=[],
+        cash_events_on_date=[],
+        dividend_events_on_date=[],
+        open_lots_prev_day=lots,
+        violations_on_date=[],
+        exempt_matches_on_date=[],
+        get_close=lambda sym, d: None,  # always None
+        delta_account_value=Decimal("0"),
+    )
+    assert b.unpriced_tickers == ("ILLIQ",)
+    assert b.unpriced_basis_total == Decimal("500")
+    assert b.top_movers == []
+    assert b.delta_unrealized == Decimal("0")
