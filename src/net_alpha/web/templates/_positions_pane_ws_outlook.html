@@ -1,0 +1,20 @@
+{# Wash-sale outlook. Renders one of four states from ws_outlook.state.
+   - skipped: nothing rendered (no testid wrapper)
+   - clean: testid wrapper with data-state="clean", no visible chrome
+   - trigger: red label + headline + optional replacement footnote
+   - error: muted label + error message #}
+{% if ws_outlook and ws_outlook.state != "skipped" %}
+<div data-testid="ws-outlook" data-state="{{ ws_outlook.state }}" class="mt-4">
+  {% if ws_outlook.state == 'trigger' %}
+    <div class="label-uc text-[10px] mb-1" style="color: var(--color-neg);">Wash-sale outlook</div>
+    <div class="text-[12px] text-text">{{ ws_outlook.message }}</div>
+    {% if ws_outlook.replacement %}
+      <div class="text-[11px] text-label-2 mt-1">{{ ws_outlook.replacement }}</div>
+    {% endif %}
+  {% elif ws_outlook.state == 'error' %}
+    <div class="label-uc text-[10px] mb-1 text-label-2">Wash-sale outlook</div>
+    <div class="text-[11px] text-label-2">{{ ws_outlook.message }}</div>
+  {% endif %}
+  {# clean state intentionally renders no body — just the testid wrapper for tests. #}
+</div>
+{% endif %}

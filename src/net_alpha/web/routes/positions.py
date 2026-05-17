@@ -10,6 +10,7 @@ from loguru import logger
 from starlette.responses import Response
 
 from net_alpha.db.repository import Repository
+from net_alpha.engine.simulator import simulate_sell
 from net_alpha.models.domain import Lot
 from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.cash_flow import compute_cash_kpis
@@ -280,6 +281,73 @@ def _pane_lot_info(
     return {"lots": rows, "clock": clock}
 
 
+def _pane_ws_outlook(
+    *,
+    sym: str,
+    account_display: str | None,
+    qty: Decimal | None,
+    last_price: float | None,
+    repo: Repository,
+) -> dict[str, Any]:
+    """Compute wash-sale outlook for the pane using simulate_sell.
+
+    Returns a dict with keys:
+      - state: "clean" | "trigger" | "error" | "skipped"
+      - message: str (rendered text; empty in clean state)
+      - replacement: str | None (one-line footnote when trigger)
+
+    SimulationOption fields used (verified from engine/simulator.py):
+      - would_trigger_wash_sale: bool
+      - realized_pnl: Decimal  (negative = loss; used as disallowed amount)
+      - blocking_buys: list[Trade]  (first entry provides replacement footnote)
+      - confidence: str
+    """
+    if qty is None or qty <= 0 or last_price is None:
+        return {"state": "skipped", "message": "", "replacement": None}
+
+    try:
+        accounts = repo.list_accounts()
+        # Filter to the specific account if the pane is scoped to one
+        if account_display is not None:
+            accounts = [a for a in accounts if a.display() == account_display]
+
+        options = simulate_sell(
+            ticker=sym,
+            qty=qty,
+            price=Decimal(str(last_price)),
+            accounts=accounts,
+            existing_lots=repo.all_lots(),
+            recent_trades=repo.all_trades(),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "state": "error",
+            "message": f"Outlook unavailable: {exc!r}",
+            "replacement": None,
+        }
+
+    # Aggregate across all account options: trigger if any has a blocking buy
+    triggering = [opt for opt in options if opt.would_trigger_wash_sale]
+    if not triggering:
+        return {"state": "clean", "message": "", "replacement": None}
+
+    # Sum disallowed loss across triggering options using realized_pnl
+    # (realized_pnl is negative for losses; disallowed = abs of total loss)
+    total_loss = sum(opt.realized_pnl for opt in triggering if opt.realized_pnl < 0)
+    disallowed_amt = abs(total_loss)
+    message = f"Selling today would trigger a wash sale — ~${disallowed_amt:,.2f} disallowed loss."
+
+    # Build replacement footnote from the first blocking buy found
+    replacement: str | None = None
+    for opt in triggering:
+        if opt.blocking_buys:
+            first_buy = opt.blocking_buys[0]
+            replacement = f"Replacement buy: {first_buy.account} on {first_buy.date}"
+            break
+
+    return {"state": "trigger", "message": message, "replacement": replacement}
+
+
 def _build_pane_ctx(
     sym: str,
     account_id: int | None,
@@ -388,6 +456,15 @@ def _build_pane_ctx(
         today=today,
     )
 
+    # --- Wash-sale outlook ---
+    ws_outlook = _pane_ws_outlook(
+        sym=sym,
+        account_display=account_display,
+        qty=qty,
+        last_price=last_price,
+        repo=repo,
+    )
+
     # --- Sim-sell realized delta ---
     # realized_delta == loss when both are computed (qty * price − open_basis).
     return {
@@ -404,6 +481,7 @@ def _build_pane_ctx(
         "transfer_date": transfer_date,
         "lt_clock": lot_info["clock"],
         "lot_rows": lot_info["lots"],
+        "ws_outlook": ws_outlook,
     }
 
 
