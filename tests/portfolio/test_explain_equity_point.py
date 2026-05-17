@@ -197,3 +197,32 @@ def test_mtm_only_day_attributes_to_delta_unrealized():
     assert b.top_movers[1].ticker == "SPY"
     assert b.top_movers[1].contribution == Decimal("-20.00")
     assert b.residual == Decimal("0")
+
+
+def test_dividend_only_day_attributes_to_dividends():
+    on = date(2026, 5, 10)
+    div = CashEvent(
+        account="Brokerage",
+        event_date=on,
+        kind="dividend",
+        amount=12.34,
+        ticker="MSFT",
+        description="Qualified dividend",
+    )
+    b = build_equity_point_breakdown(
+        on=on,
+        previous_on=date(2026, 5, 9),
+        trades_on_date=[],
+        cash_events_on_date=[],
+        dividend_events_on_date=[div],
+        open_lots_prev_day=[],
+        violations_on_date=[],
+        exempt_matches_on_date=[],
+        get_close=lambda sym, d: None,
+        delta_account_value=Decimal("12.34"),
+    )
+    assert b.dividends == Decimal("12.34")
+    assert len(b.dividend_events) == 1
+    assert b.dividend_events[0].ticker == "MSFT"
+    assert b.dividend_events[0].amount == Decimal("12.34")
+    assert b.residual == Decimal("0")

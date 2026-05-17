@@ -631,6 +631,20 @@ def build_equity_point_breakdown(
             CashEventRow(account=e.account, kind=e.kind, amount=signed)
         )
 
+    # Dividends — non-contribution cash inflow attributed to its own line so
+    # the equation reconciles. Caller passes the per-date dividend events.
+    dividends_total = Decimal("0")
+    dividend_rows: list[DividendRow] = []
+    for d in dividend_events_on_date:
+        amt = Decimal(str(d.amount))
+        dividends_total += amt
+        dividend_rows.append(
+            DividendRow(
+                ticker=d.ticker or "(cash)",
+                amount=amt,
+            )
+        )
+
     # Mark-to-market: aggregate per ticker (sum across lots), then compute
     # contribution = shares * (close - prev_close). Options without a close
     # contribute 0 and surface in ``unpriced_tickers`` (locked in by Task 8).
@@ -671,7 +685,8 @@ def build_equity_point_breakdown(
     movers = movers[:5]
 
     residual = (
-        delta_account_value - (contributions + realized + delta_unrealized)
+        delta_account_value
+        - (contributions + realized + delta_unrealized + dividends_total)
     ).quantize(Decimal("0.01"))
 
     return EquityPointBreakdown(
@@ -681,12 +696,12 @@ def build_equity_point_breakdown(
         contributions=contributions,
         realized_pnl=realized,
         delta_unrealized=delta_unrealized,
-        dividends=Decimal("0"),
+        dividends=dividends_total,
         residual=residual,
         trades=trade_rows,
         top_movers=movers,
         cash_events=cash_event_rows,
-        dividend_events=[],
+        dividend_events=dividend_rows,
         wash_events=[],
         unpriced_tickers=tuple(sorted(unpriced)),
         unpriced_basis_total=unpriced_basis,
