@@ -51,6 +51,7 @@
   <script src="/static/htmx.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/holdings_filter.js?v={{ asset_v }}" defer></script>
   <script src="/static/positions_search.js?v={{ asset_v }}" defer></script>
+  <script src="/static/positions_pane.js?v={{ asset_v }}" defer></script>
   {# palette.js must run BEFORE alpine.min.js so window.paletteOverlay is
      defined by the time Alpine's first init pass evaluates the overlay's
      x-data attribute. Defer scripts execute in document order. #}
