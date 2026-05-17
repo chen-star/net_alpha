@@ -31,6 +31,15 @@
       </span>
     {% endif %}
   {% endif %}
+  {% if benchmark_points %}
+    <button type="button"
+            class="ml-2 text-[11px] px-2 py-[2px] rounded-full border border-hairline text-label-2 hover:text-label-1"
+            x-data="{ on: false }"
+            x-on:click="on = !on; window.dispatchEvent(new CustomEvent('equity-spy-toggle', { detail: { on } }))"
+            :class="on ? 'bg-info-tint text-info border-info' : ''">
+      <span x-text="on ? 'Hide SPY' : 'Show SPY'"></span>
+    </button>
+  {% endif %}
   {% if missing_dates_count > 0 %}
     <span class="chip chip-warn ml-auto" title="Some held tickers have no historical close on these dates; the line shows a gap.">
       ⚠ {{ missing_dates_count }} date{{ 's' if missing_dates_count != 1 else '' }} missing prices
@@ -57,6 +66,12 @@
           account: {{ (p.account_value|float) if p.account_value is not none else 'null' }},
           netPl: {{ (p.net_pl|float) if p.net_pl is not none else 'null' }},
         }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    const spyPoints = [
+      {% for p in (benchmark_points or []) %}
+        { x: "{{ p.on.isoformat() }}", y: {{ (p.value|float) if p.value is not none else 'null' }} }{% if not loop.last %},{% endif %}
       {% endfor %}
     ];
 
@@ -218,6 +233,25 @@
       main.innerHTML = "";
       const mainChart = new ApexCharts(main, buildMainOpts());
       mainChart.render();
+
+      window.addEventListener("equity-spy-toggle", (e) => {
+        if (e.detail.on) {
+          mainChart.appendSeries({
+            name: "SPY",
+            type: "line",
+            data: spyPoints,
+            color: window.netAlphaChartTheme.colors.label2,
+          });
+          mainChart.updateOptions({
+            stroke: { dashArray: [0, 0, 0, 4, 0, 3] },
+          });
+        } else {
+          // Apex doesn't expose remove-by-name; cleanest path is a full re-render.
+          mainChart.destroy();
+          const fresh = new ApexCharts(document.querySelector("#equity-chart"), buildMainOpts());
+          fresh.render();
+        }
+      });
     }
 
     if (window.ApexCharts && window.netAlphaChartTheme) {
