@@ -41,7 +41,6 @@ from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
     build_cash_deployment_series,
     cash_allocation_slice,
-    cash_balance_extremes,
     compute_cash_kpis,
     compute_chart_head_kpis,
 )
@@ -979,7 +978,6 @@ def _compute_portfolio_body_context(
             trades=scoped_trades,
             period=None,
         )
-        cash_lifetime_extremes = cash_balance_extremes(lifetime_cash_points)
         # Lifetime cash deployment series — feeds compute_chart_head_kpis'
         # lifetime min/max KPI line, which only reads free_cash + pledged.
         # We synthesize cheap zero-priced AccountValuePoints off the lifetime
@@ -1020,7 +1018,6 @@ def _compute_portfolio_body_context(
             gl_lots=gl_lots_scoped,
         )
     else:
-        cash_lifetime_extremes = None
         lifetime_cash_deployment = []
         monthly_pl_lifetime = None
         lifetime_kpis = None
@@ -1063,7 +1060,6 @@ def _compute_portfolio_body_context(
         "selected_period": period or "ytd",
         "selected_accounts": accounts,
         "account_filter_active": bool(accounts),
-        "cash_lifetime_extremes": cash_lifetime_extremes,
         "monthly_pl_lifetime": monthly_pl_lifetime,
         "lifetime_kpis": lifetime_kpis,
         "current_year": current_year,
