@@ -168,6 +168,12 @@ def reconcile_open_positions(
     broker = {(bp.account_label, bp.symbol): bp for bp in bp_rows}
     ours = {(r["account_label"], r["symbol"]): r for r in repo.aggregate_open_positions()}
 
+    # Coverage scope: the set of accounts the broker file actually reports
+    # on. A per-account CSV (or a multi-account CSV that omits some) does
+    # not let us observe drift in uncovered accounts — flagging our
+    # positions there as "missing from broker" would be a false positive.
+    covered_accounts = {bp.account_label for bp in bp_rows}
+
     keys = set(broker.keys()) | set(ours.keys())
     for key in sorted(keys):
         acct, sym = key
@@ -187,6 +193,10 @@ def reconcile_open_positions(
             )
             continue
         if bp is None:
+            if acct not in covered_accounts:
+                # Position lives in an account the broker file doesn't
+                # cover — silent skip (the broker file can't observe it).
+                continue
             findings.append(
                 InvariantResult(
                     rule_id="PositionsMissingBroker",

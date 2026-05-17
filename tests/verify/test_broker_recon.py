@@ -103,6 +103,43 @@ def test_open_positions_recon_returns_stale_when_no_reference():
     assert any(f.severity == Severity.STALE and f.rule_id == "StaleReference" for f in findings)
 
 
+def test_open_positions_recon_skips_uncovered_accounts():
+    """A per-account positions CSV (e.g. only 'schwab/st') must not flag
+    our positions in *other* accounts as PositionsMissingBroker — the
+    broker file simply doesn't cover those accounts, so divergence there
+    is unobservable, not actionable. Coverage is derived from the set of
+    distinct account_labels present in the broker_position rows."""
+    repo = MagicMock()
+    today = date(2026, 5, 11).isoformat()
+    repo.latest_broker_positions.return_value = (
+        [_bp("AAPL", "schwab/st", 10.0, 1500.0, 1700.0, today)],
+        today,
+    )
+    repo.aggregate_open_positions.return_value = [
+        {
+            "symbol": "AAPL",
+            "account_label": "schwab/st",
+            "qty": 10.0,
+            "adjusted_basis_total": 1500.0,
+            "market_value_total": 1700.0,
+        },
+        # An open position in an account the broker file doesn't cover.
+        {
+            "symbol": "META",
+            "account_label": "schwab/lt",
+            "qty": 5.0,
+            "adjusted_basis_total": 2500.0,
+            "market_value_total": 3000.0,
+        },
+    ]
+    findings, _ = reconcile_open_positions(repo=repo, tol_cfg=load_tolerances(), today=date(2026, 5, 11))
+    # No PositionsMissingBroker for META/schwab/lt — that account is not
+    # covered by the broker file we're reconciling against.
+    assert not any(f.rule_id == "PositionsMissingBroker" for f in findings), [
+        (f.rule_id, f.scope) for f in findings
+    ]
+
+
 def test_open_positions_recon_returns_stale_when_old_reference():
     repo = MagicMock()
     old = (date(2026, 5, 11) - timedelta(days=31)).isoformat()
