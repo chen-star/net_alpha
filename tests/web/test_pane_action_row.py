@@ -41,11 +41,14 @@ def test_pane_body_renders_action_row(client: TestClient) -> None:
 
 
 def test_action_buttons_target_the_outlet(client: TestClient) -> None:
-    """HTMX targets must point at #pane-action-outlet."""
+    """HTMX targets must point at #pane-action-outlet.
+
+    Sim sell and Set basis are HTMX-swap buttons; Sim buy more is now a
+    plain anchor to /sim. So at least 2 buttons reference the outlet."""
     resp = client.get("/positions/pane?sym=AAPL")
     html = resp.text
-    # All three buttons should reference the outlet selector.
-    assert html.count("#pane-action-outlet") >= 3
+    # Sim sell + Set basis reference the outlet (buy more is a plain link).
+    assert html.count("#pane-action-outlet") >= 2
 
 
 def test_pane_action_sim_endpoint_returns_sim_preview(client: TestClient, repo, builders) -> None:
@@ -65,11 +68,37 @@ def test_pane_action_sim_endpoint_returns_sim_preview(client: TestClient, repo, 
     assert "<html" not in html.lower()
 
 
-def test_pane_action_basis_endpoint_returns_basis_form(client: TestClient) -> None:
-    """GET /positions/pane/basis returns the set-basis form. With no
-    seeded transfer-in lot the form may render empty or with a hint; just
-    assert the endpoint responds 200 and returns a fragment (no <html>)."""
-    resp = client.get("/positions/pane/basis?sym=NONEXIST")
+def test_pane_action_basis_endpoint_returns_basis_form(client: TestClient, seed_transfer_in) -> None:
+    """GET /positions/pane/basis returns the set-basis form with a real
+    transfer-in lot seeded so we can assert that a meaningful form rendered."""
+    sym, account_id, trade_id, qty, xfer_date = seed_transfer_in
+    resp = client.get("/positions/pane/basis", params={"sym": sym, "account_id": account_id})
     assert resp.status_code == 200
     html = resp.text
     assert "<html" not in html.lower()
+    # The set-basis form must be present and contain stable markers.
+    assert "Set basis" in html
+    assert 'name="cost_basis"' in html
+
+
+def test_pane_action_sim_endpoint_rejects_buy_action(client: TestClient) -> None:
+    """GET /positions/pane/sim?action=buy must return 400.
+
+    The buy path now routes directly to /sim via a plain anchor; the
+    pane/sim endpoint only handles sell mode."""
+    resp = client.get("/positions/pane/sim?sym=AAPL&action=buy")
+    assert resp.status_code == 400
+
+
+def test_pane_action_buy_links_directly_to_sim(client: TestClient) -> None:
+    """The 'Sim buy more' element must be a plain anchor pointing at /sim
+    with action=buy, not an HTMX-swap button."""
+    resp = client.get("/positions/pane?sym=AAPL")
+    assert resp.status_code == 200
+    html = resp.text
+    # Must be an anchor with href containing /sim and action=buy
+    assert 'href="/sim?' in html
+    assert "action=buy" in html
+    # Must NOT have hx-get on the buy element (it's a plain link now)
+    # The testid is unchanged
+    assert 'data-testid="pane-action-sim-buy"' in html

@@ -24,5 +24,6 @@ def test_pane_header_partial_present_in_template_tree() -> None:
     """Build-time guarantee: the partial file exists on disk so future
     changes that delete it surface in CI."""
     from pathlib import Path
+
     p = Path(__file__).parents[2] / "src/net_alpha/web/templates/_positions_pane_header.html"
     assert p.exists(), f"missing partial: {p}"

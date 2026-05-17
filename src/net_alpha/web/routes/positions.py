@@ -257,18 +257,20 @@ def _pane_lot_info(
 
         unrealized: Decimal | None = None
         if last_price is not None:
-            unrealized = (Decimal(str(last_price)) - Decimal(str(lot.adjusted_basis))) * Decimal(str(lot.quantity))
+            unrealized = Decimal(str(last_price)) * Decimal(str(lot.quantity)) - Decimal(str(lot.adjusted_basis))
 
         status = "TACKED" if is_tacked else ("LT" if is_lt else "ST")
-        rows.append({
-            "date": effective_acquired,
-            "qty": Decimal(str(lot.quantity)),
-            "adj_basis": Decimal(str(lot.adjusted_basis)),
-            "unrealized": unrealized,
-            "status": status,
-            "days_to_lt": days_to_lt,
-            "is_tacked": is_tacked,
-        })
+        rows.append(
+            {
+                "date": effective_acquired,
+                "qty": Decimal(str(lot.quantity)),
+                "adj_basis": Decimal(str(lot.adjusted_basis)),
+                "unrealized": unrealized,
+                "status": status,
+                "days_to_lt": days_to_lt,
+                "is_tacked": is_tacked,
+            }
+        )
 
         if not is_lt and 0 < days_to_lt <= 90:
             if min_days is None or days_to_lt < min_days:
@@ -437,7 +439,10 @@ def positions_pane_sim(
     pricing: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
     """Return the sim-preview partial bound to the open qty by default.
-    Used by the action-row Sim sell / Sim buy buttons (HTMX outlet swap)."""
+    Used by the action-row Sim sell button (HTMX outlet swap).
+    Buy mode is handled by a direct link to /sim — only 'sell' is valid here."""
+    if action != "sell":
+        raise HTTPException(status_code=400, detail="action must be 'sell'")
     ctx = _build_pane_ctx(sym=sym, account_id=account_id, repo=repo, pricing=pricing)
     ctx["action_pref"] = action
     return request.app.state.templates.TemplateResponse(

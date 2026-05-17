@@ -9,12 +9,9 @@
           hx-get="/positions/pane/sim?{{ _aq_qs }}&action=sell"
           hx-target="#pane-action-outlet"
           hx-swap="innerHTML">Sim sell</button>
-  <button type="button"
-          data-testid="pane-action-sim-buy"
-          class="btn-ghost text-[12px] px-2 py-1"
-          hx-get="/positions/pane/sim?{{ _aq_qs }}&action=buy"
-          hx-target="#pane-action-outlet"
-          hx-swap="innerHTML">Sim buy more</button>
+  <a data-testid="pane-action-sim-buy"
+     class="btn-ghost text-[12px] px-2 py-1"
+     href="/sim?ticker={{ sym|urlencode }}&action=buy{% if account_label %}&account={{ account_label|urlencode }}{% endif %}">Sim buy more</a>
   <button type="button"
           data-testid="pane-action-set-basis"
           class="btn-ghost text-[12px] px-2 py-1"
