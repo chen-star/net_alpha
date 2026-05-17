@@ -11,10 +11,28 @@
 {% set missing_dates_count = account_points|selectattr('account_value', 'none')|list|length if account_points else 0 %}
 
 <div class="panel-head">
-  <h4>Equity curve</h4>
-  <span class="meta">Account value · {{ period_label }}</span>
+  <h4 class="flex items-center gap-1.5">
+    Equity curve
+    <span class="text-label-3 text-[11px] cursor-help"
+          title="Option positions are valued at cost basis on this chart; today's mark-to-market shows on the Holdings panel.">ⓘ</span>
+  </h4>
+  <span class="meta">{{ period_label }}</span>
+  {% if chart_head_kpis and chart_head_kpis.end_account_value is not none %}
+    <span class="num text-[13px] ml-2">
+      ${{ "{:,.0f}".format(chart_head_kpis.end_account_value|float) }}
+    </span>
+    {% if chart_head_kpis.period_growth is not none %}
+      {% set up = chart_head_kpis.period_growth >= 0 %}
+      <span class="num text-[12px] ml-2 {{ 'text-pos' if up else 'text-neg' }}">
+        {{ '+' if up else '−' }}${{ "{:,.0f}".format(chart_head_kpis.period_growth|abs|float) }}
+        {% if chart_head_kpis.period_growth_pct is not none %}
+          ({{ '+' if up else '−' }}{{ "{:.1f}".format((chart_head_kpis.period_growth_pct|abs|float)*100) }}%)
+        {% endif %}
+      </span>
+    {% endif %}
+  {% endif %}
   {% if missing_dates_count > 0 %}
-    <span class="chip chip-warn" title="Some held tickers have no historical close on these dates; the line shows a gap.">
+    <span class="chip chip-warn ml-auto" title="Some held tickers have no historical close on these dates; the line shows a gap.">
       ⚠ {{ missing_dates_count }} date{{ 's' if missing_dates_count != 1 else '' }} missing prices
     </span>
   {% endif %}
@@ -26,11 +44,8 @@
   <div id="equity-chart"
        data-period="{{ selected_period|default('ytd') }}"
        data-accounts='{{ (selected_accounts if selected_accounts is defined else [])|tojson }}'
-       style="height: 218px;"></div>
+       style="height: 280px;"></div>
   <div id="explain-equity-point"></div>
-  <div class="text-label-3 text-[11px] mt-1">
-    Option positions are valued at cost basis on this chart; today's mark-to-market shows on the Holdings panel.
-  </div>
 
   <script>
   (function () {
