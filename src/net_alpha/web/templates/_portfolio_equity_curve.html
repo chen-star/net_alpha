@@ -65,24 +65,20 @@
 
     const series = [
       { name: "Contributions", type: "line", data: contribSeries },
-      { name: "Account value", type: "area", data: accountSeries },
+      { name: "Account value", type: "line", data: accountSeries },
     ];
 
     function buildMainOpts() {
       const colors = [
         window.netAlphaChartTheme.colors.label3,
-        window.netAlphaChartTheme.colors.pos,
+        window.netAlphaChartTheme.colors.info,
       ];
-      const widths = [2, 2];
-      const dashArr = [4, 0];
-      const fillTypes = ["solid", "gradient"];
-      const fillOps = [1, 1];
       const isLight = document.documentElement.getAttribute("data-theme") === "light";
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
         chart: {
           id: "equity-main",
           type: "line",
-          height: 218,
+          height: 280,
           zoom: { enabled: true, type: "x", autoScaleYaxis: true },
           toolbar: { show: false },
           events: {
@@ -112,14 +108,24 @@
         },
         colors: colors,
         markers: {
-          size: 4,
-          hover: { size: 6 },
+          // No always-on markers — clutters dense daily data. Hover still
+          // shows a single point via Apex's built-in `hover.size`.
+          size: 0,
+          hover: { size: 5 },
         },
-        stroke: { width: widths, curve: "smooth", lineCap: "round", dashArray: dashArr },
+        stroke: {
+          // Contributions = stepline (jumps at deposit events — honest about
+          // discrete cash flow). Account value = straight (no smoothing).
+          width: [1.5, 2],
+          curve: ["stepline", "straight"],
+          lineCap: "round",
+          dashArray: [4, 0],
+        },
         fill: {
-          type: fillTypes,
-          gradient: { shade: isLight ? "light" : "dark", type: "vertical", opacityFrom: 0.30, opacityTo: 0, stops: [0, 100] },
-          opacity: fillOps,
+          // Both series are line-type now; the colored P&L band is rendered
+          // separately in Task 10.
+          type: ["solid", "solid"],
+          opacity: 1,
         },
         legend: { show: true },
         xaxis: {
