@@ -631,8 +631,47 @@ def build_equity_point_breakdown(
             CashEventRow(account=e.account, kind=e.kind, amount=signed)
         )
 
+    # Mark-to-market: aggregate per ticker (sum across lots), then compute
+    # contribution = shares * (close - prev_close). Options without a close
+    # contribute 0 and surface in ``unpriced_tickers`` (locked in by Task 8).
+    shares_by_ticker: dict[str, Decimal] = {}
+    basis_by_ticker: dict[str, Decimal] = {}
+    for lot in open_lots_prev_day:
+        qty = Decimal(str(lot.quantity))
+        basis = Decimal(str(lot.adjusted_basis))
+        shares_by_ticker[lot.ticker] = shares_by_ticker.get(lot.ticker, Decimal("0")) + qty
+        basis_by_ticker[lot.ticker] = basis_by_ticker.get(lot.ticker, Decimal("0")) + basis
+
+    movers: list[MoverRow] = []
+    delta_unrealized = Decimal("0")
+    unpriced: list[str] = []
+    unpriced_basis = Decimal("0")
+    for ticker, shares in shares_by_ticker.items():
+        prev_c = get_close(ticker, previous_on)
+        cur_c = get_close(ticker, on)
+        if prev_c is None or cur_c is None:
+            unpriced.append(ticker)
+            unpriced_basis += basis_by_ticker[ticker]
+            continue
+        prev_c_d = Decimal(str(prev_c))
+        cur_c_d = Decimal(str(cur_c))
+        contrib = (shares * (cur_c_d - prev_c_d)).quantize(Decimal("0.01"))
+        delta_unrealized += contrib
+        movers.append(
+            MoverRow(
+                ticker=ticker,
+                shares=shares,
+                prev_close=prev_c_d,
+                close=cur_c_d,
+                contribution=contrib,
+            )
+        )
+
+    movers.sort(key=lambda m: abs(m.contribution), reverse=True)
+    movers = movers[:5]
+
     residual = (
-        delta_account_value - (contributions + realized)
+        delta_account_value - (contributions + realized + delta_unrealized)
     ).quantize(Decimal("0.01"))
 
     return EquityPointBreakdown(
@@ -641,16 +680,16 @@ def build_equity_point_breakdown(
         delta_account_value=delta_account_value,
         contributions=contributions,
         realized_pnl=realized,
-        delta_unrealized=Decimal("0"),
+        delta_unrealized=delta_unrealized,
         dividends=Decimal("0"),
         residual=residual,
         trades=trade_rows,
-        top_movers=[],
+        top_movers=movers,
         cash_events=cash_event_rows,
         dividend_events=[],
         wash_events=[],
-        unpriced_tickers=(),
-        unpriced_basis_total=Decimal("0"),
+        unpriced_tickers=tuple(sorted(unpriced)),
+        unpriced_basis_total=unpriced_basis,
         is_starting_snapshot=False,
         starting_holdings_count=0,
         starting_contributed_to_date=Decimal("0"),

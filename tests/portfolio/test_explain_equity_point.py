@@ -68,7 +68,7 @@ def test_row_dataclasses_construct():
     )
 
 
-from net_alpha.models.domain import CashEvent, Trade
+from net_alpha.models.domain import CashEvent, Lot, Trade
 from net_alpha.portfolio.explain import build_equity_point_breakdown
 
 
@@ -139,4 +139,61 @@ def test_contribution_only_day_attributes_to_contributions():
     assert len(b.cash_events) == 1
     assert b.cash_events[0].kind == "transfer_in"
     assert b.cash_events[0].amount == Decimal("5000")
+    assert b.residual == Decimal("0")
+
+
+def test_mtm_only_day_attributes_to_delta_unrealized():
+    on = date(2026, 5, 10)
+    prev = date(2026, 5, 9)
+    lots = [
+        Lot(
+            id="L1",
+            trade_id="t-aapl",
+            account="Brokerage",
+            ticker="AAPL",
+            date=date(2026, 1, 5),
+            quantity=100.0,
+            cost_basis=17000.0,
+            adjusted_basis=17000.0,
+        ),
+        Lot(
+            id="L2",
+            trade_id="t-spy",
+            account="Brokerage",
+            ticker="SPY",
+            date=date(2026, 1, 6),
+            quantity=10.0,
+            cost_basis=5000.0,
+            adjusted_basis=5000.0,
+        ),
+    ]
+    closes = {
+        ("AAPL", prev): Decimal("180.00"),
+        ("AAPL", on): Decimal("182.00"),  # +$200 on 100 shares
+        ("SPY", prev): Decimal("500.00"),
+        ("SPY", on): Decimal("498.00"),  # -$20 on 10 shares
+    }
+
+    def get_close(sym: str, d: date):
+        return closes.get((sym, d))
+
+    b = build_equity_point_breakdown(
+        on=on,
+        previous_on=prev,
+        trades_on_date=[],
+        cash_events_on_date=[],
+        dividend_events_on_date=[],
+        open_lots_prev_day=lots,
+        violations_on_date=[],
+        exempt_matches_on_date=[],
+        get_close=get_close,
+        delta_account_value=Decimal("180.00"),  # 200 + (-20)
+    )
+    assert b.delta_unrealized == Decimal("180.00")
+    assert len(b.top_movers) == 2
+    # Sorted by abs(contribution) desc → AAPL first.
+    assert b.top_movers[0].ticker == "AAPL"
+    assert b.top_movers[0].contribution == Decimal("200.00")
+    assert b.top_movers[1].ticker == "SPY"
+    assert b.top_movers[1].contribution == Decimal("-20.00")
     assert b.residual == Decimal("0")
