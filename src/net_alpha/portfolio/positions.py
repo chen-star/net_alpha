@@ -221,6 +221,15 @@ def open_lots_view(
             out.append(lot)  # untouched
             continue
         ratio = rem_qty / Decimal(str(lot.quantity)) if lot.quantity else Decimal("1")
+        # Audit (2026-05-17): `tacked_acquired_date` was historically dropped
+        # here (fixed in Task 4). A follow-up field-by-field audit confirmed
+        # every other Lot field is also correctly handled: scalar identity
+        # fields (id, trade_id, account, date, ticker, option_details) are
+        # passed through unchanged; quantity and cost_basis are prorated by
+        # `ratio`; adjusted_basis comes from `consume_lots_fifo`'s `rem_basis`
+        # which already carries the post-wash-sale per-share basis scaled to
+        # the remaining quantity. If new Lot fields are added in the future,
+        # verify each belongs in this reconstruction.
         out.append(
             Lot(
                 id=lot.id,
