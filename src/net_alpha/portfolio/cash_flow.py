@@ -210,3 +210,34 @@ def cash_balance_extremes(
     mn_p = min(points, key=lambda p: (p.cash_balance, p.on))
     mx_p = max(points, key=lambda p: (p.cash_balance, -p.on.toordinal()))
     return mn_p.cash_balance, mn_p.on, mx_p.cash_balance, mx_p.on
+
+
+from net_alpha.portfolio.positions import compute_open_short_option_positions  # noqa: E402
+
+
+def pledged_cash_at(
+    *,
+    on: dt.date,
+    trades: Iterable[Trade],
+    accounts: Sequence[str] | None = None,
+) -> Decimal:
+    """Sum of cash collateral pledged to open short-put positions as of close of ``on``.
+
+    Collateral = strike × 100 × qty_short for each open short put. Only short
+    puts pledge cash (CSP collateral); short calls are excluded — they are
+    covered-call positions whose "collateral" is the underlying shares, not
+    cash. Trades dated after ``on`` are ignored so the function is safe to
+    call per-date for a historical series.
+    """
+    _filter = set(accounts) if accounts else None
+    trades_asof = [
+        t for t in trades
+        if t.date <= on and (_filter is None or t.account in _filter)
+    ]
+    rows = compute_open_short_option_positions(trades_asof)
+    total = Decimal("0")
+    for r in rows:
+        if r.call_put != "P":
+            continue
+        total += Decimal(str(r.strike)) * Decimal("100") * r.qty_short
+    return total.quantize(Decimal("0.01"))

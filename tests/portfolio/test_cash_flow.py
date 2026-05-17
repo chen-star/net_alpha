@@ -440,3 +440,93 @@ def test_cash_balance_extremes_tie_earliest_wins():
     mn, mn_date, mx, mx_date = cash_balance_extremes(pts)
     assert mn == Decimal("100") and mn_date == dt.date(2024, 1, 1)
     assert mx == Decimal("100") and mx_date == dt.date(2024, 1, 1)
+
+
+# --- pledged_cash_at -------------------------------------------------------
+
+from net_alpha.models.domain import OptionDetails  # noqa: E402
+from net_alpha.portfolio.cash_flow import pledged_cash_at  # noqa: E402
+
+
+def _short_put(d, strike, expiry, qty=1, account="Schwab/x", ticker="SPY"):
+    return Trade(
+        id=f"sto-{d.isoformat()}",
+        account=account,
+        date=d,
+        ticker=f"{ticker} {expiry.strftime('%Y-%m-%d')} P{strike}",
+        action="Sell",
+        quantity=float(qty),
+        proceeds=100.0,
+        cost_basis=None,
+        gross_cash_impact=100.0,
+        option_details=OptionDetails(
+            strike=float(strike),
+            expiry=expiry,
+            call_put="P",
+        ),
+    )
+
+
+def _btc(d, strike, expiry, qty=1, account="Schwab/x", ticker="SPY"):
+    return Trade(
+        id=f"btc-{d.isoformat()}",
+        account=account,
+        date=d,
+        ticker=f"{ticker} {expiry.strftime('%Y-%m-%d')} P{strike}",
+        action="Buy",
+        quantity=float(qty),
+        proceeds=None,
+        cost_basis=50.0,
+        gross_cash_impact=-50.0,
+        option_details=OptionDetails(
+            strike=float(strike),
+            expiry=expiry,
+            call_put="P",
+        ),
+    )
+
+
+def test_pledged_zero_when_no_short_puts():
+    assert pledged_cash_at(on=dt.date(2026, 5, 1), trades=[]) == Decimal("0")
+
+
+def test_pledged_sums_open_short_put_collateral():
+    trades = [_short_put(dt.date(2026, 4, 1), 400, dt.date(2026, 6, 20))]
+    assert pledged_cash_at(on=dt.date(2026, 5, 1), trades=trades) == Decimal("40000")
+
+
+def test_pledged_drops_after_btc_closes_position():
+    trades = [
+        _short_put(dt.date(2026, 4, 1), 400, dt.date(2026, 6, 20)),
+        _btc(dt.date(2026, 4, 15), 400, dt.date(2026, 6, 20)),
+    ]
+    assert pledged_cash_at(on=dt.date(2026, 4, 14), trades=trades) == Decimal("40000")
+    assert pledged_cash_at(on=dt.date(2026, 4, 16), trades=trades) == Decimal("0")
+
+
+def test_pledged_ignores_short_calls():
+    trades = [
+        Trade(
+            id="sc",
+            account="Schwab/x",
+            date=dt.date(2026, 4, 1),
+            ticker="SPY 2026-06-20 C500",
+            action="Sell",
+            quantity=1.0,
+            proceeds=200.0,
+            cost_basis=None,
+            gross_cash_impact=200.0,
+            option_details=OptionDetails(strike=500.0, expiry=dt.date(2026, 6, 20), call_put="C"),
+        ),
+    ]
+    assert pledged_cash_at(on=dt.date(2026, 5, 1), trades=trades) == Decimal("0")
+
+
+def test_pledged_scales_with_quantity():
+    trades = [_short_put(dt.date(2026, 4, 1), 400, dt.date(2026, 6, 20), qty=3)]
+    assert pledged_cash_at(on=dt.date(2026, 5, 1), trades=trades) == Decimal("120000")
+
+
+def test_pledged_excludes_trades_after_on():
+    trades = [_short_put(dt.date(2026, 5, 5), 400, dt.date(2026, 6, 20))]
+    assert pledged_cash_at(on=dt.date(2026, 5, 1), trades=trades) == Decimal("0")
