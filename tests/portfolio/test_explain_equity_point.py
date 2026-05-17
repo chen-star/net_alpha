@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
+from net_alpha.models.domain import CashEvent, Lot, Trade, WashSaleViolation
 from net_alpha.portfolio.explain import (
     CashEventRow,
     DividendRow,
@@ -8,6 +9,7 @@ from net_alpha.portfolio.explain import (
     MoverRow,
     TradeRow,
     WashEventRef,
+    build_equity_point_breakdown,
 )
 
 
@@ -68,10 +70,6 @@ def test_row_dataclasses_construct():
     )
 
 
-from net_alpha.models.domain import CashEvent, Lot, Trade, WashSaleViolation
-from net_alpha.portfolio.explain import build_equity_point_breakdown
-
-
 def _make_sell_trade(*, on: date, ticker: str, qty: Decimal, proceeds: Decimal, basis: Decimal) -> Trade:
     return Trade(
         id="t1",
@@ -88,7 +86,13 @@ def _make_sell_trade(*, on: date, ticker: str, qty: Decimal, proceeds: Decimal, 
 def test_trade_only_day_attributes_realized_to_realized_pnl():
     on = date(2026, 5, 10)
     prev = date(2026, 5, 9)
-    trade = _make_sell_trade(on=on, ticker="AAPL", qty=Decimal("100"), proceeds=Decimal("18200"), basis=Decimal("17000"))
+    trade = _make_sell_trade(
+        on=on,
+        ticker="AAPL",
+        qty=Decimal("100"),
+        proceeds=Decimal("18200"),
+        basis=Decimal("17000"),
+    )
 
     b = build_equity_point_breakdown(
         on=on,

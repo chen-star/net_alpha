@@ -630,9 +630,7 @@ def build_equity_point_breakdown(
             # not contributions; skip here.
             continue
         contributions += signed
-        cash_event_rows.append(
-            CashEventRow(account=e.account, kind=e.kind, amount=signed)
-        )
+        cash_event_rows.append(CashEventRow(account=e.account, kind=e.kind, amount=signed))
 
     # Dividends — non-contribution cash inflow attributed to its own line so
     # the equation reconciles. Caller passes the per-date dividend events.
@@ -708,10 +706,9 @@ def build_equity_point_breakdown(
             row_id = 0
         wash_events.append(WashEventRef(kind="exempt", row_id=row_id, ticker=em.ticker))
 
-    residual = (
-        delta_account_value
-        - (contributions + realized + delta_unrealized + dividends_total)
-    ).quantize(Decimal("0.01"))
+    residual = (delta_account_value - (contributions + realized + delta_unrealized + dividends_total)).quantize(
+        Decimal("0.01")
+    )
 
     return EquityPointBreakdown(
         on=on,
