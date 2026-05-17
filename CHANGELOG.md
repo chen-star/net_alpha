@@ -2,6 +2,137 @@
 
 
 
+## v0.71.0 (2026-05-17)
+
+### Chore
+
+* chore: rebuild app.css to pick up new utility classes
+
+Tasks 8/11/12 introduced bg-info-tint, border-info, and cursor-help —
+all covered by the existing Tailwind safelist patterns, but they had
+never been required by a template before so Tailwind hadn&#39;t emitted
+them. Rebuild surfaces them as utility classes. ([`86f82d4`](https://github.com/chen-star/net_alpha/commit/86f82d433ab2fdae2516c663accaaacff8f355cd))
+
+### Feature
+
+* feat(web): rewrite cash chart as stacked-area cash deployment ([`c038269`](https://github.com/chen-star/net_alpha/commit/c0382697d1d498a3d4584982e75d1590737d6c35))
+
+* feat(web): off-by-default SPY benchmark toggle on equity chart ([`a04a18e`](https://github.com/chen-star/net_alpha/commit/a04a18e6583b6de0acb04c28469dfcdc64df4fdd))
+
+* feat(web): dual-color P&amp;L band on equity chart (green up / red down) ([`7f8a470`](https://github.com/chen-star/net_alpha/commit/7f8a4703f35cf22dbc065b72398abad90d1bb991))
+
+* feat(web): straight stroke, step-line contributions, no markers on equity chart ([`e68237a`](https://github.com/chen-star/net_alpha/commit/e68237a30505fbf6545e6fb46bc92d2ec6a933ee))
+
+* feat(web): inline KPI row + info-icon caveat in equity panel-head ([`bc500e2`](https://github.com/chen-star/net_alpha/commit/bc500e264c05aa01a0e9eb7328f53890bea5232d))
+
+* feat(portfolio): pass cash deployment series and chart head KPIs to body ([`abc6f27`](https://github.com/chen-star/net_alpha/commit/abc6f279ef2a1ed21058bacdfc4035fbff84bd2b))
+
+* feat(portfolio): add compute_chart_head_kpis for inline panel-head KPIs ([`a408935`](https://github.com/chen-star/net_alpha/commit/a40893570de0e593f07713be18ee4b6f1b07f155))
+
+* feat(portfolio): add build_cash_deployment_series for stacked cash chart ([`ab6665d`](https://github.com/chen-star/net_alpha/commit/ab6665d5a471510a75c879d8faa4ca2687cf461d))
+
+* feat(portfolio): add pledged_cash_at helper for historical CSP collateral ([`d38fe5f`](https://github.com/chen-star/net_alpha/commit/d38fe5f66481eeeb518622689f9d2dd57289bc83))
+
+* feat(portfolio): add CashDeploymentPoint and ChartHeadKPIs dataclasses ([`6d1ee09`](https://github.com/chen-star/net_alpha/commit/6d1ee092ee55058f7181bd5c25dff3ef500ea7bb))
+
+### Fix
+
+* fix(web): pad per-series arrays when SPY series is appended
+
+When SPY is toggled on via appendSeries the chart goes from 2 series
+to 3, but the toggle handler only extended stroke.dashArray. Markers,
+stroke.width/curve, and fill.type/opacity stayed at length 2, leaving
+the appended SPY series to fall back to Apex&#39;s scalar defaults.
+
+Pad all four per-series arrays to length 3 inside the same
+updateOptions call so the config stays internally consistent.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`9887f29`](https://github.com/chen-star/net_alpha/commit/9887f29ab29257001fbf472bf9037a9f6b1239de))
+
+* fix(web): use sign-aware single-color band on equity chart
+
+Earlier dual-area attempt used five series (_baseline + Gain + Loss +
+Contributions line + Account value line) hoping ApexCharts&#39; stacked-
+area math would render the green/red gap *between* the contribution
+baseline and the account-value line. In practice each area renders
+from y=0 independently regardless of chart.stacked, so the colored
+fill appeared at the bottom of the chart rather than between the
+lines — a half-broken dual band.
+
+The 2026-05-17 spec explicitly permits the single-color fallback
+already proven by the 2026-05-02 redesign: one signed-color area
+under the account-value line, picked by the latest point&#39;s sign.
+Drop the synthetic baseline + Gain + Loss series, keep the dotted
+step-line contributions baseline as the break-even reference, and
+let the line/fill color carry the up/down signal.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`79a4117`](https://github.com/chen-star/net_alpha/commit/79a41174a4bdc27c04fe98b9c261b67cbcc9ec6c))
+
+* fix(web): distinguish pledged cash from free cash with indigo hue
+
+The initial palette used `colors.info` for both regions at different
+opacities. With info at 0.55 and indigo-tint at 0.25 the two stacks
+blended into a single indistinguishable strip — especially when one
+region dominated (e.g. all cash pledged to short puts, so free=$0).
+
+Switch pledged to `colors.indigo` (still cool-family, but a distinct
+hue) and bump both cash-region opacities for readability against the
+gray invested layer above.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ca52fff`](https://github.com/chen-star/net_alpha/commit/ca52fffa42c0134864c84435adccabdcf8a61d6f))
+
+* fix(web): restore 2px markers on equity-curve account-value line
+
+Phase-3 redesign set `markers.size: 0` to reduce visual clutter, but
+ApexCharts&#39; `dataPointSelection` event only fires when a marker is
+clicked. Without markers the explain-point click flow silently broke
+— exposed by `test_equity_curve_click_swaps_explain_panel` timing out.
+
+Use per-series `size: [0, 0, 0, 0, 2]` so only the account-value line
+(last series) carries dots. 2px instead of the original 4px keeps the
+chart clean while preserving the click affordance.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3a0e10a`](https://github.com/chen-star/net_alpha/commit/3a0e10a65c47e6c9715a1d571f44f664c73a867b))
+
+### Refactor
+
+* refactor(portfolio): consolidate cash_flow.py imports at top of file
+
+The three mid-file imports added by the equity/cash chart redesign
+(compute_open_short_option_positions; AccountValuePoint +
+CashDeploymentPoint; ChartHeadKPIs) were deliberately scattered to
+keep each per-task TDD commit additive. With all phase-1 work landed
+they can move to the top of the file under the normal import block;
+drops the noqa: E402 markers along with them.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f9ceb91`](https://github.com/chen-star/net_alpha/commit/f9ceb919280bd4bb3c21774ac4899a0251a09c24))
+
+* refactor(portfolio): drop obsolete cash_lifetime_extremes context entry ([`0438401`](https://github.com/chen-star/net_alpha/commit/0438401fbfe88d3ad9fd3fe4a995b2c7f896d08e))
+
+* refactor(web): stack equity + cash charts vertically (hero layout) ([`94059e3`](https://github.com/chen-star/net_alpha/commit/94059e3d07b31da33e3231b9043dea5901068845))
+
+### Style
+
+* style: re-sort portfolio.py import block
+
+`AccountValuePoint` was added in the v2 chart redesign wiring and landed
+out of alphabetical order in the import block. Pure ruff --fix cleanup.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`457ab52`](https://github.com/chen-star/net_alpha/commit/457ab5237cc497ff69f8d9bcdc28a3bf9211d9e6))
+
+### Test
+
+* test(portfolio): cover pledged&gt;cash clamp in build_cash_deployment_series
+
+The naive pledged compute sums strike × 100 × qty over open short puts
+regardless of current cash balance — after a drawdown the notional can
+exceed actual cash, so build_cash_deployment_series clamps pledged to
+the running cash balance to keep free_cash non-negative and the stack
+arithmetic balanced. That clamp branch had no direct test coverage.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a508d8f`](https://github.com/chen-star/net_alpha/commit/a508d8fe05519f7cb5cbe41669d5011c74b62c5c))
+
+
 ## v0.70.0 (2026-05-17)
 
 ### Chore
