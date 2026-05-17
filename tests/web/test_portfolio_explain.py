@@ -408,3 +408,15 @@ def test_explain_account_value_caveat_when_lots_have_no_quote(tmp_path):
         "Account Value explainer must show the missing-quotes caveat when kpis.missing_symbols is non-empty."
     )
     assert "UNPRICED" in html, "The caveat should name the unpriced ticker(s)."
+
+
+def test_explain_equity_point_route_is_registered(tmp_path):
+    """Phase 2 of the equity-curve click-to-explain feature only registers the
+    route — the template ``_explain_equity_point.html`` lands in Phase 3. Until
+    then the route still returns a non-404 status (500 TemplateNotFound is
+    expected). This locks in the route registration without coupling to the
+    template that doesn't exist yet.
+    """
+    client, _repo = _make_client(tmp_path)
+    resp = client.get("/portfolio/explain/equity-point?on=2026-05-10&period=ytd")
+    assert resp.status_code != 404, f"Route should be registered (Phase 2 scope); got {resp.status_code}."

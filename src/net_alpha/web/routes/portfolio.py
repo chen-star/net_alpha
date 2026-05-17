@@ -1470,6 +1470,142 @@ def explain_account_value(
     )
 
 
+@router.get("/portfolio/explain/equity-point", response_class=HTMLResponse)
+def explain_equity_point(
+    request: Request,
+    on: date,
+    period: str | None = None,
+    account: list[str] = Query(default_factory=list),
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Math explainer fragment for a single point on the equity curve.
+
+    Re-derives the active series to find ``previous_on`` (the prior point
+    in the same filtered series), then calls the pure-function builder
+    and renders ``_explain_equity_point.html``.
+    """
+    from net_alpha.portfolio.cash_flow import _CONTRIB_INFLOW, _CONTRIB_OUTFLOW
+    from net_alpha.portfolio.explain import build_equity_point_breakdown
+    from net_alpha.portfolio.positions import consume_lots_fifo
+
+    accounts: list[str] = parse_accounts(account)
+    today = date.today()
+    period_tuple, _period_label = _parse_period(period, today.year)
+
+    trades = repo.all_trades()
+    lots = repo.all_lots()
+    cash_events = repo.list_cash_events(account_id=None)
+    if accounts:
+        accs_set = set(accounts)
+        trades = [t for t in trades if t.account in accs_set]
+        lots = [lt for lt in lots if lt.account in accs_set]
+        cash_events = [e for e in cash_events if e.account in accs_set]
+
+    # Re-derive the active series so we can locate `on` and its predecessor.
+    cash_points = build_cash_balance_series(
+        events=cash_events,
+        trades=trades,
+        period=period_tuple,
+    )
+    event_dates = sorted({t.date for t in trades} | {e.event_date for e in cash_events})
+    eval_dates = build_eval_dates(period=period_tuple, today=today, event_dates=event_dates)
+    series = build_account_value_series(
+        trades=trades,
+        lots=lots,
+        cash_points=cash_points,
+        eval_dates=eval_dates,
+        get_close=svc.get_historical_close,
+    )
+
+    by_date = {p.on: p for p in series}
+    if on not in by_date:
+        # Click on a date not in the filtered series — treat as starting snapshot.
+        previous_on: date | None = None
+        delta_av = Decimal("0")
+    else:
+        sorted_dates = sorted(by_date.keys())
+        idx = sorted_dates.index(on)
+        if idx == 0:
+            previous_on = None
+            delta_av = Decimal("0")
+        else:
+            previous_on = sorted_dates[idx - 1]
+            cur = by_date[on].account_value
+            prev = by_date[previous_on].account_value
+            if cur is None or prev is None:
+                delta_av = Decimal("0")
+            else:
+                delta_av = (cur - prev).quantize(Decimal("0.01"))
+
+    # Open-lots-as-of-previous_on snapshots, mirroring `holdings_value_at`'s
+    # FIFO-consumption pattern. We materialise remaining-qty/basis snapshots
+    # via `Lot.model_copy(...)` so `_compute_mtm_movers` (which only reads
+    # `.ticker`, `.quantity`, `.adjusted_basis`) sees the live-remainder.
+    open_lots_prev: list = []
+    if previous_on is not None:
+        trades_asof = [t for t in trades if t.date <= previous_on]
+        lots_asof = [lt for lt in lots if lt.date <= previous_on]
+        consumed = consume_lots_fifo(lots=lots_asof, trades=trades_asof)
+        for lot, rem_qty, rem_basis in consumed:
+            if rem_qty <= 0:
+                continue
+            if lot.option_details is not None:
+                # Options have no historical-close lookup that maps cleanly to
+                # this builder; skip them in the mover roster (matches the
+                # builder's existing convention for unpriced tickers).
+                continue
+            open_lots_prev.append(
+                lot.model_copy(update={"quantity": float(rem_qty), "adjusted_basis": float(rem_basis)})
+            )
+
+    trades_on = [t for t in trades if t.date == on]
+    cash_on_date = [e for e in cash_events if e.event_date == on and e.kind in ("transfer_in", "transfer_out")]
+    dividends_on_date = [e for e in cash_events if e.event_date == on and e.kind == "dividend"]
+    violations = [v for v in repo.all_violations() if v.loss_sale_date == on]
+    exempt_matches = [em for em in repo.list_exempt_matches() if _safe_iso_to_date(em.loss_sale_date) == on]
+
+    # Starting "contributed-to-date" snapshot — sum signed contributions
+    # (transfer_in minus transfer_out) through `on`. Mirrors the sign
+    # convention in `cash_flow._event_contrib_delta`.
+    contributed_to_date = Decimal("0")
+    for e in cash_events:
+        if e.event_date > on:
+            continue
+        if e.kind in _CONTRIB_INFLOW:
+            contributed_to_date += Decimal(str(e.amount))
+        elif e.kind in _CONTRIB_OUTFLOW:
+            contributed_to_date -= Decimal(str(e.amount))
+
+    breakdown = build_equity_point_breakdown(
+        on=on,
+        previous_on=previous_on,
+        trades_on_date=trades_on,
+        cash_events_on_date=cash_on_date,
+        dividend_events_on_date=dividends_on_date,
+        open_lots_prev_day=open_lots_prev,
+        violations_on_date=violations,
+        exempt_matches_on_date=exempt_matches,
+        get_close=svc.get_historical_close,
+        delta_account_value=delta_av,
+        starting_contributed_to_date=contributed_to_date,
+    )
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_explain_equity_point.html",
+        {"b": breakdown},
+    )
+
+
+def _safe_iso_to_date(s: str | None) -> date | None:
+    if not s:
+        return None
+    try:
+        return date.fromisoformat(s)
+    except (TypeError, ValueError):
+        return None
+
+
 @router.get("/portfolio/explain/dismiss", response_class=HTMLResponse)
 def explain_dismiss() -> HTMLResponse:
     """Empty fragment used by the explainer panels' close button."""
