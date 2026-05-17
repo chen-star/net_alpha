@@ -420,3 +420,23 @@ def test_explain_equity_point_route_is_registered(tmp_path):
     client, _repo = _make_client(tmp_path)
     resp = client.get("/portfolio/explain/equity-point?on=2026-05-10&period=ytd")
     assert resp.status_code != 404, f"Route should be registered (Phase 2 scope); got {resp.status_code}."
+
+
+def test_explain_equity_point_accepts_all_query_params(tmp_path):
+    """Route's param parsing (period parser + parse_accounts) doesn't crash
+    even before the Phase-3 template lands."""
+    client, _repo = _make_client(tmp_path)
+    resp = client.get(
+        "/portfolio/explain/equity-point"
+        "?on=2024-05-10&period=2024&account=Schwab%2FTax&account=Schwab%2FIRA"
+    )
+    # No template yet → expect 500 (TemplateNotFound), but NOT a 4xx parsing error.
+    assert resp.status_code != 404
+    assert resp.status_code != 422, "422 means FastAPI rejected the documented params"
+    assert resp.status_code != 400, "400 means a param parser raised before reaching the template"
+
+
+def test_explain_equity_point_requires_on_param(tmp_path):
+    client, _repo = _make_client(tmp_path)
+    resp = client.get("/portfolio/explain/equity-point")
+    assert resp.status_code == 422
