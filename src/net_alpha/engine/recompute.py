@@ -141,6 +141,35 @@ def recompute_all(repo: Repository) -> None:
     recompute_all_violations(repo, etf_pairs)
 
 
+def _rebuild_adjusted_basis_from_violations(repo: Repository) -> None:
+    """Reset every lot's adjusted_basis to its cost_basis plus the sum of
+    every currently-persisted deferred wash-sale violation whose
+    replacement_trade_id points at that lot's trade.
+
+    Idempotent. Run after replace_violations_in_window + replace_lots_in_window
+    so the lot state matches the violation state. Permanent-IRA violations
+    (kind='permanent_ira') do not roll over basis under §1091(d) and are
+    excluded. Manual lot_overrides are applied AFTER this pass and take
+    final precedence, so user-edited basis remains intact.
+    """
+    from collections import defaultdict
+
+    all_lots = repo.all_lots()
+    all_violations = repo.all_violations()
+
+    bumps_by_trade_id: dict[str, float] = defaultdict(float)
+    for v in all_violations:
+        if v.kind != "deferred":
+            continue
+        bumps_by_trade_id[str(v.replacement_trade_id)] += float(v.disallowed_loss)
+
+    for lot in all_lots:
+        expected = float(lot.cost_basis) + bumps_by_trade_id.get(str(lot.trade_id), 0.0)
+        # Comparison floor at $0.005 — sub-cent FP wobble is not worth a UPDATE.
+        if abs(float(lot.adjusted_basis) - expected) > 0.005:
+            repo.update_lot_qty_and_basis(int(lot.id), quantity=float(lot.quantity), adjusted_basis=expected)
+
+
 def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) -> None:
     """Recompute all wash-sale violations from scratch across all accounts.
 
@@ -181,6 +210,16 @@ def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) 
     )
     repo.replace_violations_in_window(win_start, win_end, merged)
     repo.replace_lots_in_window(win_start, win_end, det.lots)
+
+    # Rebuild adjusted_basis on every lot from cost_basis + sum of surviving
+    # deferred-violation bumps. The detector provisionally bumps each
+    # replacement lot's basis the instant it identifies a wash-sale
+    # candidate, but merge_violations may drop the engine's violation when
+    # Schwab's Realized G/L disagrees (rule 2a: wash_sale=False). Without
+    # this pass the bump survives in det.lots and accumulates as stale
+    # residue across recompute cycles — the source of phantom BasisRecon
+    # findings against open lots that have no live violation.
+    _rebuild_adjusted_basis_from_violations(repo)
 
     # Re-apply known splits, then manual overrides, to the freshly-regenerated lots.
     # Order matters: splits establish the split-adjusted baseline; manual overrides
