@@ -190,8 +190,12 @@ def test_portfolio_body_renders_monthly_pl_panel_lifetime(tmp_path):
     assert "No realized closes in" in html
 
 
-def test_cash_curve_renders_lifetime_footnote_on_period(tmp_path):
-    """Cash curve renders lifetime min/max footnote only on period-scoped views."""
+def test_cash_curve_renders_lifetime_minmax_on_period(tmp_path):
+    """Cash curve renders lifetime min/max in the panel-head on period-scoped
+    views. The old "Lifetime min … (date)" footnote line below the chart was
+    replaced with an inline min/max chip in the panel-head ("min $X mon 'yy
+    · max $Y mon 'yy") — same information, but pulled up where the rest of
+    the chart's KPI summary lives."""
     from datetime import date, datetime
 
     from net_alpha.config import Settings
@@ -223,7 +227,7 @@ def test_cash_curve_renders_lifetime_footnote_on_period(tmp_path):
         imported_at=datetime.now(),
         trade_count=1,
     )
-    # add_import requires cash_events for cash_lifetime_extremes to be non-None
+    # add_import requires cash_events for the lifetime min/max KPI to be non-None
     cash_events = [CashEvent(account="Schwab/Test", event_date=date(2026, 1, 15), kind="transfer_in", amount=18000.0)]
     repo.add_import(account, record, [trade], cash_events=cash_events)
 
@@ -231,12 +235,14 @@ def test_cash_curve_renders_lifetime_footnote_on_period(tmp_path):
     client = _client(tmp_path)
     r = client.get("/portfolio/body?period=ytd&account=")
     assert r.status_code == 200
-    assert "Lifetime min $" in r.text
+    assert "min $" in r.text
     assert "· max $" in r.text
 
 
-def test_cash_curve_omits_lifetime_footnote_on_lifetime_view(tmp_path):
-    """Cash curve footnote is omitted when viewing Lifetime scope."""
+def test_cash_curve_omits_lifetime_minmax_on_lifetime_view(tmp_path):
+    """Cash curve lifetime min/max chip is omitted when viewing Lifetime scope
+    (the chart's domain already IS the lifetime, so a separate min/max is
+    redundant)."""
     from datetime import date, datetime
 
     from net_alpha.config import Settings
@@ -271,11 +277,13 @@ def test_cash_curve_omits_lifetime_footnote_on_lifetime_view(tmp_path):
     cash_events = [CashEvent(account="Schwab/Test", event_date=date(2026, 1, 15), kind="transfer_in", amount=18000.0)]
     repo.add_import(account, record, [trade], cash_events=cash_events)
 
-    # Lifetime view should NOT include the footnote.
+    # Lifetime view should NOT include the min/max chip.
     client = _client(tmp_path)
     r = client.get("/portfolio/body?period=lifetime&account=")
     assert r.status_code == 200
-    assert "Lifetime min $" not in r.text
+    # The panel-head min/max chip uses literal "min $...· max $..." — assert
+    # neither half is present on the lifetime view.
+    assert "· max $" not in r.text
 
 
 def test_monthly_pl_renders_lifetime_footnote_on_period(tmp_path):

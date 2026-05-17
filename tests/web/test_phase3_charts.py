@@ -74,10 +74,14 @@ def test_equity_chart_options_set_hide_overlapping_labels(chart_client: TestClie
     assert "hideOverlappingLabels" in html
 
 
-def test_cash_chart_solid_is_cash_balance_dashed_is_net_contributed(chart_client: TestClient):
-    """Spec §5.12: solid → cash balance; dashed → net contributed (P7).
-    Assert via stable data-* attributes on the cash-curve container."""
+def test_cash_chart_is_stacked_deployment(chart_client: TestClient):
+    """The cash panel renders a stacked-area "cash deployment" chart whose
+    layers are free cash + (optional) pledged + invested MTM. The previous
+    "solid cash balance / dashed net contributed" two-line shape was
+    replaced because the dashed line's meaning was unclear at a glance.
+    Assert via the stable data-* attributes on the cash-curve container."""
     resp = chart_client.get("/portfolio/body")
     html = resp.text
-    assert 'data-series-solid="cash_balance"' in html
-    assert 'data-series-dashed="net_contributed"' in html
+    assert 'data-series-free="free_cash"' in html
+    assert 'data-series-invested="invested"' in html
+    assert 'data-series-pledged="pledged"' in html

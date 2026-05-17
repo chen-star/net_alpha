@@ -1,89 +1,118 @@
-{# Inputs: cash_points: list[CashBalancePoint] (each has .on: date, .cash_balance: Decimal,
-           .cumulative_contributions: Decimal),
-           period_label: str (e.g. "YTD 2026", "2024", "Lifetime") #}
+{# Inputs:
+   cash_deployment_points: list[CashDeploymentPoint]   -- period-scoped (free / pledged / invested)
+   chart_head_kpis: ChartHeadKPIs                       -- inline panel-head numbers
+   period_label: str                                    -- "YTD 2026", "2024", "Lifetime"
+
+   Renders a stacked-area chart of free cash + pledged cash + invested MTM.
+   The total stack at any date equals total account value. Replaces the
+   previous "cash balance + net contributed" two-line chart whose purpose
+   was unclear. #}
+
+{% set has_data = cash_deployment_points and cash_deployment_points|length >= 2 %}
+{% set kpis = chart_head_kpis %}
 
 <div class="panel-head">
-  <h4>Cash &amp; Contributions</h4>
-  <span class="meta">Cash balance + net contributed · {{ period_label }}</span>
+  <h4>Cash deployment</h4>
+  <span class="meta">{{ period_label }}</span>
+  {% if kpis %}
+    <span class="num text-[12px] ml-2">
+      ${{ "{:,.0f}".format((kpis.end_free_cash + kpis.end_pledged)|float) }} cash
+      {% if kpis.end_cash_share_pct is not none %}
+        · {{ "{:.1f}".format(kpis.end_cash_share_pct|float * 100) }}%
+      {% endif %}
+      {% if kpis.end_pledged > 0 %}
+        · <span class="text-label-2">${{ "{:,.0f}".format(kpis.end_pledged|float) }} pledged</span>
+      {% endif %}
+      {% if kpis.end_invested is not none %}
+        · ${{ "{:,.0f}".format(kpis.end_invested|float) }} invested
+      {% endif %}
+    </span>
+    {% if kpis.lifetime_min is not none and kpis.lifetime_max is not none %}
+      <span class="text-label-3 text-[11px] num ml-auto">
+        min ${{ "{:,.0f}".format(kpis.lifetime_min|float) }} {{ kpis.lifetime_min_on.strftime("%b '%y") }}
+        · max ${{ "{:,.0f}".format(kpis.lifetime_max|float) }} {{ kpis.lifetime_max_on.strftime("%b '%y") }}
+      </span>
+    {% endif %}
+  {% endif %}
 </div>
 
-{% if cash_points|length == 0 %}
+{% if not has_data %}
   <div class="text-label-2 text-[13px] py-4">No cash events yet — import a Schwab Transactions CSV to populate this chart.</div>
 {% else %}
-  {# data-series-solid / data-series-dashed: stable hooks for tests + future JS
-     readers (§5.12 P7). Solid line = cash balance; dashed = net contributed. #}
   <div id="cash-chart"
-       data-series-solid="cash_balance"
-       data-series-dashed="net_contributed"
-       style="height: 218px;"></div>
-
-    {% if cash_lifetime_extremes %}
-      <div class="text-[11px] text-label-3 num mt-1">
-        Lifetime min ${{ "{:,.0f}".format(cash_lifetime_extremes[0]|float) }} ({{ cash_lifetime_extremes[1].isoformat() }})
-        · max ${{ "{:,.0f}".format(cash_lifetime_extremes[2]|float) }} ({{ cash_lifetime_extremes[3].isoformat() }}).
-      </div>
-    {% endif %}
+       data-series-free="free_cash"
+       data-series-pledged="pledged"
+       data-series-invested="invested"
+       style="height: 140px;"></div>
 
   <script>
   (function () {
-    const series = [
-      {
-        name: "Cash balance",
-        type: "line",
-        data: [
-          {% for p in cash_points %}
-            { x: "{{ p.on.isoformat() }}", y: {{ p.cash_balance|float }} }{% if not loop.last %},{% endif %}
-          {% endfor %}
-        ],
-      },
-      {
-        name: "Net contributed",
-        type: "line",
-        data: [
-          {% for p in cash_points %}
-            { x: "{{ p.on.isoformat() }}", y: {{ p.cumulative_contributions|float }} }{% if not loop.last %},{% endif %}
-          {% endfor %}
-        ],
-      },
+    const points = [
+      {% for p in cash_deployment_points %}
+        {
+          on: "{{ p.on.isoformat() }}",
+          free: {{ p.free_cash|float }},
+          pledged: {{ (p.pledged|float) if p.pledged is not none else 'null' }},
+          invested: {{ (p.invested|float) if p.invested is not none else 'null' }},
+        }{% if not loop.last %},{% endif %}
+      {% endfor %}
     ];
 
+    const freeSeries     = points.map(p => ({ x: p.on, y: p.free }));
+    const pledgedSeries  = points.map(p => ({ x: p.on, y: p.pledged }));
+    const investedSeries = points.map(p => ({ x: p.on, y: p.invested }));
+
+    // 2-region fallback when pledged is null for every point.
+    const hasPledged = points.some(p => p.pledged != null && p.pledged > 0);
 
     function buildOpts() {
+      const isLight = document.documentElement.getAttribute("data-theme") === "light";
+      const series = hasPledged
+        ? [
+            { name: "Free cash", type: "area", data: freeSeries },
+            { name: "Pledged",   type: "area", data: pledgedSeries },
+            { name: "Invested",  type: "area", data: investedSeries },
+          ]
+        : [
+            { name: "Free cash", type: "area", data: freeSeries },
+            { name: "Invested",  type: "area", data: investedSeries },
+          ];
+      const colors = hasPledged
+        ? [
+            window.netAlphaChartTheme.colors.info,
+            window.netAlphaChartTheme.colors.info,
+            window.netAlphaChartTheme.colors.label2,
+          ]
+        : [
+            window.netAlphaChartTheme.colors.info,
+            window.netAlphaChartTheme.colors.label2,
+          ];
+      const fillOpacity = hasPledged ? [0.55, 0.25, 0.30] : [0.55, 0.30];
+
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
         chart: {
-          type: "line",
-          height: 218,
-          // See equity curve — drag-to-zoom stays, but the floating Apex
-          // toolbar is hidden so the chart's corner doesn't fight the rest
-          // of the dashboard chrome.
+          type: "area",
+          height: 140,
+          stacked: true,
           zoom: { enabled: true, type: "x", autoScaleYaxis: true },
           toolbar: { show: false },
         },
-        colors: [
-          window.netAlphaChartTheme.colors.info,
-          window.netAlphaChartTheme.colors.warn,
-        ],
+        colors: colors,
         stroke: {
-          width: [2, 2],
-          curve: "smooth",
+          width: hasPledged ? [0, 0, 1.5] : [0, 1.5],
+          curve: "straight",
           lineCap: "round",
-          dashArray: [0, 5],
         },
         fill: {
           type: "solid",
-          opacity: 1,
+          opacity: fillOpacity,
         },
+        markers: { size: 0, hover: { size: 4 } },
         legend: { show: true },
         xaxis: {
           type: "datetime",
           labels: {
-            // See comment on the equity curve — `format: "MMM"` produces
-            // duplicate adjacent labels at YTD scale; datetimeFormatter
-            // formats each tick at the picked granularity, e.g. "Feb 04",
-            // which is unique per tick.
             datetimeUTC: false,
-            // See equity curve: same MMM-d shape across all granularity
-            // buckets so ticks never collapse to duplicate month strings.
             datetimeFormatter: {
               year: "MMM d, yyyy",
               month: "MMM d",
@@ -107,32 +136,25 @@
           },
         },
         tooltip: {
+          shared: true,
           x: { format: "yyyy-MM-dd" },
-          y: { formatter: (v) => v == null ? "—" : "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 }) },
-        },
-        annotations: {
-          yaxis: [
-            {% if cash_lifetime_extremes %}
-            { y: {{ cash_lifetime_extremes[0]|float }},
-              borderColor: window.netAlphaChartTheme.colors.label3,
-              strokeDashArray: 4,
-              label: { text: "Lifetime min",
-                       position: "right", offsetX: -8, offsetY: -4,
-                       borderWidth: 0,
-                       style: { color: window.netAlphaChartTheme.colors.label3,
-                                background: "transparent",
-                                fontSize: "10px" } } },
-            { y: {{ cash_lifetime_extremes[2]|float }},
-              borderColor: window.netAlphaChartTheme.colors.label3,
-              strokeDashArray: 4,
-              label: { text: "Lifetime max",
-                       position: "right", offsetX: -8, offsetY: -4,
-                       borderWidth: 0,
-                       style: { color: window.netAlphaChartTheme.colors.label3,
-                                background: "transparent",
-                                fontSize: "10px" } } },
-            {% endif %}
-          ],
+          custom: function ({ dataPointIndex }) {
+            const p = points[dataPointIndex];
+            if (!p) return "";
+            const fmt = (n) => n == null ? "—" : "$" + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            const total = (p.free || 0) + (p.pledged || 0) + (p.invested || 0);
+            return `
+              <div class="apex-tt">
+                <div class="apex-tt-date">${p.on}</div>
+                <div class="apex-tt-row"><span>Free cash</span><span>${fmt(p.free)}</span></div>
+                ${hasPledged ? `<div class="apex-tt-row"><span>Pledged</span><span>${fmt(p.pledged)}</span></div>` : ""}
+                <div class="apex-tt-row"><span>Invested</span><span>${fmt(p.invested)}</span></div>
+                <div class="apex-tt-row" style="border-top:1px solid rgba(255,255,255,0.1);padding-top:2px;margin-top:2px;">
+                  <span>Total</span><span>${fmt(total)}</span>
+                </div>
+              </div>
+            `;
+          },
         },
         series: series,
       });
