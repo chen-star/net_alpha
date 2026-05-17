@@ -7,7 +7,8 @@ from unittest.mock import MagicMock
 from net_alpha.service.jobs.verify import run_verify_once
 
 
-def test_run_verify_once_writes_a_result_row():
+def test_run_verify_once_writes_a_result_row(tmp_path, monkeypatch):
+    monkeypatch.setenv("NET_ALPHA_DIR", str(tmp_path))
     repo = MagicMock()
     repo.latest_broker_positions.return_value = ([], None)  # stale — no positions CSV ever
     repo.aggregate_open_positions.return_value = []
@@ -20,7 +21,8 @@ def test_run_verify_once_writes_a_result_row():
     assert call_kwargs["trigger"] == "manual"
 
 
-def test_run_verify_once_records_ok_status_when_no_findings():
+def test_run_verify_once_records_ok_status_when_no_findings(tmp_path, monkeypatch):
+    monkeypatch.setenv("NET_ALPHA_DIR", str(tmp_path))
     repo = MagicMock()
     repo.latest_broker_positions.return_value = (
         [
