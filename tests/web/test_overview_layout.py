@@ -41,22 +41,21 @@ def seeded_client(tmp_path):
     return TestClient(create_app(settings), raise_server_exceptions=False)
 
 
-def test_equity_and_cash_curves_use_three_to_two_split(seeded_client):
-    """Equity is the primary chart; cash is operational context. The row
-    holding them is 3:2 (60/40) — wider than the legacy 2:1 split so the
-    cash + contributions chart has room to read, but still keeps equity
-    visually dominant. The allocation row below stays at 2:1."""
+def test_equity_and_cash_curves_use_vertical_stack(seeded_client):
+    """Equity is the hero chart; cash deployment is secondary context. They
+    now stack vertically (flex-col) so each chart breathes at its native
+    aspect ratio — the previous 3:2 grid forced the equity chart, the
+    page's headline metric, into a short box and crammed the cash panel
+    into a narrow column. The allocation row below stays at 2:1."""
     html = seeded_client.get("/portfolio/body").text
-    # The new equity/cash row uses the 3:2 ratio.
-    assert "grid-template-columns: 3fr 2fr;" in html
-    # Walk back from the equity panel and confirm the nearest
-    # grid-template-columns is the new 3:2 (and NOT the legacy 2:1 or 1:1).
     equity_idx = html.find('id="portfolio-equity"')
     assert equity_idx > 0
+    # Walk back from the equity panel and confirm the immediate parent is
+    # a flex-col stack (not a 3:2 / 2:1 grid).
     preceding = html[max(0, equity_idx - 400) : equity_idx]
-    assert "grid-template-columns: 3fr 2fr;" in preceding
+    assert "flex-col" in preceding
+    assert "grid-template-columns: 3fr 2fr;" not in preceding
     assert "grid-template-columns: 2fr 1fr;" not in preceding
-    assert "grid-template-columns: 1fr 1fr;" not in preceding
     # The allocation row below still uses 2:1 — confirm that lock is intact.
     alloc_idx = html.find('id="portfolio-allocation"')
     assert alloc_idx > equity_idx

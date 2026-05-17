@@ -1,5 +1,8 @@
-{# Equity (3) + Cash (2) paired row. #}
-<div class="grid gap-3 mb-4" style="grid-template-columns: 3fr 2fr;">
+{# Equity (hero) + Cash deployment (secondary) vertical stack. The previous
+   3:2 grid forced the equity chart — the page's headline metric — into a
+   short box, and crammed two lines into a narrow cash panel. The vertical
+   stack lets each chart breathe at its native aspect ratio. #}
+<div class="flex flex-col gap-3 mb-4">
   <div id="portfolio-equity" class="panel">
     {% include "_portfolio_equity_curve.html" %}
   </div>
