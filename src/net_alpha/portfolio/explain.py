@@ -684,6 +684,27 @@ def build_equity_point_breakdown(
     movers.sort(key=lambda m: abs(m.contribution), reverse=True)
     movers = movers[:5]
 
+    # Wash-sale activity refs — the renderer deep-links to the existing
+    # ``/tax`` violation/exempt explainer fragments, so we only carry id+ticker.
+    # ``WashSaleViolation.id`` is a UUID-shaped string by default; the route
+    # handler typically passes DB-backed rows whose ``id`` is a stable int.
+    # Coerce defensively. ``ExemptMatch`` has no ``id`` field in the domain
+    # model (DB rows do); fall back to 0 if absent.
+    wash_events: list[WashEventRef] = []
+    for v in violations_on_date:
+        try:
+            row_id = int(v.id)
+        except (TypeError, ValueError):
+            row_id = 0
+        wash_events.append(WashEventRef(kind="violation", row_id=row_id, ticker=v.ticker))
+    for em in exempt_matches_on_date:
+        raw = getattr(em, "id", 0)
+        try:
+            row_id = int(raw)
+        except (TypeError, ValueError):
+            row_id = 0
+        wash_events.append(WashEventRef(kind="exempt", row_id=row_id, ticker=em.ticker))
+
     residual = (
         delta_account_value
         - (contributions + realized + delta_unrealized + dividends_total)
@@ -702,7 +723,7 @@ def build_equity_point_breakdown(
         top_movers=movers,
         cash_events=cash_event_rows,
         dividend_events=dividend_rows,
-        wash_events=[],
+        wash_events=wash_events,
         unpriced_tickers=tuple(sorted(unpriced)),
         unpriced_basis_total=unpriced_basis,
         is_starting_snapshot=False,

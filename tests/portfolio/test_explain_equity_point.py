@@ -68,7 +68,7 @@ def test_row_dataclasses_construct():
     )
 
 
-from net_alpha.models.domain import CashEvent, Lot, Trade
+from net_alpha.models.domain import CashEvent, Lot, Trade, WashSaleViolation
 from net_alpha.portfolio.explain import build_equity_point_breakdown
 
 
@@ -226,3 +226,36 @@ def test_dividend_only_day_attributes_to_dividends():
     assert b.dividend_events[0].ticker == "MSFT"
     assert b.dividend_events[0].amount == Decimal("12.34")
     assert b.residual == Decimal("0")
+
+
+def test_wash_sale_violation_on_date_attaches_ref():
+    on = date(2026, 5, 10)
+    prev = date(2026, 5, 9)
+    v = WashSaleViolation(
+        id="42",
+        loss_trade_id="t1",
+        replacement_trade_id="t2",
+        loss_sale_date=on,
+        triggering_buy_date=on,
+        ticker="AAPL",
+        disallowed_loss=100.0,
+        matched_quantity=10.0,
+        confidence="Confirmed",
+        kind="deferred",
+    )
+    b = build_equity_point_breakdown(
+        on=on,
+        previous_on=prev,
+        trades_on_date=[],
+        cash_events_on_date=[],
+        dividend_events_on_date=[],
+        open_lots_prev_day=[],
+        violations_on_date=[v],
+        exempt_matches_on_date=[],
+        get_close=lambda sym, d: None,
+        delta_account_value=Decimal("0"),
+    )
+    assert len(b.wash_events) == 1
+    assert b.wash_events[0].kind == "violation"
+    assert b.wash_events[0].row_id == 42
+    assert b.wash_events[0].ticker == "AAPL"
