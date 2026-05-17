@@ -448,3 +448,88 @@ def build_account_value_breakdown(
         has_short_options=has_short_options,
         fetched_at=fetched_at,
     )
+
+
+@dataclass(frozen=True)
+class TradeRow:
+    """One trade in the 'Trades closed today' block."""
+
+    trade_id: str
+    ticker: str
+    side: str  # Trade.action values (e.g., "Buy" / "Sell")
+    quantity: Decimal
+    realized_pnl: Decimal  # 0 for opening trades
+
+
+@dataclass(frozen=True)
+class MoverRow:
+    """One row in the 'Top mark-to-market movers' block."""
+
+    ticker: str
+    shares: Decimal
+    prev_close: Decimal
+    close: Decimal
+    contribution: Decimal  # shares * (close - prev_close), signed
+
+
+@dataclass(frozen=True)
+class CashEventRow:
+    """One row in the 'Cash flow events' block."""
+
+    account: str
+    kind: str  # CashEvent.kind values (e.g., "transfer_in", "transfer_out")
+    amount: Decimal  # signed: + for inflow, - for outflow
+
+
+@dataclass(frozen=True)
+class DividendRow:
+    """One row in the 'Dividends' block."""
+
+    ticker: str
+    amount: Decimal
+
+
+@dataclass(frozen=True)
+class WashEventRef:
+    """Reference to a wash-sale row whose sale leg is on this date.
+
+    The renderer deep-links to the existing /tax violation explainer; we
+    don't duplicate that payload here.
+    """
+
+    kind: str  # "violation" | "exempt"
+    row_id: int
+    ticker: str
+
+
+@dataclass(frozen=True)
+class EquityPointBreakdown:
+    """Payload for the equity-curve click-to-explain panel.
+
+    The four equation components (``contributions``, ``realized_pnl``,
+    ``delta_unrealized``, ``dividends``) must reconcile to
+    ``delta_account_value`` within tolerance; any drift is exposed as
+    ``residual`` rather than silently absorbed.
+
+    When ``is_starting_snapshot`` is True the panel is the first point in
+    the filtered series and there is no previous-point delta to show.
+    """
+
+    on: dt.date
+    previous_on: dt.date | None
+    delta_account_value: Decimal
+    contributions: Decimal
+    realized_pnl: Decimal
+    delta_unrealized: Decimal
+    dividends: Decimal
+    residual: Decimal
+    trades: list[TradeRow]
+    top_movers: list[MoverRow]
+    cash_events: list[CashEventRow]
+    dividend_events: list[DividendRow]
+    wash_events: list[WashEventRef]
+    unpriced_tickers: tuple[str, ...]
+    unpriced_basis_total: Decimal
+    is_starting_snapshot: bool
+    starting_holdings_count: int
+    starting_contributed_to_date: Decimal
