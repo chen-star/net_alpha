@@ -232,6 +232,7 @@ def open_lots_view(
                 cost_basis=float(Decimal(str(lot.cost_basis)) * ratio),
                 adjusted_basis=float(rem_basis),
                 option_details=lot.option_details,
+                tacked_acquired_date=lot.tacked_acquired_date,
             )
         )
     return out

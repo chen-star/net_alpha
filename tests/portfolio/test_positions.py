@@ -481,6 +481,54 @@ def test_open_lots_view_handles_corporate_action_ticker_change():
     assert out == []
 
 
+def test_open_lots_view_preserves_tacked_acquired_date_after_partial_sell():
+    """open_lots_view must pass tacked_acquired_date through when a lot is
+    partially consumed by a sell (the Lot(...) reconstruction path).
+
+    Without the fix, the Lot constructor call omits tacked_acquired_date and
+    the returned lot surfaces is_tacked=False, which breaks the lot ladder's
+    Tacked pill (IRC §1223(4)).
+    """
+    tacked_date = dt.date(2024, 6, 1)  # ~700 days ago from tests running in 2026
+
+    buy = _trade(
+        id="t-buy",
+        ticker="AAPL",
+        action="Buy",
+        quantity=100.0,
+        cost_basis=15_000.0,
+        date=dt.date(2025, 1, 10),
+    )
+    sell = _trade(
+        id="t-sell",
+        ticker="AAPL",
+        action="Sell",
+        quantity=30.0,  # 30% consumed → triggers the partial-lot reconstruction
+        proceeds=4_700.0,
+        cost_basis=4_500.0,
+        date=dt.date(2025, 3, 15),
+    )
+    lot = _lot(
+        id="l-buy",
+        trade_id="t-buy",
+        ticker="AAPL",
+        quantity=100.0,
+        cost_basis=15_000.0,
+        adjusted_basis=15_000.0,
+        date=dt.date(2025, 1, 10),
+        tacked_acquired_date=tacked_date,
+    )
+
+    from net_alpha.portfolio.positions import open_lots_view
+
+    out = open_lots_view(lots=[lot], trades=[buy, sell])
+    assert len(out) == 1, "Expected one partially-open lot"
+    result = out[0]
+    assert result.tacked_acquired_date == tacked_date, (
+        f"tacked_acquired_date lost after partial sell: got {result.tacked_acquired_date!r}"
+    )
+
+
 def test_transfer_in_basis_feeds_cash_invested():
     """User-set cost basis on a transfer-in lot represents money the user
     spent acquiring the shares (just at another brokerage). Cash invested /

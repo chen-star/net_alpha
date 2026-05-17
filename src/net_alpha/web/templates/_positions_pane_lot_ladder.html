@@ -1,0 +1,47 @@
+{# Lot ladder. Consumes `lot_rows` from _pane_lot_info() (Task 2).
+
+   Layout: sorted by date desc; collapses to "N lots" toggle when N > 5.
+   Each row: date · qty · adj basis · unrealized · status pill.
+   Click on a lot opens the ticker lots view in a new tab.
+
+   Status values: "ST" (short-term), "LT" (long-term), "TACKED" (IRC §1223(4)).
+#}
+{% if lot_rows %}
+{% set _sorted = lot_rows | sort(attribute='date', reverse=True) %}
+{% set _collapsed = _sorted | length > 5 %}
+<div class="mt-4" x-data="{ expanded: {{ 'false' if _collapsed else 'true' }} }">
+  {% if _collapsed %}
+    <button type="button"
+            data-testid="lot-ladder-collapsed"
+            class="text-[12px] text-label-2 hover:text-text mb-2 inline-flex items-center gap-1"
+            @click="expanded = !expanded"
+            x-text="(expanded ? '▾ ' : '▸ ') + '{{ _sorted | length }} lots'">▸ {{ _sorted | length }} lots</button>
+  {% else %}
+    <div class="text-[10px] uppercase tracking-wide text-label-2 mb-2">{{ _sorted | length }} lot{{ 's' if _sorted | length != 1 else '' }}</div>
+  {% endif %}
+  <div x-show="expanded" {% if _collapsed %}style="display:none"{% endif %} class="space-y-1">
+    {% for row in _sorted %}
+      <a href="/ticker/{{ sym }}?view=lots" target="_blank"
+         data-testid="lot-row"
+         data-pill="{{ row.status }}"
+         {% if row.is_tacked %}title="Holding period tacked from a prior wash sale (IRC §1223(4))"{% endif %}
+         class="flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[12px] hover:bg-surface-2 no-underline text-text">
+        <span class="font-mono text-label-2 shrink-0">{{ row.date.isoformat() }}</span>
+        <span class="font-mono shrink-0">{{ fmt_quantity(row.qty) }} sh</span>
+        <span class="font-mono shrink-0">{{ fmt_currency(row.adj_basis) }}</span>
+        {% if row.unrealized is not none %}
+          <span class="font-mono shrink-0 {{ 'text-neg' if row.unrealized < 0 else 'text-pos' }}">{{ fmt_currency(row.unrealized) }}</span>
+        {% else %}
+          <span class="font-mono shrink-0 text-label-3">—</span>
+        {% endif %}
+        <span class="text-[10px] font-medium px-1.5 py-[1px] rounded shrink-0
+              {% if row.status == 'ST' %}bg-warn-tint text-warn
+              {% elif row.status == 'LT' %}bg-pos-tint text-pos
+              {% elif row.status == 'TACKED' %}bg-info-tint text-info
+              {% else %}bg-surface-2 text-label-2
+              {% endif %}">{{ row.status }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
