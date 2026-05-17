@@ -2,6 +2,119 @@
 
 
 
+## v0.70.0 (2026-05-17)
+
+### Chore
+
+* chore: refresh gitnexus index notes in AGENTS.md and CLAUDE.md
+
+Updates the symbol/relationship/process counts after the most recent
+index pass and trims the now-redundant Tools Quick Reference / Self-
+Check / Keeping the Index Fresh sections — those duplicate per-skill
+file content that .claude/skills/gitnexus/*.md already covers.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c8816af`](https://github.com/chen-star/net_alpha/commit/c8816aff14461149c65ede3b2db2e4bfa178815c))
+
+### Feature
+
+* feat(import): alias mapping + assignment dedup + split-aware GL closures
+
+Three correlated import-time corrections that share repository.py and
+the imports route.
+
+1) Schema v26 — accounts.broker_label. Schwab&#39;s per-account positions
+   CSV writes a header like &#34;Positions for account Short Term ...180&#34;;
+   the user&#39;s trades live under their own nickname (&#34;st&#34;). Verify keys
+   on (account_label, symbol), so without an alias every per-account
+   positions CSV produces N PositionsMissingLocal + M
+   PositionsMissingBroker findings on a 100% accurate dataset.
+
+   save_broker_positions now resolves each row at ingest to the
+   canonical broker/label display string. Unresolved labels redirect
+   the upload to /imports/positions/map for one-shot user mapping;
+   POST registers the alias on accounts.broker_label and retroactively
+   retags every broker_position row carrying that raw label.
+
+2) filter_assignment_duplicates — second-pass dedup that drops plain
+   equity Buys whose (account, ticker, date, qty) matches an existing
+   put_assignment trade. Schwab records assignments as two rows:
+   Assigned + Buy-of-underlying. SchwabParser converts Assigned to a
+   synthetic put_assignment with premium-adjusted basis and absorbs
+   the underlying Buy via _put_assignment_basis_offsets. On a partial
+   re-import (narrower date range that omits the Assigned row), only
+   the underlying Buy reaches the parser and lands as basis_source=
+   &#39;unknown&#39; at unadjusted basis. Natural-key dedup misses because
+   cost_basis is part of the hash. The new filter catches it.
+
+3) get_equity_gl_closures / get_option_gl_closures internally scale
+   pre-split GL row quantities to post-split units. Without this, GL
+   closures on a reverse-split lot still report the broker&#39;s raw
+   pre-split count and over-consume the now-smaller lot. Paired with
+   the consume_lots_fifo splits_by_ticker work (prior commit), this
+   makes verify reconciliation correct end-to-end on
+   reverse-split positions.
+
+   aggregate_open_positions now passes splits_by_ticker through to
+   consume_lots_fifo so the verify path uses both fixes consistently.
+
+The migration is idempotent. Existing tests that pinned
+CURRENT_SCHEMA_VERSION are bumped to 26.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fbc8d4c`](https://github.com/chen-star/net_alpha/commit/fbc8d4c292f89c520bed10240cea202036efb99a))
+
+### Fix
+
+* fix(engine): rebuild adjusted_basis from surviving wash-sale violations
+
+detect_in_window mutates lots[id].adjusted_basis += disallowed the
+moment it identifies a wash-sale candidate, before merge_violations
+runs. When merge drops the engine violation (rule 2a: same-account
+exact-ticker, Schwab Realized G/L says wash_sale=False), the
+provisional bump stayed baked in det.lots and was persisted by
+replace_lots_in_window. Cycles of recompute accumulated stale residue
+on lots with no live backing violation — surfacing as phantom
+BasisRecon FAIL findings against open positions.
+
+Adds _rebuild_adjusted_basis_from_violations, run after
+replace_violations_in_window + replace_lots_in_window and before
+apply_splits / apply_manual_overrides. Walks every lot, resets
+adjusted_basis to cost_basis + sum(disallowed_loss) over surviving
+deferred-kind violations targeting that lot&#39;s trade. Permanent-IRA
+violations are excluded (no §1091(d) rollover). Manual lot_overrides
+still take final precedence.
+
+On the maintainer&#39;s live DB this cleared 53 of 54 lots carrying
+residue (the survivor is backed by an active SPXW violation),
+eliminating ~$7,174 of phantom basis across the portfolio.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`232c1f3`](https://github.com/chen-star/net_alpha/commit/232c1f3c1375ec5590f069735404bcfae39d3c6a))
+
+* fix(verify): scope PositionsMissingBroker to broker-covered accounts
+
+A per-account positions CSV (e.g. only the &#39;st&#39; account) reports open
+positions for exactly one account. Pre-fix, reconcile_open_positions
+flagged every open position in *other* accounts as
+PositionsMissingBroker — 14 false positives on a 100% accurate dataset
+where the broker file simply doesn&#39;t cover those accounts. Derive a
+covered_accounts set from {bp.account_label for bp in bp_rows} and skip
+the finding for any (account, ticker) whose account isn&#39;t covered.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0149211`](https://github.com/chen-star/net_alpha/commit/01492116c1f61dc0f01c4f54f25b2aa314758e5a))
+
+* fix(portfolio): split-adjust pre-split sell qtys in FIFO consumption
+
+Lot.quantity is rewritten to post-split units by splits/apply.py the
+instant a split&#39;s ex-date passes. Sells in the trades table stay at the
+broker-reported pre-split units. consume_lots_fifo was summing the two
+without rescaling — a 1-for-5 reverse split with 61 pre-split shares
+sold against a now-20-share lot consumed everything and reported 0
+remaining instead of ~7. New optional splits_by_ticker kwarg scales
+trade-side sells by the cumulative product of post-trade-date splits
+for that ticker. Backward-compat: when omitted, behavior is unchanged.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3ca4446`](https://github.com/chen-star/net_alpha/commit/3ca444691effd46e8348075df48bed1858260947))
+
+
 ## v0.69.0 (2026-05-17)
 
 ### Chore
