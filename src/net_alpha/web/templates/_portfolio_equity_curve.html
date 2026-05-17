@@ -63,13 +63,33 @@
     const contribSeries = points.map(p => ({ x: p.on, y: p.contrib }));
     const accountSeries = points.map(p => ({ x: p.on, y: p.account }));
 
+    // P&L band: account value clipped to "above contributions" and "below
+    // contributions" so each segment renders with its own gradient color.
+    // Both bands share the contributions baseline via a hidden synthetic
+    // series so Apex's stacked-area math anchors correctly.
+    const gainAbove = points.map(p => ({
+      x: p.on,
+      y: (p.account != null && p.account >= p.contrib) ? p.account : null,
+    }));
+    const lossBelow = points.map(p => ({
+      x: p.on,
+      y: (p.account != null && p.account < p.contrib) ? p.account : null,
+    }));
+    const baseline = points.map(p => ({ x: p.on, y: p.contrib }));
+
     const series = [
+      { name: "_baseline", type: "area", data: baseline },
+      { name: "Gain", type: "area", data: gainAbove },
+      { name: "Loss", type: "area", data: lossBelow },
       { name: "Contributions", type: "line", data: contribSeries },
       { name: "Account value", type: "line", data: accountSeries },
     ];
 
     function buildMainOpts() {
       const colors = [
+        "transparent",
+        window.netAlphaChartTheme.colors.pos,
+        window.netAlphaChartTheme.colors.neg,
         window.netAlphaChartTheme.colors.label3,
         window.netAlphaChartTheme.colors.info,
       ];
@@ -114,20 +134,31 @@
           hover: { size: 5 },
         },
         stroke: {
-          // Contributions = stepline (jumps at deposit events — honest about
-          // discrete cash flow). Account value = straight (no smoothing).
-          width: [1.5, 2],
-          curve: ["stepline", "straight"],
+          width: [0, 0, 0, 1.5, 2],
+          curve: ["straight", "straight", "straight", "stepline", "straight"],
           lineCap: "round",
-          dashArray: [4, 0],
+          dashArray: [0, 0, 0, 4, 0],
         },
         fill: {
-          // Both series are line-type now; the colored P&L band is rendered
-          // separately in Task 10.
-          type: ["solid", "solid"],
-          opacity: 1,
+          type: ["solid", "gradient", "gradient", "solid", "solid"],
+          gradient: {
+            shade: isLight ? "light" : "dark",
+            type: "vertical",
+            opacityFrom: 0.35,
+            opacityTo: 0,
+            stops: [0, 100],
+          },
+          opacity: [0, 1, 1, 1, 1],
         },
-        legend: { show: true },
+        legend: {
+          show: true,
+          showForSingleSeries: false,
+          customLegendItems: ["Account value", "Contributions"],
+          markers: { fillColors: [
+            window.netAlphaChartTheme.colors.info,
+            window.netAlphaChartTheme.colors.label3,
+          ]},
+        },
         xaxis: {
           type: "datetime",
           labels: {
