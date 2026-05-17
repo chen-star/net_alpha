@@ -235,8 +235,12 @@
             data: spyPoints,
             color: window.netAlphaChartTheme.colors.label2,
           });
+          // Extend each per-series array by one slot for the appended SPY
+          // series so Apex doesn't fall back to scalar defaults mid-config.
           mainChart.updateOptions({
-            stroke: { dashArray: [0, 0, 0, 4, 0, 3] },
+            markers: { size: [0, 2, 0] },
+            stroke:  { width: [1.5, 2, 1.5], curve: ["stepline", "straight", "straight"], dashArray: [4, 0, 3] },
+            fill:    { type: ["solid", "gradient", "solid"], opacity: [1, 1, 1] },
           });
         } else {
           // Apex doesn't expose remove-by-name; cleanest path is a full re-render.
