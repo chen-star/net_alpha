@@ -12,11 +12,15 @@ from fastapi.testclient import TestClient
 def test_multi_lot_split_flow_clears_basis_warning(client: TestClient, repo, seed_transfer_in) -> None:
     sym, account_id, trade_id, qty, xfer_date = seed_transfer_in
 
-    # 1. Initial pane renders the single-lot form (basis missing).
+    # 1. Initial pane renders the action row with a "Set basis" button; the
+    #    actual form (and its multi-lot link) lazy-loads via
+    #    GET /positions/pane/basis when the button is clicked.
     resp = client.get("/positions/pane", params={"sym": sym, "account_id": account_id})
     assert resp.status_code == 200
     assert "Set basis" in resp.text
-    assert f"/audit/set-basis/multi/{trade_id}" in resp.text
+    resp_basis = client.get("/positions/pane/basis", params={"sym": sym, "account_id": account_id})
+    assert resp_basis.status_code == 200
+    assert f"/audit/set-basis/multi/{trade_id}" in resp_basis.text
 
     # 2. Switch to multi-lot fragment.
     resp = client.get(f"/audit/set-basis/multi/{trade_id}")
@@ -51,11 +55,13 @@ def test_multi_lot_split_flow_clears_basis_warning(client: TestClient, repo, see
     # Parent row's basis_unknown should be cleared too (hygiene-checker correctness).
     assert parent.basis_unknown is False
 
-    # 5. Re-render the pane: the form stays available so the user can RE-EDIT
+    # 5. Re-render the basis form: it stays available so the user can RE-EDIT
     #    the split lots (e.g. correct a typo in one segment's basis) without
     #    re-importing. The "+ Split into multiple lots" link must still point
     #    at the multi-lot fragment, which now pre-fills with the saved
     #    siblings and accepts segments summing to the original group qty.
-    resp = client.get("/positions/pane", params={"sym": sym, "account_id": account_id})
+    #    The form lazy-loads via /positions/pane/basis since the Task 3
+    #    action-row refactor.
+    resp = client.get("/positions/pane/basis", params={"sym": sym, "account_id": account_id})
     assert resp.status_code == 200
     assert f"/audit/set-basis/multi/{trade_id}" in resp.text
