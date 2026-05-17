@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -86,11 +85,61 @@ def test_lot_ladder_st_and_lt_pills(client: TestClient, repo, builders) -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="tacked-lot fixture not yet wired")
-def test_lot_ladder_tacked_pill_has_tooltip(client: TestClient, repo, builders) -> None:  # pragma: no cover
-    """A lot whose tacked_acquired_date is set should render data-pill="TACKED"
-    with a title tooltip mentioning IRC §1223(4)."""
-    # Seeding a wash-sale + replacement that triggers §1223(4) tacking requires
-    # a multi-step fixture (sell at loss, buy within 30d, recompute). Wire the
-    # fixture here once the wash-sale seeder helper is available.
-    pytest.skip("tacked-lot fixture not yet wired")
+def test_lot_ladder_tacked_pill_has_tooltip(client: TestClient, repo, builders) -> None:
+    """A lot whose tacked_acquired_date is set (§1223(4) wash-sale tacking) must
+    render data-pill="TACKED" with a title tooltip mentioning IRC §1223(4).
+
+    Scenario:
+      1. Buy 100 sh @ $100 (2 years ago, D1) — original lot, solidly LT.
+      2. Sell 100 sh @ $50 (30 days ago, D2) — $5,000 loss, triggers wash sale.
+      3. Buy 100 sh @ $50 (10 days ago, D3) — replacement within ±30d of D2.
+
+    Engine detects the wash sale: disallowed loss ($5,000) rolls into the
+    replacement lot's basis ($10,000), and tacked_acquired_date is set to D1.
+    The lot ladder must then render the TACKED pill + §1223(4) tooltip.
+    """
+    from net_alpha.engine.recompute import recompute_all_violations
+    from net_alpha.engine.stitch import stitch_account
+
+    sym = "TACK"
+    today = date.today()
+    display = "Schwab/Taxable"
+
+    # Step 1: BUY 100 @ $100 two years ago — holding-period anchor for tacking.
+    far_past = today - timedelta(days=730)
+    buy_old = builders.make_buy(display, sym, far_past, qty=100.0, cost=10_000.0)
+
+    # Step 2: SELL 100 @ $50 thirty days ago — realises a $5,000 loss.
+    sell_date = today - timedelta(days=30)
+    sell_old = builders.make_sell(display, sym, sell_date, qty=100.0, proceeds=5_000.0)
+
+    # Step 3: BUY 100 @ $50 ten days ago — replacement lot within ±30d of the sell.
+    rebuy_date = today - timedelta(days=10)
+    rebuy = builders.make_buy(display, sym, rebuy_date, qty=100.0, cost=5_000.0)
+
+    acct, _ = builders.seed_import(repo, "Schwab", "Taxable", [buy_old, sell_old, rebuy])
+    stitch_account(repo, acct.id)
+    recompute_all_violations(repo, {})
+
+    # Sanity: at least one lot for this ticker+account must have
+    # tacked_acquired_date == far_past (the replacement lot).
+    lots = repo.get_lots_for_ticker(sym)
+    tacked_lots = [
+        lot for lot in lots
+        if lot.account == display and lot.tacked_acquired_date is not None
+    ]
+    assert len(tacked_lots) == 1, (
+        f"expected exactly 1 tacked lot, got {len(tacked_lots)}: {tacked_lots}"
+    )
+    tacked_lot = tacked_lots[0]
+    assert tacked_lot.tacked_acquired_date == far_past, (
+        f"expected tacked_acquired_date={far_past}, got {tacked_lot.tacked_acquired_date}"
+    )
+
+    # Hit the pane and confirm the TACKED pill renders with the §1223(4) tooltip.
+    resp = client.get(f"/positions/pane?sym={sym}&account_id={acct.id}")
+    assert resp.status_code == 200
+    html = resp.text
+    assert 'data-pill="TACKED"' in html, "TACKED status pill not found in lot ladder"
+    assert "Holding period tacked" in html, "Tooltip text 'Holding period tacked' not found"
+    assert "1223(4)" in html, "IRC §1223(4) citation not found in tooltip"
