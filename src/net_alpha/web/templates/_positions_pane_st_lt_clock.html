@@ -2,11 +2,12 @@
    `_pane_lot_info` when ≥1 open ST lot is ≤90d from LT).
 
    Layout: a slim horizontal bar with progress proportional to
-   (365 - days_to_lt)/365. The right edge is "LT". Days remaining
-   labeled inline. Mute color until ≤30d, then warm. #}
+   (366 - days_to_lt)/366. The right edge is "LT" (366d held = first LT
+   day, per the helper's `held_days > 365` rule). Days remaining labeled
+   inline. Mute color until ≤30d, then warm. #}
 {% if lt_clock %}
 {% set _days = lt_clock.min_days_to_lt %}
-{% set _pct = ((365 - _days) / 365 * 100) | round(1) %}
+{% set _pct = ((366 - _days) / 366 * 100) | round(1) %}
 {% set _hot = _days <= 30 %}
 <div data-testid="st-lt-clock" class="mt-3 mb-1">
   <div class="flex items-center justify-between text-[11px] text-label-2 mb-1">

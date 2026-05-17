@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -9,6 +10,7 @@ from loguru import logger
 from starlette.responses import Response
 
 from net_alpha.db.repository import Repository
+from net_alpha.models.domain import Lot
 from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.cash_flow import compute_cash_kpis
 from net_alpha.portfolio.models import PositionRow
@@ -230,15 +232,15 @@ def positions_page(
 
 
 def _pane_lot_info(
-    open_equity_lots: list,  # list of Lot from open_lots_view filter
+    open_equity_lots: list[Lot],
     last_price: float | None,
     today: dt.date,
-) -> dict:
+) -> dict[str, Any]:
     """Compute per-lot status fields used by the ST/LT clock and the lot
     ladder. Returns a dict with keys:
 
     - `lots`: list[dict] one per lot, with fields: date, qty, adj_basis,
-      unrealized, status ("ST"|"LT"|"WS"|"TACKED"), days_to_lt, is_tacked.
+      unrealized, status ("ST" | "LT" | "TACKED"), days_to_lt, is_tacked.
     - `clock`: dict | None — {"min_days_to_lt": int} if any ST lot is
       ≤90d from LT, else None.
     """
@@ -291,6 +293,7 @@ def positions_pane(
     sim-sell preview, and set-basis form.
     """
     sym = sym.upper().strip()
+    today = dt.date.today()
     quotes = pricing.get_prices([sym])
     quote = quotes.get(sym)
     last_price = quote.price if quote and quote.price is not None else None
@@ -382,7 +385,7 @@ def positions_pane(
     lot_info = _pane_lot_info(
         open_equity_lots=equity_open,
         last_price=last_price,
-        today=dt.date.today(),
+        today=today,
     )
 
     # --- Sim-sell realized delta ---
