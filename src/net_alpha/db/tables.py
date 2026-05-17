@@ -19,6 +19,15 @@ class AccountRow(SQLModel, table=True):
     label: str = Field(index=True)
     type: str = Field(default="taxable", sa_column_kwargs={"server_default": "taxable"})
     created_at: str | None = None
+    # The broker-exported account string (e.g. "Short Term ...180" from a
+    # Schwab positions CSV header). Lets the verify reconciler key its
+    # (account_label, symbol) join against the user's nicknamed account
+    # instead of the raw broker text. NULL until the user maps it via the
+    # /imports/positions/map picker. Not unique-enforced: an unmapped row
+    # is NULL and SQLite UNIQUE counts every NULL distinct, but we also
+    # don't want two accounts claiming the same broker string — see
+    # repo.set_account_broker_alias for the runtime "one owner" guard.
+    broker_label: str | None = None
 
 
 class ImportRecordRow(SQLModel, table=True):

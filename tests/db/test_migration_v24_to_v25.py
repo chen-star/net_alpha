@@ -35,5 +35,5 @@ def test_v24_to_v25_is_idempotent(tmp_path):
         s.commit()
 
 
-def test_current_schema_version_is_25():
-    assert CURRENT_SCHEMA_VERSION == 25
+def test_current_schema_version_is_26():
+    assert CURRENT_SCHEMA_VERSION == 26

@@ -16,7 +16,7 @@ from net_alpha.engine.etf_pairs import load_etf_pairs
 from net_alpha.engine.recompute import recompute_all_violations
 from net_alpha.engine.stitch import stitch_account
 from net_alpha.ingest.csv_loader import compute_csv_sha256, load_csv
-from net_alpha.ingest.dedup import filter_new
+from net_alpha.ingest.dedup import filter_assignment_duplicates, filter_new
 from net_alpha.models.domain import ImportRecord
 from net_alpha.output import disclaimer, watch_list, ytd_impact
 from net_alpha.splits.sync import _post_import_autosync_splits
@@ -105,6 +105,8 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
             trades = import_result.trades
             existing = repo.existing_natural_keys(account.id)
             new = filter_new(trades, existing)
+            existing_assignments = repo.existing_put_assignment_keys(account.id)
+            new = filter_assignment_duplicates(new, existing_assignments=existing_assignments)
             rec = ImportRecord(
                 account_id=account.id,
                 csv_filename=Path(csv_path).name,

@@ -20,7 +20,7 @@ from net_alpha.import_.positions_csv import (
     parse_positions_csv,
 )
 from net_alpha.ingest.csv_loader import load_csv
-from net_alpha.ingest.dedup import filter_new
+from net_alpha.ingest.dedup import filter_assignment_duplicates, filter_new
 from net_alpha.models.domain import Account, ImportRecord
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.service.jobs.runner import run_job
@@ -380,7 +380,18 @@ async def upload(
             trades = import_result.trades
             existing = repo.existing_natural_keys(acct.id)
             new_trades = filter_new(trades, existing)
-            pre_filtered_dups = len(trades) - len(new_trades)
+            # Second-pass dedup: drop plain underlying-Buy rows that duplicate
+            # an existing put_assignment trade. Schwab's CSV records each put
+            # assignment as Assigned + Buy; partial re-imports that lack the
+            # Assigned row would otherwise create unadjusted-basis duplicates.
+            existing_assignments = repo.existing_put_assignment_keys(acct.id)
+            pre_assignment_dedup = len(new_trades)
+            new_trades = filter_assignment_duplicates(
+                new_trades, existing_assignments=existing_assignments
+            )
+            pre_filtered_dups = (len(trades) - pre_assignment_dedup) + (
+                pre_assignment_dedup - len(new_trades)
+            )
             # Aggregates are derived from the *parsed* set so a re-import that
             # filters everything still records the file's date range and counts
             # — the imports page can then show "skipped 7 dupes · 04/14 → 11/14"
@@ -478,8 +489,20 @@ async def upload_positions_csv(
 
     import_id = repo.save_broker_positions(rows=rows, as_of_date=as_of)
 
-    # Best-effort: trigger an immediate verify run. The orchestrator lands
-    # in a subsequent phase — until then this is a no-op import miss.
+    bump_fragment_revision(request)
+
+    # If any row's account_label didn't resolve to an existing account
+    # (neither accounts.label nor accounts.broker_label match), redirect
+    # to the alias picker BEFORE running verify — running verify against
+    # unmapped labels would just produce noise (109 missing-local/missing-
+    # broker findings for what is actually the same data).
+    if repo.unresolved_broker_labels(import_id=import_id):
+        return RedirectResponse(
+            url=f"/imports/positions/map?import_id={import_id}",
+            status_code=303,
+        )
+
+    # All labels resolved — safe to verify now.
     try:  # pragma: no cover - exercised once Phase 5 lands
         from net_alpha.service.jobs.verify import run_verify_once
 
@@ -487,9 +510,71 @@ async def upload_positions_csv(
     except Exception:  # noqa: BLE001
         pass
 
+    return RedirectResponse(url=f"/settings/imports?highlight={import_id}", status_code=303)
+
+
+@router.get("/imports/positions/map", response_class=HTMLResponse, response_model=None)
+def positions_map_picker(
+    request: Request,
+    import_id: int = Query(...),
+    repo: Repository = Depends(get_repository),
+) -> HTMLResponse | RedirectResponse:
+    """Render the picker that maps each unresolved broker label to an
+    existing user account. Bypassed automatically when nothing is left
+    to map (e.g. the user reloads the page after submitting)."""
+    unresolved = repo.unresolved_broker_labels(import_id=import_id)
+    if not unresolved:
+        return RedirectResponse(url="/verify", status_code=303)
+    # Real user accounts only — the "(multi)" sentinel created by
+    # save_broker_positions is not selectable as a mapping target.
+    accounts = [a for a in repo.list_accounts() if not (a.broker == "positions" and a.label == "(multi)")]
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "imports_positions_map.html",
+        {
+            "import_id": import_id,
+            "unresolved": unresolved,
+            "accounts": accounts,
+        },
+    )
+
+
+@router.post("/imports/positions/map", response_model=None)
+def positions_map_apply(
+    request: Request,
+    import_id: int = Form(...),
+    broker_label: list[str] = Form(...),
+    account_id: list[str] = Form(...),
+    repo: Repository = Depends(get_repository),
+) -> RedirectResponse:
+    """Apply the picker's mapping: register each broker_label as an alias
+    on the chosen account, retag broker_position rows, run verify, and
+    send the user to the verify dashboard to see the now-correct findings.
+
+    ``account_id`` may be the literal string "skip" for labels the user
+    chooses to leave unmapped — those rows stay with their raw broker
+    label and continue to surface in future picker invocations.
+    """
+    if len(broker_label) != len(account_id):
+        raise HTTPException(status_code=400, detail="mapping form is malformed")
+    for raw, aid in zip(broker_label, account_id, strict=True):
+        if aid == "skip" or not aid:
+            continue
+        try:
+            repo.set_account_broker_alias(account_id=int(aid), broker_label=raw)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
     bump_fragment_revision(request)
 
-    return RedirectResponse(url=f"/settings/imports?highlight={import_id}", status_code=303)
+    try:  # pragma: no cover - service job not wired in unit tests
+        from net_alpha.service.jobs.verify import run_verify_once
+
+        run_verify_once(repo=repo, trigger="positions_import")
+    except Exception:  # noqa: BLE001
+        pass
+
+    return RedirectResponse(url="/verify", status_code=303)
 
 
 @router.get("/imports/success", response_class=HTMLResponse)

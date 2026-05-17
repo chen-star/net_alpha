@@ -135,6 +135,84 @@ class Repository:
             s.add(row)
             s.commit()
 
+    def existing_put_assignment_keys(self, account_id: int) -> set[tuple[str, str, str, float]]:
+        """Set of (account_display, ticker, date_iso, qty) for every existing
+        put_assignment trade in `account_id`. Consumed by
+        ``filter_assignment_duplicates`` to drop the raw Schwab Buy-of-
+        underlying row when it's re-imported in a partial CSV that lacks the
+        matching Assigned option row.
+        """
+        with Session(self.engine) as s:
+            display = self._account_display_for_id(s, account_id)
+            rows = s.exec(
+                select(TradeRow.ticker, TradeRow.trade_date, TradeRow.quantity).where(
+                    TradeRow.account_id == account_id,
+                    TradeRow.basis_source == "put_assignment",
+                )
+            ).all()
+            return {(display, ticker, trade_date, float(quantity)) for ticker, trade_date, quantity in rows}
+
+    def resolve_account_label(self, label: str) -> str | None:
+        """Map a broker-exported account string to the canonical ``broker/label``
+        display form used everywhere else in the app.
+
+        Resolution order, returning the matched account's display string:
+          1. Direct display match: label == f"{a.broker}/{a.label}"
+          2. Bare-label match:     label == a.label
+          3. Alias match:          label == a.broker_label
+        Returns None when nothing matches. The display form is what
+        aggregate_open_positions emits on its side of the verify reconciler
+        join, so storing display-form broker_position.account_label is what
+        makes the (account_label, symbol) keys actually align.
+        """
+        with Session(self.engine) as s:
+            for a in s.exec(select(AccountRow)).all():
+                display = f"{a.broker}/{a.label}"
+                if label in (display, a.label, a.broker_label):
+                    return display
+            return None
+
+    def set_account_broker_alias(self, *, account_id: int, broker_label: str) -> None:
+        """Register a broker-exported label as an alias for `account_id` and
+        retroactively retag broker_position rows that hold the raw label.
+
+        Retag target is the broker/label display string (matching
+        aggregate_open_positions' side of the verify join). Any rows from
+        past imports stamped with the raw broker string flip to that
+        display form so the next verify run joins them cleanly.
+        """
+        with Session(self.engine) as s:
+            row = s.exec(select(AccountRow).where(AccountRow.id == account_id)).first()
+            if row is None:
+                raise ValueError(f"unknown account id={account_id}")
+            row.broker_label = broker_label
+            s.add(row)
+            canonical = f"{row.broker}/{row.label}"
+            s.exec(
+                text("UPDATE broker_position SET account_label = :canonical WHERE account_label = :raw").bindparams(
+                    canonical=canonical,
+                    raw=broker_label,
+                )
+            )
+            s.commit()
+
+    def unresolved_broker_labels(self, *, import_id: int) -> list[str]:
+        """Distinct broker_position.account_label values in `import_id` that
+        do not match any account's canonical display form (broker/label).
+
+        Returned in stable alphabetical order so the picker UI renders
+        deterministically across page reloads.
+        """
+        with Session(self.engine) as s:
+            display_forms = {f"{a.broker}/{a.label}" for a in s.exec(select(AccountRow)).all()}
+            rows = s.exec(
+                text(
+                    "SELECT DISTINCT account_label FROM broker_position "
+                    "WHERE import_id = :iid ORDER BY account_label"
+                ).bindparams(iid=import_id)
+            ).all()
+            return [r[0] for r in rows if r[0] not in display_forms]
+
     def get_user_preference(self, account_id: int) -> AccountPreference | None:
         with Session(self.engine) as s:
             row = s.get(UserPreferenceRow, account_id)
@@ -1020,38 +1098,80 @@ class Repository:
             account_display = self._account_display_for_id(s, account_id)
         return [self._row_to_gl_lot(r, account_display) for r in rows]
 
+    def _splits_by_symbol(self) -> dict[str, list[tuple[str, float]]]:
+        """All splits grouped by symbol as (split_date_iso, ratio) tuples.
+
+        Returned in raw-row form (no Pydantic) so the hot paths that scale GL
+        quantities don't pay model-conversion overhead for every row.
+        """
+        with Session(self.engine) as s:
+            rows = s.exec(select(SplitRow)).all()
+            out: dict[str, list[tuple[str, float]]] = {}
+            for r in rows:
+                out.setdefault(r.symbol, []).append((r.split_date, float(r.ratio)))
+            return out
+
+    def _post_split_scale(
+        self,
+        splits_by_symbol: dict[str, list[tuple[str, float]]],
+        ticker: str,
+        on_date_iso: str,
+    ) -> float:
+        """Cumulative product of split ratios with split_date > on_date_iso.
+
+        `splits/apply.py` rewrites lot.quantity to post-split units the instant
+        a split's ex-date passes; GL rows and trades still hold the
+        broker-reported pre-split units until that scaling is applied here.
+        """
+        splits = splits_by_symbol.get(ticker)
+        if not splits:
+            return 1.0
+        m = 1.0
+        for split_date_iso, ratio in splits:
+            if split_date_iso > on_date_iso:
+                m *= ratio
+        return m
+
     def get_equity_gl_closures(self) -> dict[tuple[str, str], float]:
-        """Sum of closed equity quantity per (account_display, ticker) across all GL lots.
+        """Sum of closed equity quantity per (account_display, ticker) across all
+        GL lots, expressed in post-split units to match the split-adjusted
+        lot.quantity that ``consume_lots_fifo`` consumes against.
 
         Used by position aggregations to compute true open quantity when the user
         has imported a Realized G/L CSV without the matching Transaction History
         (so trade-table sells are incomplete). Options are excluded — only rows
         with no option_strike contribute.
         """
+        splits_by_symbol = self._splits_by_symbol()
         out: dict[tuple[str, str], float] = {}
         with Session(self.engine) as s:
             rows = s.exec(select(RealizedGLLotRow).where(RealizedGLLotRow.option_strike.is_(None))).all()
             for r in rows:
                 display = self._account_display_for_id(s, r.account_id)
                 key = (display, r.ticker)
-                out[key] = out.get(key, 0.0) + float(r.quantity)
+                scale = self._post_split_scale(splits_by_symbol, r.ticker, r.closed_date)
+                out[key] = out.get(key, 0.0) + float(r.quantity) * scale
         return out
 
     def get_option_gl_closures(self) -> dict[tuple[str, str, float, str, str], float]:
         """Sum of closed option-contract quantity per
-        (account_display, ticker, strike, expiry_iso, call_put) across all GL lots.
+        (account_display, ticker, strike, expiry_iso, call_put) across all GL
+        lots, expressed in post-split units (Schwab applies splits to contract
+        count, not the multiplier).
 
         Used by the open-option counter so contracts that closed via expiry
         worthless or assignment (events Schwab records in GL but not in the
         transaction CSV) don't get double-counted as still open.
         """
+        splits_by_symbol = self._splits_by_symbol()
         out: dict[tuple[str, str, float, str, str], float] = {}
         with Session(self.engine) as s:
             rows = s.exec(select(RealizedGLLotRow).where(RealizedGLLotRow.option_strike.is_not(None))).all()
             for r in rows:
                 display = self._account_display_for_id(s, r.account_id)
                 key = (display, r.ticker, r.option_strike, r.option_expiry, r.option_call_put)
-                out[key] = out.get(key, 0.0) + float(r.quantity)
+                scale = self._post_split_scale(splits_by_symbol, r.ticker, r.closed_date)
+                out[key] = out.get(key, 0.0) + float(r.quantity) * scale
         return out
 
     def get_gl_lots_for_account(self, account_id: int) -> list[RealizedGLLot]:
@@ -2649,11 +2769,27 @@ class Repository:
             )
             s.add(rec)
             s.flush()
+            # Resolve each row's broker-exported label to the canonical
+            # broker/label display form so the verify reconciler's
+            # (account_label, symbol) key joins cleanly against
+            # aggregate_open_positions on the other side. Unresolved rows
+            # keep their raw string and surface in the /imports/positions/map
+            # picker for one-time user mapping.
+            all_accounts = list(s.exec(select(AccountRow)).all())
+            lookup: dict[str, str] = {}
+            for a in all_accounts:
+                display = f"{a.broker}/{a.label}"
+                lookup[display] = display
+                lookup[a.label] = display
+                if a.broker_label:
+                    lookup[a.broker_label] = display
             for r in rows:
+                raw = r["account_label"]
+                label = lookup.get(raw, raw)
                 s.add(
                     BrokerPosition(
                         import_id=rec.id,
-                        account_label=r["account_label"],
+                        account_label=label,
                         symbol=r["symbol"],
                         qty=r["qty"],
                         cost_basis=r["cost_basis"],
@@ -2687,11 +2823,17 @@ class Repository:
         lots = self.all_lots()
         gl_closures = self.get_equity_gl_closures()
         gl_option_closures = self.get_option_gl_closures()
+        # Splits scale trade-side sells into post-split units so they
+        # match split-adjusted lot.quantity. GL closures are already
+        # scaled inside get_*_gl_closures above; this keeps the two
+        # sources in the same unit system.
+        splits_by_ticker = {sym: self.get_splits(sym) for sym in {lot.ticker for lot in lots}}
         consumed = consume_lots_fifo(
             lots=lots,
             trades=trades,
             gl_closures=gl_closures,
             gl_option_closures=gl_option_closures,
+            splits_by_ticker=splits_by_ticker,
         )
 
         price_cache: dict[str, Decimal | None] = {}

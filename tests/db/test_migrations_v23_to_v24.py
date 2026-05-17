@@ -9,8 +9,8 @@ from net_alpha.db.migrations import (
 )
 
 
-def test_v24_constant_is_25():
-    assert CURRENT_SCHEMA_VERSION == 25
+def test_v24_constant_is_26():
+    assert CURRENT_SCHEMA_VERSION == 26
 
 
 def test_v23_to_v24_creates_verify_result_table(in_memory_session_at_v23):

@@ -48,6 +48,15 @@ Schema versions:
         records each L2 background-job run; verify_finding stores each
         failed/warned check (FK to verify_result); broker_position holds
         rows parsed from Schwab All-Positions CSVs (FK to imports.id).
+  v25 — Adds overview_layout (per-profile row order + hidden set).
+  v26 — Adds accounts.broker_label so a broker-exported account string
+        (e.g. "Short Term ...180" from a Schwab per-account positions CSV
+        header) can be aliased to the user's nicknamed account label. The
+        verify reconciler keys on (account_label, symbol); without this
+        alias an imported positions CSV produces N PositionsMissingLocal
+        + M PositionsMissingBroker findings even when the underlying data
+        agrees, because the per-account header text never matches the
+        user-chosen label (see /imports/positions/map picker).
 """
 
 from __future__ import annotations
@@ -55,7 +64,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlmodel import Session
 
-CURRENT_SCHEMA_VERSION = 25
+CURRENT_SCHEMA_VERSION = 26
 
 
 def get_schema_version(session: Session) -> int:
@@ -738,6 +747,13 @@ def _migrate_v24_to_v25(session: Session) -> None:
     )
 
 
+def _migrate_v25_to_v26(session: Session) -> None:
+    """Add accounts.broker_label for positions-CSV → account alias mapping."""
+    if _table_exists(session, "accounts") and not _column_exists(session, "accounts", "broker_label"):
+        session.exec(text("ALTER TABLE accounts ADD COLUMN broker_label TEXT"))
+    session.commit()
+
+
 def migrate(session: Session) -> None:
     """Apply pending migrations idempotently."""
     # PREFLIGHT: ensure latest TradeRow columns exist before per-version steps
@@ -759,6 +775,7 @@ def migrate(session: Session) -> None:
         _migrate_v22_to_v23(session)
         _migrate_v23_to_v24(session)
         _migrate_v24_to_v25(session)
+        _migrate_v25_to_v26(session)
         session.commit()
         return
     if current == 1:
@@ -857,6 +874,10 @@ def migrate(session: Session) -> None:
         _migrate_v24_to_v25(session)
         set_schema_version(session, 25)
         current = 25
+    if current < 26:
+        _migrate_v25_to_v26(session)
+        set_schema_version(session, 26)
+        current = 26
     if current > CURRENT_SCHEMA_VERSION:
         raise RuntimeError(
             f"DB schema_version={current} is newer than this binary "

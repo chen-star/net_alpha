@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Map account labels &middot; net-alpha{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto py-12">
+  <h1 class="text-2xl font-semibold mb-2">Map broker labels to your accounts</h1>
+  <p class="text-label-2 text-[13px] mb-6">
+    The positions CSV you just uploaded uses
+    {% if unresolved|length == 1 %}an account name{% else %}account names{% endif %}
+    we don&rsquo;t recognize. Pick which of your accounts each one belongs to so
+    the verify engine can reconcile broker totals against your local data.
+    Skipped labels stay un-aliased and continue to show as
+    <code>PositionsMissingLocal</code> findings.
+  </p>
+
+  <form method="post" action="/imports/positions/map" class="space-y-3">
+    <input type="hidden" name="import_id" value="{{ import_id }}"/>
+
+    {% for label in unresolved %}
+      <div class="flex items-center gap-3 p-3 rounded-md bg-surface"
+           style="border:0.5px solid var(--color-hairline);">
+        <div class="flex-1 min-w-0">
+          <div class="text-[12px] text-label-3 uppercase tracking-wide">Broker label</div>
+          <div class="font-mono text-[13px] truncate">{{ label }}</div>
+        </div>
+        <div class="shrink-0">
+          <div class="text-[12px] text-label-3 uppercase tracking-wide">Maps to</div>
+          <input type="hidden" name="broker_label" value="{{ label }}"/>
+          <select name="account_id"
+                  class="bg-surface-2 text-text text-[13px] px-2 py-1 rounded-md border border-hairline">
+            {% for acct in accounts %}
+              <option value="{{ acct.id }}">{{ acct.broker }} / {{ acct.label }}</option>
+            {% endfor %}
+            <option value="skip">— Skip for now —</option>
+          </select>
+        </div>
+      </div>
+    {% endfor %}
+
+    <div class="flex justify-end gap-3 pt-2">
+      <a href="/verify" class="px-3 py-1.5 rounded-md bg-surface text-text text-[13px] border border-hairline">
+        Cancel
+      </a>
+      <button type="submit"
+              class="px-3 py-1.5 rounded-md bg-primary text-on-primary text-[13px]">
+        Apply &amp; reconcile
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

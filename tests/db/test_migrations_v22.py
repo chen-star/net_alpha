@@ -9,8 +9,8 @@ from net_alpha.db.migrations import (
 )
 
 
-def test_current_schema_version_is_25():
-    assert CURRENT_SCHEMA_VERSION == 25
+def test_current_schema_version_is_26():
+    assert CURRENT_SCHEMA_VERSION == 26
 
 
 def test_v21_to_v22_adds_column_idempotently():
