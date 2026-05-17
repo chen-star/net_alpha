@@ -286,3 +286,98 @@ def build_cash_deployment_series(
             )
         )
     return pts
+
+
+from net_alpha.portfolio.models import ChartHeadKPIs  # noqa: E402
+
+
+def compute_chart_head_kpis(
+    *,
+    account_points: Sequence[AccountValuePoint],
+    cash_deployment_points: Sequence[CashDeploymentPoint],
+    lifetime_cash_points: Sequence[CashDeploymentPoint],
+    period_starting_value: Decimal,
+) -> ChartHeadKPIs:
+    """Inline panel-head numbers for the equity + cash deployment charts.
+
+    Pure-derived from the same series the chart plots. ``lifetime_cash_points``
+    is the unscoped (period=None) cash deployment series — used to source the
+    lifetime min/max KPI line that replaces the in-chart annotation lines.
+    """
+    if not account_points:
+        return ChartHeadKPIs(
+            end_account_value=None,
+            end_contributions=Decimal("0"),
+            period_growth=None,
+            period_growth_pct=None,
+            end_free_cash=Decimal("0"),
+            end_pledged=Decimal("0"),
+            end_invested=None,
+            end_cash_share_pct=None,
+            lifetime_min=None,
+            lifetime_min_on=None,
+            lifetime_max=None,
+            lifetime_max_on=None,
+        )
+
+    last = account_points[-1]
+    end_account_value = last.account_value
+    end_contributions = last.contributions
+
+    period_contrib = end_contributions - account_points[0].contributions
+    growth_denom = period_starting_value + period_contrib
+    if end_account_value is None:
+        period_growth: Decimal | None = None
+        period_growth_pct: Decimal | None = None
+    else:
+        period_growth = (end_account_value - period_starting_value - period_contrib).quantize(
+            Decimal("0.01")
+        )
+        period_growth_pct = (
+            (period_growth / growth_denom) if growth_denom != 0 else None
+        )
+
+    if cash_deployment_points:
+        last_cdp = cash_deployment_points[-1]
+        end_free = last_cdp.free_cash
+        end_pledged = last_cdp.pledged if last_cdp.pledged is not None else Decimal("0")
+        end_invested = last_cdp.invested
+    else:
+        end_free = Decimal("0")
+        end_pledged = Decimal("0")
+        end_invested = None
+
+    if end_account_value and end_account_value > 0:
+        end_cash_share_pct = ((end_free + end_pledged) / end_account_value).quantize(
+            Decimal("0.0001")
+        )
+    else:
+        end_cash_share_pct = None
+
+    if lifetime_cash_points:
+        def _cash(p: CashDeploymentPoint) -> Decimal:
+            return p.free_cash + (p.pledged if p.pledged is not None else Decimal("0"))
+
+        mn = min(lifetime_cash_points, key=lambda p: (_cash(p), p.on))
+        mx = max(lifetime_cash_points, key=lambda p: (_cash(p), -p.on.toordinal()))
+        lifetime_min = _cash(mn)
+        lifetime_min_on = mn.on
+        lifetime_max = _cash(mx)
+        lifetime_max_on = mx.on
+    else:
+        lifetime_min = lifetime_min_on = lifetime_max = lifetime_max_on = None
+
+    return ChartHeadKPIs(
+        end_account_value=end_account_value,
+        end_contributions=end_contributions,
+        period_growth=period_growth,
+        period_growth_pct=period_growth_pct,
+        end_free_cash=end_free,
+        end_pledged=end_pledged,
+        end_invested=end_invested,
+        end_cash_share_pct=end_cash_share_pct,
+        lifetime_min=lifetime_min,
+        lifetime_min_on=lifetime_min_on,
+        lifetime_max=lifetime_max,
+        lifetime_max_on=lifetime_max_on,
+    )
