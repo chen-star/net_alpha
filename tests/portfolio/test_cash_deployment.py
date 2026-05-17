@@ -129,3 +129,40 @@ def test_unpriced_holdings_yields_none_invested():
     assert pts[0].invested is None
     assert pts[0].free_cash == Decimal("1000")
     assert pts[0].pledged == Decimal("0")
+
+
+def test_pledged_clamps_to_cash_balance_when_collateral_exceeds_cash():
+    """The pledged-cash compute is naive about cash drawdowns: it sums
+    strike × 100 × qty for open short puts regardless of whether the
+    account still holds that much cash. After a market draw, cash can dip
+    below the notional collateral. The series clamps pledged to cash so
+    free_cash never goes negative and the stack arithmetic stays sane
+    (free + pledged + invested = total)."""
+    # CSP on a $400 strike → $40k collateral. Account holds $5k cash —
+    # below the notional. The clamp pins pledged = $5k, free = $0.
+    avps = [_avp(dt.date(2026, 4, 10), 40_000, 5_000, 0)]
+    sto = Trade(
+        id="sto",
+        account="Schwab/x",
+        date=dt.date(2026, 4, 10),
+        ticker="SPY 2026-06-20 P400",
+        action="Sell",
+        quantity=1.0,
+        proceeds=100.0,
+        cost_basis=None,
+        gross_cash_impact=100.0,
+        option_details=OptionDetails(
+            strike=400.0,
+            expiry=dt.date(2026, 6, 20),
+            call_put="P",
+        ),
+    )
+    pts = build_cash_deployment_series(
+        account_points=avps,
+        trades=[sto],
+        events=[_ev(dt.date(2026, 4, 1), "transfer_in", 5_000.0)],
+        accounts=None,
+        with_pledged=True,
+    )
+    assert pts[0].pledged == Decimal("5000.00")
+    assert pts[0].free_cash == Decimal("0.00")
