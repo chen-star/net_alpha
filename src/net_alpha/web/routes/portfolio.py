@@ -472,6 +472,7 @@ def portfolio_positions(
     all_lot_tickers = sorted({lot.ticker for lot in lots if lot.option_details is None})
     prices = svc.get_prices(all_lot_tickers)
     include_closed = show == "all"
+    account_id_by_display = {f"{a.broker}/{a.label}": a.id for a in repo.list_accounts()}
     all_rows = compute_open_positions(
         trades=trades,
         lots=lots,
@@ -482,6 +483,7 @@ def portfolio_positions(
         gl_closures=gl_closures,
         gl_option_closures=gl_option_closures,
         gl_lots=repo.list_all_gl_lots(),
+        account_id_by_display=account_id_by_display,
     )
     selected_symbols: set[str] = set()
     if symbols:

@@ -43,6 +43,11 @@ class PositionRow:
     # every label.
     account_chip: str = ""
     account_displays: tuple[str, ...] = ()
+    # Numeric account_id for single-account rows — used by the positions pane
+    # click and j/k keyboard handlers to scope the pane to the right account
+    # when the same symbol appears in multiple accounts. None for multi-account
+    # aggregated rows (where account_displays has more than one entry).
+    account_id: int | None = None
 
 
 @dataclass(frozen=True)

@@ -464,6 +464,7 @@ def compute_open_positions(
     gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
     gl_lots: Iterable[RealizedGLLot] | None = None,
     as_of: date | None = None,
+    account_id_by_display: dict[str, int] | None = None,
 ) -> list[PositionRow]:
     """Return positions sorted by market value desc (None last).
 
@@ -670,6 +671,11 @@ def compute_open_positions(
         oldest = oldest_open_by_sym.get(sym)
         days_held = (today - oldest).days if oldest is not None else None
         accounts_tuple = tuple(sorted(open_accounts_by_sym[sym]))
+        row_account_id = (
+            account_id_by_display.get(accounts_tuple[0])
+            if account_id_by_display and len(accounts_tuple) == 1
+            else None
+        )
         rows.append(
             PositionRow(
                 symbol=sym,
@@ -689,6 +695,7 @@ def compute_open_positions(
                 basis_known=basis_known_by_sym.get(sym, False),
                 account_chip=_account_chip(accounts_tuple),
                 account_displays=accounts_tuple,
+                account_id=row_account_id,
             )
         )
     # Tickers with only open option exposure (no equity lot): emit a qty=0 row
@@ -701,6 +708,11 @@ def compute_open_positions(
         if qty_by_sym.get(sym, Decimal("0")) != 0:
             continue
         accounts_tuple = tuple(sorted(open_accounts_by_sym[sym]))
+        opt_account_id = (
+            account_id_by_display.get(accounts_tuple[0])
+            if account_id_by_display and len(accounts_tuple) == 1
+            else None
+        )
         rows.append(
             PositionRow(
                 symbol=sym,
@@ -715,6 +727,7 @@ def compute_open_positions(
                 open_option_contracts=opt_contracts,
                 account_chip=_account_chip(accounts_tuple),
                 account_displays=accounts_tuple,
+                account_id=opt_account_id,
             )
         )
     if include_closed:
@@ -729,6 +742,11 @@ def compute_open_positions(
             if qty_by_sym.get(sym, Decimal("0")) != 0:
                 continue
             accounts_tuple = tuple(sorted(all_accounts_by_sym[sym]))
+            closed_account_id = (
+                account_id_by_display.get(accounts_tuple[0])
+                if account_id_by_display and len(accounts_tuple) == 1
+                else None
+            )
             rows.append(
                 PositionRow(
                     symbol=sym,
@@ -742,6 +760,7 @@ def compute_open_positions(
                     unrealized_pl=Decimal("0"),
                     account_chip=_account_chip(accounts_tuple),
                     account_displays=accounts_tuple,
+                    account_id=closed_account_id,
                 )
             )
     rows.sort(key=lambda r: (r.market_value is None, -(r.market_value or Decimal("0"))))
