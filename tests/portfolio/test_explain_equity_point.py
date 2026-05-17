@@ -259,3 +259,36 @@ def test_wash_sale_violation_on_date_attaches_ref():
     assert b.wash_events[0].kind == "violation"
     assert b.wash_events[0].row_id == 42
     assert b.wash_events[0].ticker == "AAPL"
+
+
+def test_first_point_in_series_returns_starting_snapshot():
+    on = date(2026, 1, 5)
+    lots = [
+        Lot(
+            id="L1",
+            trade_id="t-aapl",
+            account="Brokerage",
+            ticker="AAPL",
+            date=date(2026, 1, 5),
+            quantity=100.0,
+            cost_basis=17000.0,
+            adjusted_basis=17000.0,
+        ),
+    ]
+    b = build_equity_point_breakdown(
+        on=on,
+        previous_on=None,
+        trades_on_date=[],
+        cash_events_on_date=[],
+        dividend_events_on_date=[],
+        open_lots_prev_day=lots,
+        violations_on_date=[],
+        exempt_matches_on_date=[],
+        get_close=lambda sym, d: None,
+        delta_account_value=Decimal("0"),
+        starting_contributed_to_date=Decimal("17500"),
+    )
+    assert b.is_starting_snapshot is True
+    assert b.previous_on is None
+    assert b.starting_holdings_count == 1
+    assert b.starting_contributed_to_date == Decimal("17500")

@@ -565,6 +565,7 @@ def build_equity_point_breakdown(
     exempt_matches_on_date: list,
     get_close: Callable[[str, dt.date], Decimal | None],
     delta_account_value: Decimal,
+    starting_contributed_to_date: Decimal = Decimal("0"),
 ) -> EquityPointBreakdown:
     """Decompose the equity-curve point-to-point delta into its sources.
 
@@ -573,7 +574,9 @@ def build_equity_point_breakdown(
     Caller is responsible for filtering inputs by account; this function
     is account-agnostic and just sums what it's given.
     """
-    # Starting-snapshot case handled in Task 7.
+    # Starting-snapshot case — first point in the filtered series has no
+    # previous-point delta to compare against. Surface a "where the user
+    # started" panel instead (ticker count + cumulative contributions).
     if previous_on is None:
         return EquityPointBreakdown(
             on=on,
@@ -592,8 +595,8 @@ def build_equity_point_breakdown(
             unpriced_tickers=(),
             unpriced_basis_total=Decimal("0"),
             is_starting_snapshot=True,
-            starting_holdings_count=0,
-            starting_contributed_to_date=Decimal("0"),
+            starting_holdings_count=len({lot.ticker for lot in open_lots_prev_day}),
+            starting_contributed_to_date=starting_contributed_to_date,
         )
 
     realized = sum((_trade_realized(t) for t in trades_on_date), Decimal("0"))
