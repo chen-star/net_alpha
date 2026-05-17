@@ -543,6 +543,11 @@ class EquityPointBreakdown:
 # otherwise fall through to the sell branch producing a phantom P&L.
 _BUY_ACTIONS_LOWER = frozenset({"buy", "reinvest shares", "reinvest", "buy to open"})
 
+# Presentation policy: cap the per-day trade / mover rows shown in the
+# equity-point explainer panel. Aggregate totals stay correct; only the
+# rendered detail list is truncated.
+_TOP_N_ROWS = 5
+
 
 def _trade_realized(t) -> Decimal:
     """Realized P&L for a single trade row.
@@ -575,7 +580,7 @@ def _build_trade_rows(trades_on_date) -> tuple[Decimal, list[TradeRow]]:
         for t in trades_on_date
     ]
     rows.sort(key=lambda r: abs(r.realized_pnl), reverse=True)
-    return realized, rows[:5]
+    return realized, rows[:_TOP_N_ROWS]
 
 
 def _classify_cash_events(cash_events_on_date) -> tuple[Decimal, list[CashEventRow]]:
@@ -656,7 +661,7 @@ def _compute_mtm_movers(
         )
 
     movers.sort(key=lambda m: abs(m.contribution), reverse=True)
-    return delta_unrealized, movers[:5], tuple(sorted(unpriced)), unpriced_basis
+    return delta_unrealized, movers[:_TOP_N_ROWS], tuple(sorted(unpriced)), unpriced_basis
 
 
 def _collect_wash_refs(violations_on_date, exempt_matches_on_date) -> list[WashEventRef]:
