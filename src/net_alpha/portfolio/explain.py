@@ -6,6 +6,7 @@ data in; this module returns dataclasses ready for Jinja.
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -533,3 +534,100 @@ class EquityPointBreakdown:
     is_starting_snapshot: bool
     starting_holdings_count: int
     starting_contributed_to_date: Decimal
+
+
+def _trade_realized(t) -> Decimal:
+    """Realized P&L for a single trade row.
+
+    Sells: proceeds - basis. Buys: 0 (basis sits on lot, not realized).
+    Mirrors the convention used across ``portfolio/pnl.py``.
+
+    ``Trade.action`` values in this codebase are ``"Buy"`` / ``"Sell"``
+    (uppercase first letter); ``Trade.proceeds`` and ``Trade.cost_basis``
+    are ``float | None``.
+    """
+    if t.action.lower().startswith("buy"):
+        return Decimal("0")
+    proceeds = Decimal(str(t.proceeds)) if t.proceeds is not None else Decimal("0")
+    basis = Decimal(str(t.cost_basis)) if t.cost_basis is not None else Decimal("0")
+    return (proceeds - basis).quantize(Decimal("0.01"))
+
+
+def build_equity_point_breakdown(
+    *,
+    on: dt.date,
+    previous_on: dt.date | None,
+    trades_on_date: list,
+    cash_events_on_date: list,
+    dividend_events_on_date: list,
+    open_lots_prev_day: list,
+    violations_on_date: list,
+    exempt_matches_on_date: list,
+    get_close: Callable[[str, dt.date], Decimal | None],
+    delta_account_value: Decimal,
+) -> EquityPointBreakdown:
+    """Decompose the equity-curve point-to-point delta into its sources.
+
+    See ``docs/superpowers/specs/2026-05-16-equity-curve-click-to-explain-design.md``.
+
+    Caller is responsible for filtering inputs by account; this function
+    is account-agnostic and just sums what it's given.
+    """
+    # Starting-snapshot case handled in Task 7.
+    if previous_on is None:
+        return EquityPointBreakdown(
+            on=on,
+            previous_on=None,
+            delta_account_value=Decimal("0"),
+            contributions=Decimal("0"),
+            realized_pnl=Decimal("0"),
+            delta_unrealized=Decimal("0"),
+            dividends=Decimal("0"),
+            residual=Decimal("0"),
+            trades=[],
+            top_movers=[],
+            cash_events=[],
+            dividend_events=[],
+            wash_events=[],
+            unpriced_tickers=(),
+            unpriced_basis_total=Decimal("0"),
+            is_starting_snapshot=True,
+            starting_holdings_count=0,
+            starting_contributed_to_date=Decimal("0"),
+        )
+
+    realized = sum((_trade_realized(t) for t in trades_on_date), Decimal("0"))
+    trade_rows = [
+        TradeRow(
+            trade_id=t.id,
+            ticker=t.ticker,
+            side=t.action,
+            quantity=Decimal(str(t.quantity)),
+            realized_pnl=_trade_realized(t),
+        )
+        for t in trades_on_date
+    ]
+    # Sort by abs(realized_pnl) descending, take top 5.
+    trade_rows.sort(key=lambda r: abs(r.realized_pnl), reverse=True)
+    trade_rows = trade_rows[:5]
+
+    return EquityPointBreakdown(
+        on=on,
+        previous_on=previous_on,
+        delta_account_value=delta_account_value,
+        contributions=Decimal("0"),
+        realized_pnl=realized,
+        delta_unrealized=Decimal("0"),
+        dividends=Decimal("0"),
+        residual=(delta_account_value - realized).quantize(Decimal("0.01")),
+        trades=trade_rows,
+        top_movers=[],
+        cash_events=[],
+        dividend_events=[],
+        wash_events=[],
+        unpriced_tickers=(),
+        unpriced_basis_total=Decimal("0"),
+        is_starting_snapshot=False,
+        starting_holdings_count=0,
+        starting_contributed_to_date=Decimal("0"),
+    )
