@@ -207,8 +207,7 @@ class Repository:
             display_forms = {f"{a.broker}/{a.label}" for a in s.exec(select(AccountRow)).all()}
             rows = s.exec(
                 text(
-                    "SELECT DISTINCT account_label FROM broker_position "
-                    "WHERE import_id = :iid ORDER BY account_label"
+                    "SELECT DISTINCT account_label FROM broker_position WHERE import_id = :iid ORDER BY account_label"
                 ).bindparams(iid=import_id)
             ).all()
             return [r[0] for r in rows if r[0] not in display_forms]

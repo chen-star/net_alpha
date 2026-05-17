@@ -73,9 +73,7 @@ def test_engine_violation_kept_bumps_lot_basis(repo):
     violations = repo.all_violations()
     assert len(violations) == 1
     # The disallowed loss flows into the replacement lot's adjusted_basis.
-    replacement_lot = next(
-        lot for lot in repo.all_lots() if lot.ticker == "BKSY" and lot.date == date(2025, 8, 15)
-    )
+    replacement_lot = next(lot for lot in repo.all_lots() if lot.ticker == "BKSY" and lot.date == date(2025, 8, 15))
     assert replacement_lot.adjusted_basis > replacement_lot.cost_basis
 
 
@@ -115,10 +113,7 @@ def test_merge_dropped_violation_leaves_no_basis_residue(repo):
     assert violations == []
 
     # And the replacement lot must NOT have the dropped bump baked in.
-    replacement_lot = next(
-        lot for lot in repo.all_lots() if lot.ticker == "BKSY" and lot.date == date(2025, 8, 15)
-    )
+    replacement_lot = next(lot for lot in repo.all_lots() if lot.ticker == "BKSY" and lot.date == date(2025, 8, 15))
     assert replacement_lot.adjusted_basis == replacement_lot.cost_basis, (
-        f"stale residue: adjusted_basis={replacement_lot.adjusted_basis} "
-        f"cost_basis={replacement_lot.cost_basis}"
+        f"stale residue: adjusted_basis={replacement_lot.adjusted_basis} cost_basis={replacement_lot.cost_basis}"
     )

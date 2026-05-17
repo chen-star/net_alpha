@@ -276,13 +276,13 @@ class ChartHeadKPIs:
     # Equity head
     end_account_value: Decimal | None
     end_contributions: Decimal
-    period_growth: Decimal | None        # end_account_value - period-start anchor - period_contributions
-    period_growth_pct: Decimal | None    # period_growth / (anchor + period_contributions)
+    period_growth: Decimal | None  # end_account_value - period-start anchor - period_contributions
+    period_growth_pct: Decimal | None  # period_growth / (anchor + period_contributions)
     # Cash deployment head
     end_free_cash: Decimal
-    end_pledged: Decimal                 # always populated; uses today's value under fallback
+    end_pledged: Decimal  # always populated; uses today's value under fallback
     end_invested: Decimal | None
-    end_cash_share_pct: Decimal | None   # (free + pledged) / account_value
+    end_cash_share_pct: Decimal | None  # (free + pledged) / account_value
     lifetime_min: Decimal | None
     lifetime_min_on: date | None
     lifetime_max: Decimal | None

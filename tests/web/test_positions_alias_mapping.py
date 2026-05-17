@@ -13,14 +13,9 @@ from __future__ import annotations
 def _csv(header_account: str, body_rows: list[tuple[str, float, float, float]]) -> bytes:
     """Build a minimal Schwab per-account positions CSV with the given
     header account string + (symbol, qty, basis, mv) rows."""
-    header = (
-        f'"Positions for account {header_account} as of  09:00 AM ET, 2026/05/17"\n'
-    )
+    header = f'"Positions for account {header_account} as of  09:00 AM ET, 2026/05/17"\n'
     cols = '"Symbol","Description","Qty (Quantity)","Cost Basis","Mkt Val (Market Value)","Gain $ (Gain/Loss $)"\n'
-    body = "".join(
-        f'"{sym}","{sym} Inc","{qty}","${basis}","${mv}","$0.00"\n'
-        for sym, qty, basis, mv in body_rows
-    )
+    body = "".join(f'"{sym}","{sym} Inc","{qty}","${basis}","${mv}","$0.00"\n' for sym, qty, basis, mv in body_rows)
     return (header + cols + body).encode("utf-8")
 
 

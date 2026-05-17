@@ -55,6 +55,7 @@ def _cumulative_split_multiplier_after(
             m *= s.ratio
     return m
 
+
 # Schwab appends a numeric suffix to an option's underlying after a split or
 # special distribution ("GME" → "GME1"). The BTO may carry the original symbol
 # while the matching STC and GL closure carry the adjusted symbol — economically

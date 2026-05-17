@@ -135,9 +135,7 @@ def test_open_positions_recon_skips_uncovered_accounts():
     findings, _ = reconcile_open_positions(repo=repo, tol_cfg=load_tolerances(), today=date(2026, 5, 11))
     # No PositionsMissingBroker for META/schwab/lt — that account is not
     # covered by the broker file we're reconciling against.
-    assert not any(f.rule_id == "PositionsMissingBroker" for f in findings), [
-        (f.rule_id, f.scope) for f in findings
-    ]
+    assert not any(f.rule_id == "PositionsMissingBroker" for f in findings), [(f.rule_id, f.scope) for f in findings]
 
 
 def test_open_positions_recon_returns_stale_when_old_reference():

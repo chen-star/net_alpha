@@ -8,8 +8,12 @@ from net_alpha.portfolio.models import AccountValuePoint
 
 def _ev(d, kind, amount, account="Schwab/x"):
     return CashEvent(
-        account=account, event_date=d, kind=kind, amount=amount,
-        ticker=None, description="x",
+        account=account,
+        event_date=d,
+        kind=kind,
+        amount=amount,
+        ticker=None,
+        description="x",
     )
 
 
@@ -34,9 +38,7 @@ def _avp(d, contribs, cash, holdings):
         contributions=Decimal(str(contribs)),
         holdings_value=Decimal(str(holdings)) if holdings is not None else None,
         cash_balance=Decimal(str(cash)),
-        account_value=(
-            (Decimal(str(cash)) + Decimal(str(holdings))) if holdings is not None else None
-        ),
+        account_value=((Decimal(str(cash)) + Decimal(str(holdings))) if holdings is not None else None),
         net_pl=None,
     )
 
@@ -78,15 +80,27 @@ def test_csp_open_ramps_pledged_close_drops_it():
         _avp(dt.date(2026, 4, 20), 40_000, 40_050, 0),
     ]
     sto = Trade(
-        id="sto", account="Schwab/x", date=dt.date(2026, 4, 10),
-        ticker="SPY 2026-06-20 P400", action="Sell",
-        quantity=1.0, proceeds=100.0, cost_basis=None, gross_cash_impact=100.0,
+        id="sto",
+        account="Schwab/x",
+        date=dt.date(2026, 4, 10),
+        ticker="SPY 2026-06-20 P400",
+        action="Sell",
+        quantity=1.0,
+        proceeds=100.0,
+        cost_basis=None,
+        gross_cash_impact=100.0,
         option_details=OptionDetails(strike=400.0, expiry=dt.date(2026, 6, 20), call_put="P"),
     )
     btc = Trade(
-        id="btc", account="Schwab/x", date=dt.date(2026, 4, 20),
-        ticker="SPY 2026-06-20 P400", action="Buy",
-        quantity=1.0, proceeds=None, cost_basis=50.0, gross_cash_impact=-50.0,
+        id="btc",
+        account="Schwab/x",
+        date=dt.date(2026, 4, 20),
+        ticker="SPY 2026-06-20 P400",
+        action="Buy",
+        quantity=1.0,
+        proceeds=None,
+        cost_basis=50.0,
+        gross_cash_impact=-50.0,
         option_details=OptionDetails(strike=400.0, expiry=dt.date(2026, 6, 20), call_put="P"),
     )
     pts = build_cash_deployment_series(

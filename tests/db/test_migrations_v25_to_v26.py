@@ -29,10 +29,7 @@ def test_v25_to_v26_adds_broker_label_column(in_memory_session_at_v25):
 def test_v25_to_v26_preserves_existing_account_rows(in_memory_session_at_v25):
     session = in_memory_session_at_v25
     session.exec(
-        text(
-            "INSERT INTO accounts(broker, label, type, created_at) "
-            "VALUES ('schwab', 'st', 'taxable', '2026-05-01')"
-        )
+        text("INSERT INTO accounts(broker, label, type, created_at) VALUES ('schwab', 'st', 'taxable', '2026-05-01')")
     )
     session.commit()
     _migrate_v25_to_v26(session)

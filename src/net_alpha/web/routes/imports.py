@@ -386,12 +386,8 @@ async def upload(
             # Assigned row would otherwise create unadjusted-basis duplicates.
             existing_assignments = repo.existing_put_assignment_keys(acct.id)
             pre_assignment_dedup = len(new_trades)
-            new_trades = filter_assignment_duplicates(
-                new_trades, existing_assignments=existing_assignments
-            )
-            pre_filtered_dups = (len(trades) - pre_assignment_dedup) + (
-                pre_assignment_dedup - len(new_trades)
-            )
+            new_trades = filter_assignment_duplicates(new_trades, existing_assignments=existing_assignments)
+            pre_filtered_dups = (len(trades) - pre_assignment_dedup) + (pre_assignment_dedup - len(new_trades))
             # Aggregates are derived from the *parsed* set so a re-import that
             # filters everything still records the file's date range and counts
             # — the imports page can then show "skipped 7 dupes · 04/14 → 11/14"

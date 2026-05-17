@@ -118,5 +118,3 @@ def test_keeps_buys_with_explicit_basis_source():
     existing = {("schwab/st", "RR", "2026-04-20", 100.0)}
     out = filter_assignment_duplicates([trade], existing_assignments=existing)
     assert out == [trade]
-
-

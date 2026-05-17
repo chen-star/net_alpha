@@ -14,9 +14,7 @@ def _avp(d, contribs, cash, holdings):
         contributions=Decimal(str(contribs)),
         holdings_value=Decimal(str(holdings)) if holdings is not None else None,
         cash_balance=Decimal(str(cash)),
-        account_value=(
-            (Decimal(str(cash)) + Decimal(str(holdings))) if holdings is not None else None
-        ),
+        account_value=((Decimal(str(cash)) + Decimal(str(holdings))) if holdings is not None else None),
         net_pl=None,
     )
 

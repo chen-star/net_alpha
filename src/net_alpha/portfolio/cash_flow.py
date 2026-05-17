@@ -234,10 +234,7 @@ def pledged_cash_at(
     call per-date for a historical series.
     """
     _filter = set(accounts) if accounts else None
-    trades_asof = [
-        t for t in trades
-        if t.date <= on and (_filter is None or t.account in _filter)
-    ]
+    trades_asof = [t for t in trades if t.date <= on and (_filter is None or t.account in _filter)]
     rows = compute_open_short_option_positions(trades_asof)
     total = Decimal("0")
     for r in rows:
@@ -328,12 +325,8 @@ def compute_chart_head_kpis(
         period_growth: Decimal | None = None
         period_growth_pct: Decimal | None = None
     else:
-        period_growth = (end_account_value - period_starting_value - period_contrib).quantize(
-            Decimal("0.01")
-        )
-        period_growth_pct = (
-            (period_growth / growth_denom) if growth_denom != 0 else None
-        )
+        period_growth = (end_account_value - period_starting_value - period_contrib).quantize(Decimal("0.01"))
+        period_growth_pct = (period_growth / growth_denom) if growth_denom != 0 else None
 
     if cash_deployment_points:
         last_cdp = cash_deployment_points[-1]
@@ -346,13 +339,12 @@ def compute_chart_head_kpis(
         end_invested = None
 
     if end_account_value and end_account_value > 0:
-        end_cash_share_pct = ((end_free + end_pledged) / end_account_value).quantize(
-            Decimal("0.0001")
-        )
+        end_cash_share_pct = ((end_free + end_pledged) / end_account_value).quantize(Decimal("0.0001"))
     else:
         end_cash_share_pct = None
 
     if lifetime_cash_points:
+
         def _cash(p: CashDeploymentPoint) -> Decimal:
             return p.free_cash + (p.pledged if p.pledged is not None else Decimal("0"))
 
