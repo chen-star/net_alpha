@@ -8,7 +8,7 @@
 //   - window.__applyPositionsSymbolFilter (wrapped to re-check after apply)
 //
 // The pane's open/close state is Alpine-managed on the #positions-pane
-// aside; we toggle aside.__x.$data.open.
+// aside; we toggle it via window.Alpine.$data(aside).open (v3 API).
 (function () {
   function paneAside() { return document.getElementById('positions-pane'); }
 
@@ -24,8 +24,13 @@
   function currentSym() {
     var aside = paneAside();
     if (!aside) return null;
-    try { return aside.__x && aside.__x.$data && aside.__x.$data.sym; }
-    catch (e) { return null; }
+    try {
+      var data = window.Alpine && window.Alpine.$data(aside);
+      return data ? data.sym : null;
+    } catch (e) {
+      console.warn('[positions-pane] Alpine.$data() failed — check Alpine version', e);
+      return null;
+    }
   }
 
   function maybeCloseIfHidden() {
@@ -35,7 +40,12 @@
     if (!sym) return;
     var visible = visibleSymbols();
     if (!visible.has(sym)) {
-      try { aside.__x.$data.open = false; } catch (e) { /* swallow */ }
+      try {
+        var data = window.Alpine && window.Alpine.$data(aside);
+        if (data) data.open = false;
+      } catch (e) {
+        console.warn('[positions-pane] Alpine.$data() failed — could not close pane', e);
+      }
     }
   }
 

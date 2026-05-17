@@ -47,3 +47,12 @@ def test_table_nav_js_no_op_when_focused_in_input() -> None:
     src = Path(__file__).parents[2] / "src/net_alpha/web/static/table_nav.js"
     text = src.read_text()
     assert "activeElement" in text or "isContentEditable" in text
+
+
+def test_table_nav_js_uses_alpine_v3_api_not_v2() -> None:
+    """The pane handler must use window.Alpine.$data(el) (v3), not
+    el.__x.$data (v2 — broken with the project's Alpine 3.14.1)."""
+    src = Path(__file__).parents[2] / "src/net_alpha/web/static/table_nav.js"
+    text = src.read_text()
+    assert "Alpine.$data" in text, "must use Alpine v3 API"
+    assert "__x.$data" not in text, "Alpine v2 internal __x.$data does not exist in v3"

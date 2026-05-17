@@ -87,11 +87,11 @@
   function currentSym() {
     const aside = document.getElementById("positions-pane");
     if (!aside) return null;
-    // Alpine v3 stores reactive data on __x.$data; fall back to dataset
-    // if Alpine internals shift in a future version.
     try {
-      return aside.__x && aside.__x.$data && aside.__x.$data.sym;
+      const data = window.Alpine && window.Alpine.$data(aside);
+      return data ? data.sym : null;
     } catch (e) {
+      console.warn("[positions-pane] Alpine.$data() failed — check Alpine version", e);
       return null;
     }
   }
@@ -113,6 +113,7 @@
   document.addEventListener("keydown", function (e) {
     if (!paneIsOpen()) return;
     if (focusedInInput()) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "j") {
       e.preventDefault();
       step(+1);
