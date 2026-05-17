@@ -77,17 +77,21 @@
             { name: "Free cash", type: "area", data: freeSeries },
             { name: "Invested",  type: "area", data: investedSeries },
           ];
+      // Free cash = bright info-blue; Pledged = indigo (cool-family but a
+      // distinct hue so the two cash regions read separately even when one
+      // dominates — info+info-low-opacity blends into a single thin strip).
+      // Invested = label-2 gray.
       const colors = hasPledged
         ? [
             window.netAlphaChartTheme.colors.info,
-            window.netAlphaChartTheme.colors.info,
+            window.netAlphaChartTheme.colors.indigo,
             window.netAlphaChartTheme.colors.label2,
           ]
         : [
             window.netAlphaChartTheme.colors.info,
             window.netAlphaChartTheme.colors.label2,
           ];
-      const fillOpacity = hasPledged ? [0.55, 0.25, 0.30] : [0.55, 0.30];
+      const fillOpacity = hasPledged ? [0.60, 0.55, 0.35] : [0.60, 0.35];
 
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
         chart: {
