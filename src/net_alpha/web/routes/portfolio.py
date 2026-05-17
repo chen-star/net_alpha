@@ -739,6 +739,8 @@ def portfolio_equity_curve(
             "benchmark_points": benchmark_points,
             "benchmark_symbol": benchmark_symbol,
             "period_label": period_label,
+            "selected_period": period or "ytd",
+            "selected_accounts": accounts,
         },
     )
 
