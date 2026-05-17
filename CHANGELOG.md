@@ -2,6 +2,211 @@
 
 
 
+## v0.69.0 (2026-05-17)
+
+### Chore
+
+* chore: ruff format equity-point test additions
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8ca1cc0`](https://github.com/chen-star/net_alpha/commit/8ca1cc096871d3d49065d57c6c2c1bd6fd1165ed))
+
+* chore: ruff fixes ([`5339eed`](https://github.com/chen-star/net_alpha/commit/5339eedbb702ab7b37203fd7eaf8b0849e5ef344))
+
+* chore: refresh GitNexus stats and lockfile to v0.68.0
+
+- AGENTS.md / CLAUDE.md: gitnexus symbol/relationship counts updated by
+  the analyze hook (6777 → 6888 symbols, 22800 → 23505 relationships).
+- uv.lock: wash-alpha 0.65.0 → 0.68.0 to match pyproject.toml.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c73fb6b`](https://github.com/chen-star/net_alpha/commit/c73fb6b8abc49c13f90bf587605233493b6f5c66))
+
+### Documentation
+
+* docs(readme): refresh page table, Verify pill, positions CSV, fix CLI snippet
+
+- Track logo URL against master instead of v0.56.1.
+- Verify: reframe as the global &#34;Data check&#34; header pill (v0.67.7) and
+  mention the muted &#34;· expected&#34; badge for expected_section_1256 /
+  expected_cross_account findings (v0.68.0).
+- Page-highlights table: call out the equity-curve brush strip + lifetime
+  reference lines + Edit-layout drag-to-reorder on /, both Schwab
+  positions CSV header shapes on /imports, and add the missing /verify row.
+- Fix a stray run-on line in the Backups CLI snippet.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fa2c832`](https://github.com/chen-star/net_alpha/commit/fa2c832017530f20c2d9bac5984a5e8f5896c219))
+
+### Feature
+
+* feat(web): add markers to equity curve for click discoverability ([`b5776a6`](https://github.com/chen-star/net_alpha/commit/b5776a6bf80c8755ff15c4ea35e6c542d561f362))
+
+* feat(web): wire ApexCharts click on equity curve to open explain panel
+
+Click on a point in the equity curve now fires `dataPointSelection` and
+htmx.ajax-loads /portfolio/explain/equity-point into a new anchor div
+below the chart. The handler reads the current period and selected
+accounts from JSON-encoded data attributes on #equity-chart, building
+the URL with on=, period=, and one account= per active account filter.
+The portfolio_equity_curve route now passes selected_period and
+selected_accounts through to the fragment context so the data attrs
+carry the active filter state.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8451e58`](https://github.com/chen-star/net_alpha/commit/8451e58863f0b8c8859a20eda8c1e8100f7ec0c5))
+
+* feat(web): _explain_equity_point template with equation + conditional blocks
+
+Renders the HTMX fragment for /portfolio/explain/equity-point (Phase 2 route).
+Two branches: starting-snapshot panel (holdings count + contributed-to-date)
+and the regular delta panel (5-row equation with optional residual row, plus
+conditional trades / movers / cash / dividends / wash-sale blocks and the
+unpriced-tickers amber caveat). Mirrors the visual language of
+_explain_total_return.html and _explain_account_value.html. ([`aa94372`](https://github.com/chen-star/net_alpha/commit/aa94372f75392ec3a4f21da857e4f83e4b077617))
+
+* feat(web): GET /portfolio/explain/equity-point route
+
+Phase 2 of the equity-curve click-to-explain feature. Adds the FastAPI
+route that re-derives the active series for the (period, accounts) filter,
+locates `on` and its predecessor, constructs remaining-quantity lot
+snapshots via FIFO consumption, and calls
+`build_equity_point_breakdown` (from Phase 1) with the assembled inputs.
+
+The template `_explain_equity_point.html` is intentionally deferred to
+Phase 3, so until then the route returns 500 (TemplateNotFound) — the
+smoke test only verifies the route is registered (not 404). ([`b8e3713`](https://github.com/chen-star/net_alpha/commit/b8e3713a490ff8702faa551b4ef7ef2226321e12))
+
+* feat(explain): starting-snapshot mode for first point in series ([`78e3349`](https://github.com/chen-star/net_alpha/commit/78e3349e05584e7e8f8db1c7fe642d35ffc7f768))
+
+* feat(explain): attach wash-sale refs to equity-point breakdown ([`e8b8480`](https://github.com/chen-star/net_alpha/commit/e8b8480914e2fbc87ac214555ae389d1d3e635f7))
+
+* feat(explain): attribute dividends to equity-point delta ([`4e0e5ce`](https://github.com/chen-star/net_alpha/commit/4e0e5cee7945b86b4173d53cea3c134515d936b9))
+
+* feat(explain): mark-to-market top movers for equity-point delta ([`0538017`](https://github.com/chen-star/net_alpha/commit/053801748d3b87d1d58fea36b5f529c66f6ab32a))
+
+* feat(explain): attribute contributions to equity-point delta ([`3d2fef1`](https://github.com/chen-star/net_alpha/commit/3d2fef1bcfbcd207ed27b18ddda2a59ce4fd4cb5))
+
+* feat(explain): build_equity_point_breakdown handles trade-only day ([`5511d26`](https://github.com/chen-star/net_alpha/commit/5511d26ef5469e3d0a04dca28dc78b1a552883c3))
+
+* feat(explain): add EquityPointBreakdown dataclass payload ([`5d68273`](https://github.com/chen-star/net_alpha/commit/5d682734e2509a9a6a055e39ee6707a0eead6d25))
+
+### Fix
+
+* fix(tax): add row-level id=&#34;exempt-{id}&#34; anchor on /tax for deep-linking ([`c856d57`](https://github.com/chen-star/net_alpha/commit/c856d5769cdd6546b1b60782f30f07fe7f318f9d))
+
+* fix(web): surface skipped option lots in equity-point unpriced caveat
+
+Previously the route silently dropped option lots from the MTM mover
+roster, leaving any option-driven account-value move stuffed into
+\`residual\` with no caveat. Now the option tickers join
+\`unpriced_tickers\` / \`unpriced_basis_total\`, so the panel can show
+&#34;ΔUnrealized may be incomplete: N tickers had no historical close...&#34;
+covering both genuinely-illiquid equities and unpriced options. ([`a478bbe`](https://github.com/chen-star/net_alpha/commit/a478bbec31b022d75e4a790f14251845c981af6e))
+
+* fix(explain): reinvest action yields zero realized P&amp;L
+
+The prior ``t.action.lower().startswith(&#34;buy&#34;)`` predicate misclassified
+&#34;Reinvest&#34; / &#34;Reinvest Shares&#34; as sells, producing phantom realized P&amp;L
+on dividend-reinvestment days. Replace with a frozenset that mirrors
+brokers/schwab.py::_BUY_ACTIONS: {&#34;Buy&#34;, &#34;Reinvest Shares&#34;, &#34;Reinvest&#34;,
+&#34;Buy to Open&#34;} (lowercased for case-insensitive match).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`34be7bb`](https://github.com/chen-star/net_alpha/commit/34be7bb2e968ea31789ab6cbaf7163cefd510cff))
+
+### Refactor
+
+* refactor(cash_flow): promote contribution-kind sets to public names
+
+Routes and the explain builder need to filter by the same contribution
+convention; three references to &#34;transfer_in&#34;/&#34;transfer_out&#34; had
+emerged (cash_flow.py constants, explain.py builder string literals,
+and routes/portfolio.py private import). Promote to public so the
+convention has one source of truth. ([`4bdb996`](https://github.com/chen-star/net_alpha/commit/4bdb996ade04d9d67d9f6d614b430c5c66a2ee25))
+
+* refactor(explain): name top-N truncation constant
+
+Replace the bare ``[:5]`` slices in _build_trade_rows and
+_compute_mtm_movers with a module-level ``_TOP_N_ROWS = 5`` constant.
+Presentation policy stays in one place; aggregate totals are unchanged.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8e5ec84`](https://github.com/chen-star/net_alpha/commit/8e5ec844a82b9d12cc34f9fc57e82e3791b595f2))
+
+* refactor(explain): extract component helpers from build_equity_point_breakdown
+
+Splits the ~130-line body into five mechanically-independent helpers:
+_build_trade_rows, _classify_cash_events, _build_dividend_rows,
+_compute_mtm_movers, _collect_wash_refs. No behavior change — all 11
+tests still pass.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`647cd57`](https://github.com/chen-star/net_alpha/commit/647cd572f4355c127045f0ee3c8faa9d0674f197))
+
+### Style
+
+* style: ruff-format two integration test files
+
+CI lint job failed on these files after merge — re-run `ruff format`
+to bring them back in line with the repo&#39;s formatting baseline.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b0a7354`](https://github.com/chen-star/net_alpha/commit/b0a7354eaaa31da51347ac9a06a3e7dde43908e3))
+
+### Test
+
+* test(verify): isolate NET_ALPHA_DIR in verify-job tests
+
+Both tests in tests/verify/test_verify_job.py read load_suppressions()
+and load_tolerances() through run_verify_once, which resolve config
+from $NET_ALPHA_DIR or ~/.net_alpha. Without isolation, a real
+suppression rule in the developer&#39;s home-dir config (e.g. one
+suppressing StaleReference globally) silently filters the expected
+finding and the test asserts &#39;ok&#39; instead of &#39;stale&#39;.
+
+Pin NET_ALPHA_DIR to tmp_path in both tests so the verify subsystem
+reads an empty config and the assertions test the production logic,
+not the developer&#39;s machine.
+
+Matches the pattern already used by tests/verify/test_suppress.py,
+tests/verify/test_tolerances.py, and tests/web/test_verify_polish.py.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`20d10ca`](https://github.com/chen-star/net_alpha/commit/20d10ca12953d8b4404220ccd8b3d4e85d401b88))
+
+* test(web): option lots surface in equity-point unpriced caveat ([`1d4cd31`](https://github.com/chen-star/net_alpha/commit/1d4cd31f4b109cd7c5a09e44ebfad8e7752eadd4))
+
+* test(playwright): smoke test for equity-curve click-to-explain ([`0224def`](https://github.com/chen-star/net_alpha/commit/0224defb4017df333e39a031fdf3fea3e19d2883))
+
+* test(web): exercise equity-point explainer rendering paths
+
+Three new tests for the now-existing _explain_equity_point.html template:
+empty-DB smoke (renders the starting-snapshot fallback panel), account-
+filter smoke (multi-account query param doesn&#39;t crash), and a positive-
+render test that seeds a transfer_in + a closing trade so the equation
+branch fires with all four component labels and the seeded ticker shows
+up as a /ticker/AAPL deep link. The older &#34;!= 404&#34; route-registration
+test is left in place as a redundant sanity check per Phase-2 contract. ([`94e4a8e`](https://github.com/chen-star/net_alpha/commit/94e4a8e426d230b9452abc28ed010d584107b4e2))
+
+* test(web): lock in equity-point route param-parsing surface ([`84ce208`](https://github.com/chen-star/net_alpha/commit/84ce2085b16a95ca8078523521f4a1be4e6a867e))
+
+* test(explain): multi-component reconciliation happy path
+
+Adds a positive-proof test where all four equation components (trade
+realized P&amp;L, contributions, dividends, MTM unrealized) are non-zero on
+the same day and sum to delta_account_value with residual == 0.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0f65ffe`](https://github.com/chen-star/net_alpha/commit/0f65ffecab6ce1af0340090cdbc6fbc04c6d66d8))
+
+* test(explain): residual exposes unreconciled delta ([`789d9ae`](https://github.com/chen-star/net_alpha/commit/789d9aee65e318ddbfdbd1fbbcb9640b55438564))
+
+* test(explain): lock in unpriced-ticker caveat behavior ([`bb9eceb`](https://github.com/chen-star/net_alpha/commit/bb9eceb25c00014f7e315c582e71b749220ce506))
+
+### Unknown
+
+* Merge feature/equity-curve-click-to-explain
+
+Adds inline HTMX explainer panel under the equity curve answering
+&#34;why did account value move between consecutive points&#34;: decomposes
+into Contributions, Realized P&amp;L, ΔUnrealized, Dividends with
+conditional Trade / Top-mover / Cash / Dividend / Wash-sale blocks.
+
+Spec:  docs/superpowers/specs/2026-05-16-equity-curve-click-to-explain-design.md
+Plan:  docs/superpowers/plans/2026-05-16-equity-curve-click-to-explain.md ([`fff3064`](https://github.com/chen-star/net_alpha/commit/fff30640dc47a8cd38f87c8be82b5c3bd47979d6))
+
+
 ## v0.68.0 (2026-05-16)
 
 ### Feature
