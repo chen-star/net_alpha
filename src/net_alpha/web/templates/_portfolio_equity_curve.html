@@ -143,9 +143,12 @@
         },
         colors: colors,
         markers: {
-          // No always-on markers — clutters dense daily data. Hover still
-          // shows a single point via Apex's built-in `hover.size`.
-          size: 0,
+          // Subtle 2px markers only on the Account value line (last series).
+          // Smaller-than-size-4 to reduce clutter, but non-zero so Apex's
+          // dataPointSelection fires reliably (the explain-point click flow
+          // depends on it) and the chart reads as clickable.
+          size: [0, 0, 0, 0, 2],
+          strokeWidth: 0,
           hover: { size: 5 },
         },
         stroke: {
