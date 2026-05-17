@@ -23,8 +23,8 @@ from net_alpha.portfolio.models import CashBalancePoint, CashFlowKPIs
 # cash-neutral here; the per-sub-account split is not surfaced.
 _INFLOW_KINDS = {"transfer_in", "dividend", "interest"}
 _OUTFLOW_KINDS = {"transfer_out", "fee"}
-_CONTRIB_INFLOW = {"transfer_in"}
-_CONTRIB_OUTFLOW = {"transfer_out"}
+CONTRIB_INFLOW_KINDS = {"transfer_in"}
+CONTRIB_OUTFLOW_KINDS = {"transfer_out"}
 
 
 def _trade_cash_delta(t: Trade) -> Decimal:
@@ -55,9 +55,9 @@ def _event_cash_delta(e: CashEvent) -> Decimal:
 
 
 def _event_contrib_delta(e: CashEvent) -> Decimal:
-    if e.kind in _CONTRIB_INFLOW:
+    if e.kind in CONTRIB_INFLOW_KINDS:
         return Decimal(str(e.amount))
-    if e.kind in _CONTRIB_OUTFLOW:
+    if e.kind in CONTRIB_OUTFLOW_KINDS:
         return Decimal(str(-e.amount))
     return Decimal("0")
 

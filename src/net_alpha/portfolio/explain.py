@@ -6,6 +6,7 @@ data in; this module returns dataclasses ready for Jinja.
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -447,4 +448,327 @@ def build_account_value_breakdown(
         missing_symbols=tuple(missing_symbols),
         has_short_options=has_short_options,
         fetched_at=fetched_at,
+    )
+
+
+@dataclass(frozen=True)
+class TradeRow:
+    """One trade in the 'Trades closed today' block."""
+
+    trade_id: str
+    ticker: str
+    side: str  # Trade.action values (e.g., "Buy" / "Sell")
+    quantity: Decimal
+    realized_pnl: Decimal  # 0 for opening trades
+
+
+@dataclass(frozen=True)
+class MoverRow:
+    """One row in the 'Top mark-to-market movers' block."""
+
+    ticker: str
+    shares: Decimal
+    prev_close: Decimal
+    close: Decimal
+    contribution: Decimal  # shares * (close - prev_close), signed
+
+
+@dataclass(frozen=True)
+class CashEventRow:
+    """One row in the 'Cash flow events' block."""
+
+    account: str
+    kind: str  # CashEvent.kind values (e.g., "transfer_in", "transfer_out")
+    amount: Decimal  # signed: + for inflow, - for outflow
+
+
+@dataclass(frozen=True)
+class DividendRow:
+    """One row in the 'Dividends' block."""
+
+    ticker: str
+    amount: Decimal
+
+
+@dataclass(frozen=True)
+class WashEventRef:
+    """Reference to a wash-sale row whose sale leg is on this date.
+
+    The renderer deep-links to the existing /tax violation explainer; we
+    don't duplicate that payload here.
+    """
+
+    kind: str  # "violation" | "exempt"
+    row_id: int
+    ticker: str
+
+
+@dataclass(frozen=True)
+class EquityPointBreakdown:
+    """Payload for the equity-curve click-to-explain panel.
+
+    The four equation components (``contributions``, ``realized_pnl``,
+    ``delta_unrealized``, ``dividends``) must reconcile to
+    ``delta_account_value`` within tolerance; any drift is exposed as
+    ``residual`` rather than silently absorbed.
+
+    When ``is_starting_snapshot`` is True the panel is the first point in
+    the filtered series and there is no previous-point delta to show.
+    """
+
+    on: dt.date
+    previous_on: dt.date | None
+    delta_account_value: Decimal
+    contributions: Decimal
+    realized_pnl: Decimal
+    delta_unrealized: Decimal
+    dividends: Decimal
+    residual: Decimal
+    trades: list[TradeRow]
+    top_movers: list[MoverRow]
+    cash_events: list[CashEventRow]
+    dividend_events: list[DividendRow]
+    wash_events: list[WashEventRef]
+    unpriced_tickers: tuple[str, ...]
+    unpriced_basis_total: Decimal
+    is_starting_snapshot: bool
+    starting_holdings_count: int
+    starting_contributed_to_date: Decimal
+
+
+# Mirror of brokers/schwab.py::_BUY_ACTIONS. Opening trades produce no
+# realized P&L (basis sits on the new lot until it's later closed); they
+# must be matched by name, not by ``startswith("buy")`` — "Reinvest" and
+# "Reinvest Shares" are buys but don't start with "buy", and would
+# otherwise fall through to the sell branch producing a phantom P&L.
+_BUY_ACTIONS_LOWER = frozenset({"buy", "reinvest shares", "reinvest", "buy to open"})
+
+# Presentation policy: cap the per-day trade / mover rows shown in the
+# equity-point explainer panel. Aggregate totals stay correct; only the
+# rendered detail list is truncated.
+_TOP_N_ROWS = 5
+
+
+def _trade_realized(t) -> Decimal:
+    """Realized P&L for a single trade row.
+
+    Sells: proceeds - basis. Buys: 0 (basis sits on lot, not realized).
+    Mirrors the convention used across ``portfolio/pnl.py``.
+
+    ``Trade.action`` values in this codebase are ``"Buy"`` / ``"Sell"``
+    (uppercase first letter); ``Trade.proceeds`` and ``Trade.cost_basis``
+    are ``float | None``.
+    """
+    if (t.action or "").strip().lower() in _BUY_ACTIONS_LOWER:
+        return Decimal("0")
+    proceeds = Decimal(str(t.proceeds)) if t.proceeds is not None else Decimal("0")
+    basis = Decimal(str(t.cost_basis)) if t.cost_basis is not None else Decimal("0")
+    return (proceeds - basis).quantize(Decimal("0.01"))
+
+
+def _build_trade_rows(trades_on_date) -> tuple[Decimal, list[TradeRow]]:
+    """Compute realized P&L total + top-5 trade rows (by |realized_pnl|)."""
+    realized = sum((_trade_realized(t) for t in trades_on_date), Decimal("0"))
+    rows = [
+        TradeRow(
+            trade_id=t.id,
+            ticker=t.ticker,
+            side=t.action,
+            quantity=Decimal(str(t.quantity)),
+            realized_pnl=_trade_realized(t),
+        )
+        for t in trades_on_date
+    ]
+    rows.sort(key=lambda r: abs(r.realized_pnl), reverse=True)
+    return realized, rows[:_TOP_N_ROWS]
+
+
+def _classify_cash_events(cash_events_on_date) -> tuple[Decimal, list[CashEventRow]]:
+    """Sum signed contributions (transfer_in/_out only) + emit rows for them.
+
+    Mirrors ``portfolio/cash_flow.py::_event_contrib_delta`` semantics — only
+    ``transfer_in`` / ``transfer_out`` count as contributions in this codebase
+    (dividends/interest/fees are non-contribution cash flow and are skipped).
+    Imports the public ``CONTRIB_*_KINDS`` sets so the convention has a single
+    source of truth.
+    """
+    from net_alpha.portfolio.cash_flow import CONTRIB_INFLOW_KINDS, CONTRIB_OUTFLOW_KINDS
+
+    total = Decimal("0")
+    rows: list[CashEventRow] = []
+    for e in cash_events_on_date:
+        if e.kind in CONTRIB_INFLOW_KINDS:
+            signed = Decimal(str(e.amount))
+        elif e.kind in CONTRIB_OUTFLOW_KINDS:
+            signed = -abs(Decimal(str(e.amount)))
+        else:
+            continue
+        total += signed
+        rows.append(CashEventRow(account=e.account, kind=e.kind, amount=signed))
+    return total, rows
+
+
+def _build_dividend_rows(dividend_events_on_date) -> tuple[Decimal, list[DividendRow]]:
+    """Sum dividend amounts + emit one row per event."""
+    total = Decimal("0")
+    rows: list[DividendRow] = []
+    for d in dividend_events_on_date:
+        amt = Decimal(str(d.amount))
+        total += amt
+        rows.append(DividendRow(ticker=d.ticker or "(cash)", amount=amt))
+    return total, rows
+
+
+def _compute_mtm_movers(
+    open_lots_prev_day,
+    previous_on: dt.date,
+    on: dt.date,
+    get_close: Callable[[str, dt.date], Decimal | None],
+) -> tuple[Decimal, list[MoverRow], tuple[str, ...], Decimal]:
+    """Aggregate lots per ticker, compute MTM delta and top-5 movers.
+
+    Returns ``(delta_unrealized, top5_movers, unpriced_tickers_sorted,
+    unpriced_basis_total)``. Tickers missing either prev or current close
+    contribute 0 to ``delta_unrealized`` and surface in ``unpriced_tickers``.
+    """
+    shares_by_ticker: dict[str, Decimal] = {}
+    basis_by_ticker: dict[str, Decimal] = {}
+    for lot in open_lots_prev_day:
+        qty = Decimal(str(lot.quantity))
+        basis = Decimal(str(lot.adjusted_basis))
+        shares_by_ticker[lot.ticker] = shares_by_ticker.get(lot.ticker, Decimal("0")) + qty
+        basis_by_ticker[lot.ticker] = basis_by_ticker.get(lot.ticker, Decimal("0")) + basis
+
+    movers: list[MoverRow] = []
+    delta_unrealized = Decimal("0")
+    unpriced: list[str] = []
+    unpriced_basis = Decimal("0")
+    for ticker, shares in shares_by_ticker.items():
+        prev_c = get_close(ticker, previous_on)
+        cur_c = get_close(ticker, on)
+        if prev_c is None or cur_c is None:
+            unpriced.append(ticker)
+            unpriced_basis += basis_by_ticker[ticker]
+            continue
+        prev_c_d = Decimal(str(prev_c))
+        cur_c_d = Decimal(str(cur_c))
+        contrib = (shares * (cur_c_d - prev_c_d)).quantize(Decimal("0.01"))
+        delta_unrealized += contrib
+        movers.append(
+            MoverRow(
+                ticker=ticker,
+                shares=shares,
+                prev_close=prev_c_d,
+                close=cur_c_d,
+                contribution=contrib,
+            )
+        )
+
+    movers.sort(key=lambda m: abs(m.contribution), reverse=True)
+    return delta_unrealized, movers[:_TOP_N_ROWS], tuple(sorted(unpriced)), unpriced_basis
+
+
+def _collect_wash_refs(violations_on_date, exempt_matches_on_date) -> list[WashEventRef]:
+    """Collect wash-sale refs (violations + exempt matches) for deep-linking.
+
+    The renderer deep-links to the existing ``/tax`` violation/exempt explainer
+    fragments, so we only carry id+ticker. ``WashSaleViolation.id`` is a
+    UUID-shaped string by default; route handlers typically pass DB-backed
+    rows whose ``id`` is a stable int. Coerce defensively. ``ExemptMatch``
+    has no ``id`` field in the domain model (DB rows do); fall back to 0.
+    """
+    refs: list[WashEventRef] = []
+    for v in violations_on_date:
+        try:
+            row_id = int(v.id)
+        except (TypeError, ValueError):
+            row_id = 0
+        refs.append(WashEventRef(kind="violation", row_id=row_id, ticker=v.ticker))
+    for em in exempt_matches_on_date:
+        raw = getattr(em, "id", 0)
+        try:
+            row_id = int(raw)
+        except (TypeError, ValueError):
+            row_id = 0
+        refs.append(WashEventRef(kind="exempt", row_id=row_id, ticker=em.ticker))
+    return refs
+
+
+def build_equity_point_breakdown(
+    *,
+    on: dt.date,
+    previous_on: dt.date | None,
+    trades_on_date: list,
+    cash_events_on_date: list,
+    dividend_events_on_date: list,
+    open_lots_prev_day: list,
+    violations_on_date: list,
+    exempt_matches_on_date: list,
+    get_close: Callable[[str, dt.date], Decimal | None],
+    delta_account_value: Decimal,
+    starting_contributed_to_date: Decimal = Decimal("0"),
+) -> EquityPointBreakdown:
+    """Decompose the equity-curve point-to-point delta into its sources.
+
+    See ``docs/superpowers/specs/2026-05-16-equity-curve-click-to-explain-design.md``.
+
+    Caller is responsible for filtering inputs by account; this function
+    is account-agnostic and just sums what it's given.
+    """
+    # Starting-snapshot case — first point in the filtered series has no
+    # previous-point delta to compare against. Surface a "where the user
+    # started" panel instead (ticker count + cumulative contributions).
+    if previous_on is None:
+        return EquityPointBreakdown(
+            on=on,
+            previous_on=None,
+            delta_account_value=Decimal("0"),
+            contributions=Decimal("0"),
+            realized_pnl=Decimal("0"),
+            delta_unrealized=Decimal("0"),
+            dividends=Decimal("0"),
+            residual=Decimal("0"),
+            trades=[],
+            top_movers=[],
+            cash_events=[],
+            dividend_events=[],
+            wash_events=[],
+            unpriced_tickers=(),
+            unpriced_basis_total=Decimal("0"),
+            is_starting_snapshot=True,
+            starting_holdings_count=len({lot.ticker for lot in open_lots_prev_day}),
+            starting_contributed_to_date=starting_contributed_to_date,
+        )
+
+    realized, trade_rows = _build_trade_rows(trades_on_date)
+    contributions, cash_event_rows = _classify_cash_events(cash_events_on_date)
+    dividends_total, dividend_rows = _build_dividend_rows(dividend_events_on_date)
+    delta_unrealized, movers, unpriced, unpriced_basis = _compute_mtm_movers(
+        open_lots_prev_day, previous_on, on, get_close
+    )
+    wash_events = _collect_wash_refs(violations_on_date, exempt_matches_on_date)
+
+    residual = (delta_account_value - (contributions + realized + delta_unrealized + dividends_total)).quantize(
+        Decimal("0.01")
+    )
+
+    return EquityPointBreakdown(
+        on=on,
+        previous_on=previous_on,
+        delta_account_value=delta_account_value,
+        contributions=contributions,
+        realized_pnl=realized,
+        delta_unrealized=delta_unrealized,
+        dividends=dividends_total,
+        residual=residual,
+        trades=trade_rows,
+        top_movers=movers,
+        cash_events=cash_event_rows,
+        dividend_events=dividend_rows,
+        wash_events=wash_events,
+        unpriced_tickers=unpriced,
+        unpriced_basis_total=unpriced_basis,
+        is_starting_snapshot=False,
+        starting_holdings_count=0,
+        starting_contributed_to_date=Decimal("0"),
     )

@@ -408,3 +408,220 @@ def test_explain_account_value_caveat_when_lots_have_no_quote(tmp_path):
         "Account Value explainer must show the missing-quotes caveat when kpis.missing_symbols is non-empty."
     )
     assert "UNPRICED" in html, "The caveat should name the unpriced ticker(s)."
+
+
+def test_explain_equity_point_route_is_registered(tmp_path):
+    """Phase 2 of the equity-curve click-to-explain feature only registers the
+    route — the template ``_explain_equity_point.html`` lands in Phase 3. Until
+    then the route still returns a non-404 status (500 TemplateNotFound is
+    expected). This locks in the route registration without coupling to the
+    template that doesn't exist yet.
+    """
+    client, _repo = _make_client(tmp_path)
+    resp = client.get("/portfolio/explain/equity-point?on=2026-05-10&period=ytd")
+    assert resp.status_code != 404, f"Route should be registered (Phase 2 scope); got {resp.status_code}."
+
+
+def test_explain_equity_point_accepts_all_query_params(tmp_path):
+    """Route's param parsing (period parser + parse_accounts) doesn't crash
+    even before the Phase-3 template lands."""
+    client, _repo = _make_client(tmp_path)
+    resp = client.get(
+        "/portfolio/explain/equity-point?on=2024-05-10&period=2024&account=Schwab%2FTax&account=Schwab%2FIRA"
+    )
+    # No template yet → expect 500 (TemplateNotFound), but NOT a 4xx parsing error.
+    assert resp.status_code != 404
+    assert resp.status_code != 422, "422 means FastAPI rejected the documented params"
+    assert resp.status_code != 400, "400 means a param parser raised before reaching the template"
+
+
+def test_explain_equity_point_requires_on_param(tmp_path):
+    client, _repo = _make_client(tmp_path)
+    resp = client.get("/portfolio/explain/equity-point")
+    assert resp.status_code == 422
+
+
+def test_explain_equity_point_smoke_empty_db(tmp_path):
+    """explain_equity_point returns 200 on an empty database (no crash) and
+    renders the panel container marker. ``on`` is not in the (empty) series,
+    so the route falls back to the starting-snapshot branch.
+    """
+    client, _repo = _make_client(tmp_path)
+    resp = client.get("/portfolio/explain/equity-point?on=2026-05-10&period=ytd")
+    assert resp.status_code == 200
+    assert 'data-explain="equity-point"' in resp.text
+
+
+def test_explain_equity_point_smoke_with_account_filter(tmp_path):
+    """explain_equity_point accepts account query params without crashing."""
+    client, _repo = _make_client(tmp_path)
+    resp = client.get(
+        "/portfolio/explain/equity-point?on=2024-05-10&period=2024&account=Schwab%2FTax&account=Schwab%2FIRA"
+    )
+    assert resp.status_code == 200
+    assert 'data-explain="equity-point"' in resp.text
+
+
+def test_explain_equity_point_surfaces_option_lot_in_unpriced_caveat(tmp_path):
+    """Option lots have no historical close; the route should surface them in
+    the unpriced caveat so the user knows ΔUnrealized may not be complete.
+
+    Locks in the ``extra_unpriced`` merge path in ``explain_equity_point``:
+    when ``previous_on`` is non-null and an open lot has ``option_details``,
+    the route records the underlying ticker in ``extra_unpriced`` and merges
+    it into the breakdown's ``unpriced_tickers``. The template renders that
+    list inside the amber caveat box marked ``data-explain="unpriced-caveat"``.
+    """
+    from datetime import date, datetime
+    from decimal import Decimal
+
+    from net_alpha.engine.recompute import recompute_all_violations
+    from net_alpha.models.domain import CashEvent, ImportRecord, OptionDetails, Trade
+
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+
+    today = date.today()
+    deposit_date = date(today.year, 1, 5)
+    option_buy_date = date(today.year, 1, 10)
+    # Click on a later Friday so the series has multiple intermediate points;
+    # ``previous_on`` will be one of those Fridays, by which time the open
+    # option lot triggers the ``extra_unpriced`` branch.
+    click_date = date(today.year, 3, 13)
+
+    acct = repo.get_or_create_account(broker="Schwab", label="Tax")
+    record = ImportRecord(
+        account_id=acct.id,
+        csv_filename="t.csv",
+        csv_sha256="opt-x",
+        imported_at=datetime.now(),
+        trade_count=1,
+    )
+    # Long-option Buy-to-Open. The detector's ``Lot.from_trade`` path treats
+    # any Buy not in ``_NO_LOT_BUYS`` as a lot, so this Buy produces an open
+    # option lot with ``option_details`` set.
+    option_buy = Trade(
+        account="Schwab/Tax",
+        date=option_buy_date,
+        ticker="AAPL",
+        action="Buy",
+        quantity=Decimal("1"),
+        proceeds=None,
+        cost_basis=Decimal("250"),
+        basis_source="long_option_open",
+        option_details=OptionDetails(
+            strike=150.0,
+            expiry=date(today.year + 1, 1, 17),
+            call_put="C",
+        ),
+    )
+    cash_event = CashEvent(
+        account="Schwab/Tax",
+        event_date=deposit_date,
+        kind="transfer_in",
+        amount=1000.0,
+        description="seed",
+    )
+    repo.add_import(acct, record, [option_buy], cash_events=[cash_event])
+    # Lots are materialized by the wash-sale recompute pass.
+    recompute_all_violations(repo, {})
+
+    app = create_app(settings)
+    client = TestClient(app, raise_server_exceptions=False)
+    resp = client.get(f"/portfolio/explain/equity-point?on={click_date.isoformat()}&period=ytd")
+    assert resp.status_code == 200
+    body = resp.text
+    # Panel container rendered.
+    assert 'data-explain="equity-point"' in body
+    # The unpriced caveat MUST appear because we have an open option lot
+    # at previous_on.
+    assert "ΔUnrealized may be incomplete" in body, (
+        "Open option lots have no historical close — explainer must surface them "
+        "in the amber unpriced caveat so the user knows the ΔUnrealized aggregate "
+        "may be partial."
+    )
+    assert 'data-explain="unpriced-caveat"' in body
+    # The option's underlying ticker should appear in the caveat list.
+    assert "AAPL" in body
+
+
+def test_explain_equity_point_renders_equation_when_delta_present(tmp_path):
+    """Seed a contribution + a closing trade on a later date so the click on
+    the trade's date produces a real point-to-point delta. The equation block
+    (not the starting-snapshot fallback) must render with all four component
+    labels and the seeded ticker as a deep link.
+    """
+    from datetime import date, datetime
+    from decimal import Decimal
+
+    from net_alpha.engine.recompute import recompute_all_violations
+    from net_alpha.models.domain import CashEvent, ImportRecord, Trade
+
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+
+    today = date.today()
+    deposit_date = date(today.year, 1, 5)
+    buy_date = date(today.year, 1, 10)
+    sell_date = date(today.year, 2, 20)
+
+    acct = repo.get_or_create_account(broker="Schwab", label="Tax")
+    record = ImportRecord(
+        account_id=acct.id,
+        csv_filename="t.csv",
+        csv_sha256="x",
+        imported_at=datetime.now(),
+        trade_count=2,
+    )
+    buy = Trade(
+        account="Schwab/Tax",
+        date=buy_date,
+        ticker="AAPL",
+        action="Buy",
+        quantity=Decimal("10"),
+        proceeds=None,
+        cost_basis=Decimal("1500"),
+    )
+    sell = Trade(
+        account="Schwab/Tax",
+        date=sell_date,
+        ticker="AAPL",
+        action="Sell",
+        quantity=Decimal("10"),
+        proceeds=Decimal("1800"),
+        cost_basis=Decimal("1500"),
+    )
+    cash_event = CashEvent(
+        account="Schwab/Tax",
+        event_date=deposit_date,
+        kind="transfer_in",
+        amount=2000.0,
+        description="seed",
+    )
+    repo.add_import(acct, record, [buy, sell], cash_events=[cash_event])
+    # Lots are materialized by the wash-sale recompute pass.
+    recompute_all_violations(repo, {})
+
+    app = create_app(settings)
+    client = TestClient(app, raise_server_exceptions=False)
+    resp = client.get(f"/portfolio/explain/equity-point?on={sell_date.isoformat()}&period=ytd")
+    assert resp.status_code == 200
+    body = resp.text
+    # Panel container.
+    assert 'data-explain="equity-point"' in body
+    # Equation heading (delta branch, not starting-snapshot).
+    assert "Δ Account value" in body
+    # Equation labels — tolerant matches.
+    assert "Contributions" in body
+    assert "Realized P" in body  # "Realized P/L"
+    assert "Δ Unrealized" in body
+    assert "Dividends" in body
+    # The seeded ticker appears as a deep-link target in the trades block.
+    assert "AAPL" in body
+    assert "/ticker/AAPL" in body
+    # Standard disclaimer footer.
+    assert "Consult a tax professional" in body

@@ -23,7 +23,11 @@
 {% if not has_data %}
   <div class="text-label-2 text-[13px] py-4">No deposits yet in {{ period_label }}.</div>
 {% else %}
-  <div id="equity-chart" style="height: 218px;"></div>
+  <div id="equity-chart"
+       data-period="{{ selected_period|default('ytd') }}"
+       data-accounts='{{ (selected_accounts if selected_accounts is defined else [])|tojson }}'
+       style="height: 218px;"></div>
+  <div id="explain-equity-point"></div>
   <div class="text-label-3 text-[11px] mt-1">
     Option positions are valued at cost basis on this chart; today's mark-to-market shows on the Holdings panel.
   </div>
@@ -66,8 +70,36 @@
           height: 218,
           zoom: { enabled: true, type: "x", autoScaleYaxis: true },
           toolbar: { show: false },
+          events: {
+            dataPointSelection: function (event, chartContext, config) {
+              const idx = config.dataPointIndex;
+              const p = points[idx];
+              if (!p || !p.on) return;
+              const el = document.querySelector("#equity-chart");
+              const period = (el && el.dataset.period) || "ytd";
+              let accounts;
+              try {
+                accounts = JSON.parse((el && el.dataset.accounts) || "[]");
+              } catch (e) {
+                accounts = [];
+              }
+              let url = "/portfolio/explain/equity-point"
+                      + "?on=" + encodeURIComponent(p.on)
+                      + "&period=" + encodeURIComponent(period);
+              for (const a of accounts) {
+                url += "&account=" + encodeURIComponent(a);
+              }
+              if (window.htmx) {
+                window.htmx.ajax("GET", url, "#explain-equity-point");
+              }
+            },
+          },
         },
         colors: colors,
+        markers: {
+          size: 4,
+          hover: { size: 6 },
+        },
         stroke: { width: widths, curve: "smooth", lineCap: "round", dashArray: dashArr },
         fill: {
           type: fillTypes,
