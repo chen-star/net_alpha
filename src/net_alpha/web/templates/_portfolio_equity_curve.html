@@ -78,35 +78,31 @@
     const contribSeries = points.map(p => ({ x: p.on, y: p.contrib }));
     const accountSeries = points.map(p => ({ x: p.on, y: p.account }));
 
-    // P&L band: account value clipped to "above contributions" and "below
-    // contributions" so each segment renders with its own gradient color.
-    // Both bands share the contributions baseline via a hidden synthetic
-    // series so Apex's stacked-area math anchors correctly.
-    const gainAbove = points.map(p => ({
-      x: p.on,
-      y: (p.account != null && p.account >= p.contrib) ? p.account : null,
-    }));
-    const lossBelow = points.map(p => ({
-      x: p.on,
-      y: (p.account != null && p.account < p.contrib) ? p.account : null,
-    }));
-    const baseline = points.map(p => ({ x: p.on, y: p.contrib }));
+    // P&L fill: single sign-aware area under the account-value line, with
+    // the dotted contributions baseline drawn on top. We tried the literal
+    // "band between the two lines" pattern with stacked-area+delta math but
+    // ApexCharts renders each area series from y=0 independently even with
+    // chart.stacked enabled, producing a fill at the bottom of the chart
+    // rather than between the lines. The spec explicitly permits this
+    // single-color fallback (see 2026-05-17 design doc + 2026-05-02
+    // shipped pattern). Color is picked by the latest point's sign — green
+    // when account ≥ contrib, red when below. The contributions line still
+    // marks the break-even baseline visually.
+    const lastPriced = [...points].reverse().find(p => p.account != null);
+    const isUp = !lastPriced || lastPriced.account >= lastPriced.contrib;
+    const fillColor = isUp
+      ? window.netAlphaChartTheme.colors.pos
+      : window.netAlphaChartTheme.colors.neg;
 
     const series = [
-      { name: "_baseline", type: "area", data: baseline },
-      { name: "Gain", type: "area", data: gainAbove },
-      { name: "Loss", type: "area", data: lossBelow },
       { name: "Contributions", type: "line", data: contribSeries },
-      { name: "Account value", type: "line", data: accountSeries },
+      { name: "Account value", type: "area", data: accountSeries },
     ];
 
     function buildMainOpts() {
       const colors = [
-        "transparent",
-        window.netAlphaChartTheme.colors.pos,
-        window.netAlphaChartTheme.colors.neg,
         window.netAlphaChartTheme.colors.label3,
-        window.netAlphaChartTheme.colors.info,
+        fillColor,
       ];
       const isLight = document.documentElement.getAttribute("data-theme") === "light";
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
@@ -143,40 +139,34 @@
         },
         colors: colors,
         markers: {
-          // Subtle 2px markers only on the Account value line (last series).
-          // Smaller-than-size-4 to reduce clutter, but non-zero so Apex's
-          // dataPointSelection fires reliably (the explain-point click flow
-          // depends on it) and the chart reads as clickable.
-          size: [0, 0, 0, 0, 2],
+          // Subtle 2px markers only on the Account value line. Size 0 broke
+          // ApexCharts dataPointSelection (the explain-point click flow
+          // depends on it); 2px keeps the chart clean while preserving
+          // clickability.
+          size: [0, 2],
           strokeWidth: 0,
           hover: { size: 5 },
         },
         stroke: {
-          width: [0, 0, 0, 1.5, 2],
-          curve: ["straight", "straight", "straight", "stepline", "straight"],
+          // Contributions = stepline (jumps at deposit events — honest about
+          // discrete cash flow). Account value = straight (no smoothing).
+          width: [1.5, 2],
+          curve: ["stepline", "straight"],
           lineCap: "round",
-          dashArray: [0, 0, 0, 4, 0],
+          dashArray: [4, 0],
         },
         fill: {
-          type: ["solid", "gradient", "gradient", "solid", "solid"],
+          type: ["solid", "gradient"],
           gradient: {
             shade: isLight ? "light" : "dark",
             type: "vertical",
-            opacityFrom: 0.35,
+            opacityFrom: 0.30,
             opacityTo: 0,
             stops: [0, 100],
           },
-          opacity: [0, 1, 1, 1, 1],
+          opacity: [1, 1],
         },
-        legend: {
-          show: true,
-          showForSingleSeries: false,
-          customLegendItems: ["Account value", "Contributions"],
-          markers: { fillColors: [
-            window.netAlphaChartTheme.colors.info,
-            window.netAlphaChartTheme.colors.label3,
-          ]},
-        },
+        legend: { show: true },
         xaxis: {
           type: "datetime",
           labels: {
