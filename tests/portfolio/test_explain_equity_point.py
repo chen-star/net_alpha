@@ -325,3 +325,22 @@ def test_missing_close_for_held_ticker_populates_unpriced():
     assert b.unpriced_basis_total == Decimal("500")
     assert b.top_movers == []
     assert b.delta_unrealized == Decimal("0")
+
+
+def test_unreconciled_delta_exposes_residual():
+    on = date(2026, 5, 10)
+    prev = date(2026, 5, 9)
+    # Caller claims delta=100, but no events explain it → residual=100.
+    b = build_equity_point_breakdown(
+        on=on,
+        previous_on=prev,
+        trades_on_date=[],
+        cash_events_on_date=[],
+        dividend_events_on_date=[],
+        open_lots_prev_day=[],
+        violations_on_date=[],
+        exempt_matches_on_date=[],
+        get_close=lambda sym, d: None,
+        delta_account_value=Decimal("100"),
+    )
+    assert b.residual == Decimal("100.00")
