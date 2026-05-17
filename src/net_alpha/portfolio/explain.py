@@ -553,6 +553,130 @@ def _trade_realized(t) -> Decimal:
     return (proceeds - basis).quantize(Decimal("0.01"))
 
 
+def _build_trade_rows(trades_on_date) -> tuple[Decimal, list[TradeRow]]:
+    """Compute realized P&L total + top-5 trade rows (by |realized_pnl|)."""
+    realized = sum((_trade_realized(t) for t in trades_on_date), Decimal("0"))
+    rows = [
+        TradeRow(
+            trade_id=t.id,
+            ticker=t.ticker,
+            side=t.action,
+            quantity=Decimal(str(t.quantity)),
+            realized_pnl=_trade_realized(t),
+        )
+        for t in trades_on_date
+    ]
+    rows.sort(key=lambda r: abs(r.realized_pnl), reverse=True)
+    return realized, rows[:5]
+
+
+def _classify_cash_events(cash_events_on_date) -> tuple[Decimal, list[CashEventRow]]:
+    """Sum signed contributions (transfer_in/_out only) + emit rows for them.
+
+    Mirrors ``portfolio/cash_flow.py::_event_contrib_delta`` semantics — only
+    ``transfer_in`` / ``transfer_out`` count as contributions in this codebase
+    (dividends/interest/fees are non-contribution cash flow and are skipped).
+    """
+    total = Decimal("0")
+    rows: list[CashEventRow] = []
+    for e in cash_events_on_date:
+        if e.kind == "transfer_in":
+            signed = Decimal(str(e.amount))
+        elif e.kind == "transfer_out":
+            signed = -abs(Decimal(str(e.amount)))
+        else:
+            continue
+        total += signed
+        rows.append(CashEventRow(account=e.account, kind=e.kind, amount=signed))
+    return total, rows
+
+
+def _build_dividend_rows(dividend_events_on_date) -> tuple[Decimal, list[DividendRow]]:
+    """Sum dividend amounts + emit one row per event."""
+    total = Decimal("0")
+    rows: list[DividendRow] = []
+    for d in dividend_events_on_date:
+        amt = Decimal(str(d.amount))
+        total += amt
+        rows.append(DividendRow(ticker=d.ticker or "(cash)", amount=amt))
+    return total, rows
+
+
+def _compute_mtm_movers(
+    open_lots_prev_day,
+    previous_on: dt.date,
+    on: dt.date,
+    get_close: Callable[[str, dt.date], Decimal | None],
+) -> tuple[Decimal, list[MoverRow], tuple[str, ...], Decimal]:
+    """Aggregate lots per ticker, compute MTM delta and top-5 movers.
+
+    Returns ``(delta_unrealized, top5_movers, unpriced_tickers_sorted,
+    unpriced_basis_total)``. Tickers missing either prev or current close
+    contribute 0 to ``delta_unrealized`` and surface in ``unpriced_tickers``.
+    """
+    shares_by_ticker: dict[str, Decimal] = {}
+    basis_by_ticker: dict[str, Decimal] = {}
+    for lot in open_lots_prev_day:
+        qty = Decimal(str(lot.quantity))
+        basis = Decimal(str(lot.adjusted_basis))
+        shares_by_ticker[lot.ticker] = shares_by_ticker.get(lot.ticker, Decimal("0")) + qty
+        basis_by_ticker[lot.ticker] = basis_by_ticker.get(lot.ticker, Decimal("0")) + basis
+
+    movers: list[MoverRow] = []
+    delta_unrealized = Decimal("0")
+    unpriced: list[str] = []
+    unpriced_basis = Decimal("0")
+    for ticker, shares in shares_by_ticker.items():
+        prev_c = get_close(ticker, previous_on)
+        cur_c = get_close(ticker, on)
+        if prev_c is None or cur_c is None:
+            unpriced.append(ticker)
+            unpriced_basis += basis_by_ticker[ticker]
+            continue
+        prev_c_d = Decimal(str(prev_c))
+        cur_c_d = Decimal(str(cur_c))
+        contrib = (shares * (cur_c_d - prev_c_d)).quantize(Decimal("0.01"))
+        delta_unrealized += contrib
+        movers.append(
+            MoverRow(
+                ticker=ticker,
+                shares=shares,
+                prev_close=prev_c_d,
+                close=cur_c_d,
+                contribution=contrib,
+            )
+        )
+
+    movers.sort(key=lambda m: abs(m.contribution), reverse=True)
+    return delta_unrealized, movers[:5], tuple(sorted(unpriced)), unpriced_basis
+
+
+def _collect_wash_refs(violations_on_date, exempt_matches_on_date) -> list[WashEventRef]:
+    """Collect wash-sale refs (violations + exempt matches) for deep-linking.
+
+    The renderer deep-links to the existing ``/tax`` violation/exempt explainer
+    fragments, so we only carry id+ticker. ``WashSaleViolation.id`` is a
+    UUID-shaped string by default; route handlers typically pass DB-backed
+    rows whose ``id`` is a stable int. Coerce defensively. ``ExemptMatch``
+    has no ``id`` field in the domain model (DB rows do); fall back to 0.
+    """
+    refs: list[WashEventRef] = []
+    for v in violations_on_date:
+        try:
+            row_id = int(v.id)
+        except (TypeError, ValueError):
+            row_id = 0
+        refs.append(WashEventRef(kind="violation", row_id=row_id, ticker=v.ticker))
+    for em in exempt_matches_on_date:
+        raw = getattr(em, "id", 0)
+        try:
+            row_id = int(raw)
+        except (TypeError, ValueError):
+            row_id = 0
+        refs.append(WashEventRef(kind="exempt", row_id=row_id, ticker=em.ticker))
+    return refs
+
+
 def build_equity_point_breakdown(
     *,
     on: dt.date,
@@ -599,112 +723,13 @@ def build_equity_point_breakdown(
             starting_contributed_to_date=starting_contributed_to_date,
         )
 
-    realized = sum((_trade_realized(t) for t in trades_on_date), Decimal("0"))
-    trade_rows = [
-        TradeRow(
-            trade_id=t.id,
-            ticker=t.ticker,
-            side=t.action,
-            quantity=Decimal(str(t.quantity)),
-            realized_pnl=_trade_realized(t),
-        )
-        for t in trades_on_date
-    ]
-    # Sort by abs(realized_pnl) descending, take top 5.
-    trade_rows.sort(key=lambda r: abs(r.realized_pnl), reverse=True)
-    trade_rows = trade_rows[:5]
-
-    # Signed contributions: + for inflow, - for outflow. Mirrors
-    # ``portfolio/cash_flow.py::_event_contrib_delta`` semantics — only
-    # ``transfer_in`` / ``transfer_out`` count as contributions in this
-    # codebase (dividends/interest/fees are non-contribution cash flow).
-    contributions = Decimal("0")
-    cash_event_rows: list[CashEventRow] = []
-    for e in cash_events_on_date:
-        if e.kind == "transfer_in":
-            signed = Decimal(str(e.amount))
-        elif e.kind == "transfer_out":
-            signed = -abs(Decimal(str(e.amount)))
-        else:
-            # Non-transfer events (dividend / interest / fee / sweep_*) are
-            # not contributions; skip here.
-            continue
-        contributions += signed
-        cash_event_rows.append(CashEventRow(account=e.account, kind=e.kind, amount=signed))
-
-    # Dividends — non-contribution cash inflow attributed to its own line so
-    # the equation reconciles. Caller passes the per-date dividend events.
-    dividends_total = Decimal("0")
-    dividend_rows: list[DividendRow] = []
-    for d in dividend_events_on_date:
-        amt = Decimal(str(d.amount))
-        dividends_total += amt
-        dividend_rows.append(
-            DividendRow(
-                ticker=d.ticker or "(cash)",
-                amount=amt,
-            )
-        )
-
-    # Mark-to-market: aggregate per ticker (sum across lots), then compute
-    # contribution = shares * (close - prev_close). Options without a close
-    # contribute 0 and surface in ``unpriced_tickers`` (locked in by Task 8).
-    shares_by_ticker: dict[str, Decimal] = {}
-    basis_by_ticker: dict[str, Decimal] = {}
-    for lot in open_lots_prev_day:
-        qty = Decimal(str(lot.quantity))
-        basis = Decimal(str(lot.adjusted_basis))
-        shares_by_ticker[lot.ticker] = shares_by_ticker.get(lot.ticker, Decimal("0")) + qty
-        basis_by_ticker[lot.ticker] = basis_by_ticker.get(lot.ticker, Decimal("0")) + basis
-
-    movers: list[MoverRow] = []
-    delta_unrealized = Decimal("0")
-    unpriced: list[str] = []
-    unpriced_basis = Decimal("0")
-    for ticker, shares in shares_by_ticker.items():
-        prev_c = get_close(ticker, previous_on)
-        cur_c = get_close(ticker, on)
-        if prev_c is None or cur_c is None:
-            unpriced.append(ticker)
-            unpriced_basis += basis_by_ticker[ticker]
-            continue
-        prev_c_d = Decimal(str(prev_c))
-        cur_c_d = Decimal(str(cur_c))
-        contrib = (shares * (cur_c_d - prev_c_d)).quantize(Decimal("0.01"))
-        delta_unrealized += contrib
-        movers.append(
-            MoverRow(
-                ticker=ticker,
-                shares=shares,
-                prev_close=prev_c_d,
-                close=cur_c_d,
-                contribution=contrib,
-            )
-        )
-
-    movers.sort(key=lambda m: abs(m.contribution), reverse=True)
-    movers = movers[:5]
-
-    # Wash-sale activity refs — the renderer deep-links to the existing
-    # ``/tax`` violation/exempt explainer fragments, so we only carry id+ticker.
-    # ``WashSaleViolation.id`` is a UUID-shaped string by default; the route
-    # handler typically passes DB-backed rows whose ``id`` is a stable int.
-    # Coerce defensively. ``ExemptMatch`` has no ``id`` field in the domain
-    # model (DB rows do); fall back to 0 if absent.
-    wash_events: list[WashEventRef] = []
-    for v in violations_on_date:
-        try:
-            row_id = int(v.id)
-        except (TypeError, ValueError):
-            row_id = 0
-        wash_events.append(WashEventRef(kind="violation", row_id=row_id, ticker=v.ticker))
-    for em in exempt_matches_on_date:
-        raw = getattr(em, "id", 0)
-        try:
-            row_id = int(raw)
-        except (TypeError, ValueError):
-            row_id = 0
-        wash_events.append(WashEventRef(kind="exempt", row_id=row_id, ticker=em.ticker))
+    realized, trade_rows = _build_trade_rows(trades_on_date)
+    contributions, cash_event_rows = _classify_cash_events(cash_events_on_date)
+    dividends_total, dividend_rows = _build_dividend_rows(dividend_events_on_date)
+    delta_unrealized, movers, unpriced, unpriced_basis = _compute_mtm_movers(
+        open_lots_prev_day, previous_on, on, get_close
+    )
+    wash_events = _collect_wash_refs(violations_on_date, exempt_matches_on_date)
 
     residual = (delta_account_value - (contributions + realized + delta_unrealized + dividends_total)).quantize(
         Decimal("0.01")
@@ -724,7 +749,7 @@ def build_equity_point_breakdown(
         cash_events=cash_event_rows,
         dividend_events=dividend_rows,
         wash_events=wash_events,
-        unpriced_tickers=tuple(sorted(unpriced)),
+        unpriced_tickers=unpriced,
         unpriced_basis_total=unpriced_basis,
         is_starting_snapshot=False,
         starting_holdings_count=0,
