@@ -1,14 +1,17 @@
-{# Side pane body fragment (§3.5).
-
-   Phase 2 D2 ships the skeleton — three sub-block stubs.
-   E2 wires the sim-sell preview; E3 the set-basis form; E1 reorganizes
-   the layout into a polished header + sub-blocks. #}
+{# Positions side pane body — composes 6 sub-partials in display order.
+   See docs/superpowers/specs/2026-05-17-positions-pane-cockpit-design.md #}
 
 <div class="space-y-4">
+  {# Task 1: Header — sym/qty/account/price summary #}
   {% include "_positions_pane_header.html" %}
+  {# Task 2: ST→LT clock — only when ≥1 lot ≤90d from LT #}
   {% include "_positions_pane_st_lt_clock.html" %}
+  {# Task 3: Action row — Sim sell / Sim buy more / Set basis + outlet #}
   {% include "_positions_pane_action_row.html" %}
+  {# Task 4: Lot ladder — collapses on >5 lots #}
   {% include "_positions_pane_lot_ladder.html" %}
+  {# Task 5: Wash-sale outlook — synchronous simulate_sell #}
   {% include "_positions_pane_ws_outlook.html" %}
+  {# Task 6: Recent activity — last 5 trades on sym + account #}
   {% include "_positions_pane_recent.html" %}
 </div>

@@ -108,9 +108,10 @@ def test_recent_activity_filters_by_account(client: TestClient, repo, builders) 
     assert resp.status_code == 200
     html = resp.text
 
-    # Scoped to taxable: exactly 1 recent row and the IRA qty (99) must not appear
-    assert html.count('data-testid="recent-row"') == 1
-    assert "99" not in html or "99.0" not in html  # IRA quantity absent
+    # Scoped to taxable: exactly 1 recent row and the IRA qty (99) must not appear.
+    # Stronger assertion: both conditions must hold independently.
+    assert "99" not in html  # IRA quantity (99 shares) must be absent
+    assert html.count('data-testid="recent-row"') == 1  # only the taxable trade row
 
 
 # ---------------------------------------------------------------------------

@@ -320,9 +320,10 @@ def _pane_ws_outlook(
             recent_trades=repo.all_trades(),
         )
     except Exception as exc:  # noqa: BLE001
+        logger.warning("ws_outlook failed for sym={}, account_display={}: {!r}", sym, account_display, exc)
         return {
             "state": "error",
-            "message": f"Outlook unavailable: {exc!r}",
+            "message": "Wash-sale outlook unavailable",
             "replacement": None,
         }
 
@@ -331,10 +332,18 @@ def _pane_ws_outlook(
     if not triggering:
         return {"state": "clean", "message": "", "replacement": None}
 
-    # Sum disallowed loss across triggering options using realized_pnl
-    # (realized_pnl is negative for losses; disallowed = abs of total loss)
-    total_loss = sum(opt.realized_pnl for opt in triggering if opt.realized_pnl < 0)
-    disallowed_amt = abs(total_loss)
+    # Compute proportional disallowed loss for each triggering option.
+    # blocking_buys may cover only M of the N shares sold — only (M/N) × loss
+    # is actually disallowed under IRS wash-sale rules.
+    sold_qty_dec = qty if qty and qty > 0 else Decimal("0")
+    total_disallowed = Decimal("0")
+    for opt in triggering:
+        if opt.realized_pnl >= 0:
+            continue
+        blocking_qty_total = sum(Decimal(str(b.quantity)) for b in opt.blocking_buys)
+        proportion = min(blocking_qty_total / sold_qty_dec, Decimal("1")) if sold_qty_dec > 0 else Decimal("0")
+        total_disallowed += proportion * abs(opt.realized_pnl)
+    disallowed_amt = total_disallowed
     message = f"Selling today would trigger a wash sale — ~${disallowed_amt:,.2f} disallowed loss."
 
     # Build replacement footnote from the first blocking buy found
@@ -387,6 +396,7 @@ def _build_pane_ctx(
     transfer_qty: float | None = None
     transfer_date: dt.date | None = None
     equity_open: list = []  # initialized here so it's always defined after the try
+    recent_trades: list = []  # initialized here so it's always defined after the try
 
     try:
         lots = repo.get_lots_for_ticker(sym)
@@ -446,6 +456,11 @@ def _build_pane_ctx(
                 transfer_date = primary_trade.transfer_date or primary_trade.date
             elif len(equity_open) == 1:
                 trade_id = equity_open[0].trade_id
+
+        # --- Recent activity: last 5 trades on sym + account scope ---
+        # Reuses the already-fetched + filtered `trades` list — no extra DB call.
+        _recent = sorted(trades, key=lambda t: t.date, reverse=True)
+        recent_trades = _recent[:5]
     except Exception as exc:  # noqa: BLE001 — never block the pane render
         logger.warning("positions_pane lookup failed for sym={}, account_id={}: {!r}", sym, account_id, exc)
 
@@ -464,16 +479,6 @@ def _build_pane_ctx(
         last_price=last_price,
         repo=repo,
     )
-
-    # --- Recent activity: last 5 trades on sym + account scope ---
-    try:
-        _all_trades = repo.get_trades_for_ticker(sym)
-        if account_display is not None:
-            _all_trades = [t for t in _all_trades if t.account == account_display]
-        _all_trades.sort(key=lambda t: t.date, reverse=True)
-        recent_trades = _all_trades[:5]
-    except Exception:  # noqa: BLE001
-        recent_trades = []
 
     # --- Sim-sell realized delta ---
     # realized_delta == loss when both are computed (qty * price − open_basis).

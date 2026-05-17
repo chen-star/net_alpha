@@ -16,10 +16,10 @@
       <a href="/ticker/{{ sym }}?view=timeline#trade-{{ t.id }}"
          data-testid="recent-row"
          class="flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[12px] hover:bg-surface-2 no-underline text-text">
-        <span class="num text-label-2">{{ t.date }}</span>
-        <span class="font-medium">{{ t.action }}</span>
-        <span class="num">{{ fmt_quantity(t.quantity) }} sh</span>
-        <span class="num">{% if per_share is not none %}@ {{ fmt_currency(per_share) }}{% else %}—{% endif %}</span>
+        <span class="num text-label-2 shrink-0">{{ t.date }}</span>
+        <span class="font-medium shrink-0">{{ t.action }}</span>
+        <span class="num shrink-0">{{ fmt_quantity(t.quantity) }} sh</span>
+        <span class="num shrink-0">{% if per_share is not none %}@ {{ fmt_currency(per_share) }}{% else %}—{% endif %}</span>
         <span class="text-label-3 truncate">{{ t.account }}</span>
       </a>
     {% endfor %}
