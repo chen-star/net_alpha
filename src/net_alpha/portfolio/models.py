@@ -246,6 +246,50 @@ class CashBalancePoint:
 
 
 @dataclass(frozen=True)
+class CashDeploymentPoint:
+    """One point in the cash deployment time series (one per eval date).
+
+    The three regions stack to equal the total account value on that date:
+    ``free_cash`` (bottom) + ``pledged`` (middle, CSP collateral) + ``invested``
+    (top, marked-to-market holdings).
+
+    ``pledged`` is ``None`` when the historical pledged-cash compute is not
+    available (the 2-region fallback). In that case the chart renders only
+    free_cash + invested and the pledged dollars surface only in the panel-
+    head KPI line using today's value.
+    """
+
+    on: date
+    free_cash: Decimal
+    pledged: Decimal | None
+    invested: Decimal | None  # mirrors AccountValuePoint.holdings_value semantics
+
+
+@dataclass(frozen=True)
+class ChartHeadKPIs:
+    """Inline panel-head KPIs for the equity + cash deployment charts.
+
+    Pure-derived from the same series the chart plots, so chart and head can
+    never disagree.
+    """
+
+    # Equity head
+    end_account_value: Decimal | None
+    end_contributions: Decimal
+    period_growth: Decimal | None        # end_account_value - period-start anchor - period_contributions
+    period_growth_pct: Decimal | None    # period_growth / (anchor + period_contributions)
+    # Cash deployment head
+    end_free_cash: Decimal
+    end_pledged: Decimal                 # always populated; uses today's value under fallback
+    end_invested: Decimal | None
+    end_cash_share_pct: Decimal | None   # (free + pledged) / account_value
+    lifetime_min: Decimal | None
+    lifetime_min_on: date | None
+    lifetime_max: Decimal | None
+    lifetime_max_on: date | None
+
+
+@dataclass(frozen=True)
 class CashFlowKPIs:
     """Single-shot summary used by the Portfolio KPI strip."""
 
