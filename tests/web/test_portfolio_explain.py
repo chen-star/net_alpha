@@ -440,3 +440,105 @@ def test_explain_equity_point_requires_on_param(tmp_path):
     client, _repo = _make_client(tmp_path)
     resp = client.get("/portfolio/explain/equity-point")
     assert resp.status_code == 422
+
+
+def test_explain_equity_point_smoke_empty_db(tmp_path):
+    """explain_equity_point returns 200 on an empty database (no crash) and
+    renders the panel container marker. ``on`` is not in the (empty) series,
+    so the route falls back to the starting-snapshot branch.
+    """
+    client, _repo = _make_client(tmp_path)
+    resp = client.get("/portfolio/explain/equity-point?on=2026-05-10&period=ytd")
+    assert resp.status_code == 200
+    assert 'data-explain="equity-point"' in resp.text
+
+
+def test_explain_equity_point_smoke_with_account_filter(tmp_path):
+    """explain_equity_point accepts account query params without crashing."""
+    client, _repo = _make_client(tmp_path)
+    resp = client.get(
+        "/portfolio/explain/equity-point"
+        "?on=2024-05-10&period=2024&account=Schwab%2FTax&account=Schwab%2FIRA"
+    )
+    assert resp.status_code == 200
+    assert 'data-explain="equity-point"' in resp.text
+
+
+def test_explain_equity_point_renders_equation_when_delta_present(tmp_path):
+    """Seed a contribution + a closing trade on a later date so the click on
+    the trade's date produces a real point-to-point delta. The equation block
+    (not the starting-snapshot fallback) must render with all four component
+    labels and the seeded ticker as a deep link.
+    """
+    from datetime import date, datetime
+    from decimal import Decimal
+
+    from net_alpha.engine.recompute import recompute_all_violations
+    from net_alpha.models.domain import CashEvent, ImportRecord, Trade
+
+    settings = Settings(data_dir=tmp_path)
+    engine = get_engine(settings.db_path)
+    init_db(engine)
+    repo = Repository(engine)
+
+    today = date.today()
+    deposit_date = date(today.year, 1, 5)
+    buy_date = date(today.year, 1, 10)
+    sell_date = date(today.year, 2, 20)
+
+    acct = repo.get_or_create_account(broker="Schwab", label="Tax")
+    record = ImportRecord(
+        account_id=acct.id,
+        csv_filename="t.csv",
+        csv_sha256="x",
+        imported_at=datetime.now(),
+        trade_count=2,
+    )
+    buy = Trade(
+        account="Schwab/Tax",
+        date=buy_date,
+        ticker="AAPL",
+        action="Buy",
+        quantity=Decimal("10"),
+        proceeds=None,
+        cost_basis=Decimal("1500"),
+    )
+    sell = Trade(
+        account="Schwab/Tax",
+        date=sell_date,
+        ticker="AAPL",
+        action="Sell",
+        quantity=Decimal("10"),
+        proceeds=Decimal("1800"),
+        cost_basis=Decimal("1500"),
+    )
+    cash_event = CashEvent(
+        account="Schwab/Tax",
+        event_date=deposit_date,
+        kind="transfer_in",
+        amount=2000.0,
+        description="seed",
+    )
+    repo.add_import(acct, record, [buy, sell], cash_events=[cash_event])
+    # Lots are materialized by the wash-sale recompute pass.
+    recompute_all_violations(repo, {})
+
+    app = create_app(settings)
+    client = TestClient(app, raise_server_exceptions=False)
+    resp = client.get(f"/portfolio/explain/equity-point?on={sell_date.isoformat()}&period=ytd")
+    assert resp.status_code == 200
+    body = resp.text
+    # Panel container.
+    assert 'data-explain="equity-point"' in body
+    # Equation heading (delta branch, not starting-snapshot).
+    assert "Δ Account value" in body
+    # Equation labels — tolerant matches.
+    assert "Contributions" in body
+    assert "Realized P" in body  # "Realized P/L"
+    assert "Δ Unrealized" in body
+    assert "Dividends" in body
+    # The seeded ticker appears as a deep-link target in the trades block.
+    assert "AAPL" in body
+    assert "/ticker/AAPL" in body
+    # Standard disclaimer footer.
+    assert "Consult a tax professional" in body
