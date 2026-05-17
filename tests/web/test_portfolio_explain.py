@@ -427,8 +427,7 @@ def test_explain_equity_point_accepts_all_query_params(tmp_path):
     even before the Phase-3 template lands."""
     client, _repo = _make_client(tmp_path)
     resp = client.get(
-        "/portfolio/explain/equity-point"
-        "?on=2024-05-10&period=2024&account=Schwab%2FTax&account=Schwab%2FIRA"
+        "/portfolio/explain/equity-point?on=2024-05-10&period=2024&account=Schwab%2FTax&account=Schwab%2FIRA"
     )
     # No template yet → expect 500 (TemplateNotFound), but NOT a 4xx parsing error.
     assert resp.status_code != 404
@@ -457,8 +456,7 @@ def test_explain_equity_point_smoke_with_account_filter(tmp_path):
     """explain_equity_point accepts account query params without crashing."""
     client, _repo = _make_client(tmp_path)
     resp = client.get(
-        "/portfolio/explain/equity-point"
-        "?on=2024-05-10&period=2024&account=Schwab%2FTax&account=Schwab%2FIRA"
+        "/portfolio/explain/equity-point?on=2024-05-10&period=2024&account=Schwab%2FTax&account=Schwab%2FIRA"
     )
     assert resp.status_code == 200
     assert 'data-explain="equity-point"' in resp.text
