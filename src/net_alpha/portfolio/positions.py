@@ -23,6 +23,7 @@ from decimal import Decimal
 
 from net_alpha.models.domain import Lot, Trade
 from net_alpha.models.realized_gl import RealizedGLLot
+from net_alpha.models.splits import Split
 from net_alpha.portfolio.models import (
     ClosedLotRow,
     OpenOptionRow,
@@ -30,6 +31,29 @@ from net_alpha.portfolio.models import (
     PositionRow,
 )
 from net_alpha.pricing.provider import Quote
+
+
+def _cumulative_split_multiplier_after(
+    splits_by_ticker: dict[str, list[Split]] | None,
+    ticker: str,
+    after_date: date,
+) -> float:
+    """Product of ratios for splits whose ex-date is strictly after `after_date`.
+
+    Returns 1.0 when no splits affect the ticker / date. Used to scale a
+    pre-split trade quantity (or G/L row quantity) to the post-split unit
+    scale that ``lot.quantity`` lives in after ``splits/apply.py`` has run.
+    """
+    if not splits_by_ticker:
+        return 1.0
+    splits = splits_by_ticker.get(ticker)
+    if not splits:
+        return 1.0
+    m = 1.0
+    for s in splits:
+        if s.split_date > after_date:
+            m *= s.ratio
+    return m
 
 # Schwab appends a numeric suffix to an option's underlying after a split or
 # special distribution ("GME" → "GME1"). The BTO may carry the original symbol
@@ -49,6 +73,7 @@ def consume_lots_fifo(
     trades: Iterable[Trade],
     gl_closures: dict[tuple[str, str], float] | None = None,
     gl_option_closures: dict[tuple[str, str, float, object, str], float] | None = None,
+    splits_by_ticker: dict[str, list[Split]] | None = None,
 ) -> list[tuple[Lot, Decimal, Decimal]]:
     """FIFO-consume equity AND long-option lots by their closing events.
 
@@ -91,7 +116,11 @@ def consume_lots_fifo(
         if t.option_details is not None:
             continue
         if t.action.lower() == "sell":
-            sells_qty[(t.account, t.ticker)] += float(t.quantity)
+            # Scale pre-split quantities into the post-split unit scale that
+            # lot.quantity uses (splits/apply.py rewrites lot.quantity at
+            # write time, but never mutates the trade row).
+            scale = _cumulative_split_multiplier_after(splits_by_ticker, t.ticker, t.date)
+            sells_qty[(t.account, t.ticker)] += float(t.quantity) * scale
     eq_keys = set(sells_qty.keys()) | set(gl_closures.keys())
     closed_qty: dict[tuple[str, str], float] = {k: max(sells_qty.get(k, 0.0), gl_closures.get(k, 0.0)) for k in eq_keys}
     eq_grouped: dict[tuple[str, str], list[Lot]] = defaultdict(list)
@@ -114,8 +143,11 @@ def consume_lots_fifo(
         if t.basis_source in _STO_KINDS:
             continue  # STO opens a short, not a close of a long lot
         opt = t.option_details
-        opt_close_qty[(t.account, _opt_ticker_base(t.ticker), opt.strike, opt.expiry, opt.call_put)] += float(
-            t.quantity
+        # Option contract quantities scale by splits too (Schwab applies
+        # the split to the contract count, not the multiplier).
+        scale = _cumulative_split_multiplier_after(splits_by_ticker, t.ticker, t.date)
+        opt_close_qty[(t.account, _opt_ticker_base(t.ticker), opt.strike, opt.expiry, opt.call_put)] += (
+            float(t.quantity) * scale
         )
     opt_keys = set(opt_close_qty.keys()) | set(gl_option_closures.keys())
     opt_closed: dict[OptKey, float] = {
