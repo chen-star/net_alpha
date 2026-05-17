@@ -465,6 +465,16 @@ def _build_pane_ctx(
         repo=repo,
     )
 
+    # --- Recent activity: last 5 trades on sym + account scope ---
+    try:
+        _all_trades = repo.get_trades_for_ticker(sym)
+        if account_display is not None:
+            _all_trades = [t for t in _all_trades if t.account == account_display]
+        _all_trades.sort(key=lambda t: t.date, reverse=True)
+        recent_trades = _all_trades[:5]
+    except Exception:  # noqa: BLE001
+        recent_trades = []
+
     # --- Sim-sell realized delta ---
     # realized_delta == loss when both are computed (qty * price − open_basis).
     return {
@@ -482,6 +492,7 @@ def _build_pane_ctx(
         "lt_clock": lot_info["clock"],
         "lot_rows": lot_info["lots"],
         "ws_outlook": ws_outlook,
+        "recent_trades": recent_trades,
     }
 
 

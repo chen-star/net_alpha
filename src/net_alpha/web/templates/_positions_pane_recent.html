@@ -1,0 +1,28 @@
+{# Recent activity — last 5 trades on sym + account scope. Click → ticker
+   timeline anchored to the trade row. #}
+{% if recent_trades %}
+<div class="mt-4">
+  <div class="label-uc text-[10px] text-label-2 mb-2">Recent activity</div>
+  <div class="space-y-1">
+    {% for t in recent_trades %}
+      {# Derive per-share price: cost_basis for buys, proceeds for sells. #}
+      {% if t.action|lower == "buy" and t.cost_basis is not none and t.quantity %}
+        {% set per_share = t.cost_basis / t.quantity %}
+      {% elif t.action|lower == "sell" and t.proceeds is not none and t.quantity %}
+        {% set per_share = t.proceeds / t.quantity %}
+      {% else %}
+        {% set per_share = none %}
+      {% endif %}
+      <a href="/ticker/{{ sym }}?view=timeline#trade-{{ t.id }}"
+         data-testid="recent-row"
+         class="flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[12px] hover:bg-surface-2 no-underline text-text">
+        <span class="num text-label-2">{{ t.date }}</span>
+        <span class="font-medium">{{ t.action }}</span>
+        <span class="num">{{ fmt_quantity(t.quantity) }} sh</span>
+        <span class="num">{% if per_share is not none %}@ {{ fmt_currency(per_share) }}{% else %}—{% endif %}</span>
+        <span class="text-label-3 truncate">{{ t.account }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
