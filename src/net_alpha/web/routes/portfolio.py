@@ -1485,6 +1485,8 @@ def explain_equity_point(
     in the same filtered series), then calls the pure-function builder
     and renders ``_explain_equity_point.html``.
     """
+    from dataclasses import replace as dc_replace
+
     from net_alpha.portfolio.cash_flow import CONTRIB_INFLOW_KINDS, CONTRIB_OUTFLOW_KINDS
     from net_alpha.portfolio.explain import build_equity_point_breakdown
     from net_alpha.portfolio.positions import consume_lots_fifo
@@ -1543,6 +1545,8 @@ def explain_equity_point(
     # via `Lot.model_copy(...)` so `_compute_mtm_movers` (which only reads
     # `.ticker`, `.quantity`, `.adjusted_basis`) sees the live-remainder.
     open_lots_prev: list = []
+    extra_unpriced: list[str] = []
+    extra_unpriced_basis = Decimal("0")
     if previous_on is not None:
         trades_asof = [t for t in trades if t.date <= previous_on]
         lots_asof = [lt for lt in lots if lt.date <= previous_on]
@@ -1551,9 +1555,13 @@ def explain_equity_point(
             if rem_qty <= 0:
                 continue
             if lot.option_details is not None:
-                # Options have no historical-close lookup that maps cleanly to
-                # this builder; skip them in the mover roster (matches the
-                # builder's existing convention for unpriced tickers).
+                # Options aren't priced via get_close. Surface them in the
+                # unpriced caveat so the user understands why ΔUnrealized may
+                # not fully account for an option-close between previous_on
+                # and on.
+                if lot.ticker not in extra_unpriced:
+                    extra_unpriced.append(lot.ticker)
+                extra_unpriced_basis += Decimal(str(rem_basis))
                 continue
             open_lots_prev.append(
                 lot.model_copy(update={"quantity": float(rem_qty), "adjusted_basis": float(rem_basis)})
@@ -1596,6 +1604,14 @@ def explain_equity_point(
         delta_account_value=delta_av,
         starting_contributed_to_date=contributed_to_date,
     )
+    if extra_unpriced:
+        merged_tickers = tuple(sorted(set(breakdown.unpriced_tickers) | set(extra_unpriced)))
+        merged_basis = breakdown.unpriced_basis_total + extra_unpriced_basis
+        breakdown = dc_replace(
+            breakdown,
+            unpriced_tickers=merged_tickers,
+            unpriced_basis_total=merged_basis,
+        )
     return request.app.state.templates.TemplateResponse(
         request,
         "_explain_equity_point.html",
