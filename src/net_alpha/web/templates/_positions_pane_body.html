@@ -7,13 +7,5 @@
 <div class="space-y-4">
   {% include "_positions_pane_header.html" %}
   {% include "_positions_pane_st_lt_clock.html" %}
-
-  {% include "_positions_pane_sim_preview.html" %}
-
-  {% if trade_id %}{% include "_positions_pane_set_basis.html" %}{% endif %}
-
-  <a href="/ticker/{{ sym }}" class="inline-flex items-center gap-1 text-[13px] text-accent hover:underline">
-    Open ticker
-    <img src="/static/icons/external-link.svg?v={{ asset_v }}" class="w-3.5 h-3.5 icon-mono" alt="">
-  </a>
+  {% include "_positions_pane_action_row.html" %}
 </div>

@@ -278,19 +278,17 @@ def _pane_lot_info(
     return {"lots": rows, "clock": clock}
 
 
-@router.get("/positions/pane", response_class=HTMLResponse)
-def positions_pane(
-    request: Request,
+def _build_pane_ctx(
     sym: str,
-    account_id: int | None = None,
-    repo: Repository = Depends(get_repository),
-    pricing: PricingService = Depends(get_pricing_service),
-) -> HTMLResponse:
-    """Return the side-pane body fragment for one position.
+    account_id: int | None,
+    repo: Repository,
+    pricing: PricingService,
+) -> dict[str, Any]:
+    """Build the template context dict for the positions side-pane.
 
-    Mounted into ``#positions-pane-body`` via HTMX from a row click on
-    /positions. Phase 2 Section E populates three sub-blocks: header,
-    sim-sell preview, and set-basis form.
+    Extracted so all three pane endpoints (main body, sim partial, basis
+    partial) can share the same context-building logic without duplication.
+    Does not call TemplateResponse — callers are responsible for rendering.
     """
     sym = sym.upper().strip()
     today = dt.date.today()
@@ -390,7 +388,7 @@ def positions_pane(
 
     # --- Sim-sell realized delta ---
     # realized_delta == loss when both are computed (qty * price − open_basis).
-    ctx = {
+    return {
         "sym": sym,
         "account_id": account_id,
         "last_price": last_price,
@@ -406,9 +404,63 @@ def positions_pane(
         "lot_rows": lot_info["lots"],
     }
 
+
+@router.get("/positions/pane", response_class=HTMLResponse)
+def positions_pane(
+    request: Request,
+    sym: str,
+    account_id: int | None = None,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Return the side-pane body fragment for one position.
+
+    Mounted into ``#positions-pane-body`` via HTMX from a row click on
+    /positions. Phase 2 Section E populates three sub-blocks: header,
+    sim-sell preview, and set-basis form.
+    """
+    ctx = _build_pane_ctx(sym=sym, account_id=account_id, repo=repo, pricing=pricing)
     return request.app.state.templates.TemplateResponse(
         request,
         "_positions_pane_body.html",
+        ctx,
+    )
+
+
+@router.get("/positions/pane/sim", response_class=HTMLResponse)
+def positions_pane_sim(
+    request: Request,
+    sym: str,
+    action: str = "sell",
+    account_id: int | None = None,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Return the sim-preview partial bound to the open qty by default.
+    Used by the action-row Sim sell / Sim buy buttons (HTMX outlet swap)."""
+    ctx = _build_pane_ctx(sym=sym, account_id=account_id, repo=repo, pricing=pricing)
+    ctx["action_pref"] = action
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_positions_pane_sim_preview.html",
+        ctx,
+    )
+
+
+@router.get("/positions/pane/basis", response_class=HTMLResponse)
+def positions_pane_basis(
+    request: Request,
+    sym: str,
+    account_id: int | None = None,
+    repo: Repository = Depends(get_repository),
+    pricing: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Return the set-basis form partial. Used by the action-row Set
+    basis button (HTMX outlet swap)."""
+    ctx = _build_pane_ctx(sym=sym, account_id=account_id, repo=repo, pricing=pricing)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_positions_pane_set_basis.html",
         ctx,
     )
 

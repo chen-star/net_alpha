@@ -1,0 +1,30 @@
+{# Action row: 3 buttons that HTMX-swap a target partial into the outlet
+   below. The outlet starts empty; the user picks what they want to do.
+   The Open-ticker link stays right-aligned for full history. #}
+{% set _aq_qs %}sym={{ sym|urlencode }}{% if account_id %}&account_id={{ account_id }}{% endif %}{% endset %}
+<div class="mt-3 flex items-center gap-2 flex-wrap">
+  <button type="button"
+          data-testid="pane-action-sim-sell"
+          class="btn-ghost text-[12px] px-2 py-1"
+          hx-get="/positions/pane/sim?{{ _aq_qs }}&action=sell"
+          hx-target="#pane-action-outlet"
+          hx-swap="innerHTML">Sim sell</button>
+  <button type="button"
+          data-testid="pane-action-sim-buy"
+          class="btn-ghost text-[12px] px-2 py-1"
+          hx-get="/positions/pane/sim?{{ _aq_qs }}&action=buy"
+          hx-target="#pane-action-outlet"
+          hx-swap="innerHTML">Sim buy more</button>
+  <button type="button"
+          data-testid="pane-action-set-basis"
+          class="btn-ghost text-[12px] px-2 py-1"
+          hx-get="/positions/pane/basis?{{ _aq_qs }}"
+          hx-target="#pane-action-outlet"
+          hx-swap="innerHTML">Set basis</button>
+  <a href="/ticker/{{ sym }}"
+     class="ml-auto inline-flex items-center gap-1 text-[12px] text-accent hover:underline">
+    Open ticker
+    <img src="/static/icons/external-link.svg?v={{ asset_v }}" class="w-3.5 h-3.5 icon-mono" alt="">
+  </a>
+</div>
+<div id="pane-action-outlet" data-testid="pane-action-outlet" class="mt-3"></div>

@@ -8,11 +8,14 @@ from fastapi.testclient import TestClient
 
 
 def test_positions_pane_renders_transfer_context_for_transfer_in(client: TestClient, seed_transfer_in) -> None:
-    """When a position has a transfer_in trade with no basis, the rendered
-    pane HTML must contain the trade_id, the transferred qty, and the
-    transfer date so the multi-lot fragment can validate against them."""
+    """When a position has a transfer_in trade with no basis, the set-basis
+    form served at /positions/pane/basis must contain the trade_id, the
+    transferred qty, and the transfer date so the multi-lot fragment can
+    validate against them. The form is no longer rendered inline in the pane
+    body — it is lazy-loaded into the outlet via the action-row Set basis
+    button (Task 3 refactor)."""
     sym, account_id, trade_id, qty, xfer_date = seed_transfer_in
-    resp = client.get("/positions/pane", params={"sym": sym, "account_id": account_id})
+    resp = client.get("/positions/pane/basis", params={"sym": sym, "account_id": account_id})
     assert resp.status_code == 200
     html = resp.text
     assert f'value="{trade_id}"' in html, "single-lot form should expose trade_id"
