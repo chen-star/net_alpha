@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/chen-star/net_alpha/v0.56.1/assets/logo.svg" alt="net-alpha" width="420">
+<img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/logo.svg" alt="net-alpha" width="420">
 
 **Cross-account wash sale detection for stocks, options, and ETFs — local-first, IRS Pub 550 rules, with a tax-harvest planner and pre-trade simulator.**
 
@@ -28,7 +28,7 @@
 
 When you trade across multiple brokerages, each platform tracks wash sales **only within its own ecosystem**. A loss sale on Schwab can be silently neutralized by a repurchase on Fidelity — you won't find out until tax season, long after the window to act has closed. The problem compounds when you trade **options** alongside the underlying, or **ETFs** that track the same index.
 
-**net-alpha** is a local-first Python tool that gives you a single, unified view of your wash sale exposure across every account, asset class, and tax year — *before* it's too late to act.
+**net-alpha** is a local-first Python tool that gives you a single, unified view of your wash sale exposure across every account, asset class, and tax year — _before_ it's too late to act.
 
 > [!NOTE]
 > The package is published to PyPI as **`wash-alpha`** but the CLI command is **`net-alpha`**. Both names refer to the same project.
@@ -37,7 +37,7 @@ When you trade across multiple brokerages, each platform tracks wash sales **onl
 
 > Screenshots below use the built-in demo dataset — TSLA, NVDA, AAPL, SPY puts, an SPX §1256 call, plus a handful of open holdings (MSFT, AMZN, GOOGL, META, AMD, …). Pick **"Try the demo"** on the welcome screen to play with the same scenarios live.
 
-**Wash-sale ledger** — every match across accounts, with confidence label and rule citation. The **NVDA** row is the case no single broker would ever flag: a loss closed in `schwab/taxable` is silently neutralized by a buy in `schwab/ira` 14 days later. **TSLA** and **AAPL** are confirmed same-account round-trips. **SPY** is an exact-strike-and-expiry options match — the lag is `-8d` because the *replacement* leg was opened 8 days *before* the loss close.
+**Wash-sale ledger** — every match across accounts, with confidence label and rule citation. The **NVDA** row is the case no single broker would ever flag: a loss closed in `schwab/taxable` is silently neutralized by a buy in `schwab/ira` 14 days later. **TSLA** and **AAPL** are confirmed same-account round-trips. **SPY** is an exact-strike-and-expiry options match — the lag is `-8d` because the _replacement_ leg was opened 8 days _before_ the loss close.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/wash-sales.png" alt="Wash-sale ledger across accounts" width="900">
@@ -49,7 +49,7 @@ When you trade across multiple brokerages, each platform tracks wash sales **onl
 <img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/ticker-nvda.png" alt="NVDA per-symbol drilldown" width="900">
 </p>
 
-**Pre-trade simulator** — propose `Sell 20 AAPL @ $170` and see realized P&L, FIFO lot consumption, and the wash-sale verdict *before* you place the order. The lot-strategy table compares FIFO / LIFO / HIFO / MIN_TAX / MAX_LOSS side-by-side, with each strategy's wash-sale verdict computed independently. Suggestion chips at the top surface the largest unrealized loss (`NVDA −$3,098`) and gain (`AMD +$4,503`) for one-click sims.
+**Pre-trade simulator** — propose `Sell 20 AAPL @ $170` and see realized P&L, FIFO lot consumption, and the wash-sale verdict _before_ you place the order. The lot-strategy table compares FIFO / LIFO / HIFO / MIN_TAX / MAX_LOSS side-by-side, with each strategy's wash-sale verdict computed independently. Suggestion chips at the top surface the largest unrealized loss (`NVDA −$3,098`) and gain (`AMD +$4,503`) for one-click sims.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/sim.png" alt="Pre-trade simulator with lot-strategy comparison" width="900">
@@ -101,16 +101,16 @@ net-alpha schwab.csv --account personal --detail
 
 ### Planning
 
-- **Pre-trade simulator** — `/sim` shows FIFO lot consumption, realized P&L, and a per-account cross-account wash-sale verdict *before* you execute. Suggestion chips surface the largest unrealized loss, wash-sale risk, and largest unrealized gain.
+- **Pre-trade simulator** — `/sim` shows FIFO lot consumption, realized P&L, and a per-account cross-account wash-sale verdict _before_ you execute. Suggestion chips surface the largest unrealized loss, wash-sale risk, and largest unrealized gain.
 - **Lot-selection strategies** — compare **FIFO / LIFO / HIFO / MIN_TAX / MAX_LOSS** side-by-side on a Sell sim, with each strategy's wash-sale verdict computed independently.
 - **Tax-harvest planner** — `/tax/harvest/plan` turns the harvest queue into a ranked, editable plan (greedy by tax saved, capped by §1211's $3,000 ordinary-loss limit). Honors user-declared **PositionTargets** so it never closes something you want to keep.
 - **Forward-looking watchlist** — the always-on service forward-simulates every PositionTarget daily and surfaces wash-sale / §1091 risk inline as colored pills on the Plan view, distinguishing deferred basis-rollover sales from permanent IRA-trap losses.
 - **Action Inbox** — a single panel rolls urgent items (imminent wash-sale tripwires, §1092 holding-period suspensions, broken reconciliation, missing basis) into one place.
-- **Verify** — a toolbar badge that audits live KPIs against pure-function recomputes (Realized P/L, after-tax, lot counts) and offers one-click jumps to any divergence. Suppressible per finding; refreshed by a weekly Sunday 04:30 service job.
+- **Verify** — a global "Data check" pill in the site header that audits live KPIs against pure-function recomputes (Realized P/L, after-tax, lot counts, per-account basis vs broker positions CSV) and offers one-click jumps to any divergence. Findings carrying `expected_section_1256` or `expected_cross_account` render a muted "· expected" badge so genuine errors stand out. Suppressible per finding; refreshed by a weekly Sunday 04:30 service job.
 
 ### Reporting
 
-- **After-tax performance** — `/tax?view=performance` shows realized P&L *after* estimated taxes, with a tax-drag breakdown and an ST/LT/§1256 mix bar.
+- **After-tax performance** — `/tax?view=performance` shows realized P&L _after_ estimated taxes, with a tax-drag breakdown and an ST/LT/§1256 mix bar.
 - **Capital-loss carryforward** — auto-derived from prior years honoring §1212(b) cross-category netting and §1211 $3K cap, with hand-editable overrides at `/settings/carryforward`.
 - **Auditable explanations** — every wash-sale flag includes rule citation, source trades, match reason, math, and confidence reasoning — inline in the UI or via `--detail` on the CLI.
 - **Per-symbol reconciliation** — cross-checks computed P&L against your broker's Realized G/L file (Schwab supported); discrepancies surface inline on the ticker page.
@@ -132,15 +132,16 @@ net-alpha schwab.csv --account personal --detail
 net-alpha ui [--port 18765] [--no-browser] [--reload]
 ```
 
-| Page | Highlights |
-| :--- | :--- |
-| `/` Portfolio | KPIs, allocation, equity & cash curves, top movers, options & short-options panels, wash-sale watch |
-| `/positions` | Holdings (all / stocks / options / at-loss / closed), drag-to-reorder Plan view, multi-lot basis editor |
-| `/sim` | Pre-trade simulator with suggestion chips and lot-strategy comparison table |
-| `/tax` | After-tax performance, harvest queue, plan-builder, projection setup, wash-sale + exempt-match listings |
-| `/imports` | Drop-zone upload, preview/commit, per-import detail, data-hygiene buckets |
-| `/ticker/{symbol}` | Per-symbol timeline, lots, reconciliation, lot edit + add-trade forms |
-| `/settings` | Profile, density, ETF pairs, carryforward, accounts + types, backups, service controls, about |
+| Page               | Highlights                                                                                              |
+| :----------------- | :------------------------------------------------------------------------------------------------------ |
+| `/` Portfolio      | KPIs, equity curve with brush-strip drag-to-reperiod, cash curve, monthly P/L bars with lifetime-avg reference line, allocation, top movers, options & short-options panels, wash-sale watch. Rows are drag-to-reorder + hideable via the "Edit layout" toolbar. |
+| `/positions`       | Holdings (all / stocks / options / at-loss / closed), drag-to-reorder Plan view, multi-lot basis editor                                                                                                                                                         |
+| `/sim`             | Pre-trade simulator with suggestion chips and lot-strategy comparison table                                                                                                                                                                                     |
+| `/tax`             | After-tax performance, harvest queue, plan-builder, projection setup, wash-sale + exempt-match listings                                                                                                                                                         |
+| `/imports`         | Drop-zone upload (trades CSV or Schwab positions CSV — all-accounts or per-account header), preview/commit, per-import detail, data-hygiene buckets                                                                                                             |
+| `/ticker/{symbol}` | Per-symbol timeline, lots, reconciliation, lot edit + add-trade forms                                                                                                                                                                                           |
+| `/verify`          | Findings table (BasisRecon, RealizedRecon, StaleReference, …) with inline "Why?" explainer, one-click suppress, and freshness banner                                                                                                                            |
+| `/settings`        | Profile, density, ETF pairs, carryforward, accounts + types, backups, service controls, about                                                                                                                                                                   |
 
 Server-side HTMX + Alpine, dies on Ctrl-C.
 
@@ -179,15 +180,15 @@ Bundled at launch: **Schwab** (transactions + Realized G/L for audit reconciliat
 
 ## How the rules work
 
-`net-alpha` strictly follows IRS Publication 550. A wash sale is triggered when you sell a security at a loss and buy a *substantially identical* security within 30 days before or after the sale.
+`net-alpha` strictly follows IRS Publication 550. A wash sale is triggered when you sell a security at a loss and buy a _substantially identical_ security within 30 days before or after the sale.
 
-| Asset type | Scenario | Confidence |
-| :--- | :--- | :--- |
-| **Equities** | Sold ticker `X` at a loss, bought ticker `X` within 30 days | 🟢 **Confirmed** |
-| **Options** | Sold option at a loss, bought same option (exact strike + expiry) | 🟢 **Confirmed** |
-| **Options** | Sold option at a loss, bought option on the same underlying | 🟡 **Probable** |
-| **ETFs** | Sold ETF at a loss, bought the exact same ETF ticker | 🟢 **Confirmed** |
-| **ETFs** | Sold ETF at a loss, bought ETF tracking the same index (e.g., `SPY` → `VOO`) | 🔵 **Unclear** |
+| Asset type   | Scenario                                                                     | Confidence       |
+| :----------- | :--------------------------------------------------------------------------- | :--------------- |
+| **Equities** | Sold ticker `X` at a loss, bought ticker `X` within 30 days                  | 🟢 **Confirmed** |
+| **Options**  | Sold option at a loss, bought same option (exact strike + expiry)            | 🟢 **Confirmed** |
+| **Options**  | Sold option at a loss, bought option on the same underlying                  | 🟡 **Probable**  |
+| **ETFs**     | Sold ETF at a loss, bought the exact same ETF ticker                         | 🟢 **Confirmed** |
+| **ETFs**     | Sold ETF at a loss, bought ETF tracking the same index (e.g., `SPY` → `VOO`) | 🔵 **Unclear**   |
 
 ### §1256 contracts
 
@@ -220,14 +221,14 @@ Same-underlying offsetting positions caught by IRC §1092:
 
 ### Lifecycle
 
-| Command | Effect |
-| :--- | :--- |
-| `net-alpha service install` | Provision runtime venv, write launchd plist + sandbox profile, (re)load the agent. Idempotent. |
-| `net-alpha service start` / `stop` / `restart` | Lifecycle. `stop` survives reboots until `start`. |
-| `net-alpha service pause` / `resume` | Freeze background jobs but keep the dashboard reachable. |
-| `net-alpha service status [--json]` | Health report. |
-| `net-alpha service logs [-f]` | View / tail the service log. |
-| `net-alpha service uninstall` | Remove plist, sandbox, and runtime venv. **Data at `~/.net_alpha/net_alpha.db` is preserved.** |
+| Command                                        | Effect                                                                                         |
+| :--------------------------------------------- | :--------------------------------------------------------------------------------------------- |
+| `net-alpha service install`                    | Provision runtime venv, write launchd plist + sandbox profile, (re)load the agent. Idempotent. |
+| `net-alpha service start` / `stop` / `restart` | Lifecycle. `stop` survives reboots until `start`.                                              |
+| `net-alpha service pause` / `resume`           | Freeze background jobs but keep the dashboard reachable.                                       |
+| `net-alpha service status [--json]`            | Health report.                                                                                 |
+| `net-alpha service logs [-f]`                  | View / tail the service log.                                                                   |
+| `net-alpha service uninstall`                  | Remove plist, sandbox, and runtime venv. **Data at `~/.net_alpha/net_alpha.db` is preserved.** |
 
 The dashboard at `/settings/service` exposes the same controls in a UI surface, plus recent-runs history and a status pill in the site header.
 
