@@ -350,6 +350,41 @@ def test_unreconciled_delta_exposes_residual():
     assert b.residual == Decimal("100.00")
 
 
+def test_reinvest_action_yields_zero_realized_pnl():
+    """Reinvest / Reinvest Shares are buy actions — they create a new lot from
+    a dividend and produce 0 realized P&L. Regression: a prior implementation
+    used ``startswith("buy")`` which misclassified these as sells.
+    """
+    on = date(2026, 5, 10)
+    prev = date(2026, 5, 9)
+    reinvest = Trade(
+        id="t-reinvest",
+        account="Brokerage",
+        date=on,
+        ticker="MSFT",
+        action="Reinvest Shares",
+        quantity=0.1234,
+        proceeds=None,
+        cost_basis=12.34,
+    )
+    b = build_equity_point_breakdown(
+        on=on,
+        previous_on=prev,
+        trades_on_date=[reinvest],
+        cash_events_on_date=[],
+        dividend_events_on_date=[],
+        open_lots_prev_day=[],
+        violations_on_date=[],
+        exempt_matches_on_date=[],
+        get_close=lambda sym, d: None,
+        delta_account_value=Decimal("0"),
+    )
+    assert b.realized_pnl == Decimal("0")
+    assert len(b.trades) == 1
+    assert b.trades[0].side == "Reinvest Shares"
+    assert b.trades[0].realized_pnl == Decimal("0")
+
+
 def test_all_four_components_reconcile_to_delta():
     """Positive proof: a day with non-zero trade P&L, contributions, dividends,
     and MTM all sum to delta_account_value with residual == 0.

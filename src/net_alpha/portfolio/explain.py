@@ -536,6 +536,14 @@ class EquityPointBreakdown:
     starting_contributed_to_date: Decimal
 
 
+# Mirror of brokers/schwab.py::_BUY_ACTIONS. Opening trades produce no
+# realized P&L (basis sits on the new lot until it's later closed); they
+# must be matched by name, not by ``startswith("buy")`` — "Reinvest" and
+# "Reinvest Shares" are buys but don't start with "buy", and would
+# otherwise fall through to the sell branch producing a phantom P&L.
+_BUY_ACTIONS_LOWER = frozenset({"buy", "reinvest shares", "reinvest", "buy to open"})
+
+
 def _trade_realized(t) -> Decimal:
     """Realized P&L for a single trade row.
 
@@ -546,7 +554,7 @@ def _trade_realized(t) -> Decimal:
     (uppercase first letter); ``Trade.proceeds`` and ``Trade.cost_basis``
     are ``float | None``.
     """
-    if t.action.lower().startswith("buy"):
+    if (t.action or "").strip().lower() in _BUY_ACTIONS_LOWER:
         return Decimal("0")
     proceeds = Decimal(str(t.proceeds)) if t.proceeds is not None else Decimal("0")
     basis = Decimal(str(t.cost_basis)) if t.cost_basis is not None else Decimal("0")
