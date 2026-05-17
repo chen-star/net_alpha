@@ -229,6 +229,53 @@ def positions_page(
     )
 
 
+def _pane_lot_info(
+    open_equity_lots: list,  # list of Lot from open_lots_view filter
+    last_price: float | None,
+    today: dt.date,
+) -> dict:
+    """Compute per-lot status fields used by the ST/LT clock and the lot
+    ladder. Returns a dict with keys:
+
+    - `lots`: list[dict] one per lot, with fields: date, qty, adj_basis,
+      unrealized, status ("ST"|"LT"|"WS"|"TACKED"), days_to_lt, is_tacked.
+    - `clock`: dict | None — {"min_days_to_lt": int} if any ST lot is
+      ≤90d from LT, else None.
+    """
+    rows: list[dict] = []
+    min_days: int | None = None
+    for lot in open_equity_lots:
+        effective_acquired = getattr(lot, "tacked_acquired_date", None) or lot.date
+        if isinstance(effective_acquired, str):
+            effective_acquired = dt.date.fromisoformat(effective_acquired)
+        held_days = (today - effective_acquired).days
+        is_lt = held_days > 365
+        days_to_lt = 366 - held_days if not is_lt else 0
+        is_tacked = getattr(lot, "tacked_acquired_date", None) is not None
+
+        unrealized: Decimal | None = None
+        if last_price is not None:
+            unrealized = (Decimal(str(last_price)) - Decimal(str(lot.adjusted_basis))) * Decimal(str(lot.quantity))
+
+        status = "TACKED" if is_tacked else ("LT" if is_lt else "ST")
+        rows.append({
+            "date": effective_acquired,
+            "qty": Decimal(str(lot.quantity)),
+            "adj_basis": Decimal(str(lot.adjusted_basis)),
+            "unrealized": unrealized,
+            "status": status,
+            "days_to_lt": days_to_lt,
+            "is_tacked": is_tacked,
+        })
+
+        if not is_lt and 0 < days_to_lt <= 90:
+            if min_days is None or days_to_lt < min_days:
+                min_days = days_to_lt
+
+    clock = {"min_days_to_lt": min_days} if min_days is not None else None
+    return {"lots": rows, "clock": clock}
+
+
 @router.get("/positions/pane", response_class=HTMLResponse)
 def positions_pane(
     request: Request,
@@ -268,6 +315,7 @@ def positions_pane(
     # transfer_qty/transfer_date are only meaningful for transfer rows.
     transfer_qty: float | None = None
     transfer_date: dt.date | None = None
+    equity_open: list = []  # initialized here so it's always defined after the try
 
     try:
         lots = repo.get_lots_for_ticker(sym)
@@ -330,6 +378,13 @@ def positions_pane(
     except Exception as exc:  # noqa: BLE001 — never block the pane render
         logger.warning("positions_pane lookup failed for sym={}, account_id={}: {!r}", sym, account_id, exc)
 
+    # --- ST→LT clock + lot ladder data ---
+    lot_info = _pane_lot_info(
+        open_equity_lots=equity_open,
+        last_price=last_price,
+        today=dt.date.today(),
+    )
+
     # --- Sim-sell realized delta ---
     # realized_delta == loss when both are computed (qty * price − open_basis).
     ctx = {
@@ -344,6 +399,8 @@ def positions_pane(
         "trade_id": trade_id,
         "transfer_qty": transfer_qty,
         "transfer_date": transfer_date,
+        "lt_clock": lot_info["clock"],
+        "lot_rows": lot_info["lots"],
     }
 
     return request.app.state.templates.TemplateResponse(
