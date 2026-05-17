@@ -88,9 +88,7 @@ def test_full_pipeline_trade_import_then_positions_import_then_verify(client: Te
     for path in ("/", "/positions"):
         r = client.get(path)
         assert r.status_code == 200, f"{path} returned {r.status_code}"
-        assert "data-verify-pill" in r.text, (
-            f"{path} is missing the global verify pill marker"
-        )
+        assert "data-verify-pill" in r.text, f"{path} is missing the global verify pill marker"
 
     # 6) The /verify/badge endpoint itself renders a real badge with the
     #    data-verify-badge attribute, given at least one run has happened.

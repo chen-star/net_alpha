@@ -142,10 +142,6 @@ def test_per_account_csv_upload_then_verify_emits_section_1256_annotation(client
     assert latest is not None
     findings = repo.list_verify_findings(run_id=latest.id)
     basis = [f for f in findings if f.rule_id == "BasisRecon" and "SPX" in f.scope]
-    assert len(basis) >= 1, (
-        f"no SPX BasisRecon finding emitted (got rule_ids={[f.rule_id for f in findings]!r})"
-    )
+    assert len(basis) >= 1, f"no SPX BasisRecon finding emitted (got rule_ids={[f.rule_id for f in findings]!r})"
     detail = json.loads(basis[0].detail_json or "{}")
-    assert detail.get("expected_section_1256") is True, (
-        f"detail_json missing expected_section_1256=True: {detail!r}"
-    )
+    assert detail.get("expected_section_1256") is True, f"detail_json missing expected_section_1256=True: {detail!r}"
