@@ -118,7 +118,8 @@
           </thead>
           {% for em in exempt_matches %}
             <tbody x-data="{ open: false }">
-              <tr @click="open = !open"
+              <tr id="exempt-{{ em.id }}"
+                  @click="open = !open"
                   hx-get="/tax/exempt/{{ em.id }}/explain"
                   hx-trigger="click once"
                   hx-target="#exempt-{{ em.id }}-explain"
