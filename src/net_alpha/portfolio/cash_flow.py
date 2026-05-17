@@ -11,7 +11,14 @@ from collections.abc import Iterable, Sequence
 from decimal import Decimal
 
 from net_alpha.models.domain import CashEvent, Trade
-from net_alpha.portfolio.models import CashBalancePoint, CashFlowKPIs
+from net_alpha.portfolio.models import (
+    AccountValuePoint,
+    CashBalancePoint,
+    CashDeploymentPoint,
+    CashFlowKPIs,
+    ChartHeadKPIs,
+)
+from net_alpha.portfolio.positions import compute_open_short_option_positions
 
 # Sign rules — positive amount means cash inflow.
 #
@@ -212,9 +219,6 @@ def cash_balance_extremes(
     return mn_p.cash_balance, mn_p.on, mx_p.cash_balance, mx_p.on
 
 
-from net_alpha.portfolio.positions import compute_open_short_option_positions  # noqa: E402
-
-
 def pledged_cash_at(
     *,
     on: dt.date,
@@ -241,9 +245,6 @@ def pledged_cash_at(
             continue
         total += Decimal(str(r.strike)) * Decimal("100") * r.qty_short
     return total.quantize(Decimal("0.01"))
-
-
-from net_alpha.portfolio.models import AccountValuePoint, CashDeploymentPoint  # noqa: E402
 
 
 def build_cash_deployment_series(
@@ -286,9 +287,6 @@ def build_cash_deployment_series(
             )
         )
     return pts
-
-
-from net_alpha.portfolio.models import ChartHeadKPIs  # noqa: E402
 
 
 def compute_chart_head_kpis(
