@@ -68,7 +68,7 @@ def test_row_dataclasses_construct():
     )
 
 
-from net_alpha.models.domain import Trade
+from net_alpha.models.domain import CashEvent, Trade
 from net_alpha.portfolio.explain import build_equity_point_breakdown
 
 
@@ -111,3 +111,32 @@ def test_trade_only_day_attributes_realized_to_realized_pnl():
     assert b.trades[0].realized_pnl == Decimal("1200.00")
     assert b.residual == Decimal("0")
     assert b.is_starting_snapshot is False
+
+
+def test_contribution_only_day_attributes_to_contributions():
+    on = date(2026, 5, 10)
+    ev = CashEvent(
+        account="Brokerage",
+        event_date=on,
+        kind="transfer_in",
+        amount=5000.0,
+        ticker=None,
+        description="ACH transfer",
+    )
+    b = build_equity_point_breakdown(
+        on=on,
+        previous_on=date(2026, 5, 9),
+        trades_on_date=[],
+        cash_events_on_date=[ev],
+        dividend_events_on_date=[],
+        open_lots_prev_day=[],
+        violations_on_date=[],
+        exempt_matches_on_date=[],
+        get_close=lambda sym, d: None,
+        delta_account_value=Decimal("5000"),
+    )
+    assert b.contributions == Decimal("5000")
+    assert len(b.cash_events) == 1
+    assert b.cash_events[0].kind == "transfer_in"
+    assert b.cash_events[0].amount == Decimal("5000")
+    assert b.residual == Decimal("0")

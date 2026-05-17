@@ -611,18 +611,42 @@ def build_equity_point_breakdown(
     trade_rows.sort(key=lambda r: abs(r.realized_pnl), reverse=True)
     trade_rows = trade_rows[:5]
 
+    # Signed contributions: + for inflow, - for outflow. Mirrors
+    # ``portfolio/cash_flow.py::_event_contrib_delta`` semantics — only
+    # ``transfer_in`` / ``transfer_out`` count as contributions in this
+    # codebase (dividends/interest/fees are non-contribution cash flow).
+    contributions = Decimal("0")
+    cash_event_rows: list[CashEventRow] = []
+    for e in cash_events_on_date:
+        if e.kind == "transfer_in":
+            signed = Decimal(str(e.amount))
+        elif e.kind == "transfer_out":
+            signed = -abs(Decimal(str(e.amount)))
+        else:
+            # Non-transfer events (dividend / interest / fee / sweep_*) are
+            # not contributions; skip here.
+            continue
+        contributions += signed
+        cash_event_rows.append(
+            CashEventRow(account=e.account, kind=e.kind, amount=signed)
+        )
+
+    residual = (
+        delta_account_value - (contributions + realized)
+    ).quantize(Decimal("0.01"))
+
     return EquityPointBreakdown(
         on=on,
         previous_on=previous_on,
         delta_account_value=delta_account_value,
-        contributions=Decimal("0"),
+        contributions=contributions,
         realized_pnl=realized,
         delta_unrealized=Decimal("0"),
         dividends=Decimal("0"),
-        residual=(delta_account_value - realized).quantize(Decimal("0.01")),
+        residual=residual,
         trades=trade_rows,
         top_movers=[],
-        cash_events=[],
+        cash_events=cash_event_rows,
         dividend_events=[],
         wash_events=[],
         unpriced_tickers=(),
