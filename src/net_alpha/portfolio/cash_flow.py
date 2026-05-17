@@ -241,3 +241,48 @@ def pledged_cash_at(
             continue
         total += Decimal(str(r.strike)) * Decimal("100") * r.qty_short
     return total.quantize(Decimal("0.01"))
+
+
+from net_alpha.portfolio.models import AccountValuePoint, CashDeploymentPoint  # noqa: E402
+
+
+def build_cash_deployment_series(
+    *,
+    account_points: Sequence[AccountValuePoint],
+    trades: Iterable[Trade],
+    events: Iterable[CashEvent],  # noqa: ARG001 - reserved for future use; signature stability
+    accounts: Sequence[str] | None,
+    with_pledged: bool,
+) -> list[CashDeploymentPoint]:
+    """Return one CashDeploymentPoint per AccountValuePoint date.
+
+    Reuses the AccountValuePoint series so the deployment chart shares the
+    exact same date axis as the equity chart. ``free_cash = cash_balance -
+    pledged`` (clamped non-negative); ``pledged`` is the cash collateral on
+    open short puts as of that date (or ``None`` when ``with_pledged=False``,
+    the fallback path). ``invested`` mirrors ``AccountValuePoint.holdings_value``.
+
+    ``trades`` is the same trade list passed to the equity chart pipeline;
+    we filter it per-date via ``pledged_cash_at``.
+    """
+    trades_list = list(trades)
+    pts: list[CashDeploymentPoint] = []
+    for avp in account_points:
+        cash = avp.cash_balance
+        if with_pledged:
+            pledged = pledged_cash_at(on=avp.on, trades=trades_list, accounts=accounts)
+            if pledged > cash:
+                pledged = cash  # clamp — never report more pledged than total
+            free = cash - pledged
+        else:
+            pledged = None
+            free = cash
+        pts.append(
+            CashDeploymentPoint(
+                on=avp.on,
+                free_cash=free.quantize(Decimal("0.01")),
+                pledged=pledged.quantize(Decimal("0.01")) if pledged is not None else None,
+                invested=avp.holdings_value,
+            )
+        )
+    return pts
