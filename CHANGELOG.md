@@ -2,6 +2,37 @@
 
 
 
+## v0.73.2 (2026-05-18)
+
+### Fix
+
+* fix(web): aesthetic regressions found in UI audit
+
+Three visual regressions surfaced while scanning every page:
+
+1. Confidence pill missing for &#34;Confirmed&#34; — _detail_table and _calendar_focus
+   render `chip-{{ confidence|lower }}`, producing chip-confirmed at runtime,
+   but the CSS rule and Tailwind safelist were spelled chip-confirm. Without
+   the -ed match Tailwind purged the class, so Confirmed cells fell back to
+   plain red text while Probable/Unclear kept their pill background. Renamed
+   .chip-confirm -&gt; .chip-confirmed in app.src.css + safelist + 6 templates
+   that referenced the literal form (`_violation_card`, `_harvest_plan`,
+   `_harvest_queue`, `_positions_view_closed`, `_tax_wash_sales_tab`,
+   `wash_sales`). Rebuilt app.css.
+
+2. Loss-carryforward table headers ran together — _settings_carryforward
+   used `py-1` only, so right-aligned &#34;LT carryforward&#34; abutted left-aligned
+   &#34;Source&#34; with ~2px of whitespace, rendering as &#34;LT carryforwardSource&#34;.
+   Added `px-3` to every th/td.
+
+3. Verify findings table leaked float-precision noise — values rendered
+   as `-7.199999999999989`, `70.2600000000000001`, etc. Wired the existing
+   fmt_quantity helper into the table cells (Ours / Broker / Δ), giving
+   clean `-7.2`, `70.26`, with em-dash for None.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`48252e6`](https://github.com/chen-star/net_alpha/commit/48252e6b92467bdccf0d549e6b6d5ad2c0d2db9a))
+
+
 ## v0.73.1 (2026-05-18)
 
 ### Fix
