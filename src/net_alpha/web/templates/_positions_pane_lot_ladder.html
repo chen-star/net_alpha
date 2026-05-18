@@ -71,10 +71,13 @@
         const attr = this.sortCol === 'status' ? 'data-pill' : 'data-row-' + this.sortCol;
         const av = a.getAttribute(attr) || '';
         const bv = b.getAttribute(attr) || '';
-        // ISO dates like "2025-06-15" must NOT be parsed as numeric:
-        // parseFloat would strip everything after the year and collapse
-        // all same-year dates to equal. Exclude the date column from the
-        // numeric path; date sorts lexicographically on the ISO string.
+        // ISO dates must NOT be parsed as numeric: parseFloat would strip
+        // everything after the year and collapse all same-year dates to
+        // equal. Exclude the date column from the numeric path; date
+        // sorts lexicographically on the ISO string. (Important: avoid
+        // any double-quote character in this comment block; the
+        // surrounding HTML attribute is double-quoted and would end at
+        // the first quote, silently truncating this Alpine x-data body.)
         const an = Number(av);
         const bn = Number(bv);
         const numeric = this.sortCol !== 'date' && av !== '' && bv !== '' && !isNaN(an) && !isNaN(bn);

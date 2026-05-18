@@ -57,6 +57,10 @@
      x-data attribute. Defer scripts execute in document order. #}
   <script id="palette-index" type="application/json">{{ palette_index() | tojson }}</script>
   <script src="/static/palette.js?v={{ asset_v }}" defer></script>
+  {# Same constraint as palette.js: account_multi_select.js must define
+     window.accountMultiSelect before Alpine's first init pass walks
+     the account dropdown's x-data. #}
+  <script src="/static/account_multi_select.js?v={{ asset_v }}" defer></script>
   <script src="/static/alpine.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/vendor/apexcharts/apexcharts.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/charts.js?v={{ asset_v }}" defer></script>

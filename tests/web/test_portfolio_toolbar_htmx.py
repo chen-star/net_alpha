@@ -64,16 +64,20 @@ def test_account_select_uses_request_submit(client: TestClient, builders, repo):
 def test_account_select_dispatches_change_not_submit(client: TestClient):
     """A2.2 bugfix: the multi-select Alpine helper must dispatch a 'change'
     event on the form (so HTMX's `change from:input[type=checkbox]`
-    listener picks it up), NOT call requestSubmit() — the toolbar's
-    hx-trigger does not include 'submit', so requestSubmit would fall
-    through to a native form GET and cause a full page reload."""
-    res = client.get("/")
-    body = res.text
-    # New behavior: dispatch a change Event on the form.
+    listener picks it up) — when the parent form has hx attrs. The helper
+    now lives in /static/account_multi_select.js (extracted from the macro
+    so window.accountMultiSelect is defined before Alpine's first init
+    pass), so the substring check has moved with it."""
+    page = client.get("/")
+    assert page.status_code == 200
+    # The page must reference the static helper so it loads before alpine.
+    assert "/static/account_multi_select.js" in page.text
+
+    js = client.get("/static/account_multi_select.js")
+    assert js.status_code == 200
+    body = js.text
+    # New behavior: dispatch a change Event on the form when it's HTMX-driven.
     assert "new Event('change'" in body or 'new Event("change"' in body
-    # Old behavior must be gone — no requestSubmit on the multi-select Alpine.
-    # (Other forms in the page may still legitimately use requestSubmit;
-    #  scope this assertion to the accountMultiSelect helper.)
     assert "form.dispatchEvent" in body or "dispatchEvent(new Event" in body
 
 

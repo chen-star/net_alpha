@@ -50,70 +50,9 @@
     {% endfor %}
   </div>
 </div>
-<script>
-function accountMultiSelect() {
-  return {
-    open: false,
-    _timer: null,
-    currentLabel: 'All accounts',
-    picked: 0,
-    selectedNames: [],
-    init() {
-      this.recompute();
-    },
-    recompute() {
-      // Use $root, not $el — inside an @change handler on a checkbox,
-      // $el is the checkbox itself, not the x-data root. $root walks up
-      // to the closest x-data element regardless of where the call came
-      // from, which is what we want for the "scan all checkboxes" query.
-      const root = this.$root;
-      const total = parseInt(root.getAttribute('data-total-accounts'), 10) || 0;
-      const checked = Array.from(root.querySelectorAll('input[type=checkbox][name]'))
-        .filter(cb => cb.checked);
-      this.selectedNames = checked.map(cb => cb.value);
-      this.picked = checked.length;
-      if (this.picked === 0) {
-        this.currentLabel = 'All accounts';
-      } else if (this.picked === 1) {
-        this.currentLabel = this.selectedNames[0];
-      } else {
-        this.currentLabel = this.picked + ' of ' + total + ' accounts';
-      }
-    },
-    onToggle() {
-      // Update the button label immediately so the dropdown reflects the
-      // current selection even though the surrounding form only swaps the
-      // page body (the toolbar itself is not re-rendered on HTMX changes).
-      this.recompute();
-      // Debounce 200ms then notify the parent form. Behavior depends on
-      // whether the form is HTMX-driven:
-      //   * HTMX form (toolbar on Portfolio): dispatch a 'change' Event
-      //     so the toolbar's `hx-trigger="change from:..."` listener
-      //     picks it up. We do NOT call requestSubmit() here because
-      //     the toolbar's hx-trigger excludes 'submit' on purpose —
-      //     submit would fall through to a native form action on an
-      //     HTMX miss and cause a full page reload.
-      //   * Plain GET form (toolbar on Positions and other pages with
-      //     no body fragment endpoint): call requestSubmit() so the
-      //     form actually navigates — a 'change' event alone wouldn't
-      //     trigger submission.
-      clearTimeout(this._timer);
-      this._timer = setTimeout(() => {
-        const form = this.$root.closest('form');
-        if (!form) return;
-        if (form.hasAttribute('hx-get') || form.hasAttribute('hx-post')) {
-          form.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-          form.requestSubmit();
-        }
-      }, 200);
-    },
-    toggleAll(checked) {
-      const root = this.$root;
-      root.querySelectorAll('input[type=checkbox][name]').forEach(cb => { cb.checked = checked; });
-      this.onToggle();
-    },
-  };
-}
-</script>
+{# accountMultiSelect() is registered globally by static/account_multi_select.js,
+   which base.html loads before alpine.min.js so the function exists when Alpine
+   first evaluates this div's x-data. Keeping the function inline here used to
+   cause a race where Alpine's initial pass logged 4 ReferenceErrors before the
+   trailing <script> ran. #}
 {%- endmacro %}
