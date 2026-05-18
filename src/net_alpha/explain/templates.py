@@ -134,3 +134,47 @@ def _fmt_qty(q: float) -> str:
     if q == int(q):
         return str(int(q))
     return f"{q:.4f}".rstrip("0").rstrip(".")
+
+
+_CONFIDENCE_DELTA: dict[str, tuple[str | None, str | None]] = {
+    "equity_equity": (
+        None,
+        "Would be Probable if the replacement were a call option on the same "
+        "ticker, or Unclear if it were a substantially-identical ETF "
+        "(e.g. SPY ↔ VOO).",
+    ),
+    "option_option_exact": (
+        None,
+        "Would be Probable if any of strike, expiry, or call/put differed from the loss contract.",
+    ),
+    "option_option_partial": (
+        "Would be Confirmed if strike, expiry, and call/put all matched the loss contract.",
+        None,
+    ),
+    "equity_to_call": (
+        "Would be Confirmed if the replacement were the underlying equity rather than a call option.",
+        None,
+    ),
+    "option_to_equity": (
+        "Would be Confirmed if the replacement were the same option contract rather than the underlying equity.",
+        None,
+    ),
+    "etf_pair": (
+        "Would be Confirmed if the replacement were the same ETF ticker as "
+        "the loss, or Probable if it were a call option on the loss ETF.",
+        None,
+    ),
+    "equity_to_sold_put": (
+        "Would be Probable if the replacement were a call on the same "
+        "ticker, or Confirmed if you bought the underlying equity.",
+        None,
+    ),
+}
+
+
+def confidence_delta(branch_kind: str) -> tuple[str | None, str | None]:
+    """Return (promote_hint, demote_hint) for a branch_kind.
+
+    Unknown branch_kinds return (None, None) defensively.
+    """
+    return _CONFIDENCE_DELTA.get(branch_kind, (None, None))

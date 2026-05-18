@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from net_alpha.explain.templates import (
     classify_branch,
+    confidence_delta,
     confidence_reason,
     disallowed_math_str,
     match_reason_text,
@@ -149,3 +150,62 @@ def test_confidence_reason_option_chain():
     s = confidence_reason("Unclear", match_kind="option_chain", days_between=8)
     assert "Unclear" in s
     assert "option" in s.lower()
+
+
+def test_confidence_delta_equity_equity():
+    promote, demote = confidence_delta("equity_equity")
+    assert promote is None
+    assert demote == (
+        "Would be Probable if the replacement were a call option on the same "
+        "ticker, or Unclear if it were a substantially-identical ETF "
+        "(e.g. SPY ↔ VOO)."
+    )
+
+
+def test_confidence_delta_option_option_exact():
+    promote, demote = confidence_delta("option_option_exact")
+    assert promote is None
+    assert demote == ("Would be Probable if any of strike, expiry, or call/put differed from the loss contract.")
+
+
+def test_confidence_delta_option_option_partial():
+    promote, demote = confidence_delta("option_option_partial")
+    assert promote == ("Would be Confirmed if strike, expiry, and call/put all matched the loss contract.")
+    assert demote is None
+
+
+def test_confidence_delta_equity_to_call():
+    promote, demote = confidence_delta("equity_to_call")
+    assert promote == ("Would be Confirmed if the replacement were the underlying equity rather than a call option.")
+    assert demote is None
+
+
+def test_confidence_delta_option_to_equity():
+    promote, demote = confidence_delta("option_to_equity")
+    assert promote == (
+        "Would be Confirmed if the replacement were the same option contract rather than the underlying equity."
+    )
+    assert demote is None
+
+
+def test_confidence_delta_etf_pair():
+    promote, demote = confidence_delta("etf_pair")
+    assert promote == (
+        "Would be Confirmed if the replacement were the same ETF ticker as "
+        "the loss, or Probable if it were a call option on the loss ETF."
+    )
+    assert demote is None
+
+
+def test_confidence_delta_equity_to_sold_put():
+    promote, demote = confidence_delta("equity_to_sold_put")
+    assert promote == (
+        "Would be Probable if the replacement were a call on the same "
+        "ticker, or Confirmed if you bought the underlying equity."
+    )
+    assert demote is None
+
+
+def test_confidence_delta_unknown_returns_none_pair():
+    assert confidence_delta("unknown") == (None, None)
+    assert confidence_delta("not_a_branch") == (None, None)
