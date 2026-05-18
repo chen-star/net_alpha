@@ -40,14 +40,10 @@ def _seed_price(engine, sym: str, price: float) -> None:
     from net_alpha.pricing.provider import Quote
 
     cache = PriceCache(engine)
-    cache.put_many(
-        [Quote(symbol=sym, price=Decimal(str(price)), as_of=_dt.datetime.now(_dt.UTC), source="test")]
-    )
+    cache.put_many([Quote(symbol=sym, price=Decimal(str(price)), as_of=_dt.datetime.now(_dt.UTC), source="test")])
 
 
-def test_ws_outlook_partial_state_gain_then_loss_lot(
-    client: TestClient, repo, builders, engine
-) -> None:
+def test_ws_outlook_partial_state_gain_then_loss_lot(client: TestClient, repo, builders, engine) -> None:
     """Partial state: gain lot (FIFO first) + loss lot + blocking buy.
 
     FIFO consumption reaches a loss only when selling beyond the gain-lot
@@ -74,16 +70,22 @@ def test_ws_outlook_partial_state_gain_then_loss_lot(
 
     # Lot A: gain lot — oldest, consumed first by FIFO
     buy_gain = builders.make_buy(
-        display, sym, today - timedelta(days=200), qty=50.0, cost=2_500.0  # $50/sh
+        display,
+        sym,
+        today - timedelta(days=200),
+        qty=50.0,
+        cost=2_500.0,  # $50/sh
     )
     # Lot B: loss lot — more recent, consumed second
     buy_loss = builders.make_buy(
-        display, sym, today - timedelta(days=100), qty=50.0, cost=10_000.0  # $200/sh
+        display,
+        sym,
+        today - timedelta(days=100),
+        qty=50.0,
+        cost=10_000.0,  # $200/sh
     )
     # Blocking buy in ±30d window — triggers wash sale when loss lot consumed
-    buy_blocking = builders.make_buy(
-        display, sym, today - timedelta(days=5), qty=10.0, cost=900.0
-    )
+    buy_blocking = builders.make_buy(display, sym, today - timedelta(days=5), qty=10.0, cost=900.0)
 
     acct, _ = builders.seed_import(repo, "Schwab", "Taxable", [buy_gain, buy_loss, buy_blocking])
     stitch_account(repo, acct.id)
@@ -99,7 +101,7 @@ def test_ws_outlook_partial_state_gain_then_loss_lot(
     # Must be partial state (not trigger), because selling ≤75 sh is safe
     assert 'data-state="partial"' in html, (
         f"expected partial state, got state from html: "
-        f"{html[html.find('data-state'):html.find('data-state')+30] if 'data-state' in html else 'NOT FOUND'}"
+        f"{html[html.find('data-state') : html.find('data-state') + 30] if 'data-state' in html else 'NOT FOUND'}"
     )
     assert "safe" in html.lower(), "expected 'safe' in partial-state message"
     assert "triggers a wash sale" in html.lower(), "expected 'triggers a wash sale' in partial message"
@@ -108,14 +110,13 @@ def test_ws_outlook_partial_state_gain_then_loss_lot(
     # on lot-row quantities (which display "50 sh") instead of the actual
     # bisection result. The route formats it as "Selling up to {K} of N".
     import re
+
     m = re.search(r"Selling up to (\d+) of", html)
     assert m, f"expected 'Selling up to N of …' phrase, html had: {html[:400]}"
     assert m.group(1) == "75", f"expected safe_qty=75, got {m.group(1)}"
 
 
-def test_ws_outlook_trigger_state_when_all_lots_are_losses(
-    client: TestClient, repo, builders, engine
-) -> None:
+def test_ws_outlook_trigger_state_when_all_lots_are_losses(client: TestClient, repo, builders, engine) -> None:
     """When all lots are loss lots, even selling 1 share triggers — no partial.
 
     Position:
@@ -133,12 +134,14 @@ def test_ws_outlook_trigger_state_when_all_lots_are_losses(
     display = "Schwab/Taxable"
 
     buy_main = builders.make_buy(
-        display, sym, today - timedelta(days=100), qty=100.0, cost=20_000.0  # $200/sh
+        display,
+        sym,
+        today - timedelta(days=100),
+        qty=100.0,
+        cost=20_000.0,  # $200/sh
     )
     # Full replacement buy — 100 sh within ±30d
-    buy_blocking = builders.make_buy(
-        display, sym, today - timedelta(days=5), qty=100.0, cost=15_000.0
-    )
+    buy_blocking = builders.make_buy(display, sym, today - timedelta(days=5), qty=100.0, cost=15_000.0)
 
     acct, _ = builders.seed_import(repo, "Schwab", "Taxable", [buy_main, buy_blocking])
     stitch_account(repo, acct.id)
@@ -154,7 +157,7 @@ def test_ws_outlook_trigger_state_when_all_lots_are_losses(
     # Must be trigger (not partial), because even selling 1 share triggers
     assert 'data-state="trigger"' in html, (
         f"expected trigger state, got: "
-        f"{html[html.find('data-state'):html.find('data-state')+30] if 'data-state' in html else 'NOT FOUND'}"
+        f"{html[html.find('data-state') : html.find('data-state') + 30] if 'data-state' in html else 'NOT FOUND'}"
     )
     assert "wash sale" in html.lower()
     assert "disallowed" in html.lower()

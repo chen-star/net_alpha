@@ -438,10 +438,7 @@ def _pane_ws_outlook(
         safe_qty = None
 
     if safe_qty is not None and safe_qty > 0:
-        msg = (
-            f"Selling up to {safe_qty:g} of {qty:g} today is safe; "
-            f"selling more triggers a wash sale."
-        )
+        msg = f"Selling up to {safe_qty:g} of {qty:g} today is safe; selling more triggers a wash sale."
         return {"state": "partial", "message": msg, "replacement": None, "safe_qty": safe_qty}
 
     # Compute proportional disallowed loss for each triggering option.
@@ -601,8 +598,7 @@ def _build_pane_ctx(
         ws_implicated_trade_ids = {
             v.replacement_trade_id
             for v in violations
-            if v.replacement_trade_id is not None
-            and getattr(v, "kind", "deferred") == "deferred"
+            if v.replacement_trade_id is not None and getattr(v, "kind", "deferred") == "deferred"
         }
     except Exception:  # noqa: BLE001
         logger.warning("ws-implicated lookup failed for sym={}", sym)
