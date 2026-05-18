@@ -82,3 +82,29 @@ def test_explain_exempt_summary_mentions_index_options():
     )
     e = explain_exempt(em, repo=repo)
     assert "SPX" in e.summary or "index" in e.summary.lower()
+
+
+def test_explain_exempt_populates_confidence_delta_hints():
+    """SPX/SPX option exact match — Confirmed branch → demote hint present, no promote."""
+    loss = _spx_opt("5", "Sell", date(2024, 9, 15), 1, 100)
+    buy = _spx_opt("6", "Buy", date(2024, 9, 22), 1, 100)
+    repo = _FakeRepo([loss, buy])
+    em = ExemptMatchRow(
+        id=3,
+        loss_trade_id=5,
+        triggering_buy_id=6,
+        exempt_reason="section_1256",
+        rule_citation="IRC §1256(c)",
+        notional_disallowed=Decimal("100"),
+        confidence="Confirmed",
+        matched_quantity=1.0,
+        loss_account="x",
+        buy_account="x",
+        loss_sale_date="2024-09-15",
+        triggering_buy_date="2024-09-22",
+        ticker="SPX",
+    )
+    e = explain_exempt(em, repo=repo)
+    assert e.confidence_promote is None
+    assert e.confidence_demote is not None
+    assert "Probable" in e.confidence_demote

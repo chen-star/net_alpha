@@ -39,6 +39,8 @@ def explain_exempt(em: ExemptMatchRow, *, repo) -> ExplanationModel:
     days = (buy.date - loss.date).days
     match_kind, kwargs = _classify_match_kind(loss, buy)
     match_reason = tmpl.match_reason_text(match_kind=match_kind, **kwargs)
+    branch_kind = tmpl.classify_branch(loss, buy)
+    promote_hint, demote_hint = tmpl.confidence_delta(branch_kind)
     notional = Decimal(str(em.notional_disallowed))
     loss_qty = float(loss.quantity)
     allocable = float(em.matched_quantity)
@@ -70,6 +72,8 @@ def explain_exempt(em: ExemptMatchRow, *, repo) -> ExplanationModel:
         disallowed_math=disallowed_math,
         confidence=em.confidence,
         confidence_reason=tmpl.confidence_reason(em.confidence, match_kind=match_kind, days_between=days),
+        confidence_promote=promote_hint,
+        confidence_demote=demote_hint,
         adjusted_basis_target=None,
         cross_account=cross,
     )
