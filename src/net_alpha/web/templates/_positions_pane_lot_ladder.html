@@ -1,6 +1,8 @@
 {# Lot ladder. Consumes `lot_rows` from _pane_lot_info() (Task 2).
 
-   Layout: sorted by date desc; collapses to "N lots" toggle when N > 5.
+   Layout: sorted by date desc by default; client-side Alpine sort on column
+   headers lets the user flip by date / qty / basis / unrealized / status.
+   Collapses to "N lots" toggle when N > 5.
    Each row: date · qty · adj basis · unrealized · status pill.
    Click on a lot opens the ticker lots view in a new tab.
 
@@ -18,6 +20,10 @@
 <a href="/ticker/{{ sym }}?view=lots" target="_blank"
    data-testid="lot-row"
    data-pill="{{ row.status }}"
+   data-row-date="{{ row.date.isoformat() }}"
+   data-row-qty="{{ row.qty }}"
+   data-row-basis="{{ row.adj_basis }}"
+   data-row-unrealized="{{ row.unrealized if row.unrealized is not none else '' }}"
    {% if row.is_tacked %}title="Holding period tacked from a prior wash sale (IRC §1223(4))"
    {% elif row.is_ws_implicated %}title="This lot's cost basis was inflated by a disallowed wash-sale loss (IRC §1091(d))"
    {% endif %}
@@ -42,7 +48,39 @@
 {% if lot_rows %}
 {% set _sorted = lot_rows | sort(attribute='date', reverse=True) %}
 {% set _collapsed = _sorted | length > 5 %}
-<div class="mt-4" x-data="{ expanded: {{ 'false' if _collapsed else 'true' }} }">
+<div class="mt-4" x-data="{
+  expanded: {{ 'false' if _collapsed else 'true' }},
+  sortCol: 'date',
+  sortDesc: true,
+  sortBy(col) {
+    if (this.sortCol === col) {
+      this.sortDesc = !this.sortDesc;
+    } else {
+      this.sortCol = col;
+      this.sortDesc = col !== 'qty';
+    }
+    this.applySort();
+  },
+  applySort() {
+    const containers = this.$el.querySelectorAll('[data-row-group], [data-row-flat]');
+    containers.forEach((container) => {
+      const rows = Array.from(container.querySelectorAll('[data-testid=\'lot-row\']'));
+      rows.sort((a, b) => {
+        const attr = 'data-row-' + (this.sortCol === 'status' ? 'pill' : this.sortCol);
+        let av = a.getAttribute(attr) || '';
+        let bv = b.getAttribute(attr) || '';
+        const an = parseFloat(av);
+        const bn = parseFloat(bv);
+        const numeric = !isNaN(an) && !isNaN(bn);
+        if (numeric) {
+          return this.sortDesc ? bn - an : an - bn;
+        }
+        return this.sortDesc ? bv.localeCompare(av) : av.localeCompare(bv);
+      });
+      rows.forEach(row => container.appendChild(row));
+    });
+  }
+}">
   {% if _collapsed %}
     <button type="button"
             data-testid="lot-ladder-collapsed"
@@ -53,6 +91,23 @@
     <div class="text-[10px] uppercase tracking-wide text-label-2 mb-2">{{ _sorted | length }} lot{{ 's' if _sorted | length != 1 else '' }}</div>
   {% endif %}
   <div x-show="expanded" {% if _collapsed %}style="display:none"{% endif %} class="space-y-1">
+    {# Column header row with click-to-sort #}
+    <div class="flex items-center justify-between gap-2 px-2 py-1.5 text-[10px] uppercase tracking-wide text-label-3 select-none" data-testid="lot-ladder-header">
+      {% set _columns = [
+        ('date', 'Date'),
+        ('qty', 'Qty'),
+        ('basis', 'Basis'),
+        ('unrealized', 'Unrealized'),
+        ('status', 'Status'),
+      ] %}
+      {% for key, label in _columns %}
+        <button type="button"
+                class="hover:text-text"
+                data-sort-col="{{ key }}"
+                @click="sortBy('{{ key }}')"
+                x-text="'{{ label }}' + (sortCol === '{{ key }}' ? (sortDesc ? ' ▾' : ' ▴') : '')">{{ label }}</button>
+      {% endfor %}
+    </div>
     {% if cross_account %}
       {# Group by account: render a small section header per account, then the
          rows for that account, preserving the date-desc sort within each group.
@@ -61,7 +116,7 @@
       {% for account_display in distinct_account_displays %}
         {% set account_rows = _sorted | selectattr('account', 'equalto', account_display) | list %}
         {% if account_rows %}
-          <div data-testid="lot-ladder-group" class="mt-2 first:mt-0">
+          <div data-testid="lot-ladder-group" data-row-group class="mt-2 first:mt-0">
             <div class="text-[10px] uppercase tracking-wide text-label-3 mb-1">{{ account_display }}</div>
             {% for row in account_rows %}
               {{ lot_row(row, sym) }}
@@ -70,9 +125,11 @@
         {% endif %}
       {% endfor %}
     {% else %}
-      {% for row in _sorted %}
-        {{ lot_row(row, sym) }}
-      {% endfor %}
+      <div data-row-flat>
+        {% for row in _sorted %}
+          {{ lot_row(row, sym) }}
+        {% endfor %}
+      </div>
     {% endif %}
   </div>
 </div>
