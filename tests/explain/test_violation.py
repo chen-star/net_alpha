@@ -150,3 +150,54 @@ def test_explain_violation_partial_match():
     assert "50" in e.disallowed_math
     assert "100" in e.disallowed_math
     assert "$621.50" in e.disallowed_math
+
+
+def test_explain_violation_populates_confidence_demote_for_equity_equity():
+    """Confirmed equity/equity match exposes a demote hint, no promote hint."""
+    loss = _trade("21", "TSLA", "Sell", date(2024, 9, 15), 100, Decimal("18757"), Decimal("20000"))
+    buy = _trade("22", "TSLA", "Buy", date(2024, 9, 22), 100, Decimal("19000"), Decimal("19000"))
+    repo = _FakeRepo([loss, buy])
+    v = WashSaleViolationRow(
+        id=21,
+        loss_trade_id=21,
+        replacement_trade_id=22,
+        confidence="Confirmed",
+        disallowed_loss=Decimal("1243"),
+        matched_quantity=100.0,
+        loss_account_id=1,
+        buy_account_id=1,
+        loss_sale_date="2024-09-15",
+        triggering_buy_date="2024-09-22",
+        ticker="TSLA",
+    )
+    e = explain_violation(v, repo=repo)
+    assert e.confidence_promote is None
+    assert e.confidence_demote is not None
+    assert "Probable" in e.confidence_demote
+    assert "Unclear" in e.confidence_demote
+
+
+def test_explain_violation_populates_confidence_promote_for_option_partial():
+    """Probable partial option/option match exposes a promote hint, no demote hint."""
+    opt_loss = OptionDetails(strike=100, expiry=date(2025, 1, 17), call_put="C")
+    opt_buy = OptionDetails(strike=110, expiry=date(2025, 1, 17), call_put="C")
+    loss = _trade("23", "TSLA", "Sell", date(2024, 9, 15), 1, Decimal("100"), Decimal("500"), opt=opt_loss)
+    buy = _trade("24", "TSLA", "Buy", date(2024, 9, 22), 1, Decimal("100"), Decimal("100"), opt=opt_buy)
+    repo = _FakeRepo([loss, buy])
+    v = WashSaleViolationRow(
+        id=23,
+        loss_trade_id=23,
+        replacement_trade_id=24,
+        confidence="Probable",
+        disallowed_loss=Decimal("400"),
+        matched_quantity=1.0,
+        loss_account_id=1,
+        buy_account_id=1,
+        loss_sale_date="2024-09-15",
+        triggering_buy_date="2024-09-22",
+        ticker="TSLA",
+    )
+    e = explain_violation(v, repo=repo)
+    assert e.confidence_promote is not None
+    assert "Confirmed" in e.confidence_promote
+    assert e.confidence_demote is None

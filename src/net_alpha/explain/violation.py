@@ -47,6 +47,8 @@ class ExplanationModel(BaseModel):
     disallowed_math: str
     confidence: str
     confidence_reason: str
+    confidence_promote: str | None = None
+    confidence_demote: str | None = None
     adjusted_basis_target: LotRef | None
     cross_account: AccountPair | None
     # True when Rev. Rul. 2008-5 applies (replacement leg in IRA / Roth /
@@ -100,6 +102,8 @@ def explain_violation(v: WashSaleViolationRow, *, repo) -> ExplanationModel:
     days = (buy.date - loss.date).days
     match_kind, kwargs = _classify_match_kind(loss, buy)
     match_reason = tmpl.match_reason_text(match_kind=match_kind, **kwargs)
+    branch_kind = tmpl.classify_branch(loss, buy)
+    promote_hint, demote_hint = tmpl.confidence_delta(branch_kind)
 
     disallowed = Decimal(str(v.disallowed_loss))
     loss_qty = float(loss.quantity)
@@ -159,6 +163,8 @@ def explain_violation(v: WashSaleViolationRow, *, repo) -> ExplanationModel:
         disallowed_math=disallowed_math,
         confidence=v.confidence,
         confidence_reason=tmpl.confidence_reason(v.confidence, match_kind=match_kind, days_between=days),
+        confidence_promote=promote_hint,
+        confidence_demote=demote_hint,
         adjusted_basis_target=None if is_permanent else lot_ref,
         cross_account=cross,
         is_permanent_ira=is_permanent,
