@@ -236,14 +236,27 @@ def _pane_lot_info(
     open_equity_lots: list[Lot],
     last_price: float | None,
     today: dt.date,
+    ws_implicated_trade_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Compute per-lot status fields used by the ST/LT clock and the lot
     ladder. Returns a dict with keys:
 
     - `lots`: list[dict] one per lot, with fields: date, qty, adj_basis,
-      unrealized, status ("ST" | "LT" | "TACKED"), days_to_lt, is_tacked.
+      unrealized, status ("ST" | "LT" | "TACKED" | "WS"), days_to_lt,
+      is_tacked, is_ws_implicated.
     - `clock`: dict | None — {"min_days_to_lt": int} if any ST lot is
       ≤90d from LT, else None.
+
+    Status precedence: TACKED > WS > LT > ST.
+    TACKED signals the holding-period side-effect of §1223(4); WS signals
+    the cost-basis inflation from §1091(d) on a non-tacked lot (rare —
+    requires partial overlap where basis was adjusted without tacking).
+    When a lot is both tacked and WS-implicated, TACKED wins (the
+    holding-period concern is more material to the user).
+
+    ws_implicated_trade_ids: set of replacement_trade_id values from open
+    WashSaleViolation rows for this ticker. A lot is WS-implicated when
+    its trade_id is a member of this set.
     """
     rows: list[dict] = []
     min_days: int | None = None
@@ -256,11 +269,24 @@ def _pane_lot_info(
         days_to_lt = 366 - held_days if not is_lt else 0
         is_tacked = getattr(lot, "tacked_acquired_date", None) is not None
 
+        # WS-implicated: lot's trade_id appears as a replacement_trade_id in
+        # at least one WashSaleViolation — meaning §1091(d) rolled a
+        # disallowed loss into this lot's adjusted_basis.
+        is_ws_implicated = ws_implicated_trade_ids is not None and lot.trade_id in ws_implicated_trade_ids
+
         unrealized: Decimal | None = None
         if last_price is not None:
             unrealized = Decimal(str(last_price)) * Decimal(str(lot.quantity)) - Decimal(str(lot.adjusted_basis))
 
-        status = "TACKED" if is_tacked else ("LT" if is_lt else "ST")
+        # Status precedence: TACKED > WS > LT > ST.
+        if is_tacked:
+            status = "TACKED"
+        elif is_ws_implicated:
+            status = "WS"
+        elif is_lt:
+            status = "LT"
+        else:
+            status = "ST"
         rows.append(
             {
                 "date": effective_acquired,
@@ -270,6 +296,7 @@ def _pane_lot_info(
                 "status": status,
                 "days_to_lt": days_to_lt,
                 "is_tacked": is_tacked,
+                "is_ws_implicated": is_ws_implicated,
                 "account": getattr(lot, "account", ""),
             }
         )
@@ -475,11 +502,23 @@ def _build_pane_ctx(
     except Exception as exc:  # noqa: BLE001 — never block the pane render
         logger.warning("positions_pane lookup failed for sym={}, account_id={}: {!r}", sym, account_id, exc)
 
+    # --- WS-implicated lot IDs: lots referenced as the replacement leg of
+    # any WashSaleViolation for this ticker (§1091(d) basis inflation).
+    # We join via trade_id: WashSaleViolation.replacement_trade_id == Lot.trade_id.
+    # Scoped to the ticker via get_violations_for_ticker (efficient index).
+    ws_implicated_trade_ids: set[str] = set()
+    try:
+        violations = repo.get_violations_for_ticker(sym)
+        ws_implicated_trade_ids = {v.replacement_trade_id for v in violations if v.replacement_trade_id is not None}
+    except Exception:  # noqa: BLE001
+        logger.warning("ws-implicated lookup failed for sym={}", sym)
+
     # --- ST→LT clock + lot ladder data ---
     lot_info = _pane_lot_info(
         open_equity_lots=equity_open,
         last_price=last_price,
         today=today,
+        ws_implicated_trade_ids=ws_implicated_trade_ids,
     )
 
     # --- Header ST/LT pill ---
@@ -492,7 +531,9 @@ def _build_pane_ctx(
     # lot is effectively LT only when `days_to_lt == 0` (the helper sets
     # that field to 0 only when `held_days > 365`).
     def _eff_class(row: dict[str, Any]) -> str:
-        if row["status"] == "TACKED":
+        if row["status"] in ("TACKED", "WS"):
+            # Both TACKED and WS are overlay signals — the underlying ST/LT
+            # classification still follows days_to_lt for the header pill.
             return "LT" if row["days_to_lt"] == 0 else "ST"
         return row["status"]  # already "ST" or "LT"
 
@@ -519,9 +560,7 @@ def _build_pane_ctx(
     # realized_delta == loss when both are computed (qty * price − open_basis).
     # cross_account is set inside the try block above; if the try threw it
     # stays False (the safe default — no grouping).
-    distinct_account_displays: list[str] = (
-        sorted({row["account"] for row in lot_info["lots"]}) if cross_account else []
-    )
+    distinct_account_displays: list[str] = sorted({row["account"] for row in lot_info["lots"]}) if cross_account else []
     return {
         "sym": sym,
         "account_id": account_id,

@@ -4,7 +4,11 @@
    Each row: date · qty · adj basis · unrealized · status pill.
    Click on a lot opens the ticker lots view in a new tab.
 
-   Status values: "ST" (short-term), "LT" (long-term), "TACKED" (IRC §1223(4)).
+   Status values: "ST" (short-term), "LT" (long-term), "TACKED" (IRC §1223(4)),
+   "WS" (lot cost basis inflated by §1091(d) disallowed-loss roll-in).
+
+   Status precedence: TACKED > WS > LT > ST. When a lot is both TACKED and
+   WS-implicated, TACKED wins (holding-period concern is more material).
 
    Cross-account mode (cross_account=True): lot rows are grouped by account with
    a small section header per account. The per-row HTML is factored into the
@@ -14,7 +18,9 @@
 <a href="/ticker/{{ sym }}?view=lots" target="_blank"
    data-testid="lot-row"
    data-pill="{{ row.status }}"
-   {% if row.is_tacked %}title="Holding period tacked from a prior wash sale (IRC §1223(4))"{% endif %}
+   {% if row.is_tacked %}title="Holding period tacked from a prior wash sale (IRC §1223(4))"
+   {% elif row.is_ws_implicated %}title="This lot's cost basis was inflated by a disallowed wash-sale loss (IRC §1091(d))"
+   {% endif %}
    class="flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[12px] hover:bg-surface-2 no-underline text-text">
   <span class="font-mono text-label-2 shrink-0">{{ row.date.isoformat() }}</span>
   <span class="font-mono shrink-0">{{ fmt_quantity(row.qty) }} sh</span>
@@ -28,6 +34,7 @@
         {% if row.status == 'ST' %}bg-warn-tint text-warn
         {% elif row.status == 'LT' %}bg-pos-tint text-pos
         {% elif row.status == 'TACKED' %}bg-info-tint text-info
+        {% elif row.status == 'WS' %}bg-neg-tint text-neg
         {% else %}bg-surface-2 text-label-2
         {% endif %}">{{ row.status }}</span>
 </a>
