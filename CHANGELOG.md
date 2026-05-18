@@ -2,6 +2,26 @@
 
 
 
+## v0.73.4 (2026-05-18)
+
+### Fix
+
+* fix(portfolio): drop expired puts from pledged cash; fix cash-curve header layout
+
+pledged_cash_at counted every short put with no explicit BTC trade as still
+pledging strike × 100 × qty forever — Schwab posts assignments/expirations to
+Realized G/L but not to the transactions CSV, so phantom-open puts inflated
+pledged past total cash, hit the clamp, and pinned free cash to $0. Skip
+contracts whose expiry is before the asof date: collateral is released the
+moment a put expires worthless or is assigned, regardless of trade-log shape.
+
+Also remove ml-auto from the lifetime min/max span in _portfolio_cash_curve —
+an auto-margin on a flex item overrides justify-between, which had squashed
+the title, period, and KPI strip together on the left edge of the panel-head.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fef6ace`](https://github.com/chen-star/net_alpha/commit/fef6aced324366d3a205c03ce3b5550bac1e7597))
+
+
 ## v0.73.3 (2026-05-18)
 
 ### Fix
