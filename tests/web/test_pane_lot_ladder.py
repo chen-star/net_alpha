@@ -109,9 +109,12 @@ def test_lot_ladder_tacked_pill_has_tooltip(client: TestClient, repo, builders) 
     far_past = today - timedelta(days=730)
     buy_old = builders.make_buy(display, sym, far_past, qty=100.0, cost=10_000.0)
 
-    # Step 2: SELL 100 @ $50 thirty days ago — realises a $5,000 loss.
+    # Step 2: SELL 100 @ $50 thirty days ago — realises a $5,000 loss. Pass
+    # cost=10_000 explicitly so a reader can see "proceeds 5000 - cost 10000
+    # = -5000 loss" at the call site, without having to trace stitch_account
+    # (which would also overwrite cost_basis from the FIFO buy lot below).
     sell_date = today - timedelta(days=30)
-    sell_old = builders.make_sell(display, sym, sell_date, qty=100.0, proceeds=5_000.0)
+    sell_old = builders.make_sell(display, sym, sell_date, qty=100.0, cost=10_000.0, proceeds=5_000.0)
 
     # Step 3: BUY 100 @ $50 ten days ago — replacement lot within ±30d of the sell.
     rebuy_date = today - timedelta(days=10)
