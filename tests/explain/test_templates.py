@@ -1,11 +1,87 @@
+from datetime import date
 from decimal import Decimal
 
 from net_alpha.explain.templates import (
+    classify_branch,
     confidence_reason,
     disallowed_math_str,
     match_reason_text,
     rule_citation,
 )
+from net_alpha.models.domain import OptionDetails, Trade
+
+
+def _t(
+    ticker: str,
+    action: str,
+    *,
+    opt: OptionDetails | None = None,
+) -> Trade:
+    return Trade(
+        id="x",
+        date=date(2024, 9, 15),
+        account="schwab/personal",
+        ticker=ticker,
+        action=action,
+        quantity=1.0,
+        proceeds=0.0,
+        cost_basis=0.0,
+        option_details=opt,
+    )
+
+
+_OPT_A = OptionDetails(strike=100, expiry=date(2025, 1, 17), call_put="C")
+_OPT_B = OptionDetails(strike=110, expiry=date(2025, 1, 17), call_put="C")  # differs in strike
+_PUT = OptionDetails(strike=100, expiry=date(2025, 1, 17), call_put="P")
+
+
+def test_classify_branch_equity_equity():
+    loss = _t("TSLA", "Sell")
+    buy = _t("TSLA", "Buy")
+    assert classify_branch(loss, buy) == "equity_equity"
+
+
+def test_classify_branch_option_option_exact():
+    loss = _t("TSLA", "Sell", opt=_OPT_A)
+    buy = _t("TSLA", "Buy", opt=_OPT_A)
+    assert classify_branch(loss, buy) == "option_option_exact"
+
+
+def test_classify_branch_option_option_partial_differing_strike():
+    loss = _t("TSLA", "Sell", opt=_OPT_A)
+    buy = _t("TSLA", "Buy", opt=_OPT_B)
+    assert classify_branch(loss, buy) == "option_option_partial"
+
+
+def test_classify_branch_equity_to_call():
+    loss = _t("TSLA", "Sell")
+    buy = _t("TSLA", "Buy", opt=_OPT_A)  # buying a call on TSLA
+    assert classify_branch(loss, buy) == "equity_to_call"
+
+
+def test_classify_branch_option_to_equity():
+    loss = _t("TSLA", "Sell", opt=_OPT_A)
+    buy = _t("TSLA", "Buy")
+    assert classify_branch(loss, buy) == "option_to_equity"
+
+
+def test_classify_branch_etf_pair():
+    loss = _t("SPY", "Sell")
+    buy = _t("VOO", "Buy")
+    assert classify_branch(loss, buy) == "etf_pair"
+
+
+def test_classify_branch_equity_to_sold_put():
+    loss = _t("TSLA", "Sell")
+    buy = _t("TSLA", "Sell", opt=_PUT)  # selling a put on TSLA
+    assert classify_branch(loss, buy) == "equity_to_sold_put"
+
+
+def test_classify_branch_unknown_shape_returns_unknown():
+    # Loss = equity, buy = long put — matcher returns None; classifier returns 'unknown'
+    loss = _t("TSLA", "Sell")
+    buy = _t("TSLA", "Buy", opt=_PUT)
+    assert classify_branch(loss, buy) == "unknown"
 
 
 def test_rule_citation_for_regular_violation():

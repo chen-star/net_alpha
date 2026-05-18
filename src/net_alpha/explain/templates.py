@@ -8,6 +8,59 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from net_alpha.models.domain import Trade
+
+
+def classify_branch(loss: Trade, buy: Trade) -> str:
+    """Fine-grained branch_kind matching engine.matcher.get_match_confidence.
+
+    Returns one of:
+      equity_equity, option_option_exact, option_option_partial,
+      equity_to_call, option_to_equity, etf_pair, equity_to_sold_put, unknown.
+
+    Pure: uses only ticker / action / option_details on the Trade objects.
+    """
+    # Different tickers — only ETF-pair detection lives in the engine; here we
+    # trust the engine already classified the match and just report the shape.
+    if loss.ticker != buy.ticker:
+        return "etf_pair"
+
+    loss_opt = loss.is_option()
+    buy_opt = buy.is_option()
+
+    # Equity loss / sold put on same ticker
+    if not loss_opt and buy_opt and buy.is_sell() and buy.option_details.call_put == "P":
+        return "equity_to_sold_put"
+
+    # All other branches require buy.is_buy()
+    if not buy.is_buy():
+        return "unknown"
+
+    # Both equities
+    if not loss_opt and not buy_opt:
+        return "equity_equity"
+
+    # Equity loss / call buy
+    if not loss_opt and buy_opt and buy.option_details.call_put == "C":
+        return "equity_to_call"
+
+    # Option loss / equity buy
+    if loss_opt and not buy_opt:
+        return "option_to_equity"
+
+    # Both options on same underlying
+    if loss_opt and buy_opt:
+        if (
+            loss.option_details.strike == buy.option_details.strike
+            and loss.option_details.expiry == buy.option_details.expiry
+            and loss.option_details.call_put == buy.option_details.call_put
+        ):
+            return "option_option_exact"
+        return "option_option_partial"
+
+    return "unknown"
+
+
 _RULE_CITATIONS = {
     "regular": "IRC §1091(a) — Pub 550 p.59",
     "section_1256": "IRC §1256(c)",
