@@ -1,11 +1,34 @@
-{# Pane header — the existing 11-field one-liner. Task 1 of the
-   positions-pane-cockpit plan keeps the field set identical; later tasks
-   restack to two lines and add the ST/LT pill. #}
-<div data-testid="pane-header" class="text-label-2 text-[13px]">
-  <strong class="text-text font-semibold">{{ sym }}</strong>
-  {% if qty %} · {{ fmt_quantity(qty) }} sh{% endif %}
-  {% if account_label %} · {{ account_label }}{% endif %}
-  {% if last_price %} · last <span class="font-mono text-text">{{ fmt_currency(last_price) }}</span>{% endif %}
-  {% if open_basis %} · basis <span class="font-mono">{{ fmt_currency(open_basis) }}</span>{% endif %}
-  {% if loss is not none and loss < 0 %} · <span class="text-loss">{{ fmt_currency(loss) }}</span>{% endif %}
+{# Pane header — two-line stack per the cockpit spec.
+   Line 1 (identifier): sym · qty · account · last price
+   Line 2 (status + value): ST/LT pill · basis · unrealized $/% #}
+<div data-testid="pane-header" class="text-[13px]">
+  {# Line 1 — identifier row #}
+  <div class="flex items-baseline flex-wrap gap-x-2 text-label-2">
+    <strong class="text-text font-semibold">{{ sym }}</strong>
+    {% if qty %}<span>· {{ fmt_quantity(qty) }} sh</span>{% endif %}
+    {% if account_label %}<span>· {{ account_label }}</span>{% endif %}
+    {% if last_price %}<span>· last <span class="font-mono text-text">{{ fmt_currency(last_price) }}</span></span>{% endif %}
+  </div>
+  {# Line 2 — status + value row #}
+  {% if header_status or (loss is not none) or open_basis %}
+  <div class="flex items-baseline flex-wrap gap-x-2 mt-1 text-label-2">
+    {% if header_status %}
+      <span data-testid="pane-header-status-pill"
+            class="text-[10px] font-medium px-1.5 py-[1px] rounded
+                   {% if header_status == 'ST' %}bg-warn-tint text-warn
+                   {% elif header_status == 'LT' %}bg-pos-tint text-pos
+                   {% else %}bg-info-tint text-info{% endif %}">{{ header_status }}</span>
+    {% endif %}
+    {% if open_basis %}<span class="text-[11px]">basis <span class="font-mono">{{ fmt_currency(open_basis) }}</span></span>{% endif %}
+    {% if loss is not none %}
+      <span class="text-[11px] num font-medium
+             {% if loss < 0 %}text-neg{% elif loss > 0 %}text-pos{% endif %}">
+        {{ fmt_currency(loss) }}
+        {% if open_basis and open_basis > 0 %}
+          ({{ '{:+.1%}'.format(loss / open_basis) }})
+        {% endif %}
+      </span>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>

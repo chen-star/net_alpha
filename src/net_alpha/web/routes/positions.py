@@ -471,6 +471,21 @@ def _build_pane_ctx(
         today=today,
     )
 
+    # --- Header ST/LT pill ---
+    # Aggregate per-lot statuses into a single header label.
+    # ST means all lots are short-term; LT means all are long-term; ST/LT
+    # means mixed. TACKED rows count as LT (their tacked-back date already
+    # put them past the 365d threshold) for header purposes.
+    _statuses = {r["status"] for r in lot_info["lots"]}
+    if not _statuses:
+        header_status = None
+    elif _statuses == {"ST"}:
+        header_status = "ST"
+    elif _statuses <= {"LT", "TACKED"}:
+        header_status = "LT"
+    else:
+        header_status = "ST/LT"
+
     # --- Wash-sale outlook ---
     ws_outlook = _pane_ws_outlook(
         sym=sym,
@@ -496,6 +511,7 @@ def _build_pane_ctx(
         "transfer_date": transfer_date,
         "lt_clock": lot_info["clock"],
         "lot_rows": lot_info["lots"],
+        "header_status": header_status,
         "ws_outlook": ws_outlook,
         "recent_trades": recent_trades,
     }
