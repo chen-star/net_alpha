@@ -2,6 +2,40 @@
 
 
 
+## v0.73.0 (2026-05-18)
+
+### Documentation
+
+* docs(explain): clarify classify_branch precondition for cross-ticker shortcut
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ee17433`](https://github.com/chen-star/net_alpha/commit/ee17433e538a36f86ae677aed7cf9987a1003055))
+
+### Feature
+
+* feat(cli): render confidence delta hints in --detail output ([`24eb83e`](https://github.com/chen-star/net_alpha/commit/24eb83ee9ac07fcff576d082b2ebe5bfb95c3873))
+
+* feat(web): render confidence delta hints in violation explain fragment ([`bf7fbe7`](https://github.com/chen-star/net_alpha/commit/bf7fbe7cf72d3bdca225a388611046d58e5bc388))
+
+* feat(explain): surface confidence delta hints on exempt-match model ([`81dcfd5`](https://github.com/chen-star/net_alpha/commit/81dcfd5ecea2676356d3c94a8c44dfcfc8c6f7c8))
+
+* feat(explain): surface confidence delta hints on violation model ([`a0ba727`](https://github.com/chen-star/net_alpha/commit/a0ba727771b120787e3f4ba400ef1ddba16d9bc8))
+
+* feat(explain): add confidence_delta lookup with hint copy ([`8e3b8c4`](https://github.com/chen-star/net_alpha/commit/8e3b8c41bc4dd8c63a679a8ef4a02cc6714ea6c5))
+
+* feat(explain): add classify_branch helper for fine-grained match shape ([`2047768`](https://github.com/chen-star/net_alpha/commit/2047768ff4cc37a425bcb7fdeb820edb7df92bc8))
+
+### Style
+
+* style: apply ruff format to positions route and pane test
+
+Catches up the two files missed by 73e76ea that broke `ruff format --check`
+in CI.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3141cec`](https://github.com/chen-star/net_alpha/commit/3141cecabb5d29a2d06b0e1912bc97fcf874ded8))
+
+* style: apply ruff format to pane cockpit files ([`73e76ea`](https://github.com/chen-star/net_alpha/commit/73e76ea51f1b53f91dc49980aab683e4506b245a))
+
+
 ## v0.72.0 (2026-05-18)
 
 ### Documentation
