@@ -309,6 +309,61 @@ def _pane_lot_info(
     return {"lots": rows, "clock": clock}
 
 
+def _find_safe_sell_qty(
+    *,
+    sym: str,
+    accounts: list,
+    qty: Decimal,
+    price: Decimal,
+    existing_lots: list,
+    recent_trades: list,
+) -> Decimal | None:
+    """Binary-search for the largest K in [1, qty] where simulate_sell(K) is clean.
+
+    Returns the safe qty as a Decimal, or None if no safe qty exists (i.e., even
+    selling 1 share triggers a wash sale — all lots are loss lots).
+
+    Rationale: simulate_sell uses FIFO lot consumption, so `is_loss` (and thus
+    `would_trigger_wash_sale`) is qty-sensitive when the position contains a mix
+    of gain lots (consumed first by FIFO) and loss lots.  Selling up to the gain
+    lot boundary is clean; selling beyond it into the loss lots triggers.
+
+    The bisection runs O(log₂(qty)) calls — typically 10–20 for a 1000-share
+    position. Each call is cheap (single-symbol window) and stays under 100ms total.
+    """
+
+    def _triggers(k: Decimal) -> bool:
+        opts = simulate_sell(
+            ticker=sym,
+            qty=k,
+            price=price,
+            accounts=accounts,
+            existing_lots=existing_lots,
+            recent_trades=recent_trades,
+        )
+        return any(opt.would_trigger_wash_sale for opt in opts)
+
+    # Fast-path: even 1 share triggers → no safe qty exists.
+    if _triggers(Decimal("1")):
+        return None
+
+    # Binary search: lo is known-clean, hi is known-trigger (qty).
+    # Find the largest clean K.
+    lo = Decimal("1")
+    hi = qty
+    # qty is known to trigger (caller verified this before calling us).
+    # Quantities are integers (whole shares or whole contracts).
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        if _triggers(mid):
+            hi = mid
+        else:
+            lo = mid
+
+    # lo is the largest K where simulate_sell is clean.
+    return lo
+
+
 def _pane_ws_outlook(
     *,
     sym: str,
@@ -320,9 +375,10 @@ def _pane_ws_outlook(
     """Compute wash-sale outlook for the pane using simulate_sell.
 
     Returns a dict with keys:
-      - state: "clean" | "trigger" | "error" | "skipped"
+      - state: "clean" | "trigger" | "partial" | "error" | "skipped"
       - message: str (rendered text; empty in clean state)
       - replacement: str | None (one-line footnote when trigger)
+      - safe_qty: Decimal | None (only set in partial state)
 
     SimulationOption fields used (verified from engine/simulator.py):
       - would_trigger_wash_sale: bool
@@ -331,7 +387,7 @@ def _pane_ws_outlook(
       - confidence: str
     """
     if qty is None or qty <= 0 or last_price is None:
-        return {"state": "skipped", "message": "", "replacement": None}
+        return {"state": "skipped", "message": "", "replacement": None, "safe_qty": None}
 
     try:
         accounts = repo.list_accounts()
@@ -339,13 +395,17 @@ def _pane_ws_outlook(
         if account_display is not None:
             accounts = [a for a in accounts if a.display() == account_display]
 
+        existing_lots = repo.all_lots()
+        recent_trades = repo.all_trades()
+        price_dec = Decimal(str(last_price))
+
         options = simulate_sell(
             ticker=sym,
             qty=qty,
-            price=Decimal(str(last_price)),
+            price=price_dec,
             accounts=accounts,
-            existing_lots=repo.all_lots(),
-            recent_trades=repo.all_trades(),
+            existing_lots=existing_lots,
+            recent_trades=recent_trades,
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("ws_outlook failed for sym={}, account_display={}: {!r}", sym, account_display, exc)
@@ -353,12 +413,36 @@ def _pane_ws_outlook(
             "state": "error",
             "message": "Wash-sale outlook unavailable",
             "replacement": None,
+            "safe_qty": None,
         }
 
     # Aggregate across all account options: trigger if any has a blocking buy
     triggering = [opt for opt in options if opt.would_trigger_wash_sale]
     if not triggering:
-        return {"state": "clean", "message": "", "replacement": None}
+        return {"state": "clean", "message": "", "replacement": None, "safe_qty": None}
+
+    # Try partial state — find the largest K where selling K shares is clean.
+    # This is reachable when the position has gain lots (FIFO-first) followed by
+    # loss lots: selling only into the gain lots never triggers.
+    try:
+        safe_qty = _find_safe_sell_qty(
+            sym=sym,
+            accounts=accounts,
+            qty=qty,
+            price=price_dec,
+            existing_lots=existing_lots,
+            recent_trades=recent_trades,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ws_outlook bisection failed for sym={}: {!r}", sym, exc)
+        safe_qty = None
+
+    if safe_qty is not None and safe_qty > 0:
+        msg = (
+            f"Selling up to {safe_qty:g} of {qty:g} today is safe; "
+            f"selling more triggers a wash sale."
+        )
+        return {"state": "partial", "message": msg, "replacement": None, "safe_qty": safe_qty}
 
     # Compute proportional disallowed loss for each triggering option.
     # blocking_buys may cover only M of the N shares sold — only (M/N) × loss
@@ -382,7 +466,7 @@ def _pane_ws_outlook(
             replacement = f"Replacement buy: {first_buy.account} on {first_buy.date}"
             break
 
-    return {"state": "trigger", "message": message, "replacement": replacement}
+    return {"state": "trigger", "message": message, "replacement": replacement, "safe_qty": None}
 
 
 def _build_pane_ctx(

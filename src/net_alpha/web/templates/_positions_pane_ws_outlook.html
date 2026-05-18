@@ -1,7 +1,8 @@
-{# Wash-sale outlook. Renders one of four states from ws_outlook.state.
+{# Wash-sale outlook. Renders one of five states from ws_outlook.state.
    - skipped: nothing rendered (no testid wrapper)
    - clean: zero-size hidden span — no margin, no visual contribution
    - trigger: red label + headline + optional replacement footnote
+   - partial: warn label + safe-qty guidance message
    - error: muted label + error message #}
 {% if ws_outlook %}
   {% if ws_outlook.state == 'clean' %}
@@ -13,6 +14,11 @@
       {% if ws_outlook.replacement %}
         <div class="text-[11px] text-label-2 mt-1">{{ ws_outlook.replacement }}</div>
       {% endif %}
+    </div>
+  {% elif ws_outlook.state == 'partial' %}
+    <div data-testid="ws-outlook" data-state="partial" class="mt-4">
+      <div class="label-uc text-[10px] mb-1 text-warn">Wash-sale outlook</div>
+      <div class="text-[12px] text-text">{{ ws_outlook.message }}</div>
     </div>
   {% elif ws_outlook.state == 'error' %}
     <div data-testid="ws-outlook" data-state="error" class="mt-4">
