@@ -16,8 +16,10 @@ _OCC_PATTERN = re.compile(
 )
 
 # Schwab human-readable: TSLA 12/20/2024 250.00 C
+# Ticker char class includes '.' so multi-class symbols (BRK.B, BF.B) parse;
+# Schwab's human-readable export shows the dot literally.
 _SCHWAB_PATTERN = re.compile(
-    r"^(?P<ticker>[A-Z][A-Z0-9]{0,5})\s+"
+    r"^(?P<ticker>[A-Z][A-Z0-9.]{0,5})\s+"
     r"(?P<mm>\d{1,2})/(?P<dd>\d{1,2})/(?P<yyyy>\d{4})\s+"
     r"(?P<strike>[\d.]+)\s+"
     r"(?P<cp>[CP])$"
@@ -25,7 +27,7 @@ _SCHWAB_PATTERN = re.compile(
 
 # Robinhood human-readable: TSLA $250 Call 12/20/2024
 _ROBINHOOD_PATTERN = re.compile(
-    r"^(?P<ticker>[A-Z][A-Z0-9]{0,5})\s+"
+    r"^(?P<ticker>[A-Z][A-Z0-9.]{0,5})\s+"
     r"\$(?P<strike>[\d.]+)\s+"
     r"(?P<cp_word>Call|Put)\s+"
     r"(?P<mm>\d{1,2})/(?P<dd>\d{1,2})/(?P<yyyy>\d{4})$"

@@ -7,9 +7,17 @@ from net_alpha.models.realized_gl import RealizedGLLot
 
 
 def _parse_money(s: str) -> float:
-    """'$330.33' or '-$130.33' or '' → float (0.0 when empty)."""
+    """'$330.33' or '-$130.33' or '' or '--' or 'N/A' → float.
+
+    Empty and Schwab's sentinel tokens (``--``, ``N/A``) map to 0.0 — Schwab
+    writes these in money cells for rows with no broker history (typically
+    inbound transfers and gifts). Without this tolerance, a single such row
+    used to abort the entire Realized G/L import with ValueError.
+    """
     s = s.strip().replace("$", "").replace(",", "")
     if not s:
+        return 0.0
+    if s in ("--", "-") or s.lower() == "n/a":
         return 0.0
     return float(s)
 

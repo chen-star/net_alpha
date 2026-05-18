@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from net_alpha.models.domain import Trade
 from net_alpha.portfolio.models import MonthlyPnl, MonthlyPnlPoint
+from net_alpha.portfolio.pnl import realized_pl_contributions
 
 
 def monthly_realized_pl(
@@ -17,32 +18,42 @@ def monthly_realized_pl(
     ticker: str | None,
     accounts: Sequence[str] | None = None,
 ) -> list[MonthlyPnl]:
-    """Return 12 MonthlyPnl rows (Jan..Dec) of realized sell P&L for `year`.
+    """Return 12 MonthlyPnl rows (Jan..Dec) of realized P&L for `year`.
 
-    Filters: trades not in `year`, not Sell, missing proceeds/cost, mismatching
-    ticker, or mismatching account are excluded.
+    Delegates per-row P&L attribution to ``realized_pl_contributions`` so
+    short-option Buy-to-Close trades (``option_short_close`` /
+    ``..._expiry``) are included with proper STO pairing — otherwise the
+    heatmap would diverge from the headline Realized P&L KPI on the same
+    page. Filters by ticker and account after attribution.
     """
     _filter = set(accounts) if accounts else None
     buckets: dict[int, dict[str, Decimal | int]] = {
         m: {"gain": Decimal("0"), "loss": Decimal("0"), "count": 0} for m in range(1, 13)
     }
-    for t in trades:
-        if t.date.year != year:
+    # Equity Sells with missing proceeds/cost_basis are degenerate — drop
+    # them so they don't pollute the monthly P&L. STOs (option Sells) are
+    # kept regardless of cost_basis=None because ``realized_pl_contributions``
+    # needs them to pair against their closing BTCs.
+    def _keep(t: Trade) -> bool:
+        if t.action.lower() == "sell" and t.option_details is None:
+            return t.proceeds is not None and t.cost_basis is not None
+        return True
+
+    contributions = realized_pl_contributions(
+        [t for t in trades if _keep(t)], period=(year, year + 1)
+    )
+    for c in contributions:
+        if c.date.year != year:
             continue
-        if t.action.lower() != "sell":
+        if ticker is not None and c.ticker != ticker:
             continue
-        if t.proceeds is None or t.cost_basis is None:
+        if _filter is not None and c.account not in _filter:
             continue
-        if ticker is not None and t.ticker != ticker:
-            continue
-        if _filter is not None and t.account not in _filter:
-            continue
-        pl = Decimal(str(t.proceeds)) - Decimal(str(t.cost_basis))
-        bucket = buckets[t.date.month]
-        if pl >= 0:
-            bucket["gain"] += pl
+        bucket = buckets[c.date.month]
+        if c.amount >= 0:
+            bucket["gain"] += c.amount
         else:
-            bucket["loss"] += -pl
+            bucket["loss"] += -c.amount
         bucket["count"] += 1
     return [
         MonthlyPnl(

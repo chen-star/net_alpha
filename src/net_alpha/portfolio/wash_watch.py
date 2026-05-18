@@ -1,9 +1,9 @@
 """Recent-loss-close aggregation for the home-page wash-sale watch panel.
 
-Surfaces sell trades with negative realized P/L closed in the last N days,
-collapsed to one row per symbol (most recent close, summed loss). The UI uses
-this to remind the user "don't buy these back yet — wash sale window still
-open."
+Surfaces realized loss closes (equity sells AND short-option Buy-to-Close
+trades) from the last N days, collapsed to one row per symbol. The UI
+uses this to remind the user "don't buy these back yet — wash sale window
+still open."
 
 Pure function; no DB/IO of its own. The repo dependency is a duck-typed object
 that exposes `.all_trades()` returning an iterable of Trade.
@@ -18,6 +18,7 @@ from decimal import Decimal
 from typing import Any, Protocol
 
 from net_alpha.portfolio.models import LossCloseRow
+from net_alpha.portfolio.pnl import realized_pl_contributions
 
 
 class _RepoLike(Protocol):
@@ -31,34 +32,42 @@ def recent_loss_closes(
     window_days: int = 30,
     accounts: Sequence[str] | None = None,
 ) -> list[LossCloseRow]:
-    """Sells with realized P/L < 0 whose close_date is in [today - window_days, today].
+    """Realized closes with P/L < 0 whose close date is in
+    [today - window_days, today].
 
-    Grouped by symbol — if a symbol has multiple loss closes in window, the row
-    uses the most recent date and account, and the loss_amount is the sum of
-    |negative realized P/L| across all loss closes for that symbol in window.
+    Includes both equity Sells AND short-option Buy-to-Close (BTC) trades
+    — closing a short option at a loss creates the same §1091 30-day
+    lockout risk as closing an equity at a loss, so the user needs the
+    same warning.
 
-    `today` is the server-side `date.today()` at request time — no caching of
-    "today" across HTMX swaps. `days_to_safe = max(0, window_days - days_since)`.
+    Grouped by symbol — if a symbol has multiple loss closes in window, the
+    row uses the most recent date and account, and the loss_amount is the
+    sum of |negative realized P/L| across all loss closes for that symbol
+    in window.
+
+    `today` is the server-side `date.today()` at request time — no caching
+    of "today" across HTMX swaps.
+    `days_to_safe = max(0, window_days - days_since)`.
 
     Returns rows sorted by close_date desc.
     """
     _filter = set(accounts) if accounts else None
     earliest = date.fromordinal(today.toordinal() - window_days)
 
+    # ``realized_pl_contributions`` handles STO/BTC pairing so a BTC's
+    # contribution is ``premium_share - btc.cost_basis`` rather than the
+    # raw ``-cost_basis`` we'd get if we mis-treated BTC as a sell.
+    contributions = realized_pl_contributions(repo.all_trades(), period=None)
+
     by_symbol: dict[str, list[tuple[date, str, Decimal]]] = defaultdict(list)
-    for t in repo.all_trades():
-        if t.action.lower() != "sell":
+    for c in contributions:
+        if c.date < earliest or c.date > today:
             continue
-        if t.date < earliest or t.date > today:
+        if c.amount >= 0:
             continue
-        proceeds = Decimal(str(t.proceeds or 0))
-        basis = Decimal(str(t.cost_basis or 0))
-        pl = proceeds - basis
-        if pl >= 0:
+        if _filter is not None and c.account not in _filter:
             continue
-        if _filter is not None and t.account not in _filter:
-            continue
-        by_symbol[t.ticker].append((t.date, t.account, -pl))  # store loss as positive
+        by_symbol[c.ticker].append((c.date, c.account, -c.amount))
 
     rows: list[LossCloseRow] = []
     for symbol, entries in by_symbol.items():
