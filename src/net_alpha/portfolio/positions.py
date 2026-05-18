@@ -680,9 +680,7 @@ def compute_open_positions(
         days_held = (today - oldest).days if oldest is not None else None
         accounts_tuple = tuple(sorted(open_accounts_by_sym[sym]))
         row_account_id = (
-            account_id_by_display.get(accounts_tuple[0])
-            if account_id_by_display and len(accounts_tuple) == 1
-            else None
+            account_id_by_display.get(accounts_tuple[0]) if account_id_by_display and len(accounts_tuple) == 1 else None
         )
         rows.append(
             PositionRow(
@@ -717,9 +715,7 @@ def compute_open_positions(
             continue
         accounts_tuple = tuple(sorted(open_accounts_by_sym[sym]))
         opt_account_id = (
-            account_id_by_display.get(accounts_tuple[0])
-            if account_id_by_display and len(accounts_tuple) == 1
-            else None
+            account_id_by_display.get(accounts_tuple[0]) if account_id_by_display and len(accounts_tuple) == 1 else None
         )
         rows.append(
             PositionRow(

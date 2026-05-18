@@ -46,7 +46,7 @@ def test_positions_pane_js_uses_data_row_position_attribute() -> None:
     data-row="position" (matching the actual template attribute)."""
     src = Path(__file__).parents[2] / "src/net_alpha/web/static/positions_pane.js"
     text = src.read_text()
-    assert 'data-row="position"' in text or "data-row='position'" in text or 'tr[data-row=' in text
+    assert 'data-row="position"' in text or "data-row='position'" in text or "tr[data-row=" in text
 
 
 def test_positions_pane_js_uses_alpine_v3_api_not_v2() -> None:

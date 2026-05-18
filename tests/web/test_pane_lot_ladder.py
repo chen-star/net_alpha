@@ -127,13 +127,8 @@ def test_lot_ladder_tacked_pill_has_tooltip(client: TestClient, repo, builders) 
     # Sanity: at least one lot for this ticker+account must have
     # tacked_acquired_date == far_past (the replacement lot).
     lots = repo.get_lots_for_ticker(sym)
-    tacked_lots = [
-        lot for lot in lots
-        if lot.account == display and lot.tacked_acquired_date is not None
-    ]
-    assert len(tacked_lots) == 1, (
-        f"expected exactly 1 tacked lot, got {len(tacked_lots)}: {tacked_lots}"
-    )
+    tacked_lots = [lot for lot in lots if lot.account == display and lot.tacked_acquired_date is not None]
+    assert len(tacked_lots) == 1, f"expected exactly 1 tacked lot, got {len(tacked_lots)}: {tacked_lots}"
     tacked_lot = tacked_lots[0]
     assert tacked_lot.tacked_acquired_date == far_past, (
         f"expected tacked_acquired_date={far_past}, got {tacked_lot.tacked_acquired_date}"

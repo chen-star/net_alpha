@@ -68,9 +68,7 @@ def test_position_row_account_id_absent_for_multi_account(
         r'data-row="position"[^>]*data-symbol="MULTI"[^>]*(data-account-id)',
         re.DOTALL,
     )
-    assert not pattern.search(html), (
-        "Multi-account row for MULTI must not carry data-account-id"
-    )
+    assert not pattern.search(html), "Multi-account row for MULTI must not carry data-account-id"
 
 
 def test_keyboard_handler_dispatches_account_id_from_dataset() -> None:
@@ -87,9 +85,5 @@ def test_click_handler_reads_dataset_account_id() -> None:
     same symbol open the correct account-scoped pane."""
     src = Path(__file__).parents[2] / "src/net_alpha/web/templates/_portfolio_table.html"
     text = src.read_text()
-    assert "dataset.accountId" in text, (
-        "@click handler must read dataset.accountId instead of hardcoding null"
-    )
-    assert "account_id: null" not in text, (
-        "@click handler must not hardcode account_id: null"
-    )
+    assert "dataset.accountId" in text, "@click handler must read dataset.accountId instead of hardcoding null"
+    assert "account_id: null" not in text, "@click handler must not hardcode account_id: null"
