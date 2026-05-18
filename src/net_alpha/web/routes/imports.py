@@ -332,14 +332,35 @@ async def preview_upload(
 async def upload(
     request: Request,
     files: list[UploadFile] = File(...),
-    account: str = Form(...),
+    account: list[str] = Form(...),
     repo: Repository = Depends(get_repository),
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
     if request.app.state.demo_mode:
         return RedirectResponse("/welcome", status_code=303)
+
+    # Per-file account labels. The modal renders one input per file when
+    # multiple are uploaded so the user can route each file to its own
+    # account; without this, dropping two CSVs from different accounts
+    # silently collapses them into one and breaks cross-account wash-sale
+    # detection (+ the Rev. Rul. 2008-5 IRA-trap classifier).
+    if len(account) == 1:
+        per_file_labels = [account[0]] * len(files)
+    elif len(account) == len(files):
+        per_file_labels = list(account)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"account count ({len(account)}) must equal file count ({len(files)}) "
+                "or be a single label applied to every file"
+            ),
+        )
+    if any(not (lbl and lbl.strip()) for lbl in per_file_labels):
+        raise HTTPException(status_code=400, detail="every file requires a non-empty account label")
+
     materialized = []
-    for f in files:
+    for f, file_label in zip(files, per_file_labels, strict=True):
         raw = await f.read()
         tmp = _save_to_temp(raw, f.filename or "uploaded.csv")
         try:
@@ -350,12 +371,12 @@ async def upload(
             except OSError:
                 pass
         parser = detect_broker(headers)
-        materialized.append((f.filename or "uploaded.csv", raw, headers, rows, parser))
+        materialized.append((f.filename or "uploaded.csv", raw, headers, rows, parser, file_label))
 
-    if not any(p for *_, p in materialized):
+    if not any(m[4] for m in materialized):
         raise HTTPException(status_code=400, detail="No recognized broker formats among uploaded files")
 
-    accounts: dict[str, Account] = {}
+    accounts: dict[tuple[str, str], Account] = {}
 
     existing_symbols = {lot.ticker for lot in repo.all_lots() if lot.option_details is None}
     new_trade_count = 0
@@ -365,15 +386,16 @@ async def upload(
     new_symbols: set[str] = set()
     last_import_id: int | None = None
 
-    for filename, raw, _headers, rows, parser in materialized:
+    for filename, raw, _headers, rows, parser, file_label in materialized:
         if parser is None:
             continue
         # SchwabRealizedGLParser stores GL lots under the same "schwab" broker account
         # as SchwabParser — use parser.name unless it's the GL variant.
         broker_key = "schwab" if isinstance(parser, SchwabRealizedGLParser) else parser.name
-        if broker_key not in accounts:
-            accounts[broker_key] = repo.get_or_create_account(broker_key, account)
-        acct = accounts[broker_key]
+        key = (broker_key, file_label)
+        if key not in accounts:
+            accounts[key] = repo.get_or_create_account(broker_key, file_label)
+        acct = accounts[key]
         sha = _sha256_bytes(raw)
         if hasattr(parser, "parse_full"):
             import_result = parser.parse_full(rows, account_display=acct.display())

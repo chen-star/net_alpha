@@ -288,7 +288,9 @@ def _open_lots_with_loss(
 ) -> list[tuple[Lot, Decimal, Decimal, Decimal]]:
     """Return (lot, remaining_qty, remaining_basis, market_value) for open loss lots.
 
-    Excludes gains, options, and lots without a current price.
+    Excludes gains, options, lots without a current price, and lots held in
+    tax-advantaged accounts (IRA / Roth / 401(k) / HSA) — harvesting a loss
+    inside a tax-advantaged account yields no tax benefit.
     """
     lots = repo.all_lots()
     trades = repo.all_trades()
@@ -302,6 +304,7 @@ def _open_lots_with_loss(
     )
 
     accounts = _account_lookup(repo)
+    account_types = repo.account_types_by_display()
     symbols = sorted({lot.ticker for (lot, qty, _basis) in consumed if qty > 0 and lot.option_details is None})
     quotes = pricing.get_prices(symbols)
 
@@ -312,6 +315,9 @@ def _open_lots_with_loss(
         if lot.option_details is not None:
             continue
         if account_id is not None and accounts.get(lot.account) != account_id:
+            continue
+        acct_type = account_types.get(lot.account)
+        if acct_type is not None and acct_type.is_tax_advantaged:
             continue
         quote = quotes.get(lot.ticker)
         if quote is None:

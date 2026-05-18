@@ -40,18 +40,45 @@
 
   {% if any_recognized %}
     <form id="import-form" action="/imports" method="post" enctype="multipart/form-data" class="space-y-4">
-      <div>
-        <label class="block label-uc mb-1">Account label</label>
-        <input type="text" name="account" required list="modal-account-list"
-               class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
-               style="border:0.5px solid var(--color-hairline);"
-               placeholder="e.g. personal, joint, ira"/>
-        <datalist id="modal-account-list">
-          {% for a in accounts %}
-            <option value="{{ a.split('/')[1] if '/' in a else a }}">
-          {% endfor %}
-        </datalist>
-      </div>
+      {% if detections|length > 1 %}
+        <div>
+          <label class="block label-uc mb-1">Account label per file</label>
+          <p class="text-xs text-label-3 mb-2">
+            Each file is imported into its own account so cross-account wash sales
+            (and the Rev. Rul. 2008-5 IRA-trap classifier) work correctly. Use the
+            same label for multiple files that belong to one account.
+          </p>
+          <div class="space-y-1">
+            {% for d in detections %}
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-label-2 truncate flex-1" title="{{ d.filename }}">{{ d.filename }}</span>
+                <input type="text" name="account" required list="modal-account-list"
+                       class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-48"
+                       style="border:0.5px solid var(--color-hairline);"
+                       placeholder="e.g. joint, ira"/>
+              </div>
+            {% endfor %}
+          </div>
+          <datalist id="modal-account-list">
+            {% for a in accounts %}
+              <option value="{{ a.split('/')[1] if '/' in a else a }}">
+            {% endfor %}
+          </datalist>
+        </div>
+      {% else %}
+        <div>
+          <label class="block label-uc mb-1">Account label</label>
+          <input type="text" name="account" required list="modal-account-list"
+                 class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full"
+                 style="border:0.5px solid var(--color-hairline);"
+                 placeholder="e.g. personal, joint, ira"/>
+          <datalist id="modal-account-list">
+            {% for a in accounts %}
+              <option value="{{ a.split('/')[1] if '/' in a else a }}">
+            {% endfor %}
+          </datalist>
+        </div>
+      {% endif %}
 
       <p class="text-xs text-label-3">&#9888; This is informational only. Consult a tax professional before filing.</p>
 

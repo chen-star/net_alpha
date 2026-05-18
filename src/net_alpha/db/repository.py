@@ -1030,6 +1030,22 @@ class Repository:
                 continue
         return out
 
+    def _taxable_account_ids(self, s: Session) -> list[int]:
+        """IDs of accounts whose type is 'taxable'.
+
+        Used by every tax-helper to keep IRA / Roth / 401(k) / HSA P&L out
+        of taxable aggregations regardless of any explicit account filter.
+        Rows without an explicit type are treated as taxable (matches the
+        schema default and ``account_types_by_display`` fallback).
+        """
+        rows = s.exec(select(AccountRow.id, AccountRow.type)).all()
+        return [rid for rid, t in rows if not t or t == "taxable"]
+
+    def _taxable_account_displays(self, s: Session) -> set[str]:
+        """``"broker/label"`` for every account whose type is 'taxable'."""
+        rows = s.exec(select(AccountRow.broker, AccountRow.label, AccountRow.type)).all()
+        return {f"{b}/{lab}" for b, lab, t in rows if not t or t == "taxable"}
+
     # ----- Realized G/L methods (schema v2) -----
 
     def add_gl_lots(self, account: Account, import_id: int, lots: list[RealizedGLLot]) -> int:
@@ -1942,14 +1958,34 @@ class Repository:
             session.commit()
 
     def section_1256_mtm_rows(self, period, accounts: Sequence[str] | None = None) -> list[Section1256MTM]:
-        """Return MTM rows filtered by period and optional account."""
+        """Return MTM rows filtered by period and optional account.
+
+        Accounts that are explicitly registered as tax-advantaged
+        (IRA / Roth / 401(k) / HSA) are excluded — §1256(a)(1) year-end
+        MTM only creates a taxable event in taxable accounts. Free-form
+        account strings that don't match any registered account default
+        to taxable (same fallback ``account_types_by_display`` uses).
+        """
         effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
+            rows_meta = session.exec(
+                select(AccountRow.broker, AccountRow.label, AccountRow.type)
+            ).all()
+            tax_advantaged = {
+                f"{b}/{lab}"
+                for b, lab, t in rows_meta
+                if t and t != "taxable"
+            }
             stmt = select(Section1256MTMRow)
             if period.kind == "year" and period.year is not None:
                 stmt = stmt.where(Section1256MTMRow.tax_year == period.year)
             if effective:
-                stmt = stmt.where(Section1256MTMRow.account.in_(effective))
+                effective_filtered = [a for a in effective if a not in tax_advantaged]
+                if not effective_filtered:
+                    return []
+                stmt = stmt.where(Section1256MTMRow.account.in_(effective_filtered))
+            elif tax_advantaged:
+                stmt = stmt.where(~Section1256MTMRow.account.in_(tax_advantaged))
             rows = session.exec(stmt).all()
             return [
                 Section1256MTM(
@@ -2005,17 +2041,24 @@ class Repository:
         Draws from RealizedGLLotRow (broker-sourced Realized G/L CSV).
         Term is determined by the broker-supplied `term` column ("Short Term" / "Long Term").
         P&L per lot = proceeds - cost_basis (uses the wash-sale-adjusted cost_basis column).
+
+        Tax-advantaged accounts (IRA / Roth / 401(k) / HSA) are excluded
+        unconditionally — their realized P&L isn't a taxable event so it
+        must never appear in the After-Tax KPIs.
         """
         effective: list[str] = list(accounts) if accounts else []
         st = Decimal("0")
         lt = Decimal("0")
         with Session(self.engine) as session:
-            stmt = select(RealizedGLLotRow)
+            taxable_ids = set(self._taxable_account_ids(session))
             if effective:
-                acct_ids = self._account_ids_for_displays(session, effective)
-                if not acct_ids:
-                    return {"short_term": Decimal("0"), "long_term": Decimal("0")}
-                stmt = stmt.where(RealizedGLLotRow.account_id.in_(acct_ids))
+                requested = self._account_ids_for_displays(session, effective)
+                acct_ids = [i for i in requested if i in taxable_ids]
+            else:
+                acct_ids = list(taxable_ids)
+            if not acct_ids:
+                return {"short_term": Decimal("0"), "long_term": Decimal("0")}
+            stmt = select(RealizedGLLotRow).where(RealizedGLLotRow.account_id.in_(acct_ids))
             if period.kind != "lifetime":
                 stmt = stmt.where(RealizedGLLotRow.closed_date.startswith(f"{period.year}-"))
             # Exclude broad-based index option lots (§1256 contracts) — these are
@@ -2042,17 +2085,25 @@ class Repository:
         Draws from Section1256ClassificationRow (engine-derived). The realized_pnl
         field is the net gain/loss already; 60/40 LT/ST split is applied by
         compute_after_tax, not here.
+
+        Tax-advantaged accounts are excluded — §1256 60/40 character only
+        matters for taxable accounts.
         """
         effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
-            stmt = select(Section1256ClassificationRow).join(
-                TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id
-            )
+            taxable_ids = set(self._taxable_account_ids(session))
             if effective:
-                acct_ids = self._account_ids_for_displays(session, effective)
-                if not acct_ids:
-                    return Decimal("0")
-                stmt = stmt.where(TradeRow.account_id.in_(acct_ids))
+                requested = self._account_ids_for_displays(session, effective)
+                acct_ids = [i for i in requested if i in taxable_ids]
+            else:
+                acct_ids = list(taxable_ids)
+            if not acct_ids:
+                return Decimal("0")
+            stmt = (
+                select(Section1256ClassificationRow)
+                .join(TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id)
+                .where(TradeRow.account_id.in_(acct_ids))
+            )
             if period.kind != "lifetime":
                 stmt = stmt.where(TradeRow.trade_date.startswith(f"{period.year}-"))
             rows = session.exec(stmt).all()
@@ -2363,6 +2414,15 @@ class Repository:
     def realized_pnl_split_by_year(self, year: int) -> tuple[Decimal, Decimal]:
         """Return (st_pnl, lt_pnl) signed for the given calendar year.
 
+        Returns *tax-recognized* P&L (i.e. economic P&L with wash-sale
+        disallowed losses added back). Used by the multi-year carryforward
+        derive — a disallowed loss is not deductible in its sale year and
+        instead rolls into the replacement lot's basis, so feeding the raw
+        economic loss into carryforward would double-relieve it.
+
+        Tax-advantaged accounts (IRA / Roth / 401(k) / HSA) are excluded —
+        carryforward only applies to taxable accounts.
+
         ST/LT classification:
         - FIFO-match each sell to a buy lot (same account+ticker, lot date
           <= sell date); consume lot quantity as sells walk forward in time.
@@ -2380,8 +2440,21 @@ class Repository:
         """
         st = Decimal("0")
         lt = Decimal("0")
-        all_trades = self.all_trades()
-        all_lots = self.all_lots()
+        with Session(self.engine) as session:
+            taxable_accounts = self._taxable_account_displays(session)
+            taxable_account_ids = set(self._taxable_account_ids(session))
+            # Map loss_trade_id -> total disallowed_loss (positive magnitude).
+            # Both deferred and permanent_ira kinds get added back — the loss
+            # isn't recognized in the sale year either way.
+            disallowed_by_trade: dict[int, Decimal] = {}
+            for loss_trade_id, disallowed in session.exec(
+                select(WashSaleViolationRow.loss_trade_id, WashSaleViolationRow.disallowed_loss)
+            ).all():
+                disallowed_by_trade[loss_trade_id] = disallowed_by_trade.get(
+                    loss_trade_id, Decimal("0")
+                ) + Decimal(str(disallowed))
+        all_trades = [t for t in self.all_trades() if t.account in taxable_accounts]
+        all_lots = [lot for lot in self.all_lots() if lot.account in taxable_accounts]
 
         # Per (account, ticker) chain of "lot-like" donors with FIFO ordering,
         # remaining quantity, and effective acquired date. Lots win when
@@ -2463,7 +2536,19 @@ class Repository:
             if sell.date.year != year:
                 continue  # consumption recorded; classification only for target year
 
+            # Tax-recognized P&L: economic + disallowed_loss add-back.
+            # disallowed_loss is a positive magnitude; adding it reduces the
+            # magnitude of the recognized loss (or increases the recognized
+            # gain, in the rare case of an over-reported broker disallowance).
+            # ``Trade.id`` is the stringified TradeRow.id; cast to int before
+            # looking up the disallowed map keyed by the raw FK.
             pnl = Decimal(str(sell.proceeds)) - Decimal(str(sell.cost_basis))
+            try:
+                sell_row_id = int(sell.id) if sell.id is not None else None
+            except (TypeError, ValueError):
+                sell_row_id = None
+            if sell_row_id is not None and sell_row_id in disallowed_by_trade:
+                pnl += disallowed_by_trade[sell_row_id]
             if not consumed:
                 # Orphan sell — no prior donor available. Conservative: ST.
                 st += pnl
@@ -2484,15 +2569,28 @@ class Repository:
         # ST/LT buckets so they propagate through multi-year carryforward
         # replay per §1212(b). Without this, §1256 losses vanished between
         # years: this function was equities-only, so MTM and 60/40 character
-        # never reached the carryforward derivation.
-        for cls_row in self.list_section_1256_classifications(year=year):
-            lt += Decimal(str(cls_row.long_term_portion))
-            st += Decimal(str(cls_row.short_term_portion))
+        # never reached the carryforward derivation. Taxable accounts only —
+        # §1256(a) character only matters in taxable accounts.
         with Session(self.engine) as session:
-            mtm_stmt = select(Section1256MTMRow).where(Section1256MTMRow.tax_year == year)
-            for mtm_row in session.exec(mtm_stmt).all():
-                lt += Decimal(str(mtm_row.long_term_portion))
-                st += Decimal(str(mtm_row.short_term_portion))
+            if taxable_account_ids:
+                cls_stmt = (
+                    select(Section1256ClassificationRow)
+                    .join(TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id)
+                    .where(TradeRow.account_id.in_(taxable_account_ids))
+                    .where(TradeRow.trade_date.startswith(f"{year}-"))
+                )
+                for cls_row in session.exec(cls_stmt).all():
+                    lt += Decimal(str(cls_row.long_term_portion))
+                    st += Decimal(str(cls_row.short_term_portion))
+            if taxable_accounts:
+                mtm_stmt = (
+                    select(Section1256MTMRow)
+                    .where(Section1256MTMRow.tax_year == year)
+                    .where(Section1256MTMRow.account.in_(sorted(taxable_accounts)))
+                )
+                for mtm_row in session.exec(mtm_stmt).all():
+                    lt += Decimal(str(mtm_row.long_term_portion))
+                    st += Decimal(str(mtm_row.short_term_portion))
 
         return st, lt
 
