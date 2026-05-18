@@ -483,16 +483,25 @@ def _build_pane_ctx(
     )
 
     # --- Header ST/LT pill ---
-    # Aggregate per-lot statuses into a single header label.
-    # ST means all lots are short-term; LT means all are long-term; ST/LT
-    # means mixed. TACKED rows count as LT (their tacked-back date already
-    # put them past the 365d threshold) for header purposes.
-    _statuses = {r["status"] for r in lot_info["lots"]}
-    if not _statuses:
+    # Aggregate per-lot statuses into a single header label. ST means all
+    # lots are short-term; LT means all are long-term; ST/LT means mixed.
+    #
+    # TACKED status (§1223(4)) doesn't directly imply LT — tacking shifts
+    # the effective acquired date back to the original lot's date, which
+    # may still be < 365d ago. Discriminate using `days_to_lt`: a TACKED
+    # lot is effectively LT only when `days_to_lt == 0` (the helper sets
+    # that field to 0 only when `held_days > 365`).
+    def _eff_class(row: dict[str, Any]) -> str:
+        if row["status"] == "TACKED":
+            return "LT" if row["days_to_lt"] == 0 else "ST"
+        return row["status"]  # already "ST" or "LT"
+
+    _eff_classes = {_eff_class(r) for r in lot_info["lots"]}
+    if not _eff_classes:
         header_status = None
-    elif _statuses == {"ST"}:
+    elif _eff_classes == {"ST"}:
         header_status = "ST"
-    elif _statuses <= {"LT", "TACKED"}:
+    elif _eff_classes == {"LT"}:
         header_status = "LT"
     else:
         header_status = "ST/LT"
