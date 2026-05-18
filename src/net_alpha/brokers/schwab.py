@@ -1,7 +1,6 @@
 # src/net_alpha/brokers/schwab.py
 from __future__ import annotations
 
-from collections import defaultdict
 from datetime import date, datetime
 
 from net_alpha.ingest.option_parser import parse_option_symbol
@@ -89,79 +88,88 @@ def _parse_date(s: str) -> date | None:
         return None
 
 
-def _assigned_put_symbols(rows: list[dict[str, str]]) -> set[str]:
-    """Raw option symbols of puts that have at least one Assigned row.
+def _scan_assignment_cycles(
+    rows: list[dict[str, str]],
+) -> tuple[dict[tuple[str, date], float], dict[int, date], set[int]]:
+    """Walk rows in CSV order and bucket STO/BTC events into assignment cycles.
 
-    These chains are consumed by `_put_assignment_basis_offsets` to fold the
-    premium into the underlying-stock cost basis. Emitting STO/BTC trades for
-    the same symbols would double-count the premium (once as Sell proceeds,
-    once as basis reduction). Calls are not basis-adjusted by the helper, so
-    sold-call assignments still emit normally — premium becomes a Sell trade.
+    A cycle is the sequence of STO/BTC events for one option (keyed by
+    ``(ticker, strike, expiry, call_put)``) that ends either when an
+    ``Assigned`` row appears OR when BTC fully closes the open contracts
+    (so a closed-then-reopened position doesn't leak premia into the next
+    cycle's assignment offset).
+
+    Returns three structures:
+
+    * ``basis_offsets`` — ``{(underlying_ticker, assignment_date) → premium}``
+      consumed by the main parse loop to reduce the underlying-stock Buy's
+      cost basis (IRS Pub 550). Aggregated across multiple cycles on the
+      same day at the same ticker.
+    * ``sto_close_dates`` — ``{row_index → assignment_date}`` for STO rows
+      whose cycle ended with assignment. The main loop emits a synthetic
+      ``option_short_close_assigned`` trade on this date alongside the STO.
+    * ``suppress_btc_indices`` — row indices of BTC rows whose cycle ended
+      with assignment; their premium was already folded into the offset, so
+      the main loop must NOT also emit them as regular BTC trades.
+
+    Calls are out of scope — only puts produce basis offsets.
     """
-    out: set[str] = set()
-    for row in rows:
-        if row.get("Action", "").strip() != "Assigned":
-            continue
-        symbol = row.get("Symbol", "").strip()
-        opt = parse_option_symbol(symbol)
-        if opt is not None and opt[1].call_put == "P":
-            out.add(symbol)
-    return out
 
+    def _fresh() -> dict[str, object]:
+        return {
+            "sto_qty": 0.0,
+            "sto_amt": 0.0,
+            "btc_qty": 0.0,
+            "btc_amt": 0.0,
+            "sto_idx": [],
+            "btc_idx": [],
+        }
 
-def _put_assignment_basis_offsets(rows: list[dict[str, str]]) -> dict[tuple[str, date], float]:
-    """For each assigned short put, compute the premium that should reduce the
-    basis of the assigned underlying purchase on the assignment date.
+    cycles: dict[tuple, dict[str, object]] = {}
+    basis_offsets: dict[tuple[str, date], float] = {}
+    sto_close_dates: dict[int, date] = {}
+    suppress_btc_indices: set[int] = set()
 
-    Per IRS Pub 550, when a put you wrote is exercised against you, the premium
-    received reduces the basis of the stock you receive. Schwab's Transactions
-    CSV records the assignment as a `Buy` of the underlying at the strike price
-    *without* applying this adjustment, so we have to do it here.
-
-    Returns a map {(underlying_ticker, assignment_date) → premium_offset}.
-    Premium is computed per-contract as (sum Sell-to-Open amounts − sum
-    Buy-to-Close amounts) / sum Sell-to-Open quantity, multiplied by the
-    Assigned quantity. Calls are out of scope for this v1 helper.
-    """
-    sto_qty: dict[str, float] = defaultdict(float)
-    sto_amt: dict[str, float] = defaultdict(float)
-    btc_amt: dict[str, float] = defaultdict(float)
-    for row in rows:
+    for i, row in enumerate(rows):
         action = row.get("Action", "").strip()
-        if action not in {"Sell to Open", "Buy to Close"}:
-            continue
         symbol = row.get("Symbol", "").strip()
         opt = parse_option_symbol(symbol)
         if not opt or opt[1].call_put != "P":
             continue
-        qty = abs(_qty(row.get("Quantity", "")))
-        amount = abs(_money(row.get("Amount", "")))
-        if action == "Sell to Open":
-            sto_qty[symbol] += qty
-            sto_amt[symbol] += amount
-        else:
-            btc_amt[symbol] += amount
+        key = (opt[0], float(opt[1].strike), opt[1].expiry.isoformat(), opt[1].call_put)
+        c = cycles.setdefault(key, _fresh())
 
-    out: dict[tuple[str, date], float] = {}
-    for row in rows:
-        if row.get("Action", "").strip() != "Assigned":
-            continue
-        symbol = row.get("Symbol", "").strip()
-        opt = parse_option_symbol(symbol)
-        if not opt or opt[1].call_put != "P":
-            continue
-        d = _parse_date(row.get("Date", ""))
-        if d is None:
-            continue
-        contract_qty = abs(_qty(row.get("Quantity", "")))
-        if contract_qty <= 0 or sto_qty.get(symbol, 0) <= 0:
-            continue
-        per_contract = (sto_amt[symbol] - btc_amt.get(symbol, 0.0)) / sto_qty[symbol]
-        if per_contract <= 0:
-            continue
-        key = (opt[0], d)
-        out[key] = out.get(key, 0.0) + per_contract * contract_qty
-    return out
+        if action == "Sell to Open":
+            c["sto_qty"] += abs(_qty(row.get("Quantity", "")))  # type: ignore[operator]
+            c["sto_amt"] += abs(_money(row.get("Amount", "")))  # type: ignore[operator]
+            c["sto_idx"].append(i)  # type: ignore[attr-defined]
+        elif action == "Buy to Close":
+            c["btc_qty"] += abs(_qty(row.get("Quantity", "")))  # type: ignore[operator]
+            c["btc_amt"] += abs(_money(row.get("Amount", "")))  # type: ignore[operator]
+            c["btc_idx"].append(i)  # type: ignore[attr-defined]
+            # Position fully closed by BTC → cycle ends without assignment.
+            # Future STOs of the same option start a fresh cycle so their
+            # premia aren't entangled with this closed cycle's events.
+            if c["sto_qty"] - c["btc_qty"] <= 1e-6:  # type: ignore[operator]
+                cycles[key] = _fresh()
+        elif action == "Assigned":
+            d = _parse_date(row.get("Date", ""))
+            if d is None:
+                continue
+            contract_qty = abs(_qty(row.get("Quantity", "")))
+            sto_qty_total: float = c["sto_qty"]  # type: ignore[assignment]
+            if contract_qty > 0 and sto_qty_total > 0:
+                per_contract = (c["sto_amt"] - c["btc_amt"]) / sto_qty_total  # type: ignore[operator]
+                if per_contract > 0:
+                    okey = (opt[0], d)
+                    basis_offsets[okey] = basis_offsets.get(okey, 0.0) + per_contract * contract_qty
+                for sto_i in c["sto_idx"]:  # type: ignore[attr-defined]
+                    sto_close_dates[sto_i] = d
+                for btc_i in c["btc_idx"]:  # type: ignore[attr-defined]
+                    suppress_btc_indices.add(btc_i)
+            cycles[key] = _fresh()
+
+    return basis_offsets, sto_close_dates, suppress_btc_indices
 
 
 def _to_cash_event(
@@ -217,19 +225,9 @@ class SchwabParser:
 
     def parse(self, rows: list[dict[str, str]], account_display: str) -> list[Trade]:
         trades: list[Trade] = []
-        basis_offsets = _put_assignment_basis_offsets(rows)
-        assigned_puts = _assigned_put_symbols(rows)
-        # Map (symbol → assignment_date) so we can pair the assigned-put STO
-        # with a synthetic close on the right date for the option counter.
-        assignment_dates: dict[str, date] = {}
-        for row in rows:
-            if row.get("Action", "").strip() != "Assigned":
-                continue
-            sym = row.get("Symbol", "").strip()
-            d = _parse_date(row.get("Date", ""))
-            if sym in assigned_puts and d is not None and sym not in assignment_dates:
-                assignment_dates[sym] = d
-        for i, row in enumerate(rows, start=1):
+        basis_offsets, sto_close_dates, suppress_btc_indices = _scan_assignment_cycles(rows)
+        for i, row in enumerate(rows):
+            row_num = i + 1  # 1-based for human-facing error messages
             action_raw = row["Action"].strip()
 
             is_transfer = action_raw in _TRANSFER_ACTIONS
@@ -248,16 +246,16 @@ class SchwabParser:
                 # We mark it with a distinct basis_source so positions.py
                 # excludes it from realized-P/L aggregation (the premium is
                 # already captured via the underlying-stock basis offset, so
-                # counting it again here would double-count). Cash-flow uses
-                # gross_cash_impact, which still records the real premium
-                # credit — so emitting fixes the previously-missing inflow.
-                short_open_assigned = row["Symbol"].strip() in assigned_puts
+                # counting it again here would double-count). Cycle-aware:
+                # only STOs whose cycle ENDED with an Assigned row are marked,
+                # not every STO that shares the option symbol with one.
+                short_open_assigned = i in sto_close_dates
             elif action_raw in _SHORT_OPTION_CLOSE_ACTIONS:
-                # A real BTC of an assigned-put symbol shouldn't happen (the
-                # position closed via assignment, not market) — but if Schwab
-                # logs one, suppress it: the basis-offset helper has already
-                # consumed those amounts.
-                if row["Symbol"].strip() in assigned_puts:
+                # BTCs whose cycle ended with an Assignment are folded into the
+                # basis offset and must NOT also emit as regular BTCs (double-
+                # counting). BTCs that genuinely closed a non-assignment cycle
+                # are emitted normally.
+                if i in suppress_btc_indices:
                     continue
                 action = "Buy"
                 short_close = True
@@ -270,7 +268,7 @@ class SchwabParser:
             try:
                 trade_date = datetime.strptime(row["Date"].strip()[:10], "%m/%d/%Y").date()
             except ValueError as e:
-                raise ValueError(f"Row {i}: 'Date' value {row['Date']!r} is not a valid date") from e
+                raise ValueError(f"Row {row_num}: 'Date' value {row['Date']!r} is not a valid date") from e
 
             symbol = row["Symbol"].strip()
             opt = parse_option_symbol(symbol)
@@ -282,12 +280,12 @@ class SchwabParser:
             try:
                 qty = float(qty_raw) if qty_raw else 0.0
             except ValueError as e:
-                raise ValueError(f"Row {i}: 'Quantity' value {row['Quantity']!r} is not numeric") from e
+                raise ValueError(f"Row {row_num}: 'Quantity' value {row['Quantity']!r} is not numeric") from e
 
             try:
                 amount = float(amount_raw) if amount_raw else 0.0
             except ValueError as e:
-                raise ValueError(f"Row {i}: 'Amount' value {row['Amount']!r} is not numeric") from e
+                raise ValueError(f"Row {row_num}: 'Amount' value {row['Amount']!r} is not numeric") from e
 
             if is_transfer:
                 if qty == 0:
@@ -307,6 +305,11 @@ class SchwabParser:
                         price_val = None
                 cost_basis = (price_val * qty) if (action == "Buy" and price_val) else None
                 proceeds = None
+                # Preserve the broker statement date on transfer-IN rows so
+                # it stays available when the user later overrides
+                # ``Trade.date`` with the original acquisition date via the
+                # set-basis editor (§1223(3) holding-period correction).
+                xfer_date = trade_date if action == "Buy" else None
                 trades.append(
                     Trade(
                         account=account_display,
@@ -319,6 +322,7 @@ class SchwabParser:
                         basis_unknown=True,
                         basis_source=basis_source,
                         option_details=opt[1] if opt else None,
+                        transfer_date=xfer_date,
                     )
                 )
                 continue
@@ -373,32 +377,31 @@ class SchwabParser:
                 kwargs["basis_source"] = basis_source
             trades.append(Trade(**kwargs))
 
-        # For every assigned-put STO we just emitted, append a synthetic
-        # closing trade ($0 cost, gross_cash_impact=0) on the assignment
-        # date. This lets the open-option counter / lots-view see the
-        # short put as closed even though it never had a real BTC.
-        for t in list(trades):
-            if t.basis_source != "option_short_open_assigned":
-                continue
-            opt = t.option_details
-            if opt is None:
-                continue
-            sym_raw = f"{t.ticker} {opt.expiry.strftime('%m/%d/%Y')} {opt.strike:.2f} {opt.call_put}"
-            close_date = assignment_dates.get(sym_raw, t.date)
-            trades.append(
-                Trade(
-                    account=t.account,
-                    date=close_date,
-                    ticker=t.ticker,
-                    action="Buy",
-                    quantity=t.quantity,
-                    proceeds=None,
-                    cost_basis=0.0,
-                    basis_source="option_short_close_assigned",
-                    gross_cash_impact=0.0,
-                    option_details=opt,
+            # Inline synthetic close for an assigned-put STO: emit the
+            # ``option_short_close_assigned`` trade on the actual Assigned-row
+            # date recorded in ``sto_close_dates`` during the row scan. The
+            # close date is structurally derived from the cycle scan, so it
+            # tolerates any strike formatting Schwab uses in the symbol.
+            if short_open_assigned and opt is not None:
+                close_date = sto_close_dates.get(i, trade_date)
+                trades.append(
+                    Trade(
+                        account=account_display,
+                        date=close_date,
+                        ticker=ticker,
+                        action="Buy",
+                        quantity=qty,
+                        proceeds=None,
+                        cost_basis=0.0,
+                        basis_source="option_short_close_assigned",
+                        gross_cash_impact=0.0,
+                        option_details=opt[1],
+                    )
                 )
-            )
+
+        # Synthetic close trades for assigned-put STOs are emitted inline in
+        # the main loop above (see the `if short_open_assigned` block right
+        # after the STO Trade append). No post-loop reconstruction needed.
 
         # Assign within-batch occurrence indices to trades whose canonical
         # fields are byte-for-byte identical (Schwab can split a fill across

@@ -135,12 +135,51 @@ class Repository:
             s.add(row)
             s.commit()
 
-    def existing_put_assignment_keys(self, account_id: int) -> set[tuple[str, str, str, float]]:
-        """Set of (account_display, ticker, date_iso, qty) for every existing
-        put_assignment trade in `account_id`. Consumed by
-        ``filter_assignment_duplicates`` to drop the raw Schwab Buy-of-
-        underlying row when it's re-imported in a partial CSV that lacks the
-        matching Assigned option row.
+    def existing_sell_basis_blind_keys(self, account_id: int) -> set[tuple[str, str, str, float, str]]:
+        """``(account_display, ticker, date_iso, qty, proceeds_str)`` for every
+        existing equity Sell trade.
+
+        Used by ``filter_sell_basis_drift_duplicates`` to catch a Schwab
+        re-export that gained a ``Cost Basis`` column on its sell rows
+        — the column flips ``Trade.cost_basis`` from ``None`` to a value,
+        which changes the row's natural_key and would otherwise silently
+        insert a duplicate sell on re-import.
+        """
+        with Session(self.engine) as s:
+            display = self._account_display_for_id(s, account_id)
+            rows = s.exec(
+                select(
+                    TradeRow.ticker,
+                    TradeRow.trade_date,
+                    TradeRow.quantity,
+                    TradeRow.proceeds,
+                    TradeRow.option_strike,
+                ).where(
+                    TradeRow.account_id == account_id,
+                    TradeRow.action == "Sell",
+                )
+            ).all()
+            return {
+                (
+                    display,
+                    ticker,
+                    trade_date,
+                    float(quantity),
+                    str(proceeds if proceeds is not None else ""),
+                )
+                for ticker, trade_date, quantity, proceeds, option_strike in rows
+                if option_strike is None  # equity sells only — options have their own pairing
+            }
+
+    def existing_put_assignment_keys(self, account_id: int) -> dict[tuple[str, str, str, float], int]:
+        """Counts of (account_display, ticker, date_iso, qty) for every
+        existing put_assignment trade in ``account_id``.
+
+        Consumed by ``filter_assignment_duplicates`` to drop the raw Schwab
+        Buy-of-underlying row on a partial re-import. The count discriminates
+        the common case (1 existing → drop the dupe) from the rare ambiguous
+        case (≥2 existing same-day same-qty different-strike assignments →
+        leave new Buys alone so we don't silently lose a genuine new lot).
         """
         with Session(self.engine) as s:
             display = self._account_display_for_id(s, account_id)
@@ -150,7 +189,11 @@ class Repository:
                     TradeRow.basis_source == "put_assignment",
                 )
             ).all()
-            return {(display, ticker, trade_date, float(quantity)) for ticker, trade_date, quantity in rows}
+            counts: dict[tuple[str, str, str, float], int] = {}
+            for ticker, trade_date, quantity in rows:
+                key = (display, ticker, trade_date, float(quantity))
+                counts[key] = counts.get(key, 0) + 1
+            return counts
 
     def resolve_account_label(self, label: str) -> str | None:
         """Map a broker-exported account string to the canonical ``broker/label``

@@ -20,7 +20,11 @@ from net_alpha.import_.positions_csv import (
     parse_positions_csv,
 )
 from net_alpha.ingest.csv_loader import load_csv
-from net_alpha.ingest.dedup import filter_assignment_duplicates, filter_new
+from net_alpha.ingest.dedup import (
+    filter_assignment_duplicates,
+    filter_new,
+    filter_sell_basis_drift_duplicates,
+)
 from net_alpha.models.domain import Account, ImportRecord
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.service.jobs.runner import run_job
@@ -402,14 +406,26 @@ async def upload(
             trades = import_result.trades
             existing = repo.existing_natural_keys(acct.id)
             new_trades = filter_new(trades, existing)
-            # Second-pass dedup: drop plain underlying-Buy rows that duplicate
+            # Second-pass dedup #1: drop re-imported equity Sells whose only
+            # difference from an existing Sell is ``cost_basis`` (Schwab can
+            # add a populated "Cost Basis" column between exports, flipping
+            # the natural_key on otherwise-identical sells).
+            pre_basis_drift = len(new_trades)
+            new_trades = filter_sell_basis_drift_duplicates(
+                new_trades, existing_keys=repo.existing_sell_basis_blind_keys(acct.id)
+            )
+            # Second-pass dedup #2: drop plain underlying-Buy rows that duplicate
             # an existing put_assignment trade. Schwab's CSV records each put
             # assignment as Assigned + Buy; partial re-imports that lack the
             # Assigned row would otherwise create unadjusted-basis duplicates.
             existing_assignments = repo.existing_put_assignment_keys(acct.id)
             pre_assignment_dedup = len(new_trades)
             new_trades = filter_assignment_duplicates(new_trades, existing_assignments=existing_assignments)
-            pre_filtered_dups = (len(trades) - pre_assignment_dedup) + (pre_assignment_dedup - len(new_trades))
+            pre_filtered_dups = (
+                (len(trades) - pre_basis_drift)
+                + (pre_basis_drift - pre_assignment_dedup)
+                + (pre_assignment_dedup - len(new_trades))
+            )
             # Aggregates are derived from the *parsed* set so a re-import that
             # filters everything still records the file's date range and counts
             # — the imports page can then show "skipped 7 dupes · 04/14 → 11/14"
