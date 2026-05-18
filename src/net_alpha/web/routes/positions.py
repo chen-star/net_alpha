@@ -587,13 +587,23 @@ def _build_pane_ctx(
         logger.warning("positions_pane lookup failed for sym={}, account_id={}: {!r}", sym, account_id, exc)
 
     # --- WS-implicated lot IDs: lots referenced as the replacement leg of
-    # any WashSaleViolation for this ticker (§1091(d) basis inflation).
-    # We join via trade_id: WashSaleViolation.replacement_trade_id == Lot.trade_id.
-    # Scoped to the ticker via get_violations_for_ticker (efficient index).
+    # a §1091(d) DEFERRED wash sale (i.e., the disallowed loss was rolled
+    # into the replacement lot's basis). We join via trade_id:
+    # WashSaleViolation.replacement_trade_id == Lot.trade_id.
+    #
+    # Filter to kind="deferred" only — `permanent_ira` violations (Rev. Rul.
+    # 2008-5) do NOT inflate the IRA replacement lot's adjusted_basis (the
+    # engine skips that mutation for tax-advantaged replacement legs), so
+    # the "basis inflated by §1091(d)" tooltip would be false on those rows.
     ws_implicated_trade_ids: set[str] = set()
     try:
         violations = repo.get_violations_for_ticker(sym)
-        ws_implicated_trade_ids = {v.replacement_trade_id for v in violations if v.replacement_trade_id is not None}
+        ws_implicated_trade_ids = {
+            v.replacement_trade_id
+            for v in violations
+            if v.replacement_trade_id is not None
+            and getattr(v, "kind", "deferred") == "deferred"
+        }
     except Exception:  # noqa: BLE001
         logger.warning("ws-implicated lookup failed for sym={}", sym)
 

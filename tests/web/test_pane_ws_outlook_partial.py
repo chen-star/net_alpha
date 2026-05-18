@@ -54,13 +54,16 @@ def test_ws_outlook_partial_state_gain_then_loss_lot(
     boundary, so selling ≤ gain-lot qty is clean; selling more triggers.
 
     Position:
-      Lot A: 50 sh @ $50/sh (200d ago) — GAIN at $100
-      Lot B: 50 sh @ $200/sh (100d ago) — LOSS at $100
+      Lot A: 50 sh @ $50/sh (200d ago) — GAIN at $100 (+$2,500 over basis)
+      Lot B: 50 sh @ $200/sh (100d ago) — LOSS at $100 (-$5,000 vs basis)
       Blocking buy: 10 sh (5d ago)
 
-    Selling 1–50 sh: only Lot A consumed → realized > 0 → clean.
+    Selling 1–75 sh: Lot A's $2,500 gain offsets up to $2,500 of Lot B's
+    per-share loss, so the cumulative realized P&L stays ≥ 0 through sh 75
+    (50 from Lot A + 25 from Lot B: +2500 + 2500 - 5000 = 0). Selling sh 76+
+    tips realized negative → loss → triggers.
     Selling 51–100 sh: Lot B consumed → realized < 0 → triggers.
-    Expected safe_qty = 50.
+    Expected safe_qty = 75 (binary search confirmed).
     """
     from net_alpha.engine.recompute import recompute_all_violations
     from net_alpha.engine.stitch import stitch_account
@@ -93,7 +96,7 @@ def test_ws_outlook_partial_state_gain_then_loss_lot(
     assert resp.status_code == 200
     html = resp.text
 
-    # Must be partial state (not trigger), because selling ≤50 sh is safe
+    # Must be partial state (not trigger), because selling ≤75 sh is safe
     assert 'data-state="partial"' in html, (
         f"expected partial state, got state from html: "
         f"{html[html.find('data-state'):html.find('data-state')+30] if 'data-state' in html else 'NOT FOUND'}"
@@ -101,8 +104,13 @@ def test_ws_outlook_partial_state_gain_then_loss_lot(
     assert "safe" in html.lower(), "expected 'safe' in partial-state message"
     assert "triggers a wash sale" in html.lower(), "expected 'triggers a wash sale' in partial message"
 
-    # The safe qty should be 50 (all gain-lot shares)
-    assert "50" in html, "expected safe_qty=50 in partial message"
+    # Pin the exact safe_qty in the message — avoids accidentally passing
+    # on lot-row quantities (which display "50 sh") instead of the actual
+    # bisection result. The route formats it as "Selling up to {K} of N".
+    import re
+    m = re.search(r"Selling up to (\d+) of", html)
+    assert m, f"expected 'Selling up to N of …' phrase, html had: {html[:400]}"
+    assert m.group(1) == "75", f"expected safe_qty=75, got {m.group(1)}"
 
 
 def test_ws_outlook_trigger_state_when_all_lots_are_losses(

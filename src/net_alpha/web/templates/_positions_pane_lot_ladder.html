@@ -66,12 +66,18 @@
     containers.forEach((container) => {
       const rows = Array.from(container.querySelectorAll('[data-testid=\'lot-row\']'));
       rows.sort((a, b) => {
-        const attr = 'data-row-' + (this.sortCol === 'status' ? 'pill' : this.sortCol);
-        let av = a.getAttribute(attr) || '';
-        let bv = b.getAttribute(attr) || '';
-        const an = parseFloat(av);
-        const bn = parseFloat(bv);
-        const numeric = !isNaN(an) && !isNaN(bn);
+        // Status reads `data-pill` (set by the row macro); other columns
+        // read `data-row-{col}` set alongside it.
+        const attr = this.sortCol === 'status' ? 'data-pill' : 'data-row-' + this.sortCol;
+        const av = a.getAttribute(attr) || '';
+        const bv = b.getAttribute(attr) || '';
+        // ISO dates like "2025-06-15" must NOT be parsed as numeric:
+        // parseFloat would strip everything after the year and collapse
+        // all same-year dates to equal. Exclude the date column from the
+        // numeric path; date sorts lexicographically on the ISO string.
+        const an = Number(av);
+        const bn = Number(bv);
+        const numeric = this.sortCol !== 'date' && av !== '' && bv !== '' && !isNaN(an) && !isNaN(bn);
         if (numeric) {
           return this.sortDesc ? bn - an : an - bn;
         }
