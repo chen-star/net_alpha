@@ -12,16 +12,21 @@ from net_alpha.models.domain import Trade
 
 
 def classify_branch(loss: Trade, buy: Trade) -> str:
-    """Fine-grained branch_kind matching engine.matcher.get_match_confidence.
+    """Fine-grained branch_kind for an already-matched (loss, buy) pair.
 
     Returns one of:
       equity_equity, option_option_exact, option_option_partial,
       equity_to_call, option_to_equity, etf_pair, equity_to_sold_put, unknown.
 
+    Precondition: the caller has confirmed the pair is a real wash-sale match
+    (engine.matcher.get_match_confidence returned a non-None label). The
+    cross-ticker shortcut below assumes any ticker mismatch reaching this
+    function went through the engine's ETF-pair check, so we report 'etf_pair'
+    without re-validating against etf_pairs.yaml. Do not call from contexts
+    that haven't gone through the engine first.
+
     Pure: uses only ticker / action / option_details on the Trade objects.
     """
-    # Different tickers — only ETF-pair detection lives in the engine; here we
-    # trust the engine already classified the match and just report the shape.
     if loss.ticker != buy.ticker:
         return "etf_pair"
 
