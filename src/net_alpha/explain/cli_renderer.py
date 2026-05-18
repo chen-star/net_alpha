@@ -32,6 +32,10 @@ def render_explanation(e: ExplanationModel) -> str:
         lines.append(f"  Disallowed: {e.disallowed_math}")
 
     lines.append(f"  Confidence: {e.confidence_reason}")
+    if e.confidence_promote:
+        lines.append(f"    ↑ {e.confidence_promote}")
+    if e.confidence_demote:
+        lines.append(f"    ↓ {e.confidence_demote}")
 
     if e.is_permanent_ira:
         lines.append(

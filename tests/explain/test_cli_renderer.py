@@ -61,3 +61,82 @@ def test_render_explanation_partial_match_shows_math():
     out = render_explanation(m)
     assert "× (50 / 100)" in out or "(50 / 100)" in out
     assert "$621.50" in out
+
+
+def test_render_explanation_includes_demote_hint_when_present():
+    """ExplanationModel with confidence_demote set → renderer emits a ↓ line."""
+    from net_alpha.explain.violation import ExplanationModel, TradeRow
+
+    e = ExplanationModel(
+        summary="TSLA loss on 2024-09-15 disallowed by buy on 2024-09-22 (7 days later).",
+        rule_citation="IRC §1091(a) — Pub 550 p.59",
+        is_exempt=False,
+        loss_trade=TradeRow(
+            date=date(2024, 9, 15),
+            ticker="TSLA",
+            action="Sell",
+            quantity=100,
+            proceeds=Decimal("18757"),
+            cost_basis=Decimal("20000"),
+        ),
+        triggering_buy=TradeRow(
+            date=date(2024, 9, 22),
+            ticker="TSLA",
+            action="Buy",
+            quantity=100,
+            proceeds=Decimal("19000"),
+            cost_basis=Decimal("19000"),
+        ),
+        days_between=7,
+        match_reason="exact ticker — TSLA",
+        disallowed_or_notional=Decimal("1243"),
+        disallowed_math="$1,243.00",
+        confidence="Confirmed",
+        confidence_reason="Confirmed — exact ticker match within 7 days",
+        confidence_promote=None,
+        confidence_demote="Would be Probable if the replacement were a call option …",
+        adjusted_basis_target=None,
+        cross_account=None,
+    )
+    out = render_explanation(e)
+    assert "↓ Would be Probable" in out
+    assert "↑" not in out  # no promote → no ↑ line
+
+
+def test_render_explanation_includes_promote_hint_when_present():
+    from net_alpha.explain.violation import ExplanationModel, TradeRow
+
+    e = ExplanationModel(
+        summary="TSLA loss disallowed (Probable).",
+        rule_citation="IRC §1091(a) — Pub 550 p.59",
+        is_exempt=False,
+        loss_trade=TradeRow(
+            date=date(2024, 9, 15),
+            ticker="TSLA",
+            action="Sell",
+            quantity=1,
+            proceeds=Decimal("100"),
+            cost_basis=Decimal("500"),
+        ),
+        triggering_buy=TradeRow(
+            date=date(2024, 9, 22),
+            ticker="TSLA",
+            action="Buy",
+            quantity=1,
+            proceeds=Decimal("100"),
+            cost_basis=Decimal("100"),
+        ),
+        days_between=7,
+        match_reason="option chain",
+        disallowed_or_notional=Decimal("400"),
+        disallowed_math="$400.00",
+        confidence="Probable",
+        confidence_reason="Probable — option chain match within 7 days",
+        confidence_promote="Would be Confirmed if strike, expiry, and call/put all matched …",
+        confidence_demote=None,
+        adjusted_basis_target=None,
+        cross_account=None,
+    )
+    out = render_explanation(e)
+    assert "↑ Would be Confirmed" in out
+    assert "↓" not in out
