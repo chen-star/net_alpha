@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from net_alpha.db.tables import WashSaleViolationRow
 from net_alpha.explain import ExplanationModel
 from net_alpha.explain.violation import explain_violation
@@ -201,3 +203,38 @@ def test_explain_violation_populates_confidence_promote_for_option_partial():
     assert e.confidence_promote is not None
     assert "Confirmed" in e.confidence_promote
     assert e.confidence_demote is None
+
+
+def test_violation_explain_fragment_renders_delta_hints(tmp_path):
+    """The _violation_explain.html fragment renders ↑/↓ markers when hints exist."""
+    import pathlib
+
+    jinja2 = pytest.importorskip("jinja2")
+
+    templates_dir = pathlib.Path(__file__).resolve().parents[2] / "src" / "net_alpha" / "web" / "templates"
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(templates_dir)), autoescape=True)
+    tmpl = env.get_template("_violation_explain.html")
+
+    loss = _trade("31", "TSLA", "Sell", date(2024, 9, 15), 100, Decimal("18757"), Decimal("20000"))
+    buy = _trade("32", "TSLA", "Buy", date(2024, 9, 22), 100, Decimal("19000"), Decimal("19000"))
+    repo = _FakeRepo([loss, buy])
+    v = WashSaleViolationRow(
+        id=31,
+        loss_trade_id=31,
+        replacement_trade_id=32,
+        confidence="Confirmed",
+        disallowed_loss=Decimal("1243"),
+        matched_quantity=100.0,
+        loss_account_id=1,
+        buy_account_id=1,
+        loss_sale_date="2024-09-15",
+        triggering_buy_date="2024-09-22",
+        ticker="TSLA",
+    )
+    e = explain_violation(v, repo=repo)
+    html = tmpl.render(e=e)
+    # Demote hint is present for equity/equity → render the ↓ marker.
+    assert "↓" in html
+    assert "Probable" in html
+    # No promote hint for Confirmed → no ↑ marker.
+    assert "↑" not in html

@@ -39,7 +39,13 @@
   </div>
 
   <div class="text-[12px] text-label-2 mb-2">
-    <span class="text-label-3">Confidence:</span> {{ e.confidence_reason }}
+    <div><span class="text-label-3">Confidence:</span> {{ e.confidence_reason }}</div>
+    {% if e.confidence_promote %}
+      <div class="pl-4 text-label-3">↑ {{ e.confidence_promote }}</div>
+    {% endif %}
+    {% if e.confidence_demote %}
+      <div class="pl-4 text-label-3">↓ {{ e.confidence_demote }}</div>
+    {% endif %}
   </div>
 
   {% if e.is_permanent_ira %}
