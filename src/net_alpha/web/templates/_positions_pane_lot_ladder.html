@@ -5,7 +5,33 @@
    Click on a lot opens the ticker lots view in a new tab.
 
    Status values: "ST" (short-term), "LT" (long-term), "TACKED" (IRC §1223(4)).
+
+   Cross-account mode (cross_account=True): lot rows are grouped by account with
+   a small section header per account. The per-row HTML is factored into the
+   `lot_row` macro to avoid duplication between the flat-list and grouped branches.
 #}
+{% macro lot_row(row, sym) %}
+<a href="/ticker/{{ sym }}?view=lots" target="_blank"
+   data-testid="lot-row"
+   data-pill="{{ row.status }}"
+   {% if row.is_tacked %}title="Holding period tacked from a prior wash sale (IRC §1223(4))"{% endif %}
+   class="flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[12px] hover:bg-surface-2 no-underline text-text">
+  <span class="font-mono text-label-2 shrink-0">{{ row.date.isoformat() }}</span>
+  <span class="font-mono shrink-0">{{ fmt_quantity(row.qty) }} sh</span>
+  <span class="font-mono shrink-0">{{ fmt_currency(row.adj_basis) }}</span>
+  {% if row.unrealized is not none %}
+    <span class="font-mono shrink-0 {{ 'text-neg' if row.unrealized < 0 else 'text-pos' }}">{{ fmt_currency(row.unrealized) }}</span>
+  {% else %}
+    <span class="font-mono shrink-0 text-label-3">—</span>
+  {% endif %}
+  <span class="text-[10px] font-medium px-1.5 py-[1px] rounded shrink-0
+        {% if row.status == 'ST' %}bg-warn-tint text-warn
+        {% elif row.status == 'LT' %}bg-pos-tint text-pos
+        {% elif row.status == 'TACKED' %}bg-info-tint text-info
+        {% else %}bg-surface-2 text-label-2
+        {% endif %}">{{ row.status }}</span>
+</a>
+{% endmacro %}
 {% if lot_rows %}
 {% set _sorted = lot_rows | sort(attribute='date', reverse=True) %}
 {% set _collapsed = _sorted | length > 5 %}
@@ -20,28 +46,27 @@
     <div class="text-[10px] uppercase tracking-wide text-label-2 mb-2">{{ _sorted | length }} lot{{ 's' if _sorted | length != 1 else '' }}</div>
   {% endif %}
   <div x-show="expanded" {% if _collapsed %}style="display:none"{% endif %} class="space-y-1">
-    {% for row in _sorted %}
-      <a href="/ticker/{{ sym }}?view=lots" target="_blank"
-         data-testid="lot-row"
-         data-pill="{{ row.status }}"
-         {% if row.is_tacked %}title="Holding period tacked from a prior wash sale (IRC §1223(4))"{% endif %}
-         class="flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[12px] hover:bg-surface-2 no-underline text-text">
-        <span class="font-mono text-label-2 shrink-0">{{ row.date.isoformat() }}</span>
-        <span class="font-mono shrink-0">{{ fmt_quantity(row.qty) }} sh</span>
-        <span class="font-mono shrink-0">{{ fmt_currency(row.adj_basis) }}</span>
-        {% if row.unrealized is not none %}
-          <span class="font-mono shrink-0 {{ 'text-neg' if row.unrealized < 0 else 'text-pos' }}">{{ fmt_currency(row.unrealized) }}</span>
-        {% else %}
-          <span class="font-mono shrink-0 text-label-3">—</span>
+    {% if cross_account %}
+      {# Group by account: render a small section header per account, then the
+         rows for that account, preserving the date-desc sort within each group.
+         distinct_account_displays is pre-sorted by the route so iteration order
+         is deterministic. #}
+      {% for account_display in distinct_account_displays %}
+        {% set account_rows = _sorted | selectattr('account', 'equalto', account_display) | list %}
+        {% if account_rows %}
+          <div data-testid="lot-ladder-group" class="mt-2 first:mt-0">
+            <div class="text-[10px] uppercase tracking-wide text-label-3 mb-1">{{ account_display }}</div>
+            {% for row in account_rows %}
+              {{ lot_row(row, sym) }}
+            {% endfor %}
+          </div>
         {% endif %}
-        <span class="text-[10px] font-medium px-1.5 py-[1px] rounded shrink-0
-              {% if row.status == 'ST' %}bg-warn-tint text-warn
-              {% elif row.status == 'LT' %}bg-pos-tint text-pos
-              {% elif row.status == 'TACKED' %}bg-info-tint text-info
-              {% else %}bg-surface-2 text-label-2
-              {% endif %}">{{ row.status }}</span>
-      </a>
-    {% endfor %}
+      {% endfor %}
+    {% else %}
+      {% for row in _sorted %}
+        {{ lot_row(row, sym) }}
+      {% endfor %}
+    {% endif %}
   </div>
 </div>
 {% endif %}

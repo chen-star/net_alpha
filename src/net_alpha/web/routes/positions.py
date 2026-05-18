@@ -270,6 +270,7 @@ def _pane_lot_info(
                 "status": status,
                 "days_to_lt": days_to_lt,
                 "is_tacked": is_tacked,
+                "account": getattr(lot, "account", ""),
             }
         )
 
@@ -397,6 +398,7 @@ def _build_pane_ctx(
     transfer_date: dt.date | None = None
     equity_open: list = []  # initialized here so it's always defined after the try
     recent_trades: list = []  # initialized here so it's always defined after the try
+    cross_account: bool = False  # set inside try if 2+ accounts hold sym
 
     try:
         lots = repo.get_lots_for_ticker(sym)
@@ -423,6 +425,15 @@ def _build_pane_ctx(
         )
         # Equity-only lots (no option_details)
         equity_open = [lot for lot in open_lots if lot.option_details is None]
+
+        # Cross-account detection: if no specific account was requested and the
+        # symbol is held in 2+ accounts, surface that to the header and ladder.
+        distinct_open_accounts: set[str] = {lot.account for lot in equity_open}
+        if account_id is None and len(distinct_open_accounts) >= 2:
+            account_label = f"Across {len(distinct_open_accounts)} accounts"
+            cross_account = True
+        else:
+            cross_account = False
 
         if equity_open:
             qty = sum((Decimal(str(lot.quantity)) for lot in equity_open), Decimal("0"))
@@ -497,6 +508,11 @@ def _build_pane_ctx(
 
     # --- Sim-sell realized delta ---
     # realized_delta == loss when both are computed (qty * price − open_basis).
+    # cross_account is set inside the try block above; if the try threw it
+    # stays False (the safe default — no grouping).
+    distinct_account_displays: list[str] = (
+        sorted({row["account"] for row in lot_info["lots"]}) if cross_account else []
+    )
     return {
         "sym": sym,
         "account_id": account_id,
@@ -514,6 +530,8 @@ def _build_pane_ctx(
         "header_status": header_status,
         "ws_outlook": ws_outlook,
         "recent_trades": recent_trades,
+        "cross_account": cross_account,
+        "distinct_account_displays": distinct_account_displays,
     }
 
 
