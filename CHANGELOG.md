@@ -2,6 +2,55 @@
 
 
 
+## v0.73.3 (2026-05-18)
+
+### Fix
+
+* fix(tax): correct 9 calculation bugs surfaced by QA audit
+
+Audit of every calculation module flagged 19 bugs. The 9 CRITICAL/HIGH
+ones are fixed here; 10 MEDIUM/LOW are documented as follow-ups.
+
+CRITICAL
+* audit/reconciliation: per_lot_diffs collapsed same-day sells via a
+  dict-comprehension, producing simultaneous false-positive (&#34;broker has
+  no match&#34;) and false-negative (collapsed pair) findings on every
+  partial fill. Now FIFO-matches into a per-date bucket list.
+
+HIGH
+* audit/reconciliation: _net_alpha_realized skipped BTC (buy-to-close)
+  trades, leaving options accounts permanently DIFF vs broker.
+* section_1256/mtm: open_section_1256_positions walked lots from oldest
+  without consuming prior sells, so a buy/sell/buy sequence picked basis
+  from the already-disposed lot.
+* section_1256/classifier: classify_closed_trades had the same problem
+  on sequential sells; second-and-later sells silently re-read the
+  first-consumed lot. Refactored to date-order walk with shared FIFO
+  state.
+* section_1256/{mtm,classifier}: prior-year MTM FMV is per-contract;
+  substituting it bare as basis_before ignored quantity for longs and
+  produced a sign error for shorts carried across year-end.
+* engine/detector: sold-put as wash-sale replacement recorded
+  kind=&#34;deferred&#34; then silently failed the basis rollover (no equity
+  lot exists for an STO), so the disallowed loss was effectively lost.
+  Now classified kind=&#34;deferred_to_contract&#34; to surface the situation.
+* db/repository: realized_pnl_split_by_year was equities-only, so the
+  60/40 LT/ST character of §1256 P&amp;L and year-end MTM never reached
+  multi-year carryforward replay. Folds §1256 classifications and MTM
+  into the ST/LT split per §1212(b).
+* portfolio/{carryforward,tax_planner}, engine/lot_selector: §1211(b)
+  cap was hardcoded $3,000 in five call sites; MFS filers cap at
+  $1,500. New ordinary_loss_cap(filing_status) helper threaded through
+  derive_carryforward, compute_offset_budget, build_plan,
+  summarize_manual_picks, and lot_selector._compute_after_tax.
+
+Each fix has a focused regression test under tests/{audit,engine,
+portfolio,section_1256}/test_*_qa_fixes.py (13 new tests). Full suite:
+2442 passed (+13), 2 skipped, lint clean.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ced5e96`](https://github.com/chen-star/net_alpha/commit/ced5e96285172f4abe2af2fbbe26e129e24dc81a))
+
+
 ## v0.73.2 (2026-05-18)
 
 ### Fix
