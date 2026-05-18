@@ -2,6 +2,34 @@
 
 
 
+## v0.73.1 (2026-05-18)
+
+### Fix
+
+* fix(web): repair two Alpine x-data regressions surfaced by UI audit
+
+The lot ladder x-data attribute was being truncated at the first double
+quote in a JS comment (// ISO dates like &#34;2025-06-15&#34; ...), since the
+surrounding HTML attribute is also double-quoted. The browser ended the
+attribute mid-payload, leaving Alpine with malformed source — the side
+pane logged 9 errors per open and leaked raw JS code into the rendered
+DOM as visible text. Comment now omits the example quotes and carries a
+guard note explaining why double quotes are forbidden in that block.
+
+accountMultiSelect() lived in a trailing &lt;script&gt; inside the macro that
+also declared x-data=&#34;accountMultiSelect()&#34;. Alpine&#39;s first init pass
+walked the div before the inline script executed, raising 4 noisy
+ReferenceErrors (accountMultiSelect, picked, selectedNames, currentLabel)
+on every page that used the macro (/imports, /settings, /tax). Moved the
+function to web/static/account_multi_select.js loaded via base.html with
+defer before alpine.min.js — same pattern palette.js already uses. The
+redundant simplified copy in portfolio.html is dropped; the static file
+is the single source of truth. Test updated to grep the JS asset instead
+of the page body.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`78565c8`](https://github.com/chen-star/net_alpha/commit/78565c864f48dbfbe0e08e4f3c2aa228656647a0))
+
+
 ## v0.73.0 (2026-05-18)
 
 ### Documentation
