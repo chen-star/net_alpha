@@ -2,6 +2,313 @@
 
 
 
+## v0.72.0 (2026-05-18)
+
+### Documentation
+
+* docs(portfolio): tighten F2 audit comment + clarify F3 sell fixture
+
+Phase F-A review notes (both non-blocking):
+- F3: pass cost=10_000 explicitly to make_sell so the loss is obvious at
+  the call site without requiring a reader to trace stitch_account&#39;s
+  cost_basis overwrite.
+- F2: re-organize the audit comment as a clean bulleted list so all 10
+  Lot fields are enumerated consistently (no separate &#34;+1 fixed in Task 4&#34;
+  footnote that read as if 9 were checked). ([`423730c`](https://github.com/chen-star/net_alpha/commit/423730c85f0d2661514a8fa1b01f0bfcb183d251))
+
+* docs(portfolio): document open_lots_view audit confirming no other dropped fields
+
+A field-by-field audit of the partial-consumption Lot reconstruction in
+open_lots_view confirmed that, after the Task 4 tacked_acquired_date fix,
+every Lot field is correctly handled. Added an inline comment recording
+the audit result and flagging the reconstruction site for future Lot
+field additions.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`125df98`](https://github.com/chen-star/net_alpha/commit/125df9854165007f9aa176dd1f7073d5bac6f3e6))
+
+### Feature
+
+* feat(web): add client-side column-header sort to lot ladder
+
+Adds five clickable column headers (Date, Qty, Basis, Unrealized, Status)
+to the lot ladder in the positions side pane. Clicking a header sorts all
+lot rows client-side via Alpine.js DOM reordering, toggling asc/desc on
+repeat clicks. Each lot row now carries machine-sortable data attributes
+(data-row-date, data-row-qty, data-row-basis, data-row-unrealized) alongside
+the existing data-pill; cross-account groups stay sorted within their own
+container via data-row-group / data-row-flat anchors.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`41431b0`](https://github.com/chen-star/net_alpha/commit/41431b0eb9000de275f2831f4f221eaa8c4fa373))
+
+* feat(web): add partial wash-sale outlook state via simulate_sell bisection
+
+When selling all open shares would trigger a wash sale but selling fewer
+(up to the gain-lot FIFO boundary) would not, _pane_ws_outlook now emits
+state=&#34;partial&#34; with prescriptive guidance: &#34;Selling up to K of N today
+is safe; selling more triggers a wash sale.&#34;
+
+_find_safe_sell_qty binary-searches O(log₂(qty)) simulate_sell calls to
+find the largest clean K. The partial state is reachable when the position
+holds a mix of gain lots (FIFO-first) and loss lots — selling into only
+the gain lots keeps realized PnL non-negative and avoids the trigger.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`fa900f5`](https://github.com/chen-star/net_alpha/commit/fa900f5b132ff8546e6712979f956333c51c25e3))
+
+* feat(web): add WS risk pill to lot ladder for §1091(d)-implicated lots
+
+Cross-references open lots against WashSaleViolation.replacement_trade_id
+(the join key is lot.trade_id). Lots whose adjusted_basis was inflated by a
+prior disallowed-loss roll-in now render a &#34;WS&#34; pill in the ladder with a
+§1091(d) tooltip. Status precedence: TACKED &gt; WS &gt; LT &gt; ST — when both apply
+(the standard wash-sale outcome), TACKED wins. The _eff_class header-pill
+helper treats &#34;WS&#34; like &#34;TACKED&#34; (uses days_to_lt for the ST/LT aggregate).
+
+Violation field used: WashSaleViolation.replacement_trade_id (str), joined
+via Lot.trade_id. No engine changes — reads only from existing rows.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3c2ee71`](https://github.com/chen-star/net_alpha/commit/3c2ee7108d46e8ba2af9cc2f864aa0173013e8fe))
+
+* feat(web): add cross-account disambiguator to pane header and lot ladder
+
+When the positions pane is fetched without account_id and the symbol is held
+in 2+ accounts, the header account slot now shows &#34;Across N accounts&#34; and the
+lot ladder groups rows by account with a per-account section header.
+Single-account and account-scoped requests render exactly as before.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`60dfc01`](https://github.com/chen-star/net_alpha/commit/60dfc01f86e5f96abee0f7f0da1f8a563c028703))
+
+* feat(web): restack pane header into two lines with explicit ST/LT pill
+
+Restructures _positions_pane_header.html from a single-line 11-field
+strip into a two-line cockpit layout (identifier row + status/value row)
+and adds an always-present ST/LT pill derived from open lot statuses.
+TACKED lots count as LT per §1223(4). New tests cover all three pill
+states (ST, LT, ST/LT) and the no-lots case.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7ba352f`](https://github.com/chen-star/net_alpha/commit/7ba352fbec7a707c52b84f8ad62328d12c59a0a6))
+
+* feat(web): emit data-account-id on position rows for multi-account disambiguation
+
+Add account_id: int | None to PositionRow (populated for single-account
+rows only), wire it through compute_open_positions via account_id_by_display,
+and emit data-account-id on each &lt;tr&gt; in _portfolio_table.html. Update the
+Alpine @click handler to read dataset.accountId instead of hardcoding null,
+so both click and j/k keyboard nav correctly scope the positions pane when
+the same symbol exists in multiple accounts.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b9dad08`](https://github.com/chen-star/net_alpha/commit/b9dad08c982def6196c20f4792df8b0cd0d23bf6))
+
+* feat(web): keep positions pane open across filter changes when symbol still visible
+
+Adds positions_pane.js which hooks into htmx:afterSwap on #holdings-positions
+and wraps window.__applyPositionsSymbolFilter; after each filter change it checks
+whether the currently-open symbol row is still visible and closes the pane (via
+Alpine __x.$data.open = false) only when it is not.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d151463`](https://github.com/chen-star/net_alpha/commit/d1514638efd65a381f7798da2176be314086bb54))
+
+* feat(web): add j/k/o keyboard nav to positions side pane
+
+Appends a second IIFE to table_nav.js that listens for j/k/o keydowns
+while the pane is open and the user is not typing in an input. j/k step
+through visible tr[data-row=&#34;position&#34;] rows in #holdings-positions and
+dispatch the existing open-positions-pane custom event so the Alpine
+aside re-fetches pane content via HTMX. o opens /ticker/{sym} in a new
+tab. Guards: paneIsOpen() (checks display != none) and focusedInInput()
+(tagName regex + isContentEditable) prevent accidental firings.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`222a553`](https://github.com/chen-star/net_alpha/commit/222a553a0c4c8c6b99c0eda1dd003e09b5ea6537))
+
+* feat(web): add recent activity to positions pane
+
+Adds a &#34;Recent activity&#34; block to the positions side pane showing the
+last 5 trades on the current sym+account scope, sorted newest-first,
+each linking to the ticker timeline anchored at the trade row.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`d35ecd5`](https://github.com/chen-star/net_alpha/commit/d35ecd5223bb3d54064c892f8c075a7611728185))
+
+* feat(web): add wash-sale outlook to positions pane
+
+Adds _pane_ws_outlook() helper that calls simulate_sell synchronously
+and maps the result to one of four states (skipped/clean/trigger/error);
+wires ws_outlook into _build_pane_ctx; creates the outlook partial and
+includes it at the bottom of _positions_pane_body.html.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4c355bf`](https://github.com/chen-star/net_alpha/commit/4c355bf8640360861bb8cb09ee09d9a68a3d70ec))
+
+* feat(web): add lot ladder to positions side pane
+
+Also preserves tacked_acquired_date through open_lots_view when a lot
+is partially consumed by sells, so the ladder&#39;s Tacked pill is accurate
+(§1223(4)).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`daf0f05`](https://github.com/chen-star/net_alpha/commit/daf0f0571283c187b307167b7c1f92cbed5876d2))
+
+* feat(web): add action row + outlet to positions pane
+
+Replace the always-rendered sim-preview and set-basis form with a three-button
+action row (Sim sell, Sim buy more, Set basis) plus a right-aligned Open ticker
+link. Each button HTMX-swaps the corresponding partial into an empty outlet div
+on click — no navigation occurs. Extract _build_pane_ctx() from positions_pane()
+so the two new GET /positions/pane/sim and /positions/pane/basis endpoints can
+reuse the same context-building logic without duplication.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`65ea6e9`](https://github.com/chen-star/net_alpha/commit/65ea6e980b85e4f092e33ef2103521f6a30f94c7))
+
+* feat(web): add ST→LT clock to positions side pane
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`95d933f`](https://github.com/chen-star/net_alpha/commit/95d933f4f3a7961443ee22240f579f5c00582c2b))
+
+### Fix
+
+* fix(web): F8 sort attr mismatches, F6 permanent_ira filter, F7 test pin
+
+Phase F-C review surfaced 4 findings:
+
+- F8 (critical): status sort read &#39;data-row-pill&#39; but rows emit &#39;data-pill&#39;;
+  silently no-op&#39;d the Status column click. Fix the attribute name.
+- F8 (critical): date sort used parseFloat which parses &#39;2025-06-15&#39; as
+  2025, collapsing all same-year dates to equal. Exclude the date column
+  from the numeric path and let it sort lexicographically on the ISO
+  string (works for ISO yyyy-mm-dd). Also switch parseFloat→Number to
+  reject mixed strings like &#39;$1,200&#39; rather than silently treating them
+  as numeric.
+- F6 (important): get_violations_for_ticker returns both &#39;deferred&#39; and
+  &#39;permanent_ira&#39; kinds; the WS pill tooltip says &#34;basis was inflated&#34;
+  which is FALSE for permanent_ira (Rev. Rul. 2008-5: IRA replacement
+  legs don&#39;t get basis rollover). Filter to kind=&#34;deferred&#34; only.
+- F7 (minor): partial-state test asserted &#39;assert &#34;50&#34; in html&#39; which
+  passed coincidentally on lot-row quantities, not on the actual
+  safe_qty. The real safe_qty for that fixture is 75 (50 gain shares +
+  25 loss shares before realized P&amp;L tips negative). Replace with a
+  regex that pins the exact &#34;Selling up to 75 of …&#34; phrase. ([`63d7dbf`](https://github.com/chen-star/net_alpha/commit/63d7dbfb2337e8a0a3806a88285ef5ee8867b430))
+
+* fix(web): TACKED lot does not imply LT in header pill
+
+Phase F-B review found a tax-correctness bug in F4&#39;s header_status:
+`_statuses &lt;= {&#34;LT&#34;, &#34;TACKED&#34;}` classified any TACKED lot as LT, but
+§1223(4) only shifts the effective acquired date back to the original
+lot&#39;s date — that date may still be &lt; 365 days ago.
+
+Use `days_to_lt == 0` (set by `_pane_lot_info` only when held_days &gt; 365)
+to discriminate TACKED-LT from TACKED-ST. Add a regression test seeding
+a wash sale where the original buy is 350d ago; the tacked replacement
+must show ST in the header pill, not LT. ([`5113a90`](https://github.com/chen-star/net_alpha/commit/5113a90ec1f82cba1ce3dc608d6091f09dfa0b0c))
+
+* fix(web): use Alpine v3 $data() API for pane state access
+
+Phase D quality-review finding (critical):
+- table_nav.js (j/k/o nav) and positions_pane.js (sticky-open) both
+  read aside.__x.$data — Alpine v2 internal. The project ships
+  Alpine 3.14.1 which never sets __x on DOM elements, so currentSym()
+  always returned null, breaking j/k row stepping and disabling the
+  sticky-open close-on-filter behavior entirely.
+- Replace with window.Alpine.$data(aside) (the v3 public API).
+- Add console.warn on access failure so future version mismatches
+  surface in DevTools instead of vanishing silently.
+- Add a modifier-key guard to the pane keydown handler so Ctrl+J
+  no longer double-fires (matches the existing first IIFE&#39;s pattern).
+- Add unit tests asserting the v3 idiom is used and v2 is not.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ee452d6`](https://github.com/chen-star/net_alpha/commit/ee452d63993ad175ed0d643a682a46473042b46a))
+
+* fix(web): proportional disallowed amount + clean-state spacing + recent-row test
+
+Phase C review findings:
+- _pane_ws_outlook: proportional disallowed = (blocking_qty/sold_qty) ×
+  loss, capped at 1.0. The prior abs(realized_pnl) overstated by up to
+  10× in partial-wash cases.
+- Clean state renders a zero-size hidden span instead of an mt-4 div,
+  eliminating dead vertical space on the majority of positions.
+- Tighten account-filter assertion: `not in` AND exact recent-row count.
+- Add logger.warning to both new exception handlers (don&#39;t leak repr to
+  user messages).
+- Eliminate redundant get_trades_for_ticker call; reuse the trades list
+  already fetched in the main try-block.
+- Template polish: text-neg class instead of inline style; updated body
+  comment + per-include task labels; shrink-0 on recent-row numerics.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0066776`](https://github.com/chen-star/net_alpha/commit/00667763c685a75a790d8500f0c644d88ae9f9c3))
+
+* fix(web): correct unrealized P&amp;L formula + route Sim buy more directly to /sim
+
+Phase B quality-review findings:
+- _pane_lot_info: unrealized = price*qty - adjusted_basis (adjusted_basis
+  is the lot total, not per-share). The buggy formula slipped in from
+  the original design doc.
+- Sim buy more button now opens /sim directly; the existing
+  _positions_pane_sim_preview partial is sell-only and produced a
+  misleading &#34;Sim sell preview&#34; panel on buy clicks.
+- /positions/pane/sim endpoint rejects action!=sell with 400.
+- Strengthen basis-endpoint test to verify the form actually rendered.
+- Add unit tests for the unrealized formula on a known fixture.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e3485ae`](https://github.com/chen-star/net_alpha/commit/e3485aedc5f215de5a7ff7cf707174940af7cc39))
+
+### Refactor
+
+* refactor(web): tighten _pane_lot_info type hints, doc, and clock denominator
+
+Phase A code-quality review notes (all non-blocking polish):
+- type list[Lot] / dict[str, Any] instead of bare list / dict
+- drop &#34;WS&#34; from helper docstring (status never produces it)
+- capture today once in positions_pane handler
+- fix clock denominator 365 → 366 (366d held is first LT day, matching
+  the helper&#39;s held_days &gt; 365 boundary) ([`7d361e5`](https://github.com/chen-star/net_alpha/commit/7d361e50eed3d84956bcda57c4e111e50c57941b))
+
+* refactor(web): extract pane header into _positions_pane_header.html ([`b0382cc`](https://github.com/chen-star/net_alpha/commit/b0382cc72644bcdf98c559d893453c02c1d625e0))
+
+### Style
+
+* style: apply ruff format to 12 files with format drift
+
+CI&#39;s `ruff format --check` was failing on 12 files. 5 are from the
+equity/cash chart redesign work (cash_flow.py, models.py, the two new
+test modules); the other 7 had drifted in earlier commits on master
+and were already failing CI before this session. Single sweep fixes
+the lot.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7e58f72`](https://github.com/chen-star/net_alpha/commit/7e58f723f0d6a6d973e3b6839fbfbf1c3476b9a9))
+
+### Test
+
+* test(web): un-skip tacked-pill test with §1223(4) wash-sale fixture
+
+Seeds a 3-trade scenario (original buy → loss sell → replacement buy within
+±30d) that causes the wash-sale engine to set tacked_acquired_date on the
+replacement lot, then asserts the lot ladder renders data-pill=&#34;TACKED&#34; with
+the IRC §1223(4) tooltip.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a448c21`](https://github.com/chen-star/net_alpha/commit/a448c21140408c8fa2f4c795d89a628f557d6677))
+
+* test(web): point integration test at /positions/pane/basis; drop flaky asset_v check
+
+Final-review findings on the positions-pane-cockpit branch:
+
+- test_multi_lot_split_flow_clears_basis_warning was hitting /positions/pane
+  and asserting the multi-lot set-basis link is in the body. After the Task 3
+  action-row refactor, the form (and its multi-lot link) lazy-loads via
+  GET /positions/pane/basis. Update the test to fetch that endpoint for the
+  multi-lot link assertions, while keeping the original /positions/pane
+  fetch to verify the &#34;Set basis&#34; button is in the action row.
+
+- test_recent_activity_filters_by_account had a `&#34;99&#34; not in html` check
+  that was flaky against the Tailwind asset_v epoch (Unix timestamps in the
+  177905xxxx range occasionally contain &#34;99&#34;). Drop the substring check;
+  the adjacent `count(&#39;data-testid=&#34;recent-row&#34;&#39;) == 1` assertion is the
+  robust account-filter guarantee. ([`81058e0`](https://github.com/chen-star/net_alpha/commit/81058e0b2e1d2369c2e6d60b4646b52a7092a58e))
+
+* test(web): add positions pane composition smoke test
+
+Smoke test that seeds a richly-populated position (two open lots on a
+symbol, one approaching LT boundary, one as wash-sale replacement) and
+asserts all six sub-blocks (header, ST→LT clock, action row, lot ladder,
+wash-sale outlook, recent activity) are present in a single pane render.
+Catches the &#34;I added a partial but forgot to wire it&#34; regression.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8997ee6`](https://github.com/chen-star/net_alpha/commit/8997ee676e4d075059c0962a42189de93cb53f4b))
+
+
 ## v0.71.0 (2026-05-17)
 
 ### Chore
