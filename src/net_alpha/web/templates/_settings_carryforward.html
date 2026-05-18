@@ -28,20 +28,20 @@
   <table class="w-full text-[12px]">
     <thead class="text-label-2">
       <tr class="border-b" style="border-color: var(--color-hairline);">
-        <th class="text-left py-1 font-medium">Tax year (into)</th>
-        <th class="text-right py-1 font-medium">ST carryforward</th>
-        <th class="text-right py-1 font-medium">LT carryforward</th>
-        <th class="text-left py-1 font-medium">Source</th>
-        <th class="text-right py-1 font-medium">Actions</th>
+        <th class="text-left px-3 py-1 font-medium">Tax year (into)</th>
+        <th class="text-right px-3 py-1 font-medium">ST carryforward</th>
+        <th class="text-right px-3 py-1 font-medium">LT carryforward</th>
+        <th class="text-left px-3 py-1 font-medium">Source</th>
+        <th class="text-right px-3 py-1 font-medium">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for row in rows %}
       <tr class="border-b" style="border-color: var(--color-hairline);">
-        <td class="py-1 font-mono">{{ row.year }}</td>
-        <td class="py-1 text-right font-mono">${{ '{:,.2f}'.format(row.st) }}</td>
-        <td class="py-1 text-right font-mono">${{ '{:,.2f}'.format(row.lt) }}</td>
-        <td class="py-1">
+        <td class="px-3 py-1 font-mono">{{ row.year }}</td>
+        <td class="px-3 py-1 text-right font-mono">${{ '{:,.2f}'.format(row.st) }}</td>
+        <td class="px-3 py-1 text-right font-mono">${{ '{:,.2f}'.format(row.lt) }}</td>
+        <td class="px-3 py-1">
           {% if row.source == 'user' %}
             <span class="px-1.5 py-0.5 rounded bg-surface text-text"
                   style="border:0.5px solid var(--color-hairline);">from override</span>
@@ -52,7 +52,7 @@
             <span class="text-label-3">none</span>
           {% endif %}
         </td>
-        <td class="py-1 text-right">
+        <td class="px-3 py-1 text-right">
           <button type="button"
                   hx-get="/settings/carryforward/edit?year={{ row.year }}"
                   hx-target="closest tr"

@@ -58,7 +58,7 @@
               <td class="r num {% if row.realized_pl < 0 %}text-neg{% elif row.realized_pl > 0 %}text-pos{% else %}text-label-2{% endif %}">
                 {% if row.realized_pl > 0 %}+{% endif %}{{ fmt_currency(row.realized_pl) }}
                 {% if row.wash_sale %}
-                  <span class="chip chip-confirm ml-1" title="Wash sale: {{ fmt_currency(row.disallowed_loss) }} disallowed">W</span>
+                  <span class="chip chip-confirmed ml-1" title="Wash sale: {{ fmt_currency(row.disallowed_loss) }} disallowed">W</span>
                 {% endif %}
               </td>
               <td class="text-label-2 num">{{ fmt_date(row.opened_date) }}</td>

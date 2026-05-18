@@ -3,11 +3,11 @@
   <div class="text-sm text-text">
     <strong>Loss in</strong> {{ violation.loss_account or "-" }} → <strong>triggered by</strong> {{ violation.buy_account or "-" }} on {{ violation.triggering_buy_date or "-" }}
     {% if violation.kind == "permanent_ira" %}
-      <span class="ml-2 chip-confirm"
+      <span class="ml-2 chip-confirmed"
             title="Rev. Rul. 2008-5 — replacement leg is in a tax-advantaged account; loss is permanently disallowed (no §1091(d) basis rollover)">Permanent (IRA trap)</span>
     {% endif %}
     {% if violation.source == "schwab_g_l" %}
-      <span class="ml-2 chip-confirm"
+      <span class="ml-2 chip-confirmed"
             title="Confirmed by Schwab's 1099-B reporting">Schwab</span>
     {% elif violation.source == "engine" %}
       {% if violation.loss_account != violation.buy_account %}

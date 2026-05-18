@@ -38,7 +38,7 @@
         <td class="text-[12px]">{{ row.account_label }}</td>
         <td>
           {% if row.lockout_clear %}
-            <span class="chip-confirm" title="Recent buy of this (or a substantially-identical) security puts the sale inside the 30-day wash window. Selling before this date triggers a wash sale.">{{ row.lockout_clear }}</span>
+            <span class="chip-confirmed" title="Recent buy of this (or a substantially-identical) security puts the sale inside the 30-day wash window. Selling before this date triggers a wash sale.">{{ row.lockout_clear }}</span>
           {% else %}
             <span class="chip-unclear" style="color: var(--color-pos); background: rgba(48,209,88,0.14);">clear</span>
           {% endif %}

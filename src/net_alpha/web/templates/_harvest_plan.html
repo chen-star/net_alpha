@@ -56,7 +56,7 @@
         <td class="text-[12px]">{{ row.account_label }}</td>
         <td>
           {% if row.lockout_clear %}
-            <span class="chip-confirm">{{ row.lockout_clear }}</span>
+            <span class="chip-confirmed">{{ row.lockout_clear }}</span>
           {% else %}
             <span class="chip-unclear" style="color: var(--color-pos); background: rgba(48,209,88,0.14);">clear</span>
           {% endif %}

@@ -35,9 +35,9 @@
           </span>
         {% endif %}
       </td>
-      <td class="py-1.5 pr-3 text-right tabular-nums">{{ f.ours if f.ours is not none else '—' }}</td>
-      <td class="py-1.5 pr-3 text-right tabular-nums">{{ f.theirs if f.theirs is not none else '—' }}</td>
-      <td class="py-1.5 pr-3 text-right tabular-nums">{{ f.delta if f.delta is not none else '—' }}</td>
+      <td class="py-1.5 pr-3 text-right tabular-nums">{{ fmt_quantity(f.ours) }}</td>
+      <td class="py-1.5 pr-3 text-right tabular-nums">{{ fmt_quantity(f.theirs) }}</td>
+      <td class="py-1.5 pr-3 text-right tabular-nums">{{ fmt_quantity(f.delta) }}</td>
       <td class="py-1.5 pr-3">
         <button type="button"
                 class="text-[12px] text-accent hover:underline"

@@ -162,7 +162,7 @@
     <div class="panel mb-4 text-sm flex gap-4 items-baseline">
       <div><span class="font-medium">{{ summary.violation_count }}</span> violations</div>
       <div><span class="font-medium text-confirmed num">${{ "%.2f"|format(summary.disallowed_total|float) }}</span> disallowed</div>
-      <div><span class="chip-confirm">{{ summary.confirmed_count }} confirmed</span></div>
+      <div><span class="chip-confirmed">{{ summary.confirmed_count }} confirmed</span></div>
       <div><span class="chip-probable">{{ summary.probable_count }} probable</span></div>
       <div><span class="chip-unclear">{{ summary.unclear_count }} unclear</span></div>
     </div>

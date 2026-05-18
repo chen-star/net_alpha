@@ -7,7 +7,7 @@ module.exports = {
     { pattern: /^text-(label-1|label-2|label-3|pos|neg|warn|info|indigo|violet|text)$/ },
     { pattern: /^border-(hairline|hairline-strong|pos|neg|warn|info|indigo|violet|indigo-edge|text)$/ },
     // chip variants
-    "chip", "chip-confirm", "chip-probable", "chip-unclear",
+    "chip", "chip-confirmed", "chip-probable", "chip-unclear",
     // KPI hero halo
     "kpi-hero",
     // segmented buttons
