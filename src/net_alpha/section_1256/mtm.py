@@ -44,6 +44,11 @@ def open_section_1256_positions(
     Key = tuple[str, str, float, str, str]
     net_qty: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
     representative_opt: dict[Key, OptionDetails] = {}
+    # Per-position FIFO consumption of long lots by prior sells. Without this,
+    # buy 100 → sell 100 → buy 50 produced net_qty=50 but the basis loop walked
+    # `lots` from oldest first and pulled basis from the already-disposed
+    # 100-lot — yielding the wrong $/contract for the still-open 50.
+    sells_by_key: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
 
     for t in trades:
         if not _is_eligible(t, universe):
@@ -58,6 +63,7 @@ def open_section_1256_positions(
             net_qty[key] += delta
         else:
             net_qty[key] -= delta
+            sells_by_key[key] += delta
         representative_opt.setdefault(key, o)
 
     positions: list[OpenPosition] = []
@@ -72,14 +78,27 @@ def open_section_1256_positions(
                 [lot for lot in lots if lot.ticker == ticker and lot.account == account and lot.option_details == opt],
                 key=lambda lot: lot.date,
             )
+            # Pre-consume the FIFO chain by the total qty of prior sells, so
+            # the basis loop reads from the still-open lots only.
+            prior_sells_remaining = sells_by_key.get(key, Decimal("0"))
+            lot_avail: list[tuple[Lot, Decimal]] = []
+            for lot in matching:
+                lot_qty = Decimal(str(lot.quantity))
+                if prior_sells_remaining > 0:
+                    consumed = min(prior_sells_remaining, lot_qty)
+                    prior_sells_remaining -= consumed
+                    lot_qty -= consumed
+                if lot_qty > 0:
+                    lot_avail.append((lot, lot_qty))
+
             remaining = qty
             basis_total = Decimal("0")
-            for lot in matching:
+            for lot, available in lot_avail:
                 if remaining <= 0:
                     break
-                lot_qty = Decimal(str(lot.quantity))
-                take = min(remaining, lot_qty)
-                per_unit = Decimal(str(lot.adjusted_basis)) / lot_qty if lot_qty > 0 else Decimal("0")
+                take = min(remaining, available)
+                original_qty = Decimal(str(lot.quantity))
+                per_unit = Decimal(str(lot.adjusted_basis)) / original_qty if original_qty > 0 else Decimal("0")
                 basis_total += take * per_unit
                 remaining -= take
             positions.append(
@@ -137,7 +156,19 @@ def mark_to_market(
 
         prior_mtm = prior_year_mtm_basis_fn(pkey, tax_year - 1)
         if prior_mtm is not None:
-            basis_before = prior_mtm
+            # `prior_mtm` is the per-contract FMV stored on last year's MTM row.
+            # Per §1256(a)(2), the position's basis after MTM equals the FMV
+            # marked at year-end. For a position of quantity Q at per-contract
+            # FMV F, post-MTM basis = signed Q × F:
+            #   long  (qty > 0): +qty × F
+            #   short (qty < 0): -|qty| × F   (a credit/obligation, signed)
+            # Substituting `prior_mtm` directly (as bare per-contract FMV) was
+            # wrong for any qty != 1: long-with-qty-N over-reported MTM loss as
+            # (N×F2 − F1) instead of N×(F2 − F1); shorts compounded a sign flip.
+            if pos.quantity > 0:
+                basis_before = pos.quantity * prior_mtm
+            else:
+                basis_before = -abs(pos.quantity) * prior_mtm
         else:
             basis_before = pos.basis
 

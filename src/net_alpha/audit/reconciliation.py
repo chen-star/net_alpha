@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from enum import StrEnum
 
 from pydantic import BaseModel
@@ -99,13 +100,30 @@ def reconcile_all(
     return out
 
 
+_OPTION_SHORT_CLOSE_SOURCES = {"option_short_close", "option_short_close_assigned"}
+
+
 def _net_alpha_realized(repo: Repository, account_id: int, symbol: str) -> float:
-    """Sum realized P/L for the (account, symbol) pair across all time."""
+    """Sum realized P/L for the (account, symbol) pair across all time.
+
+    Includes:
+      * Sell trades — standard equity/long-option close.
+      * Buy-to-close (BTC) trades that close short options — these have
+        ``action == "buy"`` with ``basis_source`` in the short-close set.
+        For a BTC, ``(proceeds or 0) - (cost_basis or 0) == -cost_basis``,
+        which correctly contributes the *expense* leg to a STO/BTC pair's
+        net P&L. Excluding BTC left options-heavy accounts always DIFF
+        against broker totals.
+    """
     total = 0.0
     accounts = {a.id: f"{a.broker}/{a.label}" if a.label else a.broker for a in repo.list_accounts()}
     target_display = accounts.get(account_id)
     for t in repo.get_trades_for_ticker(symbol):
-        if t.action.lower() != "sell":
+        is_sell = t.action.lower() == "sell"
+        is_short_close = (
+            t.action.lower() == "buy" and getattr(t, "basis_source", "") in _OPTION_SHORT_CLOSE_SOURCES
+        )
+        if not (is_sell or is_short_close):
             continue
         if target_display is not None and t.account != target_display:
             continue
@@ -152,14 +170,22 @@ def per_lot_diffs(
         for t in repo.get_trades_for_ticker(symbol)
         if t.action.lower() == "sell" and (target_display is None or t.account == target_display)
     ]
-    sells_by_date: dict[date, Trade] = {t.date: t for t in sells}
+    # Multiple net-alpha sells can close on the same date (e.g. partial fills
+    # of the same order, or two distinct orders the user submitted that day).
+    # Group into per-date lists, then FIFO-consume each list as broker lots
+    # are walked. Using a single-value dict here silently collapsed same-day
+    # sells, producing simultaneous false-positive (broker has no match) and
+    # false-negative (collapsed pair) findings.
+    sells_by_date: dict[date, list[Trade]] = defaultdict(list)
+    for t in sorted(sells, key=lambda x: x.date):
+        sells_by_date[t.date].append(t)
 
     diffs: list[LotDiff] = []
     for bl in broker_lots:
         if bl.closed is None:
             continue
-        match = sells_by_date.get(bl.closed)
-        if match is None:
+        bucket = sells_by_date.get(bl.closed)
+        if not bucket:
             diffs.append(
                 LotDiff(
                     closed_date=bl.closed,
@@ -174,6 +200,11 @@ def per_lot_diffs(
                 )
             )
             continue
+        # FIFO-consume from the bucket: prefer a same-qty match if any, else
+        # the oldest unconsumed sell.
+        same_qty = next((t for t in bucket if abs((t.quantity or 0) - bl.qty) < 1e-6), None)
+        match = same_qty if same_qty is not None else bucket[0]
+        bucket.remove(match)
         na_basis = match.cost_basis or 0.0
         na_proceeds = match.proceeds or 0.0
         delta = round(

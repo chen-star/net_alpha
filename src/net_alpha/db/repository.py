@@ -2479,6 +2479,21 @@ class Repository:
                     lt += portion
                 else:
                     st += portion
+
+        # Fold §1256 60/40 splits (closed contracts + year-end MTM) into the
+        # ST/LT buckets so they propagate through multi-year carryforward
+        # replay per §1212(b). Without this, §1256 losses vanished between
+        # years: this function was equities-only, so MTM and 60/40 character
+        # never reached the carryforward derivation.
+        for cls_row in self.list_section_1256_classifications(year=year):
+            lt += Decimal(str(cls_row.long_term_portion))
+            st += Decimal(str(cls_row.short_term_portion))
+        with Session(self.engine) as session:
+            mtm_stmt = select(Section1256MTMRow).where(Section1256MTMRow.tax_year == year)
+            for mtm_row in session.exec(mtm_stmt).all():
+                lt += Decimal(str(mtm_row.long_term_portion))
+                st += Decimal(str(mtm_row.short_term_portion))
+
         return st, lt
 
     # ---- Carryforward overrides ----

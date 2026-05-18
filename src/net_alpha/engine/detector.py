@@ -177,7 +177,24 @@ def detect_wash_sales(
                 # advantaged account, §1091(a) still disallows the loss but
                 # §1091(d)'s basis rollover can't apply — the loss is gone.
                 is_permanent = _is_tax_advantaged(candidate.account, account_types)
-                kind = "permanent_ira" if is_permanent else "deferred"
+                # Sold-put trigger: §1091 still disallows the loss, but the
+                # replacement leg is a "contract to acquire" (no holding lot
+                # exists in our schema to roll basis into). We mark these as
+                # "deferred_to_contract" so reporting can distinguish them
+                # from ordinary equity rollovers — they require manual
+                # tracking until the put is closed or assigned.
+                is_sold_put_trigger = (
+                    candidate.is_sell()
+                    and candidate.is_option()
+                    and candidate.option_details is not None
+                    and candidate.option_details.call_put == "P"
+                )
+                if is_permanent:
+                    kind = "permanent_ira"
+                elif is_sold_put_trigger:
+                    kind = "deferred_to_contract"
+                else:
+                    kind = "deferred"
 
                 violations.append(
                     WashSaleViolation(
@@ -196,10 +213,16 @@ def detect_wash_sales(
                 )
 
                 # Adjust replacement lot basis + tack holding period (§1223(4)),
-                # but ONLY for deferred wash sales. Permanent (IRA-trap) ones
-                # have no §1091(d) rollover, so the IRA lot's basis is its own
-                # purchase cost — untouched.
-                if not is_permanent and candidate.id in lots:
+                # but ONLY for ordinary deferred wash sales. Permanent
+                # (IRA-trap) ones have no §1091(d) rollover. Sold-put triggers
+                # ("deferred_to_contract") have no equity lot to mutate; the
+                # rolled basis must attach to the option contract — out of
+                # scope for v1.
+                if (
+                    not is_permanent
+                    and not is_sold_put_trigger
+                    and candidate.id in lots
+                ):
                     lots[candidate.id].adjusted_basis += disallowed
                     current_eff = lots[candidate.id].effective_acquired_date()
                     if loss_side_acquired < current_eff:

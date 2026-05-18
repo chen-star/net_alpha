@@ -492,9 +492,12 @@ def _compute_after_tax(
     state_tax = max(Decimal("0"), st_after + lt_after) * brackets.state_marginal_rate
     tax_bill = st_tax + lt_tax + state_tax
 
-    # Loss residue: up to $3K against ordinary saves federal_marginal_rate * $3K.
+    # Loss residue: up to the §1211(b) cap saves federal_marginal_rate * cap.
+    # Cap is $3,000 normally, $1,500 for MFS.
+    from net_alpha.portfolio.carryforward import ordinary_loss_cap
+
     loss_residue = max(Decimal("0"), -(st_after + lt_after))
-    cap_used = min(loss_residue, Decimal("3000"))
+    cap_used = min(loss_residue, ordinary_loss_cap(getattr(brackets, "filing_status", None)))
     loss_benefit = cap_used * brackets.federal_marginal_rate
 
     after_tax = pre_tax - tax_bill + loss_benefit

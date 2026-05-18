@@ -189,11 +189,21 @@ class WashSaleViolation(BaseModel):
     triggering_buy_date: date | None = None
     ticker: str = ""
     source: str = "engine"  # "schwab_g_l" | "engine"
-    # IRC §1091 disposition kind. See Rev. Rul. 2008-5: a wash sale whose
-    # replacement leg sits in an IRA / Roth / 401(k) / HSA can't roll the
-    # disallowed loss into basis (no IRA basis ledger), so the loss is
-    # permanently lost. "deferred" = ordinary §1091(d) rollover; "permanent_ira"
-    # = Rev. Rul. 2008-5 permanent disallowance.
+    # IRC §1091 disposition kind:
+    #   "deferred"             — ordinary §1091(d) basis-into-replacement-lot
+    #                            rollover (the default).
+    #   "permanent_ira"        — Rev. Rul. 2008-5: replacement leg sits in an
+    #                            IRA / Roth / 401(k) / HSA. §1091(a) still
+    #                            disallows the loss, but §1091(d)'s basis
+    #                            rollover can't apply (no basis ledger in a
+    #                            tax-advantaged account) — the loss is
+    #                            permanently lost.
+    #   "deferred_to_contract" — replacement leg is a sold put (STO put).
+    #                            §1091 still disallows the loss; §1091(d)
+    #                            rolls basis into "the contract to acquire,"
+    #                            but we don't track basis on STO contracts in
+    #                            v1, so the rollover must be tracked manually
+    #                            until the put is closed or assigned.
     kind: str = "deferred"
 
 

@@ -16,6 +16,18 @@ from decimal import Decimal
 from typing import Literal, Protocol
 
 ORDINARY_LOSS_CAP = Decimal("3000")
+ORDINARY_LOSS_CAP_MFS = Decimal("1500")
+
+
+def ordinary_loss_cap(filing_status: str | None) -> Decimal:
+    """§1211(b): $3,000 against ordinary income, halved to $1,500 for MFS.
+
+    `filing_status` matches `TaxBrackets.filing_status`: single | mfj | mfs | hoh.
+    None or any non-MFS value returns the standard $3,000 cap.
+    """
+    if filing_status is not None and filing_status.lower() == "mfs":
+        return ORDINARY_LOSS_CAP_MFS
+    return ORDINARY_LOSS_CAP
 
 
 @dataclass(frozen=True)
@@ -34,20 +46,28 @@ class _EffectiveCarryforwardRepo(_CarryforwardRepo, Protocol):
     def get_carryforward_override(self, year: int): ...
 
 
-def derive_carryforward(repo: _CarryforwardRepo, year: int) -> Carryforward:
+def derive_carryforward(
+    repo: _CarryforwardRepo,
+    year: int,
+    *,
+    filing_status: str | None = None,
+) -> Carryforward:
     """Replay all years from the earliest realized year up through year-1.
 
-    Returns the (st, lt) magnitude that rolls INTO `year`.
+    Returns the (st, lt) magnitude that rolls INTO `year`. `filing_status`
+    controls the §1211(b) cap (MFS halves to $1,500); when unknown, the
+    standard $3,000 cap is used.
     """
     first = repo.earliest_trade_year()
     if first is None or first >= year:
         return Carryforward(st=Decimal("0"), lt=Decimal("0"), source="none")
 
+    cap = ordinary_loss_cap(filing_status)
     st_carry = Decimal("0")
     lt_carry = Decimal("0")
     for y in range(first, year):
         st_pnl, lt_pnl = repo.realized_pnl_split_by_year(y)
-        st_carry, lt_carry = _roll_one_year(st_carry, lt_carry, st_pnl, lt_pnl)
+        st_carry, lt_carry = _roll_one_year(st_carry, lt_carry, st_pnl, lt_pnl, cap=cap)
     return Carryforward(st=st_carry, lt=lt_carry, source="derived")
 
 
@@ -56,6 +76,8 @@ def _roll_one_year(
     lt_in: Decimal,
     st_pnl: Decimal,
     lt_pnl: Decimal,
+    *,
+    cap: Decimal = ORDINARY_LOSS_CAP,
 ) -> tuple[Decimal, Decimal]:
     """One-year roll honoring §1212(b) netting and §1211 $3K cap.
 
@@ -116,10 +138,10 @@ def _roll_one_year(
     lt_new_loss -= absorbed
     st_gain -= absorbed
 
-    # 4) §1211 $3K cap on this year's NEW net losses only.
+    # 4) §1211 $3K (or $1,500 MFS) cap on this year's NEW net losses only.
     new_total = st_new_loss + lt_new_loss
     if new_total > 0:
-        cap_used = min(new_total, ORDINARY_LOSS_CAP)
+        cap_used = min(new_total, cap)
         surplus = new_total - cap_used
         if surplus > 0:
             # Per Schedule D Capital Loss Carryover Worksheet, surplus retains
@@ -138,12 +160,18 @@ def _roll_one_year(
     return st_carry + st_share, lt_carry + lt_share
 
 
-def get_effective_carryforward(repo: _EffectiveCarryforwardRepo, year: int) -> Carryforward:
+def get_effective_carryforward(
+    repo: _EffectiveCarryforwardRepo,
+    year: int,
+    *,
+    filing_status: str | None = None,
+) -> Carryforward:
     """Override-wins resolution. Falls back to ``derive_carryforward``.
 
     A user-recorded override always wins — even when both ST and LT amounts
     are zero, an explicit zero means "I have no carryforward" and overrides
-    any derived value.
+    any derived value. `filing_status` is forwarded to the derive path for
+    the §1211(b) cap (MFS = $1,500; default $3,000).
     """
     override = repo.get_carryforward_override(year)
     if override is not None:
@@ -152,4 +180,4 @@ def get_effective_carryforward(repo: _EffectiveCarryforwardRepo, year: int) -> C
             lt=Decimal(str(override.lt_amount)),
             source="user",
         )
-    return derive_carryforward(repo, year)
+    return derive_carryforward(repo, year, filing_status=filing_status)

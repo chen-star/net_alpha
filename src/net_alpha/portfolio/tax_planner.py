@@ -431,17 +431,22 @@ def compute_offset_budget(
     year: int,
     planned_trades: list[PlannedTrade] | None = None,
     carryforward: Carryforward | None = None,
+    *,
+    filing_status: str | None = None,
 ) -> OffsetBudget:
-    """YTD realized P&L vs the $3,000-against-ordinary cap, optionally with planned trades.
+    """YTD realized P&L vs the §1211(b) ordinary-income cap, optionally with planned trades.
 
-    Pure read. Cap is fixed at $3,000.
+    Pure read. Cap defaults to $3,000; MFS filers get $1,500 per §1211(b) when
+    ``filing_status="mfs"`` is supplied (TaxBrackets.filing_status).
 
     When ``carryforward`` is supplied, the prior-year ST/LT loss carryforward is
     folded into the projection: the combined (current-year net loss + incoming
-    carryforward) is what gets clamped at the $3K ordinary-income cap, with the
-    residue surfaced as ``carryforward_projection`` (the amount that will roll
-    forward into the next year).
+    carryforward) is what gets clamped at the cap, with the residue surfaced as
+    ``carryforward_projection`` (the amount that will roll forward into the
+    next year).
     """
+    from net_alpha.portfolio.carryforward import ordinary_loss_cap
+
     losses, gains = _realized_in_year(repo, year)
     net = losses + gains
 
@@ -449,7 +454,7 @@ def compute_offset_budget(
     cf_lt = carryforward.lt if carryforward else Decimal("0")
     cf_total = cf_st + cf_lt
 
-    cap = ORDINARY_LOSS_CAP
+    cap = ordinary_loss_cap(filing_status)
     used = Decimal("0")
     carry = Decimal("0")
 
@@ -644,11 +649,14 @@ def build_plan(
     exclude_locked: bool = True,
 ) -> HarvestPlan:
     """Greedy by estimated tax saved per candidate, ST-first on ties."""
+    from net_alpha.portfolio.carryforward import ordinary_loss_cap
+
+    fs = marginal_rates.filing_status if marginal_rates is not None else None
     used_auto = target_budget is None
     if target_budget is not None:
         target = target_budget
     else:
-        target = max(Decimal("0"), realized_gains_ytd) + ORDINARY_LOSS_CAP
+        target = max(Decimal("0"), realized_gains_ytd) + ordinary_loss_cap(fs)
 
     skipped_locked: list[HarvestOpportunity] = []
     pool: list[HarvestOpportunity] = []
@@ -671,7 +679,7 @@ def build_plan(
         total_loss = next_total
         tax_saved_sum += _tax_saved_for(c, marginal_rates)
 
-    cap = ORDINARY_LOSS_CAP
+    cap = ordinary_loss_cap(fs)
     excess_over_gains = max(Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd))
     ordinary_offset = min(cap, excess_over_gains)
     gain_offset = total_loss - ordinary_offset
@@ -700,6 +708,9 @@ def summarize_manual_picks(
     No algorithm — the user's UI selection is authoritative. Unknown picks
     (stale UI state) are silently dropped.
     """
+    from net_alpha.portfolio.carryforward import ordinary_loss_cap
+
+    fs = marginal_rates.filing_status if marginal_rates is not None else None
     by_key = {(c.symbol, c.account_label): c for c in candidates}
     selected = [by_key[k] for k in picks if k in by_key]
 
@@ -708,7 +719,7 @@ def summarize_manual_picks(
         (_tax_saved_for(c, marginal_rates) for c in selected),
         Decimal("0"),
     )
-    cap = ORDINARY_LOSS_CAP
+    cap = ordinary_loss_cap(fs)
     excess_over_gains = max(Decimal("0"), total_loss - max(Decimal("0"), realized_gains_ytd))
     ordinary_offset = min(cap, excess_over_gains)
     gain_offset = total_loss - ordinary_offset
