@@ -231,7 +231,10 @@ def pledged_cash_at(
     puts pledge cash (CSP collateral); short calls are excluded — they are
     covered-call positions whose "collateral" is the underlying shares, not
     cash. Trades dated after ``on`` are ignored so the function is safe to
-    call per-date for a historical series.
+    call per-date for a historical series. Contracts whose expiry is before
+    ``on`` are skipped: a short put released its collateral the moment it
+    expired worthless or was assigned, regardless of whether the broker CSV
+    contains an explicit closing trade.
     """
     _filter = set(accounts) if accounts else None
     trades_asof = [t for t in trades if t.date <= on and (_filter is None or t.account in _filter)]
@@ -239,6 +242,8 @@ def pledged_cash_at(
     total = Decimal("0")
     for r in rows:
         if r.call_put != "P":
+            continue
+        if r.expiry < on:
             continue
         total += Decimal(str(r.strike)) * Decimal("100") * r.qty_short
     return total.quantize(Decimal("0.01"))

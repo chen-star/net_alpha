@@ -28,7 +28,7 @@
       {% endif %}
     </span>
     {% if kpis.lifetime_min is not none and kpis.lifetime_max is not none %}
-      <span class="text-label-3 text-[11px] num ml-auto">
+      <span class="text-label-3 text-[11px] num">
         min ${{ "{:,.0f}".format(kpis.lifetime_min|float) }} {{ kpis.lifetime_min_on.strftime("%b '%y") }}
         · max ${{ "{:,.0f}".format(kpis.lifetime_max|float) }} {{ kpis.lifetime_max_on.strftime("%b '%y") }}
       </span>
