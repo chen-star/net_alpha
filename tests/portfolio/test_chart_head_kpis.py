@@ -224,9 +224,7 @@ def test_period_pipeline_buggy_input_documents_regression():
             amount=5000,
         ),
     ]
-    period_cash_points = build_cash_balance_series(
-        events=events, trades=[], period=(2026, 2027)
-    )
+    period_cash_points = build_cash_balance_series(events=events, trades=[], period=(2026, 2027))
     # Sanity: period filter only affects emission, cumulative still lifetime.
     assert period_cash_points[0].cumulative_contributions == Decimal("55000")
 

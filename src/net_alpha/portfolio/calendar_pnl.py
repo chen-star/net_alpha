@@ -30,6 +30,7 @@ def monthly_realized_pl(
     buckets: dict[int, dict[str, Decimal | int]] = {
         m: {"gain": Decimal("0"), "loss": Decimal("0"), "count": 0} for m in range(1, 13)
     }
+
     # Equity Sells with missing proceeds/cost_basis are degenerate — drop
     # them so they don't pollute the monthly P&L. STOs (option Sells) are
     # kept regardless of cost_basis=None because ``realized_pl_contributions``
@@ -39,9 +40,7 @@ def monthly_realized_pl(
             return t.proceeds is not None and t.cost_basis is not None
         return True
 
-    contributions = realized_pl_contributions(
-        [t for t in trades if _keep(t)], period=(year, year + 1)
-    )
+    contributions = realized_pl_contributions([t for t in trades if _keep(t)], period=(year, year + 1))
     for c in contributions:
         if c.date.year != year:
             continue

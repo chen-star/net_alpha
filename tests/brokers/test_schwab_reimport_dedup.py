@@ -14,7 +14,7 @@ of whether ``cost_basis`` was added in the meantime.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 
 import pytest
 from sqlmodel import SQLModel, create_engine

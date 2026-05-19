@@ -72,9 +72,7 @@ def classify_closed_trades(
                     continue
                 take = min(remaining, avail)
                 original_qty = Decimal(str(lot.quantity))
-                per_unit = (
-                    Decimal(str(lot.adjusted_basis)) / original_qty if original_qty > 0 else Decimal("0")
-                )
+                per_unit = Decimal(str(lot.adjusted_basis)) / original_qty if original_qty > 0 else Decimal("0")
                 basis += take * per_unit
                 remaining_per_lot[lot.id] = avail - take
                 remaining -= take

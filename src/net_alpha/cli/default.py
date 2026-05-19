@@ -109,9 +109,7 @@ def run(csv_paths: list[str], account_label: str, detail: bool = False) -> int:
             trades = import_result.trades
             existing = repo.existing_natural_keys(account.id)
             new = filter_new(trades, existing)
-            new = filter_sell_basis_drift_duplicates(
-                new, existing_keys=repo.existing_sell_basis_blind_keys(account.id)
-            )
+            new = filter_sell_basis_drift_duplicates(new, existing_keys=repo.existing_sell_basis_blind_keys(account.id))
             existing_assignments = repo.existing_put_assignment_keys(account.id)
             new = filter_assignment_duplicates(new, existing_assignments=existing_assignments)
             rec = ImportRecord(

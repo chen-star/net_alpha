@@ -120,9 +120,7 @@ def _net_alpha_realized(repo: Repository, account_id: int, symbol: str) -> float
     target_display = accounts.get(account_id)
     for t in repo.get_trades_for_ticker(symbol):
         is_sell = t.action.lower() == "sell"
-        is_short_close = (
-            t.action.lower() == "buy" and getattr(t, "basis_source", "") in _OPTION_SHORT_CLOSE_SOURCES
-        )
+        is_short_close = t.action.lower() == "buy" and getattr(t, "basis_source", "") in _OPTION_SHORT_CLOSE_SOURCES
         if not (is_sell or is_short_close):
             continue
         if target_display is not None and t.account != target_display:

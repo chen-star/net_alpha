@@ -63,8 +63,7 @@ def test_expired_short_option_not_in_open_options_list(client, repo):
     assert "ALIVE" in body
     # Expired contract is filtered out of the actionable list.
     assert "EXP" not in body or "expired" in body.lower(), (
-        "Expired short option leaked into the open-options listing — "
-        "users see a row they cannot act on."
+        "Expired short option leaked into the open-options listing — users see a row they cannot act on."
     )
 
 

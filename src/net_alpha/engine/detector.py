@@ -218,11 +218,7 @@ def detect_wash_sales(
                 # ("deferred_to_contract") have no equity lot to mutate; the
                 # rolled basis must attach to the option contract — out of
                 # scope for v1.
-                if (
-                    not is_permanent
-                    and not is_sold_put_trigger
-                    and candidate.id in lots
-                ):
+                if not is_permanent and not is_sold_put_trigger and candidate.id in lots:
                     lots[candidate.id].adjusted_basis += disallowed
                     current_eff = lots[candidate.id].effective_acquired_date()
                     if loss_side_acquired < current_eff:

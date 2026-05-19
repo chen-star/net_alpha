@@ -2018,14 +2018,8 @@ class Repository:
         """
         effective: list[str] = list(accounts) if accounts else []
         with Session(self.engine) as session:
-            rows_meta = session.exec(
-                select(AccountRow.broker, AccountRow.label, AccountRow.type)
-            ).all()
-            tax_advantaged = {
-                f"{b}/{lab}"
-                for b, lab, t in rows_meta
-                if t and t != "taxable"
-            }
+            rows_meta = session.exec(select(AccountRow.broker, AccountRow.label, AccountRow.type)).all()
+            tax_advantaged = {f"{b}/{lab}" for b, lab, t in rows_meta if t and t != "taxable"}
             stmt = select(Section1256MTMRow)
             if period.kind == "year" and period.year is not None:
                 stmt = stmt.where(Section1256MTMRow.tax_year == period.year)
@@ -2500,9 +2494,9 @@ class Repository:
             for loss_trade_id, disallowed in session.exec(
                 select(WashSaleViolationRow.loss_trade_id, WashSaleViolationRow.disallowed_loss)
             ).all():
-                disallowed_by_trade[loss_trade_id] = disallowed_by_trade.get(
-                    loss_trade_id, Decimal("0")
-                ) + Decimal(str(disallowed))
+                disallowed_by_trade[loss_trade_id] = disallowed_by_trade.get(loss_trade_id, Decimal("0")) + Decimal(
+                    str(disallowed)
+                )
         all_trades = [t for t in self.all_trades() if t.account in taxable_accounts]
         all_lots = [lot for lot in self.all_lots() if lot.account in taxable_accounts]
 

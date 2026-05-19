@@ -165,9 +165,7 @@ def test_realized_pnl_split_mixed_filter_keeps_only_taxable(repo):
     _seed_realized_gl(repo, acct_display="Schwab/Taxable", pnl=Decimal("200"))
     _seed_realized_gl(repo, acct_display="Schwab/Roth", pnl=Decimal("500"))
 
-    result = repo.realized_pnl_split(
-        Period.for_year(2025), accounts=["Schwab/Taxable", "Schwab/Roth"]
-    )
+    result = repo.realized_pnl_split(Period.for_year(2025), accounts=["Schwab/Taxable", "Schwab/Roth"])
     assert result["short_term"] == Decimal("200")
 
 
@@ -190,9 +188,7 @@ def test_section_1256_pnl_excludes_roth_when_no_account_filter(repo):
 
 
 def test_section_1256_mtm_pnl_excludes_roth_when_no_account_filter(repo):
-    repo.save_section_1256_mtm(
-        [_mtm_row("Schwab/Taxable", "k_t"), _mtm_row("Schwab/Roth", "k_r")]
-    )
+    repo.save_section_1256_mtm([_mtm_row("Schwab/Taxable", "k_t"), _mtm_row("Schwab/Roth", "k_r")])
 
     total = repo.section_1256_mtm_pnl(Period.for_year(2025))
     # Each row carries unrealized_pnl=50; only the taxable row should count.

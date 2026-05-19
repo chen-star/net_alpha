@@ -30,8 +30,9 @@ def _opt(strike: float, expiry: date, cp: str) -> OptionDetails:
     return OptionDetails(strike=strike, expiry=expiry, call_put=cp)
 
 
-def _trade(action: str, qty: int, when: date, *, opt: OptionDetails, basis: float | None, proceeds: float | None,
-           tid: str) -> Trade:
+def _trade(
+    action: str, qty: int, when: date, *, opt: OptionDetails, basis: float | None, proceeds: float | None, tid: str
+) -> Trade:
     return Trade(
         id=tid,
         account="x",
