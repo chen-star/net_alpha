@@ -2,6 +2,34 @@
 
 
 
+## v0.73.8 (2026-05-19)
+
+### Chore
+
+* chore: fix CI — drop unused import + apply ruff format
+
+- tests/brokers/test_schwab_reimport_dedup.py: remove unused `date` import (F401)
+- 10 files: apply ruff format (long lines from prior commit a6adbd8 left
+  unwrapped; CI had been masking these by failing at the lint step first)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`c403cef`](https://github.com/chen-star/net_alpha/commit/c403cef16b8e5c62d5d1e895aeb97dea892bc439))
+
+### Fix
+
+* fix(web): make open-options bar represent DTE on a fixed 0–365d scale
+
+Previously the bar tracked % of option lifetime elapsed (opened → expiry),
+which made two contracts with the same expiry render differently when opened
+at different times. The visual didn&#39;t match what users intuitively read —
+&#34;how much time is left.&#34;
+
+Now each bar fills proportionally to `dte / 365` (clamped at 100%) and uses
+a solid color matched to the DTE-urgency bucket: red ≤7d, orange ≤21d,
+green &gt;21d. Same expiry → same bar. A tooltip explains the scale.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`55e5c64`](https://github.com/chen-star/net_alpha/commit/55e5c640a84d107b5ef33a8b701c295e5b0c0ae6))
+
+
 ## v0.73.7 (2026-05-19)
 
 ### Fix
