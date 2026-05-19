@@ -110,6 +110,13 @@ def sim_form(
         q = quotes.get(sym)
         if q is not None and q.price is not None:
             price_hint = f"{float(q.price):.2f}"
+    account_displays = [a.display() for a in repo.list_accounts()]
+    # Single-account portfolios: preselect the lone account so Sell sims
+    # don't hit the "Account is required for Sell" error on first submit.
+    # With 2+ accounts we deliberately leave the default empty — silently
+    # picking one would risk misattributing a multi-account sim.
+    if not account_pref and len(account_displays) == 1:
+        account_pref = account_displays[0]
     return request.app.state.templates.TemplateResponse(
         request,
         "sim.html",
@@ -121,7 +128,7 @@ def sim_form(
             "price_hint": price_hint,
             "harvest_mode": bool(harvest),
             "tickers": repo.list_distinct_tickers(),
-            "accounts": [a.display() for a in repo.list_accounts()],
+            "accounts": account_displays,
             "today_iso": _date.today().isoformat(),
             "result": None,
         },
@@ -261,15 +268,30 @@ def sim_run(
 def _pick_recommended(results: list[LotPickResult]) -> int:
     """Pick the recommended lot strategy.
 
-    Tiebreak: prefer no-wash-sale combos first, then highest after-tax P&L.
-    On a true tie, returns the earliest strategy in the input order.
+    Wash-sale-tainted picks are always deprioritized regardless of P&L sign
+    (a wash sale defers the loss into the replacement lot's basis — not a
+    clean realized harvest).
+
+    Within the clean cohort the optimization flips with the sale's sign:
+
+    - Gain sale (max pre-tax > 0): keep the most money → pick the strategy
+      with the HIGHEST after-tax P&L.
+    - Loss sale (all pre-tax ≤ 0): harvest the biggest loss → pick the
+      strategy with the LOWEST (most-negative) after-tax P&L. This matches
+      the traffic-light "Lot method recommended: HIFO" hint shown above the
+      table. Picking highest-after-tax on a loss sale would recommend the
+      SMALLEST loss — directly contrary to the harvest intent.
+
+    Tiebreak: input order (earliest strategy wins on exact ties).
     """
+    is_loss_harvest = all(r.pre_tax_pnl <= 0 for r in results)
 
     def key(idx_r: tuple[int, LotPickResult]) -> tuple:
         idx, r = idx_r
-        # Sort: wash-sale risk LAST (False < True), then largest after-tax first
-        # (negate so min() picks the largest), then input order for stability.
-        return (r.has_wash_sale_risk, -r.after_tax_pnl, idx)
+        # Sort: wash-sale risk LAST (False < True), then the P&L objective
+        # (sign-aware), then input order for stability.
+        pnl_objective = r.after_tax_pnl if is_loss_harvest else -r.after_tax_pnl
+        return (r.has_wash_sale_risk, pnl_objective, idx)
 
     return min(enumerate(results), key=key)[0]
 

@@ -38,6 +38,20 @@
     <form method="get" action="/tax" class="kpi-card flex gap-3 items-end text-sm mb-2">
       {% if view %}<input type="hidden" name="view" value="{{ view }}">{% endif %}
       <div>
+        <label class="label-uc">Period:</label>
+        <select name="period" onchange="this.form.submit()"
+                class="bg-surface text-text rounded-md px-2 py-1 text-[12px]"
+                style="border:0.5px solid var(--color-hairline);">
+          <option value="ytd" {% if selected_period == 'ytd' %}selected{% endif %}>YTD ({{ current_year }})</option>
+          {% for y in available_years %}
+            {% if y != current_year %}
+              <option value="{{ y }}" {% if selected_period == y|string %}selected{% endif %}>{{ y }}</option>
+            {% endif %}
+          {% endfor %}
+          <option value="lifetime" {% if selected_period == 'lifetime' %}selected{% endif %}>Lifetime</option>
+        </select>
+      </div>
+      <div>
         <label class="label-uc">Account:</label>
         {{ macros_acc.account_multi_select(accounts_available, selected_accounts) }}
       </div>

@@ -39,6 +39,7 @@ def get_tax(
     view: str | None = None,
     account: list[str] = Query(default_factory=list),
     year: int | None = None,
+    period: str | None = None,
     ticker: str | None = None,
     confidence: str | None = None,
     sort: str | None = None,
@@ -100,6 +101,59 @@ def get_tax(
 
     accounts_available = sorted({imp.account_display for imp in repo.list_imports()})
 
+    # Period selector resolution. Accepts:
+    #   - "ytd" (default; current year)
+    #   - "lifetime"
+    #   - "<year>" (e.g. "2025") — also accepts the legacy ?year= query
+    # Maps the user-facing ``period`` query param onto the existing ``year``
+    # context — for_year(year) vs ytd(today.year) vs lifetime() — so the
+    # per-tab handlers below don't need to learn a new vocabulary.
+    today = _date.today()
+    available_years_set: set[int] = set()
+    for imp in repo.list_imports():
+        try:
+            available_years_set.add(imp.imported_at.year)
+        except AttributeError:
+            continue
+    for t in repo.all_trades():
+        try:
+            available_years_set.add(t.date.year)
+        except AttributeError:
+            continue
+    available_years_set.add(today.year)
+    available_years = sorted(available_years_set, reverse=True)
+
+    selected_period: str = "ytd"
+    resolved_year: int | None = year
+    if period:
+        period_norm = period.lower().strip()
+        if period_norm == "lifetime":
+            selected_period = "lifetime"
+            resolved_year = None  # lifetime — no year filter
+            # Carry a sentinel so per-tab handlers can distinguish lifetime
+            # from "no period specified" (which falls back to YTD).
+        elif period_norm == "ytd":
+            selected_period = "ytd"
+            resolved_year = today.year
+        else:
+            try:
+                yr = int(period_norm)
+            except ValueError:
+                yr = today.year
+            selected_period = str(yr)
+            resolved_year = yr
+    elif year is not None:
+        selected_period = str(year)
+        resolved_year = year
+    else:
+        selected_period = "ytd"
+        resolved_year = None  # let _build_performance_ctx fall back to ytd(today.year)
+
+    # Distinguish "lifetime explicitly requested" from "no year specified" —
+    # the Performance tab needs both to route through different Period
+    # constructors (lifetime() vs ytd(today.year)).
+    is_lifetime = selected_period == "lifetime"
+
     ctx: dict = {
         "request": request,
         "view": tab_view,
@@ -109,7 +163,10 @@ def get_tax(
         "account_filter_active": account_filter_active,
         # Legacy single-value kept for templates that still reference selected_account.
         "selected_account": single_account or "",
-        "selected_year": year,
+        "selected_year": resolved_year,
+        "selected_period": selected_period,
+        "available_years": available_years,
+        "current_year": today.year,
         "profile": profile,
         "page_key": "/tax",
         "account_id": filter_id,
@@ -146,7 +203,14 @@ def get_tax(
         ctx.update(proj_ctx)
     elif view == "performance":
         cfg = request.app.state.tax_brackets_cfg
-        perf_ctx = _build_performance_ctx(request, repo, cfg, year=year, accounts=accounts)
+        perf_ctx = _build_performance_ctx(
+            request,
+            repo,
+            cfg,
+            year=resolved_year,
+            accounts=accounts,
+            is_lifetime=is_lifetime,
+        )
         ctx.update(perf_ctx)
 
     return request.app.state.templates.TemplateResponse(request, "tax.html", ctx)
@@ -388,13 +452,16 @@ def _build_performance_ctx(
     cfg: TaxConfig | None,
     year: int | None,
     accounts: list[str],
+    is_lifetime: bool = False,
 ) -> dict:
     """Build the template context for the performance tab body fragment."""
     from net_alpha.portfolio.after_tax import Period, compute_after_tax
     from net_alpha.portfolio.carryforward import get_effective_carryforward
 
     today = _date.today()
-    if year is not None:
+    if is_lifetime:
+        period_obj = Period.lifetime()
+    elif year is not None and year != today.year:
         period_obj = Period.for_year(year)
     else:
         period_obj = Period.ytd(today.year)

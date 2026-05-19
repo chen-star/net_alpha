@@ -605,13 +605,21 @@ def holdings_options(
     today = date.today()
     trades = repo.all_trades()
     lots = repo.all_lots()
-    open_options = compute_open_option_positions(
+    open_options_all = compute_open_option_positions(
         trades,
         lots,
         accounts=accounts or None,
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=repo.get_option_gl_closures(),
     )
+    # Filter expired contracts (expiry < today): their collateral has already
+    # been released — see pledged_cash_at() in portfolio/cash_flow.py — and
+    # the broker has typically already closed them server-side. Leaving them
+    # in the open list mixes non-actionable rows with truly open contracts
+    # and overstates open exposure. The expired tally still surfaces via
+    # ``expired_count`` for the panel header.
+    open_options = [o for o in open_options_all if o.expiry >= today]
+    expired_count = len(open_options_all) - len(open_options)
     cash_secured_total = sum((o.cash_secured for o in open_options), start=Decimal("0"))
     premium_received_total = sum((o.cash_basis for o in open_options if o.side == "short"), start=Decimal("0"))
     long_cost_total = sum((o.cash_basis for o in open_options if o.side == "long"), start=Decimal("0"))
@@ -667,6 +675,7 @@ def holdings_options(
             "long_cost_total": long_cost_total,
             "options_summary": options_summary,
             "option_counts": option_counts,
+            "expired_count": expired_count,
             "today": today,
             "selected_accounts": accounts,
             "account_filter_active": bool(accounts),
@@ -708,10 +717,14 @@ def portfolio_equity_curve(
     if accounts:
         cash_events = [e for e in cash_events if e.account in accs_set]
 
+    # Lifetime cash points: build_account_value_series requires this so the
+    # first AccountValuePoint of the period anchors on the pre-period
+    # cumulative contributions; otherwise compute_chart_head_kpis would
+    # double-count the contributions and emit a phantom negative period_growth.
     cash_points = build_cash_balance_series(
         events=cash_events,
         trades=trades,
-        period=period_tuple,
+        period=None,
     )
 
     event_dates = sorted({t.date for t in trades} | {e.event_date for e in cash_events})
@@ -870,18 +883,23 @@ def _compute_portfolio_body_context(
         period=period_tuple,
         today=today,
     )
+    # build_account_value_series requires the LIFETIME cash series (so the
+    # first AccountValuePoint of the period anchors on the pre-period
+    # cumulative contributions; see the docstring on build_account_value_series).
+    # Period-scoped variant is not currently consumed elsewhere in this body,
+    # but if reintroduced should be built separately.
     cash_points = build_cash_balance_series(
         events=cash_events,
         trades=scoped_trades,
-        period=period_tuple,
+        period=None,
     )
     cash_slice = cash_allocation_slice(
         events=cash_events,
         trades=scoped_trades,
     )
 
-    # Account-value series (the redesigned equity curve). Built off the same
-    # cash_points + an event-anchored eval-date axis. See
+    # Account-value series (the redesigned equity curve). Built off the
+    # lifetime cash_points + an event-anchored eval-date axis. See
     # docs/superpowers/specs/2026-05-02-equity-curve-redesign-design.md.
     account_event_dates = sorted({t.date for t in scoped_trades} | {e.event_date for e in cash_events})
     account_eval_dates = build_eval_dates(
@@ -1553,10 +1571,11 @@ def explain_equity_point(
         cash_events = [e for e in cash_events if e.account in accs_set]
 
     # Re-derive the active series so we can locate `on` and its predecessor.
+    # Lifetime cash points required by build_account_value_series (see its docstring).
     cash_points = build_cash_balance_series(
         events=cash_events,
         trades=trades,
-        period=period_tuple,
+        period=None,
     )
     event_dates = sorted({t.date for t in trades} | {e.event_date for e in cash_events})
     eval_dates = build_eval_dates(period=period_tuple, today=today, event_dates=event_dates)

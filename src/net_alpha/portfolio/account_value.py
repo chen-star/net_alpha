@@ -262,6 +262,15 @@ def build_account_value_series(
     """Return one AccountValuePoint per date in ``eval_dates``.
 
     Returns [] when there are no cash_points (no account history).
+
+    ``cash_points`` MUST be the lifetime series (built with ``period=None``).
+    The per-date lookup walks forward to the most recent cp ≤ d, starting
+    from cash_bal=0/contrib=0; if cash_points is period-scoped, eval_dates
+    that precede the first emitted in-period point would silently inherit
+    the zero anchor and AccountValuePoint[0].contributions would read 0 —
+    which compute_chart_head_kpis would then subtract from end_contribs to
+    double-count the lifetime contributions anchor, producing a phantom
+    negative period_growth on the equity-curve panel head.
     """
     if not cash_points:
         return []

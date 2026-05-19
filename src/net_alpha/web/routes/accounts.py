@@ -17,10 +17,18 @@ VALID_TYPES = {t.value for t in AccountType}
 
 @router.get("", response_class=HTMLResponse)
 async def list_accounts(request: Request, repo: Repository = Depends(get_repository)) -> HTMLResponse:
+    """Render the account-type editor.
+
+    Direct browser navigation gets the full base.html shell (nav + theme +
+    footer); HTMX swaps get just the bare fragment so the swap target isn't
+    nested under a second <html>/<body>.
+    """
     rows = repo.list_accounts()
+    is_htmx = request.headers.get("HX-Request", "").lower() == "true"
+    template = "_settings_accounts.html" if is_htmx else "settings_accounts.html"
     return request.app.state.templates.TemplateResponse(
         request,
-        "_settings_accounts.html",
+        template,
         {
             "accounts": rows,
             "types": [t.value for t in AccountType],
