@@ -2,6 +2,34 @@
 
 
 
+## v0.73.6 (2026-05-19)
+
+### Fix
+
+* fix(web): six UI bugs surfaced by full-surface audit
+
+- equity-curve panel head: build_account_value_series now receives lifetime
+  cash_points so the first AVP anchors on pre-period cumulative
+  contributions; the panel no longer reports a phantom −24.8% drawdown
+  while the chart visibly trends up.
+- sim lot-strategy recommendation: _pick_recommended flips its after-tax
+  sort key on loss-harvest sales so the recommendation matches the
+  traffic-light &#34;Lot method recommended: HIFO&#34; hint instead of picking the
+  smallest loss.
+- /settings/accounts: direct GETs render inside base.html (dark theme,
+  nav, footer); HTMX swaps still receive the bare fragment.
+- positions/options: expired contracts drop out of the open list; their
+  count surfaces in the header as &#34;X expired (awaiting broker close)&#34;.
+- /sim: single-account portfolios preselect the lone account so Sell sims
+  don&#39;t hit the &#34;Account is required&#34; error on first submit; 2+ accounts
+  keep the explicit-choice default.
+- /tax: Period selector (YTD / past years / Lifetime) joins the toolbar
+  so Performance and Projection can scope to historical years instead of
+  being permanently locked to YTD.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`6bb09bf`](https://github.com/chen-star/net_alpha/commit/6bb09bfbc7291925e63bc060aa9be6dd839fe913))
+
+
 ## v0.73.5 (2026-05-19)
 
 ### Fix
