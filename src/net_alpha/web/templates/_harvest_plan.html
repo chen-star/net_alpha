@@ -71,7 +71,10 @@
           {% endif %}
         </td>
         <td>
-          <a href="/sim?ticker={{ row.symbol }}&amp;qty={{ row.qty }}&amp;harvest=1" class="btn-ghost text-[12px]">
+          {# Carry the row's account into the sim form so a multi-account
+             portfolio doesn't default to "All accounts" and sell the wrong lot.
+             account_label is already "broker/label" form (same shape sim accepts). #}
+          <a href="/sim?ticker={{ row.symbol }}&amp;qty={{ row.qty }}&amp;harvest=1&amp;action=sell{% if row.account_label %}&amp;account={{ row.account_label|urlencode }}{% endif %}" class="btn-ghost text-[12px]">
             Simulate harvest
           </a>
         </td>

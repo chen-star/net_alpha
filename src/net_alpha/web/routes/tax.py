@@ -176,12 +176,16 @@ def get_tax(
     if tab_view == "wash-sales":
         from net_alpha.web.routes.wash_sales import _wash_sales_context
 
+        # Wash-sales tab honours the page Period selector: ``year=`` (legacy)
+        # still wins if explicitly supplied; otherwise fall through to the
+        # resolved year (None on lifetime → no filter inside the helper).
+        ws_year = year if year is not None else (None if is_lifetime else resolved_year)
         ctx.update(
             _wash_sales_context(
                 repo,
                 ticker=ticker,
                 accounts=accounts,
-                year=year,
+                year=ws_year,
                 confidence=confidence,
                 sort=sort,
                 order=order,
@@ -199,7 +203,11 @@ def get_tax(
         ctx["account_filter_active"] = account_filter_active
     elif view == "projection":
         cfg = request.app.state.tax_brackets_cfg
-        proj_ctx = _build_projection_ctx(request, repo, cfg)
+        # Forward the Period selector's resolved year — lifetime collapses to
+        # today's year inside _build_projection_ctx (projection is single-year
+        # by nature).
+        proj_year = resolved_year if (resolved_year is not None and not is_lifetime) else today.year
+        proj_ctx = _build_projection_ctx(request, repo, cfg, year=proj_year)
         ctx.update(proj_ctx)
     elif view == "performance":
         cfg = request.app.state.tax_brackets_cfg
@@ -417,10 +425,17 @@ def _build_projection_ctx(
     request: Request,
     repo: Repository,
     cfg: TaxConfig | None,
+    year: int | None = None,
 ) -> dict:
-    """Build the template context for the projection tab body fragment."""
+    """Build the template context for the projection tab body fragment.
+
+    ``year`` honours the page-level Period selector. Lifetime/YTD/None all
+    fall back to the current tax year — projection is inherently a single-
+    year forward look, so a multi-year view doesn't apply here.
+    """
     today = _date.today()
-    ctx: dict = {"request": request, "tax_brackets_cfg": cfg}
+    target_year = year if year is not None else today.year
+    ctx: dict = {"request": request, "tax_brackets_cfg": cfg, "projection_year": target_year}
     if cfg is not None:
         brackets = TaxBrackets(
             filing_status=cfg.filing_status,
@@ -433,7 +448,7 @@ def _build_projection_ctx(
         try:
             ctx["projection"] = project_year_end_tax(
                 repo=repo,
-                year=today.year,
+                year=target_year,
                 brackets=brackets,
             )
             ctx["has_tax_config"] = True

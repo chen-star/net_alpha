@@ -23,7 +23,15 @@ def _parse_money(s: str) -> float:
 
 
 def _parse_yes_no(s: str) -> bool:
-    return s.strip().lower() == "yes"
+    # Schwab emits "Yes", "No", or "" (blank for non-loss rows). Anything else
+    # is a data-quality problem — silently mapping unknown text to False used
+    # to suppress real wash-sale flags from typos / casing variants.
+    v = s.strip().lower()
+    if v == "yes":
+        return True
+    if v in ("no", ""):
+        return False
+    raise ValueError(f"unrecognized Yes/No value {s!r}")
 
 
 def _parse_mdy(s: str) -> datetime:
@@ -67,7 +75,10 @@ class SchwabRealizedGLParser:
             cost_basis = _parse_money(row["Cost Basis (CB)"])
             unadjusted = _parse_money(row.get("Unadjusted Cost Basis", "") or row["Cost Basis (CB)"])
 
-            wash_sale = _parse_yes_no(row["Wash Sale?"])
+            try:
+                wash_sale = _parse_yes_no(row["Wash Sale?"])
+            except ValueError as e:
+                raise ValueError(f"Row {i}: 'Wash Sale?' {e}") from e
             disallowed = _parse_money(row.get("Disallowed Loss", ""))
 
             term = row.get("Term", "").strip()

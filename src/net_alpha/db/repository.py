@@ -159,13 +159,20 @@ class Repository:
                     TradeRow.action == "Sell",
                 )
             ).all()
+
+            # Must mirror ingest.dedup.sell_basis_blind_key: collapse
+            # proceeds=0 and proceeds=None to the same empty-string slot so
+            # canceled/zero-fill rows dedupe on re-import.
+            def _proc(p: float | None) -> str:
+                return "" if p is None or float(p) == 0.0 else str(p)
+
             return {
                 (
                     display,
                     ticker,
                     trade_date,
                     float(quantity),
-                    str(proceeds if proceeds is not None else ""),
+                    _proc(proceeds),
                 )
                 for ticker, trade_date, quantity, proceeds, option_strike in rows
                 if option_strike is None  # equity sells only — options have their own pairing
@@ -3000,10 +3007,18 @@ class Repository:
             return p if p is not None else Decimal("0")
 
         out: dict[tuple[str, str], dict] = {}
+        skipped_null_account = 0
         for lot, rem_qty, rem_basis in consumed:
             if lot.option_details is not None:
                 continue
             if rem_qty <= 0:
+                continue
+            # Verify joins broker_position.account_label (always "broker/label")
+            # against this side's key. A falsy lot.account (legacy migration
+            # artifact) would collapse to ("" , ticker) and silently fail the
+            # join, producing phantom PositionsMissingLocal findings.
+            if not lot.account:
+                skipped_null_account += 1
                 continue
             key = (lot.account, lot.ticker)
             row = out.get(key)
@@ -3019,6 +3034,12 @@ class Repository:
             row["qty"] += float(rem_qty)
             row["adjusted_basis_total"] += float(rem_basis)
             row["market_value_total"] += float(rem_qty * _price(lot.ticker))
+        if skipped_null_account:
+            logging.getLogger(__name__).warning(
+                "aggregate_open_positions: skipped %d open lot(s) with empty/NULL account "
+                "— verify reconciliation will not see them",
+                skipped_null_account,
+            )
         return list(out.values())
 
     def latest_broker_positions(self) -> tuple[list, str | None]:

@@ -22,13 +22,21 @@ def sell_basis_blind_key(t: Trade) -> SellBasisBlindKey:
     basis-blind key catches that case — two sells with identical
     (account, ticker, date, qty, proceeds) are the same logical close
     regardless of which export ran the basis column.
+
+    A zero-proceeds Sell (canceled / no-fill row recorded as $0) and a
+    missing-proceeds Sell must collapse to the same key — otherwise a
+    re-import sees them as distinct and silently duplicates.
     """
+    if t.proceeds is None or float(t.proceeds) == 0.0:
+        proceeds_str = ""
+    else:
+        proceeds_str = str(t.proceeds)
     return (
         t.account,
         t.ticker,
         t.date.isoformat(),
         float(t.quantity),
-        str(t.proceeds if t.proceeds is not None else ""),
+        proceeds_str,
     )
 
 

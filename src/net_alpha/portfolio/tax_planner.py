@@ -637,14 +637,32 @@ class HarvestPlan(BaseModel):
 
 
 def _tax_saved_for(opp: HarvestOpportunity, rates: TaxBrackets | None) -> Decimal:
-    abs_loss = abs(opp.loss)
+    # Estimated tax saved is undefined without marginal rates — returning
+    # abs_loss (the pre-fix behaviour) silently asserted a 100% rate and
+    # made every loss look maximally valuable on the harvest queue. Callers
+    # gate the "Est. tax saved" display on has_tax_config (_harvest_plan.html).
     if rates is None:
-        return abs_loss
+        return Decimal("0")
+    abs_loss = abs(opp.loss)
     if opp.lt_st == "ST":
         rate = rates.federal_marginal_rate + rates.state_marginal_rate
     else:
         rate = rates.ltcg_rate
     return abs_loss * rate
+
+
+def _sort_score(opp: HarvestOpportunity, rates: TaxBrackets | None) -> Decimal:
+    """Ranking signal for the harvest queue.
+
+    With rates configured, sort by estimated tax saved. Without rates, fall
+    back to absolute loss so the biggest losses still surface first — this
+    keeps the queue useful before the user fills in tax config, without
+    quietly polluting the user-facing "tax saved" column with the loss
+    magnitude itself.
+    """
+    if rates is None:
+        return abs(opp.loss)
+    return _tax_saved_for(opp, rates)
 
 
 def build_plan(
@@ -672,7 +690,7 @@ def build_plan(
         else:
             pool.append(c)
 
-    pool.sort(key=lambda c: (-_tax_saved_for(c, marginal_rates), 0 if c.lt_st == "ST" else 1))
+    pool.sort(key=lambda c: (-_sort_score(c, marginal_rates), 0 if c.lt_st == "ST" else 1))
 
     selected: list[HarvestOpportunity] = []
     total_loss = Decimal("0")

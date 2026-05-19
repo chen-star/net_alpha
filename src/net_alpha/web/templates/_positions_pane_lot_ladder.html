@@ -52,6 +52,23 @@
   expanded: {{ 'false' if _collapsed else 'true' }},
   sortCol: 'date',
   sortDesc: true,
+  storageKey: 'lotLadderSort:{{ sym }}',
+  init() {
+    // Persist sort across pane re-renders within a session — without this,
+    // every pane open / HTMX swap reset to date desc and forced the user
+    // to re-pick their column.
+    try {
+      const saved = sessionStorage.getItem(this.storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.col === 'string' && typeof parsed.desc === 'boolean') {
+          this.sortCol = parsed.col;
+          this.sortDesc = parsed.desc;
+          this.$nextTick(() => this.applySort());
+        }
+      }
+    } catch (e) { /* sessionStorage disabled — fall back to defaults */ }
+  },
   sortBy(col) {
     if (this.sortCol === col) {
       this.sortDesc = !this.sortDesc;
@@ -59,6 +76,9 @@
       this.sortCol = col;
       this.sortDesc = col !== 'qty';
     }
+    try {
+      sessionStorage.setItem(this.storageKey, JSON.stringify({col: this.sortCol, desc: this.sortDesc}));
+    } catch (e) { /* ignore */ }
     this.applySort();
   },
   applySort() {

@@ -150,7 +150,26 @@ def _scan_assignment_cycles(
             # Position fully closed by BTC → cycle ends without assignment.
             # Future STOs of the same option start a fresh cycle so their
             # premia aren't entangled with this closed cycle's events.
-            if c["sto_qty"] - c["btc_qty"] <= 1e-6:  # type: ignore[operator]
+            #
+            # Over-close (BTC qty > STO qty, beyond FP epsilon) signals a
+            # corrupted CSV or a re-export missing the matching STO. Log a
+            # warning so the user can investigate; treat as a closed cycle
+            # so the next STO starts clean rather than inheriting bad state.
+            sto_q = c["sto_qty"]  # type: ignore[assignment]
+            btc_q = c["btc_qty"]  # type: ignore[assignment]
+            if btc_q - sto_q > 1e-6:  # type: ignore[operator]
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "schwab: BTC qty %.6f exceeds STO qty %.6f for %s — "
+                    "premium offset on next assignment may be wrong; check "
+                    "CSV row %d",
+                    btc_q,
+                    sto_q,
+                    key,
+                    i,
+                )
+            if sto_q - btc_q <= 1e-6:  # type: ignore[operator]
                 cycles[key] = _fresh()
         elif action == "Assigned":
             d = _parse_date(row.get("Date", ""))

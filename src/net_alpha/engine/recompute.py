@@ -147,10 +147,21 @@ def _rebuild_adjusted_basis_from_violations(repo: Repository) -> None:
     replacement_trade_id points at that lot's trade.
 
     Idempotent. Run after replace_violations_in_window + replace_lots_in_window
-    so the lot state matches the violation state. Permanent-IRA violations
-    (kind='permanent_ira') do not roll over basis under §1091(d) and are
-    excluded. Manual lot_overrides are applied AFTER this pass and take
-    final precedence, so user-edited basis remains intact.
+    so the lot state matches the violation state.
+
+    Only ``kind="deferred"`` violations bump basis. The other two kinds are
+    intentionally excluded:
+
+    - ``kind="permanent_ira"`` — Rev. Rul. 2008-5: §1091(a) disallows the loss
+      but §1091(d)'s basis rollover can't apply (no basis ledger in a
+      tax-advantaged account). Loss is permanently lost; no lot to mutate.
+
+    - ``kind="deferred_to_contract"`` — sold-put trigger. §1091(d) rolls basis
+      into "the contract to acquire," but v1 doesn't track basis on STO
+      contracts. Out of scope; user tracks manually until close/assignment.
+
+    Manual lot_overrides are applied AFTER this pass and take final precedence,
+    so user-edited basis remains intact.
     """
     from collections import defaultdict
 
