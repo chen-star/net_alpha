@@ -35,27 +35,27 @@ When you trade across multiple brokerages, each platform tracks wash sales **onl
 
 ## See it in action
 
-> Screenshots below use the built-in demo dataset — TSLA, NVDA, AAPL, SPY puts, an SPX §1256 call, plus a handful of open holdings (MSFT, AMZN, GOOGL, META, AMD, …). Pick **"Try the demo"** on the welcome screen to play with the same scenarios live.
+> Screenshots below use the built-in demo dataset — TSLA, NVDA, AAPL, SPY puts, an SPX §1256 call, plus a handful of open holdings (MSFT, AMZN, GOOGL, META, AMD, VOO, …). Pick **"Try the demo"** on the welcome screen to play with the same scenarios live; replay any time from `/tour`.
 
-**Wash-sale ledger** — every match across accounts, with confidence label and rule citation. The **NVDA** row is the case no single broker would ever flag: a loss closed in `schwab/taxable` is silently neutralized by a buy in `schwab/ira` 14 days later. **TSLA** and **AAPL** are confirmed same-account round-trips. **SPY** is an exact-strike-and-expiry options match — the lag is `-8d` because the _replacement_ leg was opened 8 days _before_ the loss close.
+**Wash-sale ledger** — every match across accounts, with confidence label and rule citation. The **NVDA** row is the case no single broker would ever flag: a loss closed in `schwab/taxable` is silently neutralized by a buy in `schwab/ira` 14 days later — surfaced as a `Cross-account` source pill. **TSLA** and **AAPL** are confirmed same-account round-trips. **SPY** is an exact-strike-and-expiry options match — the lag is `-8d` because the _replacement_ leg was opened 8 days _before_ the loss close. The mini-bar above the table aggregates disallowed losses vs. realized P/L by month.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/wash-sales.png" alt="Wash-sale ledger across accounts" width="900">
 </p>
 
-**Per-symbol drilldown** — NVDA's timeline pulls lots from both accounts into one view, with realized / disallowed KPIs and the cross-account violation pinned underneath. Every row links back to the source trade so the chain is always auditable.
+**Per-symbol drilldown** — NVDA's timeline pulls lots from both accounts into one view, with KPIs (Open lots, Realized P/L vs broker, Disallowed, Last trade) above and the cross-account violation pinned underneath. The pairing column links each close back to the open it consumed, and every row deep-links to the source trade so the chain is always auditable.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/ticker-nvda.png" alt="NVDA per-symbol drilldown" width="900">
 </p>
 
-**Pre-trade simulator** — propose `Sell 20 AAPL @ $170` and see realized P&L, FIFO lot consumption, and the wash-sale verdict _before_ you place the order. The lot-strategy table compares FIFO / LIFO / HIFO / MIN_TAX / MAX_LOSS side-by-side, with each strategy's wash-sale verdict computed independently. Suggestion chips at the top surface the largest unrealized loss (`NVDA −$3,098`) and gain (`AMD +$4,503`) for one-click sims.
+**Pre-trade simulator** — propose `Sell 20 AAPL @ market` and see realized P&L, FIFO lot consumption, and a per-account wash-sale verdict _before_ you place the order. The lot-strategy table compares FIFO / LIFO / HIFO / MIN_TAX / MAX_LOSS side-by-side — pre-tax P&L, after-tax P&L, wash-sale impact, and lots consumed — with the recommended strategy highlighted. Suggestion chips at the top surface the largest unrealized loss and gain in the portfolio for one-click sims.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/sim.png" alt="Pre-trade simulator with lot-strategy comparison" width="900">
 </p>
 
-**Portfolio dashboard** — KPIs, equity curve, cash & contributions overlay, monthly realized P&L bars, allocation rollup, and top movers — every account combined in one view, with toggles to drill in per-account.
+**Portfolio dashboard** — KPIs (account value, total return, cash, realized P/L, unrealized), equity curve with brush-strip drag-to-reperiod, **cash deployment** stacked-area chart (free cash · pledged · invested), monthly realized P&L bars with lifetime-average reference line, allocation donut + leaderboard, and top movers — every account combined in one view, with toggles to drill in per-account. Tiles are drag-to-reorder and hideable via "Edit layout"; click any point on the equity curve to open a breakdown of that day's drivers (trades, dividends, contributions, mark-to-market).
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/chen-star/net_alpha/master/assets/screenshots/portfolio.png" alt="Portfolio dashboard" width="900">
@@ -79,7 +79,7 @@ net-alpha ui
 The UI runs locally at `http://127.0.0.1:18765` (auto-picks the next free port in 18765–18775). With the service installed, prices refresh every 4 hours, forward-looking wash-sale checks run daily, and a snapshot backup runs at 03:30 UTC; without it, `net-alpha ui` runs ephemerally (Ctrl-C to stop).
 
 > [!TIP]
-> First run? Pick **"Try the demo"** on the welcome screen for a guided tour with sample data — no CSV needed. Replay any time from `/tour`.
+> First run? Pick **"Try the demo"** on the welcome screen for a guided tour with sample data — no CSV needed. Or skip straight to it with `net-alpha ui --demo`. Replay any time from `/tour`.
 
 Prefer the terminal? The CLI works without UI extras:
 
@@ -134,8 +134,8 @@ net-alpha ui [--port 18765] [--no-browser] [--reload]
 
 | Page               | Highlights                                                                                              |
 | :----------------- | :------------------------------------------------------------------------------------------------------ |
-| `/` Portfolio      | KPIs, equity curve with brush-strip drag-to-reperiod, cash curve, monthly P/L bars with lifetime-avg reference line, allocation, top movers, options & short-options panels, wash-sale watch. Rows are drag-to-reorder + hideable via the "Edit layout" toolbar. |
-| `/positions`       | Holdings (all / stocks / options / at-loss / closed), drag-to-reorder Plan view, multi-lot basis editor                                                                                                                                                         |
+| `/` Portfolio      | KPIs, equity curve (brush-strip drag-to-reperiod, click-to-explain a single day's drivers, off-by-default SPY benchmark overlay), cash-deployment stacked-area chart, monthly P/L bars with lifetime-avg reference line, allocation, top movers, options & short-options panels, wash-sale watch. Rows are drag-to-reorder + hideable via the "Edit layout" toolbar. |
+| `/positions`       | Holdings (all / stocks / options / at-loss / closed), drag-to-reorder Plan view, multi-lot basis editor. Per-row side pane shows lot ladder with ST→LT clock, recent activity, wash-sale outlook, and partial-close bisection — `j` / `k` nav, `o` to open.    |
 | `/sim`             | Pre-trade simulator with suggestion chips and lot-strategy comparison table                                                                                                                                                                                     |
 | `/tax`             | After-tax performance, harvest queue, plan-builder, projection setup, wash-sale + exempt-match listings                                                                                                                                                         |
 | `/imports`         | Drop-zone upload (trades CSV or Schwab positions CSV — all-accounts or per-account header), preview/commit, per-import detail, data-hygiene buckets                                                                                                             |
