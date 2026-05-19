@@ -2,6 +2,55 @@
 
 
 
+## v0.73.7 (2026-05-19)
+
+### Fix
+
+* fix: nine critical/high bugs surfaced by backend+UI audit
+
+Tax planner
+- _tax_saved_for(rates=None) returned abs_loss, silently asserting a 100%
+  rate and polluting estimated_tax_saved on the harvest queue. Returns
+  Decimal(0) now; new _sort_score() preserves the abs-loss ranking
+  fallback so the queue stays useful before tax config is filled in.
+
+Schwab importer
+- _parse_yes_no in the Realized G/L parser silently mapped any non-&#34;yes&#34;
+  value to False, suppressing real wash-sale flags on typos / casing
+  variants. Now raises on unrecognized text with the row number.
+- _scan_assignment_cycles logs a warning when BTC qty exceeds STO qty
+  (corrupt CSV / re-export with missing STO) so the wrong-basis next
+  assignment is no longer silent.
+
+Verify reconciliation
+- aggregate_open_positions used lot.account as a dict key without a
+  NULL/empty guard, so legacy rows collapsed to (&#34;&#34;, ticker) and silently
+  failed the broker_position join, producing phantom PositionsMissingLocal
+  findings. Skip + warn.
+
+Ingest dedup
+- sell_basis_blind_key treated proceeds=0.0 and proceeds=None as distinct,
+  so canceled/zero-fill rows duplicated on re-import. Both collapse to the
+  same empty-string slot; existing_sell_basis_blind_keys mirrors.
+
+Engine
+- _rebuild_adjusted_basis_from_violations docstring documented the
+  permanent_ira exclusion but not deferred_to_contract — clarified that
+  both are intentionally excluded from §1091(d) basis rollover.
+
+Web
+- /tax page Period selector existed in the template but _build_projection_ctx
+  hardcoded today.year and the wash-sales tab used raw `year=` instead of
+  the resolved period, so projection/wash-sales locked to YTD regardless of
+  selection. Both now honour the Period control.
+- Lot ladder sort state reset on every pane re-render; persisted via
+  sessionStorage keyed by symbol.
+- Harvest plan &#34;Simulate harvest&#34; links omitted &amp;account=, defaulting sim
+  to &#34;All accounts&#34; for single-account positions. Now carry row.account_label.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a6adbd8`](https://github.com/chen-star/net_alpha/commit/a6adbd8b5852f229a88d3b6015bf368485e30940))
+
+
 ## v0.73.6 (2026-05-19)
 
 ### Fix
