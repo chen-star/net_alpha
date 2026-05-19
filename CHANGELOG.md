@@ -2,6 +2,136 @@
 
 
 
+## v0.73.5 (2026-05-19)
+
+### Fix
+
+* fix(schwab): tier-2 importer correctness — re-import dedup, multi-cycle put assignments, transfer dates
+
+Five audit-identified bugs in the Schwab import pipeline. Foundational —
+every downstream tax/wash-sale number depends on these being correct.
+
+I3 — Re-import with newly-populated Cost Basis column doubled every sell
+  ``compute_natural_key`` includes cost_basis. First export had no Cost
+  Basis column (cost_basis=None on Sells); a re-export that gains the
+  column flips cost_basis to a value → new key → second row inserts as
+  a duplicate. Realized P&amp;L doubles. Added a basis-blind sell dedup pass
+  (``filter_sell_basis_drift_duplicates``) keyed on
+  (account, ticker, date, qty, proceeds). Wired into both the web route
+  and the CLI default command.
+
+I7 — Put-assignment dedup collapsed different-strike same-day assignments
+  Key (account, ticker, date, qty) drops strike. Two different-strike
+  puts assigned same-day at same contract count share the key, so a
+  partial re-import bringing a genuinely-new underlying Buy got silently
+  dropped. Changed ``existing_put_assignment_keys`` to return a count map
+  and ``filter_assignment_duplicates`` to leave Buys alone when the key
+  is ambiguous (&gt;=2 existing matches). Better to keep a duplicate the
+  user can delete than to lose a real lot&#39;s basis.
+
+I2 — Transfer-in lost the broker statement date
+  Parser wrote the statement date to ``Trade.date`` and left
+  ``Trade.transfer_date=None``. When the user later corrected the
+  acquisition date via the set-basis editor (which overwrites
+  ``Trade.date``), the broker&#39;s transfer date was lost. Parser now
+  populates ``Trade.transfer_date`` on inbound transfers so it persists
+  alongside the eventually-user-set acquisition date.
+
+I5 — Assigned-put basis offsets averaged across cycles
+  ``_put_assignment_basis_offsets`` summed STO/BTC across the entire
+  CSV per symbol. Rolling/re-selling the same strike-expiry across the
+  year collapsed cycles into a single per-contract average, so the
+  second cycle&#39;s assignment got contaminated by the first.
+
+I6 — Synthetic close used a reconstructed Schwab symbol string
+  Lookup used ``f&#34;{strike:.2f}&#34;`` formatting. Mini-options or any other
+  strike precision (10.0 / 10 / 1.5 / etc.) missed the lookup and the
+  synthetic close silently fell back to the STO date, making the short
+  appear closed instantly even when held to assignment.
+
+Both I5 and I6 fixed in one structural refactor: replaced the two old
+helpers with ``_scan_assignment_cycles`` — a single walk over rows that
+buckets STO/BTC events into per-cycle state (reset on Assignment OR full
+BTC close), records the actual Assigned-row date per STO row index, and
+returns the BTC indices whose premium has been folded into the offset
+(so they&#39;re not also emitted as plain BTCs). The main parse loop now
+emits the synthetic close inline, no string-reconstruction needed.
+
+Tests: 7 new + 2487 existing all pass; 0 regressions.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`89e1f46`](https://github.com/chen-star/net_alpha/commit/89e1f46f2b242d788688d5717a89c994fab970d6))
+
+* fix: tier-1 audit cleanup (calendar+wash-watch BTC, GL sentinels, dot tickers, lot_aging fifo)
+
+Five small audit-identified bugs bundled into one PR. Each is a silent-
+wrong-number or silent-data-drop the user can hit today, and each is
+testable in isolation.
+
+C3 - Calendar P&amp;L heatmap &amp; wash-watch panel skipped BTC closes
+  Both filtered on action == &#34;sell&#34; so short-option Buy-to-Close
+  trades never landed in either surface. Calendar diverged from the
+  headline Realized P&amp;L; wash-watch failed to warn before re-selling
+  a strike inside the §1091 30-day window. Both helpers now delegate
+  to realized_pl_contributions, which already handles STO+BTC pairing.
+  calendar_pnl still pre-filters equity Sells with missing
+  proceeds/cost_basis to match prior degenerate-row semantics.
+
+C4 - top_lots_crossing_ltcg surfaced fully-sold lots
+  Function is dead in production today (only tests call it) so the
+  user impact is latent, but the math is wrong: lot.quantity is the
+  original buy size, never decremented by sells. Added optional
+  trades + gl_closures kwargs that route through consume_lots_fifo
+  when provided; existing callers still work.
+
+I9 - Schwab Realized G/L parser crashed on &#39;--&#39; / &#39;N/A&#39;
+  Schwab writes these sentinel tokens in money cells for rows with
+  no broker history (inbound transfers, gifts). One such row aborted
+  the entire GL import. _parse_money now treats them as 0.0, matching
+  the tolerance import_/positions_csv._f already has.
+
+I10 - Option regex rejected tickers with &#39;.&#39;
+  Schwab and Robinhood human-readable patterns required [A-Z0-9]{0,5}
+  for ticker chars, so &#34;BRK.B 04/19/2024 400.00 C&#34; returned None and
+  the entire option-symbol string landed as a junk equity ticker in
+  the trades table. Added &#39;.&#39; to both ticker char classes. OCC format
+  already strips the dot (BRKB...) so it&#39;s unchanged.
+
+Tests: 21 new + 2475 existing all pass; 0 regressions.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b8bdf39`](https://github.com/chen-star/net_alpha/commit/b8bdf39202edff7aa6d8d3bb838d874d52266fed))
+
+* fix(tax,web): plug tax-advantaged account leak, wash-aware carryforward, per-file upload labels
+
+Three audit-identified bugs that jointly produced mutually inconsistent
+numbers across Portfolio &#34;Realized P/L&#34;, Tax &#34;After-Tax&#34;, Tax &#34;Carryforward
+projection&#34;, and the harvest queue.
+
+C1 - Tax-advantaged account leak (repository.py, tax_planner.py)
+  realized_pnl_split / section_1256_pnl / section_1256_mtm_rows now
+  unconditionally exclude IRA/Roth/401(k)/HSA. _open_lots_with_loss
+  skips lots in tax-advantaged accounts so the harvest queue never
+  suggests harvesting losses inside a Roth.
+
+C2 - Wash-aware multi-year carryforward (repository.py)
+  realized_pnl_split_by_year now adds disallowed_loss back per sell,
+  returning tax-recognized P&amp;L instead of raw economic P&amp;L; otherwise
+  a wash-disallowed loss is double-relieved (once as current-year
+  carryforward, again later when the replacement lot&#39;s basis is sold).
+
+I1 - Per-file account labels on multi-file upload (routes/imports.py,
+     _import_modal.html)
+  POST /imports accepts account as list[str]: one label broadcasts to
+  every file (legacy tx+GL workflow), N labels routes per file. The
+  modal renders one input per detection when uploading multiple files.
+  Stops the silent collapse that broke cross-account wash detection
+  and the Rev. Rul. 2008-5 IRA-trap classifier.
+
+Tests: 17 new + 2454 existing all pass; gitnexus_detect_changes
+confirms scope.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fed1b9b`](https://github.com/chen-star/net_alpha/commit/fed1b9b74de043966ff3223a3085235ebe8ceb63))
+
+
 ## v0.73.4 (2026-05-18)
 
 ### Fix
