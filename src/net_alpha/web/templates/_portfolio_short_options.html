@@ -23,21 +23,17 @@
   <div class="text-label-2 text-[13px] py-3">No open short options.</div>
 {% else %}
   <div class="flex flex-col">
+    {# Bar = days-to-expiry on a fixed 0–365d scale. Same expiry → same bar.
+       Color matches the DTE-urgency bucket (red ≤7d, orange ≤21d, green >21d). #}
+    {% set MAX_DTE = 365 %}
     {% for s in open_shorts %}
       {% set dte = (s.expiry - today).days %}
-      {% if dte <= 7 %}{% set dte_class = 'text-warn' %}
-      {% elif dte <= 21 %}{% set dte_class = 'text-label-1' %}
-      {% else %}{% set dte_class = 'text-label-2' %}{% endif %}
-      {# Days since open as a progress bar from 0 → expiry. We don't know the
-         exact open date when GL closures shrink the chain, so use opened_at
-         when available; otherwise show a steady bar. #}
-      {% if s.opened_at %}
-        {% set total_days = (s.expiry - s.opened_at).days %}
-        {% set elapsed = (today - s.opened_at).days %}
-        {% if total_days > 0 %}{% set fill_pct = (elapsed / total_days * 100)|round(0, 'common') %}{% else %}{% set fill_pct = 100 %}{% endif %}
-      {% else %}
-        {% set fill_pct = 50 %}
-      {% endif %}
+      {% if dte <= 7 %}{% set dte_class = 'text-warn' %}{% set bar_color = 'var(--color-neg)' %}
+      {% elif dte <= 21 %}{% set dte_class = 'text-label-1' %}{% set bar_color = 'var(--color-warn)' %}
+      {% else %}{% set dte_class = 'text-label-2' %}{% set bar_color = 'var(--color-pos)' %}{% endif %}
+      {% set _capped = dte if dte > 0 else 0 %}
+      {% if _capped > MAX_DTE %}{% set _capped = MAX_DTE %}{% endif %}
+      {% set fill_pct = (_capped / MAX_DTE * 100)|round(0, 'common') %}
       <div class="grid items-center gap-[14px] py-[9px] text-[13px]"
            style="grid-template-columns: 90px 110px 1fr 100px 100px; border-bottom: 0.5px solid var(--color-hairline);">
         <div class="flex items-center gap-2 font-semibold tracking-tightish">
@@ -54,9 +50,10 @@
           <span class="text-[11px] text-label-2 num min-w-[88px]">
             {% if s.opened_at %}opened {{ (today - s.opened_at).days }}d ago{% else %}— {% endif %}
           </span>
-          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: var(--color-hairline);">
+          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: var(--color-hairline);"
+               title="{{ dte }}d to expiry · bar length proportional to DTE on a fixed 0–365d scale">
             <div style="width: {{ fill_pct }}%; height: 100%;
-                        background: linear-gradient(90deg, var(--color-pos) 0%, var(--color-warn) 70%, var(--color-neg) 100%);
+                        background: {{ bar_color }};
                         border-radius: 999px;"></div>
           </div>
         </div>
