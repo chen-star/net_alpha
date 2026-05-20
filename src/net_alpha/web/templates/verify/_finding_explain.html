@@ -5,15 +5,15 @@
   <div class="explain-copy space-y-2">
     {% if f.rule_id == "OV-1" %}
       <p><strong>Overview market value disagrees with the sum of per-lot values.</strong>
-        We render <code>${{ '%.2f'|format(f.ours or 0) }}</code> on the dashboard, but the
-        per-lot loop totals <code>${{ '%.2f'|format(f.theirs or 0) }}</code>
-        (Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>).</p>
+        We render <code>${{ '{:,.2f}'.format(f.ours or 0) }}</code> on the dashboard, but the
+        per-lot loop totals <code>${{ '{:,.2f}'.format(f.theirs or 0) }}</code>
+        (Δ <code>${{ '{:,.2f}'.format(f.delta or 0) }}</code>).</p>
       <p>Most often this means a lot was added or split-adjusted but the
         aggregator wasn’t refreshed. Re-import the affected ticker’s CSV or
         re-run any pending corporate-action sync.</p>
     {% elif f.rule_id == "OV-2" %}
       <p><strong>Unrealized P&amp;L ≠ market value − cost basis.</strong>
-        Components don’t reconcile (Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>).</p>
+        Components don’t reconcile (Δ <code>${{ '{:,.2f}'.format(f.delta or 0) }}</code>).</p>
       <p>Usually a stale price snapshot or a lot whose adjusted basis was
         rewritten without recomputing P&amp;L. Refresh prices on /portfolio
         and re-render.</p>
@@ -29,13 +29,13 @@
         a hidden slice (cash sleeve or excluded symbol) is the cause.</p>
     {% elif f.rule_id == "AL-2" %}
       <p><strong>Leaderboard $ weights don’t add up to total market value.</strong>
-        Drift <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+        Drift <code>${{ '{:,.2f}'.format(f.delta or 0) }}</code>.</p>
       <p>Open /positions and look for a symbol present in the donut but not
         the table (or vice versa) — usually an option lot that escaped the
         equity-only filter.</p>
     {% elif f.rule_id == "PL-1" %}
       <p><strong>A lot’s market value ≠ qty × current price.</strong>
-        Scope <code>{{ f.scope }}</code>, drift <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+        Scope <code>{{ f.scope }}</code>, drift <code>${{ '{:,.2f}'.format(f.delta or 0) }}</code>.</p>
       <p>Stale or zero quote, or a manually-edited row. Refresh quotes; if
         the price provider is offline, the lot will mark to zero.</p>
     {% elif f.rule_id == "PL-2" %}
@@ -50,23 +50,23 @@
         to the positions view. Refresh /positions.</p>
     {% elif f.rule_id == "XP-1" %}
       <p><strong>/positions doesn’t sum to the Overview total.</strong>
-        Cross-page drift of <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+        Cross-page drift of <code>${{ '{:,.2f}'.format(f.delta or 0) }}</code>.</p>
       <p>One page was rendered against a stale price snapshot. Hard-refresh
         both tabs; if it persists, the lot adapters are out of sync.</p>
     {% elif f.rule_id == "RealizedRecon" %}
       <p><strong>Computed realized P&amp;L disagrees with the broker’s Realized G/L file.</strong>
-        Scope <code>{{ f.scope }}</code>, Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+        Scope <code>{{ f.scope }}</code>, Δ <code>${{ '{:,.2f}'.format(f.delta or 0) }}</code>.</p>
       <p>Open <a href="/reconciliation/{{ f.scope.split('/')[0] }}" class="underline">the per-ticker reconciliation view</a>
         to see the row-level diff. Common causes: split-adjustment timing,
         a manual trade with a stale basis, or a missing wash-sale rollover.</p>
     {% elif f.rule_id == "BasisRecon" %}
       <p><strong>Aggregate cost basis disagrees with the broker’s All-Positions file.</strong>
-        Scope <code>{{ f.scope }}</code>, Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+        Scope <code>{{ f.scope }}</code>, Δ <code>${{ '{:,.2f}'.format(f.delta or 0) }}</code>.</p>
       <p>Re-check the basis editor on the symbol page; spinoffs, partial
         rollovers, and DRIP shares are the usual suspects.</p>
     {% elif f.rule_id == "MarketValueRecon" %}
       <p><strong>Aggregate market value disagrees with the broker file.</strong>
-        Scope <code>{{ f.scope }}</code>, Δ <code>${{ '%.2f'|format(f.delta or 0) }}</code>.</p>
+        Scope <code>{{ f.scope }}</code>, Δ <code>${{ '{:,.2f}'.format(f.delta or 0) }}</code>.</p>
       <p>Almost always a price-snapshot timing difference (broker file
         captured pre-market, our quote is intraday). Re-export the broker
         CSV at the same time-of-day used in the previous comparison.</p>
