@@ -17,8 +17,16 @@
 
   {% include "_backup_list.html" %}
 
-  <p class="hint">
-    To restore from a bundle, run <code>net-alpha restore &lt;file&gt;</code> in a terminal.
-  </p>
+  {# Promote the CLI-only restore note from 11px hint to a full info row so
+     users don't expect a per-row Restore button. #}
+  <div class="mt-4 p-3 rounded"
+       style="border:0.5px solid var(--color-info); background: var(--color-info-tint); color: var(--color-text);">
+    <div class="font-semibold text-[13px] mb-1">Restoring is CLI-only</div>
+    <p class="text-[12px] text-label-1 m-0">
+      net-alpha doesn't include a restore button — restoring an old DB while
+      the service is running could corrupt active jobs. Quit the service, then
+      run <code class="text-[12px]">net-alpha restore &lt;file&gt;</code> in a terminal.
+    </p>
+  </div>
 </section>
 {% endblock %}

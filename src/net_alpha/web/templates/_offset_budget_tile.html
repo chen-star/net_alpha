@@ -7,7 +7,8 @@
 {% set _cf_st = (budget.incoming_carryforward_st|float) if budget.incoming_carryforward_st is defined else 0 %}
 {% set _cf_lt = (budget.incoming_carryforward_lt|float) if budget.incoming_carryforward_lt is defined else 0 %}
 {% set _cf_in = _cf_st + _cf_lt %}
-<div class="kpi" data-testid="offset-budget">
+<div class="kpi" data-testid="offset-budget"
+     title="Realized losses first offset same-category gains (ST↔ST, LT↔LT), then cross-offset per §1212(b). Net loss after offsets reduces ordinary income up to the $3,000 cap under §1211(b); anything beyond rolls forward indefinitely.">
   <div class="flex items-baseline justify-between">
     <div class="label-uc">Loss harvest budget</div>
     <div class="text-[11px] text-label-2">{{ budget.year }}</div>
@@ -34,6 +35,7 @@
     Incoming carryforward (from prior years):
     <span class="num text-label-1">${{ "{:,.0f}".format(budget.incoming_carryforward_st) }}</span> ST
     + <span class="num text-label-1">${{ "{:,.0f}".format(budget.incoming_carryforward_lt) }}</span> LT
+    <span class="text-label-3" title="§1212(b): ST carryforward first offsets ST gains, then LT carryforward offsets LT gains; any residual loss applies up to the $3K §1211(b) ordinary cap before rolling forward again.">(?)</span>
   </div>
   {% endif %}
 </div>

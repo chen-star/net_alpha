@@ -22,7 +22,10 @@
       {% for w in projection.bracket_warnings %}<div>{{ w }}</div>{% endfor %}
     </div>
     {% endif %}
-    <div class="text-[11px] text-label-2 mt-2">Estimate only — single marginal rate.</div>
+    <div class="text-[11px] text-label-2 mt-2"
+         title="Applies your configured federal + state marginal rate to net realized gains. Doesn't add the 3.8% Net Investment Income Tax (§1411) that kicks in above the MAGI threshold ($200K single / $250K MFJ); add it manually if you're above that line.">
+      Estimate only — single marginal rate, no NIIT.
+    </div>
   {% else %}
     <div class="label-uc">Year-end tax projection</div>
     <div class="text-[12px] text-label-2 mt-2 leading-[1.5]">
