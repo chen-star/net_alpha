@@ -77,8 +77,11 @@ def test_all_loss_no_negative_tax():
     repo = _StubRepo(st=Decimal("-5000"))
     r = compute_after_tax(repo, _ytd(), _brackets())
     assert r.estimated_tax_bill == Decimal("0")
-    assert r.after_tax_realized_pnl == Decimal("-5000")
-    assert r.tax_drag_dollar == Decimal("0")
+    # §1211(b) benefit added: $3,000 cap × 0.37 fed rate = $1,110 offset.
+    # After-tax = -5000 + 1110 = -3890.
+    assert r.after_tax_realized_pnl == Decimal("-3890.000")
+    # Drag is negative because losses gained a marginal-rate benefit.
+    assert r.tax_drag_dollar == Decimal("-1110.000")
 
 
 def test_section_1256_60_40_split_absorbed_into_st_lt():

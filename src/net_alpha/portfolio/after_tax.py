@@ -17,7 +17,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from net_alpha.portfolio.carryforward import Carryforward
+from net_alpha.portfolio.carryforward import Carryforward, ordinary_loss_cap
 from net_alpha.portfolio.tax_planner import TaxBrackets
 
 _NIIT_RATE = Decimal("0.038")
@@ -144,6 +144,15 @@ def compute_after_tax(
     tax_bill = st_tax + lt_tax + state_tax + niit
     pre_tax = st_pnl + lt_pnl + sec1256_pnl + sec1256_mtm
     after_tax = pre_tax - tax_bill
+
+    # §1211(b) ordinary-loss-cap benefit. Mirror engine/lot_selector._compute_after_tax
+    # so the sim's Lot Strategy Comparison and the Tax Performance tab agree on
+    # the same calc when both have net loss. Up to $3K ($1.5K MFS) of net loss
+    # offsets ordinary income at federal_marginal_rate.
+    loss_residue = max(Decimal("0"), -(total_st + total_lt))
+    cap_used = min(loss_residue, ordinary_loss_cap(getattr(brackets, "filing_status", None)))
+    loss_benefit = cap_used * brackets.federal_marginal_rate
+    after_tax = after_tax + loss_benefit
     drag_dollar = pre_tax - after_tax  # equals tax_bill when pre_tax > 0; 0 when pre_tax <= 0
 
     # For losses or zero P&L: after_tax == pre_tax, so drag is 0
