@@ -2,6 +2,75 @@
 
 
 
+## v0.74.1 (2026-05-20)
+
+### Fix
+
+* fix(web): dark-mode v2 polish — hero/drawer/mix-bar + .num-promoted refactor
+
+UI audit pass after the dark-mode v2 cycle. Findings split into bug fixes,
+design-system housekeeping, and polish.
+
+Bug fixes
+- _tax_performance_panel.html: &#34;Pre-tax realized&#34; had the .kpi-hero halo
+  but only text-[22px]/600, so the hero typography never landed. Promote
+  to .num-hero (38px/700) to match Portfolio overview.
+- _settings_drawer.html: resize-handle hover used hardcoded indigo
+  rgba(94,92,230,…) — last holdouts from before the violet signature
+  migration. Re-tinted via var(--color-signature{,-edge,-tint}).
+- app.src.css [data-theme=&#34;light&#34;]: --ring-focus stayed at the dark-indigo
+  literal; added a light override rgba(54,52,163,0.5) so the keyboard
+  halo matches the rest of the light palette.
+- app.src.css [data-theme=&#34;light&#34;]: bumped --color-brand-glow 0.18 → 0.28
+  so the kpi-hero halo reads on white (effective opacity was ~10%).
+- _settings_drawer.html: drawer backdrop strengthened from
+  bg-overlay-medium / backdrop-blur-sm to bg-overlay-strong /
+  backdrop-blur-md. With the previous medium overlay the underlying
+  carryforward fragment stayed clearly readable behind the drawer,
+  reading as two competing UI layers instead of one focused panel.
+
+Design-system DRY
+- app.src.css: deleted the orphan .kpi-promoted .num.num-promoted (28px,
+  defined but never referenced in any template); added .num-promoted
+  (22px / 700 / line-height 1.2) as the canonical middle-tier KPI class.
+- Replaced 12 occurrences of text-[22px] font-bold mt-2 /
+  text-[22px] font-semibold mt-1 with .num-promoted across:
+  _portfolio_kpis.html (×4), _tax_performance_panel.html (×4),
+  ticker.html (×3), _offset_budget_tile.html, _projection_card.html.
+  Side-effect: Tax panel weights bump 600 → 700, aligning with the
+  hero/promoted/regular ladder Portfolio and Ticker already use.
+- _offset_budget_tile.html: linear-gradient(90deg, #5E5CE6, #BF5AF2)
+  → var(--accent-hero).
+
+Polish
+- _settings_drawer.html: durations switched from Tailwind duration-300/200
+  to duration-[240ms]/duration-[160ms] so the drawer slide stays in
+  lockstep with --duration-med / --duration-fast tokens.
+- _tax_performance_panel.html: when one ST/LT/§1256 tranche is 100% of
+  the period, render the mix bar with --color-*-tint variants and a
+  hairline outer border instead of solid --color-warn etc. Removes the
+  alarming look in light mode (#B25000 at 100% width was visually heavy).
+- settings_entry.html: carryforward fragment switched from
+  hx-trigger=&#34;load&#34; → &#34;settings-drawer-closed from:body once&#34;. The
+  drawer&#39;s x-data gained an init() that $watches `open` and dispatches
+  the event on close, so the fragment defers its fetch until the user
+  is actually looking at it rather than firing behind the auto-opened
+  drawer.
+- app.src.css .apexcharts-tooltip: added a token-coupling comment above
+  the rgba(38,38,42,0.85) literal explaining the same dark-canvas
+  expansion convention used by .vibrancy-surface.
+
+Empirically verified that the existing prefers-reduced-motion rule
+(* { transition-duration: 0ms !important }) does cover the drawer:
+Alpine x-transition adds Tailwind utility *classes* (not inline styles),
+and * + !important overrides them. No drawer-specific override needed.
+
+pytest: 2510 passed, 2 skipped, 1 deselected (env port conflict), 0 failed.
+ruff check + format: clean. Browser console: 0 errors / 0 warnings.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`923054b`](https://github.com/chen-star/net_alpha/commit/923054b5f4472b626e74d7f7c7f66e650fb7ffc1))
+
+
 ## v0.74.0 (2026-05-20)
 
 ### Chore
