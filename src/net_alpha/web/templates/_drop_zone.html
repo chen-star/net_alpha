@@ -39,6 +39,11 @@
 </div>
 
 <div id="import-modal" class="hidden fixed inset-0 bg-overlay-strong z-50 flex items-center justify-center"
+     role="dialog"
+     aria-modal="true"
+     aria-label="Import preview"
+     x-data
+     x-on:keydown.window.escape="if (!$el.classList.contains('hidden')) $el.classList.add('hidden')"
      onclick="this.classList.add('hidden')">
   <div id="import-modal-content"></div>
 </div>

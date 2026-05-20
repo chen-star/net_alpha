@@ -21,8 +21,29 @@
     );
   }
 
+  // True when any overlay (modal, palette, cheatsheet, drawer) is on screen.
+  // Without this, pressing `,` or `g o` while a delete-confirm modal is up
+  // would navigate away from the partially-completed action.
+  function isOverlayOpen() {
+    if (document.querySelector("dialog[open]")) return true;
+    const dialogs = document.querySelectorAll("[role=dialog]");
+    for (const d of dialogs) {
+      if (d.hasAttribute("hidden")) continue;
+      if (d.classList.contains("hidden")) continue;
+      // Alpine x-show / x-cloak set style.display='none' while closed.
+      if (d.style && d.style.display === "none") continue;
+      return true;
+    }
+    for (const id of ["trade-modal", "import-modal", "settings-drawer"]) {
+      const el = document.getElementById(id);
+      if (el && !el.classList.contains("hidden") && !(el.style && el.style.display === "none")) return true;
+    }
+    return false;
+  }
+
   document.addEventListener("keydown", (e) => {
     if (isTypingTarget(e.target)) { awaiting = null; return; }
+    if (isOverlayOpen()) { awaiting = null; return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
     if (e.key === "?") {

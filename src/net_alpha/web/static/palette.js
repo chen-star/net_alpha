@@ -221,6 +221,21 @@
           saveRecents(this.recents);
         }
         const newTab = evt && (evt.metaKey || evt.ctrlKey);
+        // Same-page navigation in the same tab would reload the page, wiping
+        // any in-progress form state. Close the palette and stay put instead.
+        // Cmd/Ctrl-click (new tab) always proceeds — it's a deliberate
+        // "open same page in new tab" gesture.
+        try {
+          const targetUrl = new URL(item.route, window.location.origin);
+          const sameUrl =
+            targetUrl.pathname === window.location.pathname &&
+            targetUrl.search === window.location.search &&
+            targetUrl.hash === window.location.hash;
+          if (sameUrl && !newTab) {
+            this.close();
+            return;
+          }
+        } catch (e) { /* malformed route — fall through to navigate */ }
         if (newTab) window.open(item.route, "_blank");
         else window.location.href = item.route;
         this.close();
