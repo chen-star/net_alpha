@@ -77,6 +77,9 @@
 <body class="min-h-screen flex flex-col bg-bg text-text"
       x-data
       {% if open_settings_tab %}data-open-settings-tab="{{ open_settings_tab }}"{% endif %}>
+  {# Skip-to-content for keyboard / screen-reader users — visible only on
+     focus so it stays out of the way of mouse users. #}
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <header class="topbar hidden md:flex">
     <div class="flex items-center gap-6">
       <a href="/" class="flex items-center gap-2 no-underline text-text">
@@ -127,7 +130,7 @@
     net-alpha is desktop-first. Switch to a tablet or larger screen for the full experience.
   </div>
   {% include "_tour_banner.html" %}
-  <main class="hidden md:block flex-1 max-w-screen-2xl w-full mx-auto px-5 py-5">
+  <main id="main-content" class="hidden md:block flex-1 max-w-screen-2xl w-full mx-auto px-5 py-5">
     {% block content %}{% endblock %}
   </main>
 

@@ -1,10 +1,14 @@
-{# Pre-trade traffic-light verdict header for /sim result panels. #}
+{# Pre-trade traffic-light verdict header for /sim result panels.
+   CSS dots instead of emoji circles — Linux without a color-emoji font
+   renders 🟢🟡🔴 monochrome, making the verdict unreadable. #}
 {% if signal %}
 <div class="traffic-light traffic-light--{{ signal.color }}">
-  <span class="dot" aria-hidden="true">
-    {%- if signal.color == 'green' -%}&#x1F7E2;
-    {%- elif signal.color == 'yellow' -%}&#x1F7E1;
-    {%- else -%}&#x1F534;{%- endif -%}
+  <span class="tl-dot tl-dot--{{ signal.color }}" aria-hidden="true"></span>
+  <span class="sr-only">
+    {%- if signal.color == 'green' -%}OK
+    {%- elif signal.color == 'yellow' -%}Caution
+    {%- else -%}Stop
+    {%- endif -%}:
   </span>
   <span class="explanation">{{ signal.explanation }}</span>
   {% if signal.suggestion %}

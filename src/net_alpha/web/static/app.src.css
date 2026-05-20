@@ -555,10 +555,56 @@
     background: var(--color-surface-3);
   }
 
-  /* Status chips */
+  /* Status chips — the colored trio (red/yellow/blue) is reserved for the
+     3-tier wash-sale confidence palette (CLAUDE.md). The neutral / pos
+     variants below carry non-confidence tags (LT/ST, lockout-clear date,
+     suggestion kind) so users don't read every yellow chip as "probable
+     wash sale". */
   .chip-confirmed { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-neg);  background: var(--color-neg-tint); }
   .chip-probable { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-warn); background: var(--color-warn-tint); }
   .chip-unclear  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-info); background: var(--color-info-tint); }
+  .chip-neutral  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-label-2); background: var(--color-hairline); }
+  .chip-pos      { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-pos); background: var(--color-pos-tint); }
+
+  /* Traffic-light dot — replaces emoji circles that rendered monochrome on
+     Linux without a color emoji font. */
+  .tl-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    vertical-align: middle;
+  }
+  .tl-dot--green  { background: var(--color-pos); }
+  .tl-dot--yellow { background: var(--color-warn); }
+  .tl-dot--red    { background: var(--color-neg); }
+
+  /* Skip-to-content — visible only on keyboard focus. */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 8px;
+    z-index: 100;
+    padding: 6px 12px;
+    border-radius: 4px;
+    background: var(--color-accent);
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: top 120ms ease-out;
+  }
+  .skip-link:focus {
+    top: 8px;
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Sim lot-comparison: recommended row highlight via theme-aware variable
+     rather than the previous hardcoded rgba(48,209,88,0.08). */
+  .sim-recommended-row {
+    background-color: var(--color-pos-tint);
+  }
 
   /* Table — snug density */
   .net-table { @apply w-full text-[12px] border-collapse; }

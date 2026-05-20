@@ -53,13 +53,15 @@
         </td>
         <td class="font-semibold">{{ row.symbol }}</td>
         <td class="r num text-neg">−${{ "{:,.2f}".format(row.loss|abs) }}</td>
-        <td><span class="chip-{% if row.lt_st|lower == 'lt' %}unclear{% else %}probable{% endif %}">{{ row.lt_st }}</span></td>
+        <td><span class="chip-neutral">{{ row.lt_st }}</span></td>
         <td class="text-[12px]">{{ row.account_label }}</td>
         <td>
           {% if row.lockout_clear %}
-            <span class="chip-confirmed">{{ row.lockout_clear }}</span>
+            {# Informational, not alarming — chip-confirmed (red) made the
+               lockout-clear date look like a wash-sale warning. #}
+            <span class="chip-neutral" title="Wash-sale lockout ends on this date">{{ row.lockout_clear }}</span>
           {% else %}
-            <span class="chip-unclear" style="color: var(--color-pos); background: rgba(48,209,88,0.14);">clear</span>
+            <span class="chip-pos">clear</span>
           {% endif %}
         </td>
         {% set _acct_slug = row.account_label|dom_id_slug %}

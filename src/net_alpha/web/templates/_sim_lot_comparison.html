@@ -34,11 +34,11 @@
         <tbody>
           {% for r in lot_comparison.results %}
           {% set is_rec = loop.index0 == lot_comparison.recommended_idx %}
-          <tr {% if is_rec %}data-recommended="true" style="background-color: rgba(48,209,88,0.08);"{% endif %}>
+          <tr {% if is_rec %}data-recommended="true" class="sim-recommended-row"{% endif %}>
             <td class="font-semibold">
               {{ r.strategy.replace('_', ' ').title() }}
               {% if is_rec %}
-                <span class="chip-unclear ml-1" style="color: var(--color-pos); background: rgba(48,209,88,0.14);">Recommended</span>
+                <span class="chip-pos ml-1">Recommended</span>
               {% endif %}
             </td>
             <td class="r num {% if r.pre_tax_pnl < 0 %}text-neg{% elif r.pre_tax_pnl > 0 %}text-pos{% endif %}">
@@ -75,7 +75,7 @@
                       <td class="r num">{{ p.qty_consumed }}</td>
                       <td class="r num">${{ "{:,.2f}".format(p.adjusted_basis|float) }}/sh</td>
                       <td>
-                        <span class="chip-{% if p.is_long_term %}unclear{% else %}probable{% endif %}">
+                        <span class="chip-neutral">
                           {{ 'LT' if p.is_long_term else 'ST' }}
                         </span>
                       </td>
