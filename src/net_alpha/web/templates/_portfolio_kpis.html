@@ -232,7 +232,7 @@
   </div>
 
   <div class="kpi col-span-12 lg:col-span-4" data-kpi-slot="realized"
-       title="Tax-recognized realized P/L for the selected period — matches Schwab UI and Form 8949. Includes wash-sale-disallowed losses added back to basis. The economic figure shown below is the actual cash netted (recognized − disallowed).">
+       title="Economic realized P/L for the selected period. Uses your broker's Realized G/L CSV as the canonical close source when imported, includes ALL accounts (taxable + IRA/Roth/401k/HSA), and includes both equities and options. For Form-8949 tax-reportable income (taxable accounts only, excluding §1256 derivatives), see Tax → Performance.">
     <div class="label-uc">Realized P/L</div>
     <div class="num num-promoted mt-2 {% if kpis.period_realized < 0 %}text-neg{% else %}text-pos{% endif %}">
       {% if kpis.period_realized < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(kpis.period_realized|float|abs) }}{% if metric_refs is defined and metric_refs.realized_period is defined %}{{ provenance_link(metric_refs.realized_period) }}{% endif %}
@@ -243,6 +243,7 @@
         <span class="text-label-3" title="The figure above is tax-recognized P/L (wash-sale-disallowed losses added back to basis — matches Schwab and Form 8949). This “cash-netted” figure subtracts those add-backs, showing the actual cash you netted from realized trades.">(?)</span>
       {% endif %}
     </div>
+    <div class="text-[10px] text-label-3 mt-0.5">Economic · GL-canonical · all accounts</div>
     {% if lifetime_kpis is defined and lifetime_kpis is not none %}
       {# Use the same tax-recognized number that the Lifetime view shows as
          its main figure (`period_realized`), so toggling Period to Lifetime

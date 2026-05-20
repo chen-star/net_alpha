@@ -110,7 +110,8 @@
   {% set _gains  = realized_kpis.realized_gains_ytd|abs %}
   {% set _max    = (_losses if _losses > _gains else _gains) %}
   {% if _max > 0 %}
-    <div data-testid="realized-mini-bar" class="mb-4 flex items-center gap-2 text-[11px] text-label-2">
+    <div data-testid="realized-mini-bar" class="mb-4 flex items-center gap-2 text-[11px] text-label-2"
+         title="Gross gains and losses YTD across raw trades (all accounts, all asset types). Used for §1211 $3,000 ordinary-loss cap planning. May differ from the Portfolio Realized P/L (which is GL-canonical) and Tax Performance (which excludes §1256 and tax-advantaged accounts).">
       <div class="flex-1 grid grid-cols-2 h-4 rounded overflow-hidden" style="background: var(--color-hairline);">
         <div class="flex justify-end">
           <div class="h-full" style="width: {{ ((_losses / _max) * 100)|int }}%; background: var(--color-neg);"

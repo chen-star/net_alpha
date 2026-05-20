@@ -25,11 +25,13 @@
        halo anchors the eye on the page's headline pre-tax number, matching
        the Portfolio overview's hero KPI pattern. #}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-      <div class="kpi kpi-hero p-3">
+      <div class="kpi kpi-hero p-3"
+           title="Form 8949 tax-reportable realized income for the selected period. Sourced from your broker's Realized G/L CSV. EXCLUDES §1256 contracts (broad-based index options) — those net 60/40 LT/ST separately. EXCLUDES tax-advantaged accounts (IRA, Roth, 401k, HSA). May differ from the Portfolio Realized P/L tile, which is economic (all accounts, includes options).">
         <div class="label-uc">Pre-tax realized</div>
         <div class="num num-hero mt-1 {% if breakdown.pre_tax_realized_pnl < 0 %}text-neg{% elif breakdown.pre_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
           {% if breakdown.pre_tax_realized_pnl < 0 %}−{% elif breakdown.pre_tax_realized_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.pre_tax_realized_pnl|float|abs) }}
         </div>
+        <div class="text-[10px] text-label-3 mt-0.5">Form 8949 · taxable accounts · excl. §1256</div>
       </div>
       <div class="kpi p-3">
         <div class="label-uc">Tax bill (est.)</div>
