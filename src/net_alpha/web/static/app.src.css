@@ -585,6 +585,30 @@
     box-shadow: 0 0 14px var(--color-brand-glow), inset 0 0 0 0.5px rgba(255,255,255,0.2);
   }
 
+  /* ApexCharts tooltip — vibrancy treatment matching .vibrancy-surface so
+     tooltips don't look like a different visual layer than the rest of the
+     chrome. !important is required because ApexCharts emits inline styles. */
+  .apexcharts-tooltip {
+    background: rgba(38,38,42,0.85) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 0.5px solid var(--color-hairline-strong) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-pane) !important;
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .apexcharts-tooltip-title {
+    background: transparent !important;
+    border-bottom: 0.5px solid var(--color-hairline) !important;
+    font-family: var(--font-sans) !important;
+    font-weight: 600;
+  }
+  [data-theme="light"] .apexcharts-tooltip {
+    background: rgba(255,255,255,0.92) !important;
+  }
+
   /* Row action menu — hover-revealed `⋯` button per spec §3.4. */
   .row-actions {
     position: relative;

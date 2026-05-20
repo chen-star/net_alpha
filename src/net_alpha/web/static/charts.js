@@ -16,18 +16,19 @@
 
   function readColors() {
     return {
-      pos:      readVar("--color-pos")      || "#30D158",
-      neg:      readVar("--color-neg")      || "#FF453A",
-      indigo:   readVar("--color-indigo")   || "#5E5CE6",
-      violet:   readVar("--color-violet")   || "#BF5AF2",
-      info:     readVar("--color-info")     || "#64D2FF",
-      warn:     readVar("--color-warn")     || "#FF9F0A",
-      label1:   readVar("--color-label-1")  || "rgba(235,235,245,0.92)",
-      label2:   readVar("--color-label-2")  || "rgba(235,235,245,0.6)",
-      label3:   readVar("--color-label-3")  || "rgba(235,235,245,0.35)",
-      hairline: readVar("--color-hairline") || "rgba(255,255,255,0.08)",
-      surface:  readVar("--color-surface")  || "#1C1C1E",
-      bg:       readVar("--color-bg")       || "#000000",
+      pos:       readVar("--color-pos")       || "#30D158",
+      neg:       readVar("--color-neg")       || "#FF453A",
+      indigo:    readVar("--color-indigo")    || "#5E5CE6",
+      violet:    readVar("--color-violet")    || "#BF5AF2",
+      signature: readVar("--color-signature") || "#BF5AF2",   // NEW
+      info:      readVar("--color-info")      || "#64D2FF",
+      warn:      readVar("--color-warn")      || "#FF9F0A",
+      label1:    readVar("--color-label-1")   || "rgba(235,235,245,0.92)",
+      label2:    readVar("--color-label-2")   || "rgba(235,235,245,0.6)",
+      label3:    readVar("--color-label-3")   || "rgba(235,235,245,0.35)",
+      hairline:  readVar("--color-hairline")  || "rgba(255,255,255,0.10)",  // bumped to match Task 1
+      surface:   readVar("--color-surface")   || "#26262A",                  // bumped to match Task 1
+      bg:        readVar("--color-bg")        || "#1A1A1C",                  // bumped to match Task 1
     };
   }
 
@@ -62,16 +63,16 @@
         zoom: { enabled: false },
         animations: {
           enabled: true,
-          easing: "easeinout",
-          speed: 800,
-          animateGradually: { enabled: false },
-          dynamicAnimation: { enabled: false },
+          easing: "easeout",
+          speed: 480,                                // was 800 — matches --duration-slow
+          animateGradually: { enabled: true, delay: 80 },  // light stagger
+          dynamicAnimation: { enabled: true, speed: 240 },
         },
       },
       theme: { mode: activeTheme() },
       grid: {
         borderColor: c.hairline,
-        strokeDashArray: 2,
+        strokeDashArray: 3,                        // was 2 — slightly more open
         xaxis: { lines: { show: false } },
         yaxis: { lines: { show: true } },
         padding: { top: 8, right: 8, bottom: 4, left: 8 },
@@ -80,8 +81,8 @@
         labels: {
           style: { colors: axisColor, fontSize: "10px", fontFamily: "JetBrains Mono, ui-monospace, monospace" },
         },
-        axisBorder: { color: c.hairline },
-        axisTicks: { color: c.hairline },
+        axisBorder: { show: false },
+        axisTicks:  { show: false },
       },
       yaxis: {
         labels: {
@@ -98,7 +99,11 @@
         fontSize: "12px",
         fontFamily: "Inter, sans-serif",
       },
-      stroke: { curve: "smooth", width: 2, lineCap: "round" },
+      colors: [
+        c.signature, c.info, c.pos, c.warn, c.neg,
+        c.indigo, c.violet,
+      ],
+      stroke: { curve: "smooth", width: 1.5, lineCap: "round" },  // was width: 2
     };
   }
 
