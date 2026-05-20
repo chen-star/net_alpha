@@ -55,6 +55,34 @@ def settings_drawer_entry(request: Request) -> HTMLResponse:
     )
 
 
+def _settings_drawer_for_tab(request: Request, tab: str) -> HTMLResponse:
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "settings_entry.html",
+        {"open_settings_tab": tab},
+    )
+
+
+@router.get("/settings/profile", response_class=HTMLResponse)
+def settings_drawer_profile(request: Request) -> HTMLResponse:
+    return _settings_drawer_for_tab(request, "profile")
+
+
+@router.get("/settings/density", response_class=HTMLResponse)
+def settings_drawer_density(request: Request) -> HTMLResponse:
+    return _settings_drawer_for_tab(request, "density")
+
+
+@router.get("/settings/etf-pairs", response_class=HTMLResponse)
+def settings_drawer_etf_pairs(request: Request) -> HTMLResponse:
+    return _settings_drawer_for_tab(request, "etf-pairs")
+
+
+@router.get("/settings/about", response_class=HTMLResponse)
+def settings_drawer_about(request: Request) -> HTMLResponse:
+    return _settings_drawer_for_tab(request, "about")
+
+
 @router.get("/settings/carryforward", response_class=HTMLResponse)
 def settings_carryforward(
     request: Request,
