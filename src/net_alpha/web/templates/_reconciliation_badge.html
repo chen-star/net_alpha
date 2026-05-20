@@ -12,8 +12,9 @@
     vs broker —
   </span>
 {% else %}
+  {% set _delta = result.delta %}
   <a href="/ticker/{{ result.symbol }}?view=recon" class="badge badge-warn no-underline"
-     title="Discrepancy of ${{ '%.2f'|format(result.delta|abs) }} — click to investigate">
-    vs broker △ ${{ '%.0f'|format(result.delta|abs) }}
+     title="net-alpha reports {% if _delta > 0 %}+{% else %}−{% endif %}${{ '{:,.2f}'.format(_delta|abs) }} vs {{ result.source_label or 'broker' }} — click to investigate">
+    vs broker {% if _delta > 0 %}+{% else %}−{% endif %}${{ '{:,.0f}'.format(_delta|abs) }}
   </a>
 {% endif %}
