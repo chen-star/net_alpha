@@ -2,6 +2,56 @@
 
 
 
+## v0.75.2 (2026-05-20)
+
+### Fix
+
+* fix(web): Batch 11 — post-verification fixes
+
+Browser walk-through + independent code-review surfaced bugs that the
+pytest suite missed. Browser-found bugs are runtime UI failures; review-
+found bugs are correctness holes in code I added in earlier batches.
+
+Browser-found:
+- base.html: revert allowEval:false (Batch 10). htmx-config blocking eval
+  also blocked the legitimate hx-on::after-request handlers I added in
+  Batches 2 + 6 (6 templates total). The same-origin middleware handles
+  the real security work.
+- positions.html: move the JS comment out of the x-on:click.outside
+  expression. Alpine compiles attribute values via `new AsyncFunction`
+  with newlines normalized; the // comments swallowed the `if` below
+  them and the click.outside handler threw SyntaxError on every page.
+- ticker.html: `|default(&#39;—&#39;, true)` so None renders em-dash. The bare
+  `|default(&#39;—&#39;)` only fires for *undefined* — None passed through to
+  render literal &#34;None&#34; in the subtitle.
+
+Review-found:
+- keyboard.js: `?` must work even when an overlay is open — it toggles
+  the cheatsheet itself. isOverlayOpen was blocking the very key that
+  closes the cheatsheet. Moved the `?` branch above the overlay check.
+- app.py: same-origin guard now reads request.url.hostname instead of
+  splitting Host on the first colon — naive split yielded &#34;[&#34; for IPv6
+  bound ports (some Chrome configs use ::1 for localhost) and 403&#39;d
+  every mutation. Also: Origin:null (sandboxed iframe, file://) used to
+  short-circuit past the host comparison; now rejected explicitly.
+- _toast.html: setTimeout redirect only fires when redirect_to is a
+  path-relative URL (starts with `/`, not `//`). Refuses `javascript:`
+  schemes so a future caller that threads user input through
+  redirect_to can&#39;t end up with a one-line DOM XSS.
+- routes/ticker.py: synth_id + seen_synth dedup key both pick up
+  gl.account_display. Two accounts that closed the same option contract
+  on the same day previously deduped to one row.
+
+Test improvement:
+- test_type_flip_within_tax_advantaged_skips_recompute spies on the
+  imported `recompute_all_violations` via monkeypatch. The state-only
+  assertion would have passed even with the same-side guard removed,
+  since recompute is idempotent here.
+- test_origin_null_is_blocked: regression for the Origin:null bypass.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1dca3d0`](https://github.com/chen-star/net_alpha/commit/1dca3d005cc971474e10470f56d057b4e8f676fb))
+
+
 ## v0.75.1 (2026-05-20)
 
 ### Fix
