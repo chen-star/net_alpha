@@ -13,7 +13,8 @@
 <details{% if _expanded %} open{% endif %}>
   <summary class="panel-head cursor-pointer">
     <h4>Open options</h4>
-    <span class="meta">
+    <span class="meta"
+          title="Live (non-expired) short option contracts only. The Cash card's 'pledged' total may be higher when an expired short is awaiting broker collateral release.">
       {% if _long_count %}{{ _long_count }} long{% endif %}
       {% if _long_count and _short_count %} · {% endif %}
       {% if _short_count %}{{ _short_count }} short{% endif %}
