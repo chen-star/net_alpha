@@ -374,8 +374,7 @@
   .kpi-hero {
     /* Top-anchored brand-glow gives the page-hero KPI presence without
        resorting to a different fill — peer of the four small KPIs at rest,
-       subtly emphasized by the colored halo. Halo intensity ramps on hover
-       (motion deployment in Task 5). */
+       subtly emphasized by the colored halo. Halo intensity ramps on hover. */
     background: var(--color-surface);
     @apply px-5 py-4;
     position: relative;

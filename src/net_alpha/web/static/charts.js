@@ -20,15 +20,15 @@
       neg:       readVar("--color-neg")       || "#FF453A",
       indigo:    readVar("--color-indigo")    || "#5E5CE6",
       violet:    readVar("--color-violet")    || "#BF5AF2",
-      signature: readVar("--color-signature") || "#BF5AF2",   // NEW
+      signature: readVar("--color-signature") || "#BF5AF2",
       info:      readVar("--color-info")      || "#64D2FF",
       warn:      readVar("--color-warn")      || "#FF9F0A",
       label1:    readVar("--color-label-1")   || "rgba(235,235,245,0.92)",
       label2:    readVar("--color-label-2")   || "rgba(235,235,245,0.6)",
       label3:    readVar("--color-label-3")   || "rgba(235,235,245,0.35)",
-      hairline:  readVar("--color-hairline")  || "rgba(255,255,255,0.10)",  // bumped to match Task 1
-      surface:   readVar("--color-surface")   || "#26262A",                  // bumped to match Task 1
-      bg:        readVar("--color-bg")        || "#1A1A1C",                  // bumped to match Task 1
+      hairline:  readVar("--color-hairline")  || "rgba(255,255,255,0.10)",
+      surface:   readVar("--color-surface")   || "#26262A",
+      bg:        readVar("--color-bg")        || "#1A1A1C",
     };
   }
 
