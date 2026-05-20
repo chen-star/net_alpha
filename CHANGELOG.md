@@ -2,6 +2,98 @@
 
 
 
+## v0.75.0 (2026-05-20)
+
+### Documentation
+
+* docs: /imports route reconciled with current /settings/imports redirect
+
+The legacy /imports route now 302s to the Settings drawer; the docs
+claimed it was a standalone top-level page. Updates CLAUDE.md and
+AGENTS.md to describe the redirect + drawer hosting; clarifies that
+mutation endpoints (POST upload, DELETE) remain at /imports/*.
+
+Also bundles a GitNexus index-stats refresh that was sitting dirty
+(symbol/relationship/process counts auto-updated by gitnexus analyze).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`297a166`](https://github.com/chen-star/net_alpha/commit/297a16623943aa81c8f2b9a1b1841c2077a7b246))
+
+### Feature
+
+* feat(web): humanize Days held column with year buckets ([`fe9addc`](https://github.com/chen-star/net_alpha/commit/fe9addc9a72cbff943269e4bb6a91454dfeedcc5))
+
+### Fix
+
+* fix(web): /settings/{profile,density,etf-pairs,about} direct links no longer 404
+
+Each route renders the same drawer shell with the named tab auto-opened.
+Mirrors the existing /settings + /settings/imports pattern.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`986d0c8`](https://github.com/chen-star/net_alpha/commit/986d0c8e1239587af4b0d2a6fb1eb08aec6a8987))
+
+* fix(web): sim &#39;Lots consumed (FIFO)&#39; clarified as baseline
+
+The per-account view always uses FIFO; the strategy comparison below
+shows alternatives. Add title tooltip and rename &#34;FIFO&#34; to &#34;FIFO
+baseline&#34; so users don&#39;t think the upper section follows their
+selected strategy.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4fbe023`](https://github.com/chen-star/net_alpha/commit/4fbe023ee576b231a2f85dab510bfbc5d566c295))
+
+* fix(web): sim Account label clarifies &#39;All&#39; is a valid per-account choice
+
+Previously labeled &#34;(required)&#34; when action=sell, but the &lt;select&gt;
+defaults to &#34;All&#34; which IS valid (produces per-account result cards).
+Relabel to convey intent without misleading users.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`753e1f8`](https://github.com/chen-star/net_alpha/commit/753e1f827aafea67a4fad0dca4001733872f1514))
+
+* fix(web): /positions ?page_size URL param propagates to all/stocks/options views ([`e43a043`](https://github.com/chen-star/net_alpha/commit/e43a043dac2f914cb549dbc822c2eed133d48cd6))
+
+* fix(web): sim lot-comparison renders minus sign before $ (accounting style) ([`3855db8`](https://github.com/chen-star/net_alpha/commit/3855db8223c1a3780f9c41d51f94a15aa8f41204))
+
+* fix(tax): compute_after_tax applies §1211(b) loss-cap benefit on net loss
+
+Mirror the engine path (lot_selector._compute_after_tax) so the Tax
+Performance tab and Sim&#39;s Lot Strategy Comparison agree on net-loss years.
+Up to $3K ($1.5K MFS) of net loss now offsets ordinary income at the
+federal marginal rate; previously after_tax == pre_tax for losses. ([`81e7630`](https://github.com/chen-star/net_alpha/commit/81e7630dc388dd5f3b13b45e430b082b5cef7ac8))
+
+* fix(web): projection card headline = sum of displayed components
+
+Python&#39;s {:,.0f} uses banker&#39;s rounding which can split the rounding
+direction between fed/state/total when each component lands on .5
+(e.g., $49.50 → $50, $14.57 → $15, $64.07 → $64). Round each
+component to int first via |round(0,&#39;common&#39;), then sum, then format.
+The user-visible &#34;$50 + $15 ≠ $64&#34; drift goes away.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`12d0038`](https://github.com/chen-star/net_alpha/commit/12d00384849db43b62cac0ad81d0bbfe9e2271e1))
+
+* fix(web): tooltips clarifying Cash pledged (incl expired) vs Open Options secured (live only) ([`daacc63`](https://github.com/chen-star/net_alpha/commit/daacc63404c43e49048c1b2cb605e1b749d2aec9))
+
+* fix(web): tooltips clarifying Composition Holdings vs Allocation Positions ([`3a5605a`](https://github.com/chen-star/net_alpha/commit/3a5605a91a93d508c3d575c8fef9bf3623ff158a))
+
+* fix(web): disambiguate the three Realized P/L surfaces with concept tooltips ([`eefd2d3`](https://github.com/chen-star/net_alpha/commit/eefd2d31f7562b1dcb3bab44df3a07a647b99362))
+
+* fix(tax): year-end projection total equals sum of rounded fed+state ([`8de2f74`](https://github.com/chen-star/net_alpha/commit/8de2f74e2907cade47344885a247b0e26d72ab96))
+
+* fix(web): thousand separators on remaining dollar tooltips (calendar + verify) ([`ab89f2e`](https://github.com/chen-star/net_alpha/commit/ab89f2e8ea3d3321074ea5f397c8b0255586dc98))
+
+* fix(web): default settings drawer width to 420px (was 480) ([`411785a`](https://github.com/chen-star/net_alpha/commit/411785a2cf4345a7cb1f39176e2314aec1c695e4))
+
+* fix(web): render ticker vs-broker delta with explicit sign and comma separator ([`06311c7`](https://github.com/chen-star/net_alpha/commit/06311c737a203e42827685e3c84727a2217476b4))
+
+* fix(web): chart axis + legend contrast in light mode ([`8b0b210`](https://github.com/chen-star/net_alpha/commit/8b0b21004fd4d70e618149079e3b626faff206cd))
+
+* fix(web): truncate imports filename column with title tooltip ([`16abef3`](https://github.com/chen-star/net_alpha/commit/16abef3ef809aa7f1d41934b9fb34385fb206c08))
+
+* fix(web): render Positions tab counts as a pill badge with spacing ([`35b6bd1`](https://github.com/chen-star/net_alpha/commit/35b6bd1eab25636e7621b51d8433b5d06993b8be))
+
+* fix(web): thousand separators on all hero KPI dollar values
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f4b675f`](https://github.com/chen-star/net_alpha/commit/f4b675f27b82d648e47f6ade816fba93b2138d24))
+
+
 ## v0.74.1 (2026-05-20)
 
 ### Fix
