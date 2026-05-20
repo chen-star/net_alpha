@@ -6,6 +6,10 @@
     <input type="hidden" name="view" value="plan">
     {% for a in selected_accounts %}<input type="hidden" name="account" value="{{ a }}">{% endfor %}
     {% if plan_view.selected_tag %}<input type="hidden" name="tag" value="{{ plan_view.selected_tag }}">{% endif %}
+    {# Preserve pagination across sort changes — without this, switching sort
+       resets page_size to the default. Page is intentionally not preserved
+       because changing sort order makes the old page index meaningless. #}
+    {% if pagination is defined and pagination.page_size %}<input type="hidden" name="page_size" value="{{ pagination.page_size }}">{% endif %}
     <label class="text-[11px] text-label-2">Sort:</label>
     <select name="sort"
             class="text-[12px] px-2 py-[4px] rounded-md"
@@ -23,7 +27,7 @@
       type="button"
       hx-post="/positions/plan/mark-seen"
       hx-swap="none"
-      hx-on::after-request="window.location.reload()"
+      hx-on::after-request="if (event.detail.successful) window.location.reload()"
       class="text-xs text-label-2 hover:text-text px-2 py-1 border border-hairline rounded">
       Mark as seen
     </button>

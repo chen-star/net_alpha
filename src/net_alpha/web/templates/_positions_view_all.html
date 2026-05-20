@@ -15,7 +15,7 @@
 {% else %}
   {% set _acct_qs %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
   <div id="holdings-positions"
-       hx-get="/portfolio/positions?period={{ selected_period }}{{ _acct_qs }}&group_options={{ group_options }}&show=open&page=1&page_size={{ page_size|default(25) }}"
+       hx-get="/portfolio/positions?period={{ selected_period }}{{ _acct_qs }}&group_options={{ group_options }}&show=open&page={{ page|default(1) }}&page_size={{ page_size|default(25) }}"
        hx-trigger="load" hx-swap="innerHTML"></div>
 
   <div id="holdings-options" class="panel mt-4"

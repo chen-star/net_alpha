@@ -78,14 +78,16 @@
             ">
       Reset to default
     </button>
-    {# Freshness chip — absorbs the data-source disclaimer in its tooltip. #}
+    {# Freshness chip — absorbs the data-source disclaimer in its tooltip.
+       Reload runs after the refresh POST completes so the chip + KPIs pick up
+       fresh quotes; reloading via onclick would race-cancel the in-flight POST. #}
     <button type="button"
             data-testid="freshness-chip"
             class="freshness-chip inline-flex items-center gap-1 px-2 py-1 rounded text-[12px] {% if price_freshness == 'green' %}text-pos{% elif price_freshness == 'amber' %}text-warn{% elif price_freshness == 'red' %}text-neg{% else %}text-label-3{% endif %}"
             hx-post="/prices/refresh?symbols=ALL"
             hx-target="body"
             hx-swap="none"
-            onclick="window.location.reload()"
+            hx-on::after-request="if (event.detail.successful) window.location.reload()"
             title="Quotes via Yahoo Finance (~15 min delay). {% if price_freshness == 'green' %}Prices are fresh — click to force refresh.{% elif price_freshness == 'amber' %}Some prices are from cache — click to refresh.{% elif price_freshness == 'red' %}Prices are stale — click to refresh.{% else %}No price data yet — click to fetch.{% endif %}">
       <span class="rounded-full w-1.5 h-1.5 {% if price_freshness == 'green' %}bg-pos{% elif price_freshness == 'amber' %}bg-warn{% elif price_freshness == 'red' %}bg-neg{% else %}bg-label-3{% endif %}"></span>
       Prices {{ price_freshness_label|default('—') }}
@@ -116,7 +118,7 @@
                 hx-post="/splits/sync?symbols=ALL"
                 hx-target="body"
                 hx-swap="none"
-                onclick="window.location.reload()"
+                hx-on::after-request="if (event.detail.successful) window.location.reload()"
                 @click="open = false">
           <span>Sync splits</span>
           <span class="text-label-3 text-[11px]">↕</span>

@@ -40,11 +40,13 @@
         </tbody>
       </table>
 
-      {# Pagination footer — shared partial. #}
+      {# Pagination footer — shared partial. Plan view wraps its content in
+         #plan-body (top of this template), so pagination must target that id;
+         #positions-tab-content only exists on at-loss / closed views. #}
       {% set _qs %}&view=plan{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% if plan_view.selected_tag %}&tag={{ plan_view.selected_tag|urlencode }}{% endif %}{% if plan_view.sort_key and plan_view.sort_key != 'manual' %}&sort={{ plan_view.sort_key }}{% endif %}{% endset %}
       {% set page_base_url = '/positions' %}
       {% set page_extra_qs = _qs %}
-      {% set page_target = '#positions-tab-content' %}
+      {% set page_target = '#plan-body' %}
       {% set page_swap = 'outerHTML' %}
       {% include "_pagination_footer.html" %}
     </div>

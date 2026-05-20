@@ -158,12 +158,15 @@
     {% endwith %}
   {% endif %}
   <script>
-    // Allow HTMX to swap 4xx responses so validation error fragments render
-    // inline in the form panel (HTMX 1.9 silently drops 4xx by default).
+    // Allow HTMX to swap 4xx + 5xx responses so server-rendered error fragments
+    // render inline where the swap was supposed to land (HTMX 1.9 silently drops
+    // non-2xx by default). The server-side error handlers (routes/system.py)
+    // return a compact fragment when HX-Request is set so we don't paint a full
+    // <html> document into a small target slot.
     document.body.addEventListener('htmx:beforeSwap', function(evt) {
-      if (evt.detail.xhr.status >= 400 && evt.detail.xhr.status < 500) {
+      if (evt.detail.xhr.status >= 400) {
         evt.detail.shouldSwap = true;
-        evt.detail.isError = false;
+        evt.detail.isError = evt.detail.xhr.status >= 500;
       }
     });
   </script>

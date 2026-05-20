@@ -101,6 +101,7 @@ def positions_page(
         "account_id": filter_id,
         "selected_view": selected_view,
         "target_count": target_count,
+        "page": max(1, page),
         "page_size": page_size,
     }
 
