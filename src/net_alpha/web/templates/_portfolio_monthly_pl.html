@@ -151,9 +151,9 @@
     function render() {
       const el = document.querySelector("#monthly-pl-chart");
       if (!el) return;
-      el.innerHTML = "";
-      const chart = new ApexCharts(el, buildOpts());
-      chart.render();
+      // mountChart destroys any prior chart on the node before remounting —
+      // theme:change re-renders previously leaked Apex instances + listeners.
+      window.netAlphaChartTheme.mountChart(el, buildOpts());
     }
 
     if (window.ApexCharts && window.netAlphaChartTheme) {

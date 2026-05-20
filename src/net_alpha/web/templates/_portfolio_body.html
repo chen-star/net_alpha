@@ -37,12 +37,29 @@
               @click="
                 const wasHidden = hidden;
                 hidden = !hidden;
-                $el.closest('.overview-row').classList.toggle('overview-row-hidden', hidden);
+                const rowEl = $el.closest('.overview-row');
+                rowEl.classList.toggle('overview-row-hidden', hidden);
                 fetch('/portfolio/layout/visibility', {
                   method: 'POST',
                   headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                   body: new URLSearchParams({row: '{{ key }}', hidden: String(hidden)})
-                }).then(() => { if (wasHidden) window.location.reload(); });
+                })
+                  .then(r => {
+                    if (!r.ok) {
+                      // Server rejected — roll back optimistic toggle so the UI
+                      // matches server state instead of silently diverging.
+                      console.warn('visibility toggle failed:', r.status);
+                      hidden = wasHidden;
+                      rowEl.classList.toggle('overview-row-hidden', hidden);
+                      return;
+                    }
+                    if (wasHidden) window.location.reload();
+                  })
+                  .catch(err => {
+                    console.warn('visibility toggle error:', err);
+                    hidden = wasHidden;
+                    rowEl.classList.toggle('overview-row-hidden', hidden);
+                  });
               ">
         <img src="/static/icons/eye.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="Show" x-show="!hidden">
         <img src="/static/icons/eye-off.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="Hide" x-show="hidden">

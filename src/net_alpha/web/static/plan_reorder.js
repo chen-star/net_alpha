@@ -18,6 +18,13 @@
       animation: 150,
       ghostClass: 'plan-row-ghost',
       onEnd: function () {
+        // Drop the drop if a previous reorder is still in flight. Without
+        // this guard, rapid drag-drop-drag-drop races two POSTs that each
+        // replace #plan-body and the second one reads positions from the
+        // freshly-swapped-in HTML and POSTs a now-stale order.
+        if (tbody._reorderInFlight) return;
+        tbody._reorderInFlight = true;
+
         var symbols = [];
         tbody.querySelectorAll('tr[data-symbol]').forEach(function (tr) {
           symbols.push(tr.dataset.symbol);
@@ -42,8 +49,15 @@
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: params.toString(),
         })
-          .then(function (r) { return r.text(); })
+          .then(function (r) {
+            if (!r.ok) {
+              console.warn('plan reorder failed:', r.status);
+              return null;
+            }
+            return r.text();
+          })
           .then(function (html) {
+            if (html === null) return;
             var planBody = document.getElementById('plan-body');
             if (!planBody) return;
             var tmp = document.createElement('div');
@@ -58,6 +72,15 @@
                 detail: { target: fresh },
               }));
             }
+          })
+          .catch(function (err) {
+            console.warn('plan reorder error:', err);
+          })
+          .finally(function () {
+            // Clear the in-flight flag on the (possibly new) tbody so the
+            // next drag re-fires. If the swap replaced the tbody, the old
+            // reference still gets cleared but the new tbody starts fresh.
+            tbody._reorderInFlight = false;
           });
       },
     });

@@ -48,7 +48,8 @@
                  hx-trigger="change"
                  hx-target="#harvest-summary"
                  hx-swap="outerHTML"
-                 hx-include="[name='pick']:checked,[name='exclude_locked']">
+                 hx-include="[name='pick']:checked,[name='exclude_locked']"
+                 hx-sync="closest table:queue last">
         </td>
         <td class="font-semibold">{{ row.symbol }}</td>
         <td class="r num text-neg">−${{ "{:,.2f}".format(row.loss|abs) }}</td>

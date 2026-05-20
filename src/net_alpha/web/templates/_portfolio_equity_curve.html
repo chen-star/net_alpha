@@ -223,13 +223,22 @@
     function render() {
       const main = document.querySelector("#equity-chart");
       if (!main) return;
-      main.innerHTML = "";
-      const mainChart = new ApexCharts(main, buildMainOpts());
-      mainChart.render();
+      // mountChart destroys any prior chart on this node before creating a
+      // fresh one — without this, every theme:change re-render leaked an
+      // ApexCharts instance (Apex keeps internal refs even after innerHTML="").
+      window.netAlphaChartTheme.mountChart(main, buildMainOpts());
 
-      window.addEventListener("equity-spy-toggle", (e) => {
-        if (e.detail.on) {
-          mainChart.appendSeries({
+      // Replace the SPY-toggle listener each render so closures reference the
+      // current chart instance. Without this the listener registry grew on
+      // every theme toggle, each entry pointing at a destroyed chart.
+      if (main._spyListener) {
+        window.removeEventListener("equity-spy-toggle", main._spyListener);
+      }
+      main._spyListener = (e) => {
+        const chart = main._apexChart;
+        if (!chart) return;
+        if (e.detail && e.detail.on) {
+          chart.appendSeries({
             name: "SPY",
             type: "line",
             data: spyPoints,
@@ -237,18 +246,17 @@
           });
           // Extend each per-series array by one slot for the appended SPY
           // series so Apex doesn't fall back to scalar defaults mid-config.
-          mainChart.updateOptions({
+          chart.updateOptions({
             markers: { size: [0, 2, 0] },
             stroke:  { width: [1.5, 2, 1.5], curve: ["stepline", "straight", "straight"], dashArray: [4, 0, 3] },
             fill:    { type: ["solid", "gradient", "solid"], opacity: [1, 1, 1] },
           });
         } else {
           // Apex doesn't expose remove-by-name; cleanest path is a full re-render.
-          mainChart.destroy();
-          const fresh = new ApexCharts(document.querySelector("#equity-chart"), buildMainOpts());
-          fresh.render();
+          window.netAlphaChartTheme.mountChart(main, buildMainOpts());
         }
-      });
+      };
+      window.addEventListener("equity-spy-toggle", main._spyListener);
     }
 
     if (window.ApexCharts && window.netAlphaChartTheme) {

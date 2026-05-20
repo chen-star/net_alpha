@@ -35,7 +35,13 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: params.toString(),
-        });
+        })
+          .then(function (r) {
+            if (!r.ok) console.warn('overview reorder failed:', r.status);
+          })
+          .catch(function (err) {
+            console.warn('overview reorder error:', err);
+          });
       },
     });
   }

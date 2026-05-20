@@ -140,8 +140,35 @@
 
   function refresh() {
     for (var i = 0; i < registry.length; i++) {
-      try { registry[i](); } catch (e) { /* a single chart failure shouldn't kill others */ }
+      try {
+        registry[i]();
+      } catch (e) {
+        // A single chart failure shouldn't kill the others, but the error must
+        // not be invisible — silent catch made chart leaks impossible to spot.
+        console.warn("chart refresh failed:", e);
+      }
     }
+  }
+
+  // Mount or remount an ApexCharts instance on `el`. Destroys any prior chart
+  // stored on the node so theme-change re-renders don't leak event listeners
+  // or animation timers (Apex keeps internal refs even after `innerHTML = ''`).
+  // Returns the new chart instance (or null on failure).
+  function mountChart(el, opts) {
+    if (!el || typeof window.ApexCharts !== "function") return null;
+    if (el._apexChart && typeof el._apexChart.destroy === "function") {
+      try { el._apexChart.destroy(); } catch (e) { console.warn("chart destroy failed:", e); }
+    }
+    el.innerHTML = "";
+    var c = new window.ApexCharts(el, opts);
+    try {
+      c.render();
+    } catch (e) {
+      console.warn("chart render failed:", e);
+      return null;
+    }
+    el._apexChart = c;
+    return c;
   }
 
   window.addEventListener("theme:change", refresh);
@@ -154,5 +181,6 @@
     merge: merge,
     register: register,
     refresh: refresh,
+    mountChart: mountChart,
   };
 })();
