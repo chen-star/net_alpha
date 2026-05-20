@@ -336,6 +336,23 @@
     @apply text-[11px] font-medium;
     color: var(--color-label-2);
   }
+
+  .vibrancy-surface {
+    /* Surface @ 72% over a `backdrop-filter: blur(20px) saturate(180%)`.
+       The numeric rgba expands the `--color-surface` token at compile time
+       because backdrop-filter cannot operate on `currentColor`. Update both
+       light and dark blocks together if either canvas value changes.
+       Dark: surface = #26262A → rgb(38,38,42)
+       Light: surface = #FFFFFF → rgb(255,255,255) */
+    background: rgba(38,38,42,0.72);
+    backdrop-filter: blur(var(--blur-vibrancy)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--blur-vibrancy)) saturate(180%);
+    border: 0.5px solid var(--color-hairline-strong);
+  }
+  [data-theme="light"] .vibrancy-surface {
+    background: rgba(255,255,255,0.72);
+  }
+
   .label-uc {
     @apply text-[11px] font-medium uppercase;
     color: var(--color-label-2);
