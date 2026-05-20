@@ -119,8 +119,29 @@
   /* Backdrop blur */
   --blur-vibrancy: 20px;
 
+  /* Motion — Linear-style soft easing, three duration steps.
+     Designed so durations multiply cleanly: fast = 160 (hover/focus),
+     med = 240 (nav/panel/drawer), slow = 480 (chart entry / page transitions). */
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 160ms;
+  --duration-med:  240ms;
+  --duration-slow: 480ms;
+
   /* Phase 0 additions (UI/UX redesign §5.1) */
   --accent-hero: linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%);
+
+  /* Signature — violet binds to the α brand mark and supersedes the soft-
+     deprecated `--color-accent` (same value, but `signature` is the
+     canonical name going forward). Outside chart contexts, all identity
+     accent usage routes through these three tokens; indigo demotes to
+     functional accent (links, focus rings). */
+  --color-signature:      #BF5AF2;
+  --color-signature-tint: rgba(191,90,242,0.16);
+  --color-signature-edge: rgba(191,90,242,0.32);
+
+  /* Functional aliases */
+  --color-link: #5E5CE6;  /* hyperlinks; same as --color-indigo */
+
   --font-feature-num: "tnum", "ss01", "cv11";
   --color-skeleton: rgba(255,255,255,0.04);
   --color-skeleton-shimmer: rgba(255,255,255,0.08);
@@ -135,13 +156,19 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --color-bg:        #000000;
-  --color-surface:   #1C1C1E;
-  --color-surface-2: #2C2C2E;
+  /* Canvas — graphite, not pure black.
+     Pure #000 was iPhone-OLED-aesthetic; on a desktop monitor in a long
+     session it is fatiguing. `#1A1A1C` sits in the iOS systemGray family
+     (still Apple-system, no longer iPhone-pure-black). Surface ladder
+     shifted up one tier; surface-3 unchanged so the deepest chip tier
+     keeps its contrast against the new surface-2. */
+  --color-bg:        #1A1A1C;
+  --color-surface:   #26262A;
+  --color-surface-2: #2F2F33;
   --color-surface-3: #3A3A3C;
 
-  --color-hairline:        rgba(255,255,255,0.08);
-  --color-hairline-strong: rgba(255,255,255,0.14);
+  --color-hairline:        rgba(255,255,255,0.10);  /* bumped from 0.08 — graphite gives less black-on-black gap to coast on */
+  --color-hairline-strong: rgba(255,255,255,0.16);  /* bumped from 0.14 */
 
   --color-text:    #FFFFFF;
   --color-label-1: rgba(235,235,245,0.92);
@@ -150,6 +177,10 @@
 
   --color-indigo: #5E5CE6;
   --color-violet: #BF5AF2;
+  --color-signature:      #BF5AF2;
+  --color-signature-tint: rgba(191,90,242,0.16);
+  --color-signature-edge: rgba(191,90,242,0.32);
+  --color-link:           #5E5CE6;
   --color-pos:    #30D158;
   --color-neg:    #FF453A;
   --color-warn:   #FF9F0A;
@@ -179,8 +210,8 @@
   --color-overlay-medium: rgba(0,0,0,0.40);
   --color-overlay-soft:   rgba(0,0,0,0.20);
   --color-row-hover:      rgba(255,255,255,0.02);
-  --color-topbar-bg:      rgba(0,0,0,0.60);
-  --color-brand-glow:     rgba(94,92,230,0.35);
+  --color-topbar-bg:  rgba(26,26,28,0.72);    /* was rgba(0,0,0,0.60) — bg @ 72% so topbar reads as a vibrancy surface above the new graphite canvas */
+  --color-brand-glow: rgba(191,90,242,0.32);  /* was indigo rgba(94,92,230,0.35) — retint to violet signature */
   --color-cash:           rgba(142,142,147,0.60);
   --color-pos-tint:       rgba(48,209,88,0.10);
   --color-neg-tint:       rgba(255,69,58,0.14);
