@@ -83,7 +83,7 @@ Other brokers can be added by contributing a parser at `src/net_alpha/brokers/<n
 
 ### Web UI
 
-`src/net_alpha/web/` is an optional FastAPI subpackage providing a local browser UI. Launched via `net-alpha ui`. Top-level pages: `/` (Portfolio), `/positions` (Holdings + Plan), `/sim` (with suggestion chips), `/tax` (performance + harvest planner + projection + wash sales), `/imports`, `/ticker/{symbol}`, `/settings`. Manual trade CRUD lives at `/trades` (POST routes for add / edit-manual / edit-transfer / delete). Templates use Jinja + HTMX + Alpine. Assets (htmx, alpine, ApexCharts, Lucide v0.469.0, Inter, JetBrains Mono) are vendored under `web/static/` — no CDN, no node, no npm.
+`src/net_alpha/web/` is an optional FastAPI subpackage providing a local browser UI. Launched via `net-alpha ui`. Top-level pages: `/` (Portfolio), `/positions` (Holdings + Plan), `/sim` (with suggestion chips), `/tax` (performance + harvest planner + projection + wash sales), `/settings/imports` (Imports drawer; `/imports` redirects here), `/ticker/{symbol}`, `/settings`. Manual trade CRUD lives at `/trades` (POST routes for add / edit-manual / edit-transfer / delete). Templates use Jinja + HTMX + Alpine. Assets (htmx, alpine, ApexCharts, Lucide v0.469.0, Inter, JetBrains Mono) are vendored under `web/static/` — no CDN, no node, no npm.
 
 UI deps are in the `[ui]` optional group; install with `uv sync --extra ui`. The web layer only calls existing public seams (`Repository`, engine functions, portfolio/planner/audit pure functions) — **no business logic lives in `web/`**.
 
@@ -142,7 +142,7 @@ No exceptions. Not skippable.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **net_alpha** (12931 symbols, 18165 relationships, 111 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **net_alpha** (13933 symbols, 19358 relationships, 103 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

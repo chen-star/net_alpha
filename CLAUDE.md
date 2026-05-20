@@ -183,7 +183,7 @@ Top-level pages (one route file per area in `web/routes/`):
 - `/positions` — Holdings views (all / stocks / options / at-loss / closed) plus a Plan view backed by `PositionTarget`s; includes a "Set basis" multi-lot editor, a per-row "↗ Sim" deep link, and a Manual sort mode that lets the user drag rows into a custom order persisted via `position_targets.sort_order` (POST `/positions/plan/reorder`).
 - `/sim` — Pre-trade simulator with a `/sim/suggestions` chip strip (largest unrealized loss, wash-sale risk, largest unrealized gain, or a demo chip on empty portfolios) and a recents list.
 - `/tax` — Tax performance, harvest queue, harvest plan-builder (`/tax/harvest/plan`), tax-projection setup form (`/tax/projection-config`), wash-sale + exempt-match listings.
-- `/imports` — Imports table, drop-zone upload, preview/commit, per-import detail, data-hygiene groups (Missing basis / No price quote / Missing dates as collapsible `<details>` buckets).
+- `/imports` → redirects to the Settings drawer (`/settings/imports`). The drawer hosts the imports table, drop-zone upload, preview/commit, per-import detail, and data-hygiene groups (Missing basis / No price quote / Missing dates as collapsible `<details>` buckets). The `/imports/*` mutation endpoints (POST upload, DELETE) remain at their original paths.
 - `/ticker/{symbol}` — Per-symbol timeline, lots, and reconciliation views; lot edit + add-trade forms.
 - `/settings` — Settings drawer (profile, density, ETF pairs, imports, about) — resizable.
 - `/trades` (POST) — Manual trade CRUD: add, edit-manual, edit-transfer, delete; recomputes wash sales over the affected window.
@@ -229,7 +229,7 @@ never leave the box. Disable price fetches by setting
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **net_alpha** (12931 symbols, 18165 relationships, 111 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **net_alpha** (13933 symbols, 19358 relationships, 103 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
