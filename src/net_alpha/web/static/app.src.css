@@ -365,11 +365,37 @@
     border: 0.5px solid var(--color-hairline);
   }
   .kpi-hero {
-    /* Flat surface so the hero sits as a peer to the four small KPIs in the
-       command-center grid; only the larger type gives it weight. */
+    /* Top-anchored brand-glow gives the page-hero KPI presence without
+       resorting to a different fill — peer of the four small KPIs at rest,
+       subtly emphasized by the colored halo. Halo intensity ramps on hover
+       (motion deployment in Task 5). */
     background: var(--color-surface);
     @apply px-5 py-4;
+    position: relative;
   }
+  .kpi-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 80% at 50% 0%,
+                var(--color-brand-glow) 0%,
+                transparent 60%);
+    opacity: 0.55;
+    pointer-events: none;
+    border-radius: inherit;
+  }
+  .kpi-hero > * {
+    position: relative;  /* keep content above the ::before halo */
+  }
+
+  /* Active positions cockpit pane — promoted from a flat 1px border
+     panel to a shadowed surface with a violet left edge so it reads
+     as the page's active focus surface, not a sibling column. */
+  .positions-pane {
+    box-shadow: var(--shadow-pane);
+    border-left: 1px solid var(--color-signature);
+  }
+
   .kpi-hero .num.num-hero {
     @apply text-[38px] font-bold tracking-tight;
     line-height: 1.1;
@@ -633,6 +659,8 @@
   .tab:focus-visible,
   .chip:focus-visible,
   .nav-link:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible,
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible,
