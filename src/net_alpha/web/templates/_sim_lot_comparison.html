@@ -42,10 +42,10 @@
               {% endif %}
             </td>
             <td class="r num {% if r.pre_tax_pnl < 0 %}text-neg{% elif r.pre_tax_pnl > 0 %}text-pos{% endif %}">
-              ${{ "{:,.2f}".format(r.pre_tax_pnl|float) }}
+              {% if r.pre_tax_pnl < 0 %}−{% endif %}${{ "{:,.2f}".format(r.pre_tax_pnl|float|abs) }}
             </td>
             <td class="r num {% if r.after_tax_pnl < 0 %}text-neg{% elif r.after_tax_pnl > 0 %}text-pos{% endif %}">
-              ${{ "{:,.2f}".format(r.after_tax_pnl|float) }}
+              {% if r.after_tax_pnl < 0 %}−{% endif %}${{ "{:,.2f}".format(r.after_tax_pnl|float|abs) }}
             </td>
             <td class="r num">
               {% if r.has_wash_sale_risk %}
