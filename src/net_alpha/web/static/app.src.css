@@ -387,6 +387,20 @@
   .kpi-hero > * {
     position: relative;  /* keep content above the ::before halo */
   }
+  .kpi {
+    transition: transform var(--duration-med) var(--ease-out-soft),
+                box-shadow var(--duration-med) var(--ease-out-soft);
+  }
+  .kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-pane);
+  }
+  .kpi-hero::before {
+    transition: opacity var(--duration-med) var(--ease-out-soft);
+  }
+  .kpi-hero:hover::before {
+    opacity: 0.75;  /* was 0.55 at rest */
+  }
 
   /* Active positions cockpit pane — promoted from a flat 1px border
      panel to a shadowed surface with a violet left edge so it reads
@@ -413,7 +427,8 @@
   .seg button, .seg a {
     @apply bg-transparent border-0 px-3 py-1 text-[12px] font-medium rounded-[6px] cursor-pointer;
     color: var(--color-label-2);
-    transition: background-color 120ms, color 120ms;
+    transition: background-color var(--duration-fast) var(--ease-out-soft),
+                color var(--duration-fast) var(--ease-out-soft);
   }
   .seg button:hover:not(.seg-active),
   .seg a:hover:not(.seg-active) { color: var(--color-text); }
@@ -440,7 +455,8 @@
     color: var(--color-label-1);
     background: var(--color-surface);
     border: 0.5px solid var(--color-hairline);
-    transition: background-color 120ms, color 120ms;
+    transition: background-color var(--duration-fast) var(--ease-out-soft),
+                color var(--duration-fast) var(--ease-out-soft);
   }
   .status-pill:hover { background: var(--color-surface-2); }
   .status-pill .status-dot {
@@ -468,7 +484,8 @@
   .nav-link {
     @apply px-3 py-[5px] text-[13px] rounded-md font-medium no-underline;
     color: var(--color-label-2);
-    transition: background-color 120ms, color 120ms;
+    transition: background-color var(--duration-fast) var(--ease-out-soft),
+                color var(--duration-fast) var(--ease-out-soft);
   }
   .nav-link:hover { color: var(--color-text); }
   .nav-link.active {
@@ -498,7 +515,8 @@
     color: var(--color-label-2);
     border-bottom: 2px solid transparent;
     margin-bottom: -0.5px;
-    transition: color 120ms, border-color 120ms;
+    transition: color var(--duration-fast) var(--ease-out-soft),
+                border-color var(--duration-fast) var(--ease-out-soft);
   }
   .tab:hover { color: var(--color-text); }
   .tab--active {
@@ -538,7 +556,7 @@
   }
   .net-table thead th.r { @apply text-right; }
   .net-table tbody tr {
-    transition: background-color 120ms;
+    transition: background-color var(--duration-fast) var(--ease-out-soft);
     border-bottom: 0.5px solid var(--color-hairline);
   }
   .net-table tbody tr:last-child { border-bottom: 0; }
@@ -680,6 +698,16 @@
     background: var(--color-surface-2);
     border: 0.5px solid var(--color-hairline);
     border-radius: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 0ms !important;
+      animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+    }
+    .kpi:hover { transform: none; }
   }
 }
 
