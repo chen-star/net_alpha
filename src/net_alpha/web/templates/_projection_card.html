@@ -5,11 +5,17 @@
       <div class="label-uc">Year-end tax projection</div>
       <div class="text-[11px] text-label-2">Dec 31, {{ projection.year }}</div>
     </div>
-    <div class="num num-promoted mt-2">${{ "{:,.0f}".format(projection.total_tax) }}</div>
+    {# Display the headline as the sum of the rounded components so the user
+       never sees "$50 + $15 = $64". Python's `{:,.0f}` uses banker's rounding,
+       which can split rounding direction between fed/state/total when each
+       component lands on .5. Round each to int first, then sum, then format. #}
+    {% set _fed_d = (projection.federal_tax|float)|round(0, 'common')|int %}
+    {% set _state_d = (projection.state_tax|float)|round(0, 'common')|int %}
+    <div class="num num-promoted mt-2">${{ "{:,d}".format(_fed_d + _state_d) }}</div>
     <div class="text-[11px] text-label-2 mt-1">
-      Federal <span class="num text-label-1">${{ "{:,.0f}".format(projection.federal_tax) }}</span>
+      Federal <span class="num text-label-1">${{ "{:,d}".format(_fed_d) }}</span>
       <span class="text-label-3 mx-1">·</span>
-      State <span class="num text-label-1">${{ "{:,.0f}".format(projection.state_tax) }}</span>
+      State <span class="num text-label-1">${{ "{:,d}".format(_state_d) }}</span>
     </div>
     {% if projection.bracket_warnings %}
     <div class="mt-2 text-[11px] text-warn">
