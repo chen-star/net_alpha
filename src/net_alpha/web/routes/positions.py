@@ -56,6 +56,9 @@ def positions_page(
     if selected_view not in {"all", "stocks", "options", "at-loss", "closed", "plan"}:
         selected_view = "all"
 
+    if page_size not in (10, 25, 50, 100):
+        page_size = 25
+
     imports = repo.list_imports()
     accounts_available = sorted({imp.account_display for imp in imports})
 
@@ -98,6 +101,7 @@ def positions_page(
         "account_id": filter_id,
         "selected_view": selected_view,
         "target_count": target_count,
+        "page_size": page_size,
     }
 
     if selected_view == "closed":
