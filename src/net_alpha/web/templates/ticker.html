@@ -23,7 +23,7 @@
   <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
     <div class="kpi" data-kpi-slot="open-lots">
       <div class="label-uc">Open lots</div>
-      <div class="num text-[22px] font-bold mt-2">
+      <div class="num num-promoted mt-2">
         {{ kpi_open_lots }}{% if open_shorts %}<span class="text-label-2 text-[14px] font-normal"> + {{ open_shorts|length }} short opt</span>{% endif %}
       </div>
       <div class="text-xs text-label-2 mt-1">Basis: {{ fmt_currency(kpi_open_basis) }}</div>
@@ -31,7 +31,7 @@
 
     <div class="kpi" data-kpi-slot="realized">
       <div class="label-uc">Realized P&amp;L</div>
-      <div class="num text-[22px] font-bold mt-2 {% if kpi_realized_ytd > 0 %}text-pos{% elif kpi_realized_ytd < 0 %}text-neg{% else %}text-label-2{% endif %}">
+      <div class="num num-promoted mt-2 {% if kpi_realized_ytd > 0 %}text-pos{% elif kpi_realized_ytd < 0 %}text-neg{% else %}text-label-2{% endif %}">
         {{ fmt_currency(kpi_realized_ytd) }}{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
       </div>
       <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
@@ -53,7 +53,7 @@
 
     <div class="kpi" data-kpi-slot="disallowed">
       <div class="label-uc">Disallowed</div>
-      <div class="num text-[22px] font-bold mt-2 {% if kpi_disallowed_ytd > 0 %}text-neg{% else %}text-label-3{% endif %}">
+      <div class="num num-promoted mt-2 {% if kpi_disallowed_ytd > 0 %}text-neg{% else %}text-label-3{% endif %}">
         {{ fmt_currency(kpi_disallowed_ytd) }}
       </div>
       <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>

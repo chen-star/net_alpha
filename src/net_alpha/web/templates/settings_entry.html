@@ -8,9 +8,15 @@
 
   {# Loss-carryforward section — lazy-loaded fragment. Sits beneath the
      drawer landing copy so deep-links into /settings surface the per-year
-     carryforward state without forcing a drawer-tab switch. #}
+     carryforward state without forcing a drawer-tab switch.
+
+     The drawer auto-opens on this page (entry-point logic in base.html), so
+     fetching at page-load would render content nobody can see — wasted work
+     plus a flash of underlying chrome during the drawer-close transition.
+     Defer to when the drawer is dismissed instead; if the user revisits with
+     the drawer already auto-opened, the fetch waits cleanly for them to close it. #}
   <div hx-get="/settings/carryforward"
-       hx-trigger="load"
+       hx-trigger="settings-drawer-closed from:body once"
        hx-swap="innerHTML"
        id="settings-carryforward-mount"
        class="mt-8 max-w-2xl mx-auto"></div>

@@ -12,7 +12,7 @@
     <div class="label-uc">Loss harvest budget</div>
     <div class="text-[11px] text-label-2">{{ budget.year }}</div>
   </div>
-  <div class="num text-[22px] font-bold mt-2">
+  <div class="num num-promoted mt-2">
     ${{ "{:,.0f}".format(budget.used_against_ordinary) }}
     <span class="text-[12px] text-label-2 font-normal ml-1">of ${{ "{:,.0f}".format(budget.cap_against_ordinary) }} cap</span>
   </div>
@@ -20,7 +20,7 @@
        class="mt-2 h-[5px] rounded-full overflow-hidden" style="background: var(--color-hairline);"
        role="progressbar" aria-valuenow="{{ _pct_int }}" aria-valuemin="0" aria-valuemax="100">
     <div style="width: {{ _pct_int }}%; height: 100%;
-                background: linear-gradient(90deg, #5E5CE6 0%, #BF5AF2 100%);
+                background: var(--accent-hero);
                 border-radius: 999px;"></div>
   </div>
   <div class="flex items-center justify-between mt-2 text-[11px]">

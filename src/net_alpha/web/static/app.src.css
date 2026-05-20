@@ -286,7 +286,7 @@
   --color-overlay-soft:   rgba(0,0,0,0.20);
   --color-row-hover:      rgba(60,60,67,0.04);
   --color-topbar-bg:      rgba(255,255,255,0.72);
-  --color-brand-glow:     rgba(137,68,171,0.18);
+  --color-brand-glow:     rgba(137,68,171,0.28);
   --color-cash:           rgba(142,142,147,0.55);
   --color-pos-tint:       rgba(36,138,61,0.12);
   --color-neg-tint:       rgba(215,0,21,0.10);
@@ -300,6 +300,10 @@
   --color-skeleton-shimmer: rgba(60,60,67,0.10);
   --shadow-drawer: 0 0 0 1px var(--color-hairline), -24px 0 48px rgba(0,0,0,0.10);
   --shadow-pane:   0 0 0 0.5px var(--color-hairline), 0 12px 32px rgba(0,0,0,0.08);
+
+  /* Focus ring retinted to light-indigo (#3634A3) so the keyboard halo matches
+     the rest of the light palette. Dark uses the @theme default (rgba 94,92,230,0.6). */
+  --ring-focus: 0 0 0 2px rgba(54,52,163,0.5);
 }
 
 @layer base {
@@ -420,9 +424,14 @@
     @apply text-[38px] font-bold tracking-tight;
     line-height: 1.1;
   }
-  .kpi-promoted .num.num-promoted {
-    @apply text-[28px] font-bold tracking-tight;
-    line-height: 1.15;
+  /* Middle-tier KPI numeric — used on every non-hero KPI tile across Tax,
+     Portfolio, Ticker, and the forward-projection card. Sits between
+     `.num-hero` (38px page anchor) and the default `.num` body size, so the
+     KPI grid reads as a clean hierarchy without per-template font literals.
+     Apply alongside `.num` (which provides tabular-nums + the mono stack). */
+  .num-promoted {
+    @apply text-[22px] font-bold;
+    line-height: 1.2;
   }
 
   /* Segmented control */
@@ -593,7 +602,11 @@
 
   /* ApexCharts tooltip — vibrancy treatment matching .vibrancy-surface so
      tooltips don't look like a different visual layer than the rest of the
-     chrome. !important is required because ApexCharts emits inline styles. */
+     chrome. !important is required because ApexCharts emits inline styles.
+     The background rgba literal expands `--color-surface` at compile time
+     (backdrop-filter can't operate on currentColor / CSS vars). If the dark
+     `--color-surface` value changes, update this literal and the matching
+     light-mode override below — same convention as `.vibrancy-surface`. */
   .apexcharts-tooltip {
     background: rgba(38,38,42,0.85) !important;
     backdrop-filter: blur(16px) saturate(180%);

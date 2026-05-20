@@ -27,25 +27,25 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
       <div class="kpi kpi-hero p-3">
         <div class="label-uc">Pre-tax realized</div>
-        <div class="num text-[22px] font-semibold mt-1 {% if breakdown.pre_tax_realized_pnl < 0 %}text-neg{% elif breakdown.pre_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
+        <div class="num num-hero mt-1 {% if breakdown.pre_tax_realized_pnl < 0 %}text-neg{% elif breakdown.pre_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
           {% if breakdown.pre_tax_realized_pnl < 0 %}−{% elif breakdown.pre_tax_realized_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.pre_tax_realized_pnl|float|abs) }}
         </div>
       </div>
       <div class="kpi p-3">
         <div class="label-uc">Tax bill (est.)</div>
-        <div class="num text-[22px] font-semibold mt-1">
+        <div class="num num-promoted mt-1">
           ${{ '{:,.2f}'.format(breakdown.estimated_tax_bill|float) }}
         </div>
       </div>
       <div class="kpi p-3">
         <div class="label-uc">After-tax realized</div>
-        <div class="num text-[22px] font-semibold mt-1 {% if breakdown.after_tax_realized_pnl < 0 %}text-neg{% elif breakdown.after_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
+        <div class="num num-promoted mt-1 {% if breakdown.after_tax_realized_pnl < 0 %}text-neg{% elif breakdown.after_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
           {% if breakdown.after_tax_realized_pnl < 0 %}−{% elif breakdown.after_tax_realized_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.after_tax_realized_pnl|float|abs) }}
         </div>
       </div>
       <div class="kpi p-3">
         <div class="label-uc">Tax drag</div>
-        <div class="num text-[22px] font-semibold mt-1">
+        <div class="num num-promoted mt-1">
           ${{ '{:,.2f}'.format(breakdown.tax_drag_dollar|float) }}
           <span class="text-[14px] text-label-2 ml-1">({{ '{:.1%}'.format(breakdown.tax_drag_pct|float) }})</span>
         </div>
@@ -63,10 +63,15 @@
         {% set st_pct = (st_abs / total_abs) * 100 %}
         {% set lt_pct = (lt_abs / total_abs) * 100 %}
         {% set s1256_pct = (s1256_abs / total_abs) * 100 %}
-        <div class="flex h-4 rounded overflow-hidden bg-surface-2">
-          <div class="bg-warn" style="width: {{ '{:.1f}'.format(st_pct) }}%" title="Short-term {{ '{:.0f}'.format(st_pct) }}%"></div>
-          <div class="bg-pos" style="width: {{ '{:.1f}'.format(lt_pct) }}%" title="Long-term {{ '{:.0f}'.format(lt_pct) }}%"></div>
-          <div style="background: var(--color-info, var(--color-info)); width: {{ '{:.1f}'.format(s1256_pct) }}%" title="§1256 {{ '{:.0f}'.format(s1256_pct) }}%"></div>
+        {# Single-tranche periods (one category = 100%) render with tint variants
+           so the bar reads as informational rather than alarming. The legend dots
+           below stay at full saturation so the actual category is unambiguous. #}
+        {% set _single_tranche = (st_pct == 100) or (lt_pct == 100) or (s1256_pct == 100) %}
+        <div class="flex h-4 rounded overflow-hidden bg-surface-2"
+             style="{% if _single_tranche %}border: 0.5px solid var(--color-hairline);{% endif %}">
+          <div style="background: var({{ '--color-warn-tint' if _single_tranche else '--color-warn' }}); width: {{ '{:.1f}'.format(st_pct) }}%" title="Short-term {{ '{:.0f}'.format(st_pct) }}%"></div>
+          <div style="background: var({{ '--color-pos-tint' if _single_tranche else '--color-pos' }}); width: {{ '{:.1f}'.format(lt_pct) }}%" title="Long-term {{ '{:.0f}'.format(lt_pct) }}%"></div>
+          <div style="background: var({{ '--color-info-tint' if _single_tranche else '--color-info' }}); width: {{ '{:.1f}'.format(s1256_pct) }}%" title="§1256 {{ '{:.0f}'.format(s1256_pct) }}%"></div>
         </div>
         <div class="flex flex-wrap justify-between text-[11px] text-label-2 mt-2 gap-2">
           <span>
@@ -146,7 +151,7 @@
     {# Effective tax rate #}
     <div class="kpi p-3">
       <div class="label-uc">Effective tax rate</div>
-      <div class="num text-[22px] font-semibold mt-1">{{ '{:.1%}'.format(breakdown.effective_tax_rate|float) }}</div>
+      <div class="num num-promoted mt-1">{{ '{:.1%}'.format(breakdown.effective_tax_rate|float) }}</div>
       <div class="text-[11px] text-label-3 mt-1">tax bill ÷ max(0, pre-tax realized)</div>
     </div>
 

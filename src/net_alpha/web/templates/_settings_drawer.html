@@ -19,6 +19,12 @@
          return Number.isFinite(v) ? v : 480;
        })(),
        resizing: false,
+       init() {
+         // Dispatch a bubbling event whenever the drawer transitions to closed,
+         // so the underlying settings_entry.html carryforward fragment can defer
+         // its lazy fetch until the user is actually looking at it.
+         this.$watch('open', (v) => { if (!v) this.$dispatch('settings-drawer-closed'); });
+       },
        openTab(name) { this.tab = name; this.open = true; },
        startResize(ev) {
          ev.preventDefault();
@@ -49,29 +55,32 @@
      x-on:keydown.window.escape="open = false"
      x-cloak>
   {# Backdrop — fades in/out independent of the panel slide so the dim feels
-     like ambient context, not part of the panel's geometry. #}
+     like ambient context, not part of the panel's geometry. Uses bg-overlay-strong
+     + a heavier blur so any underlying content (e.g. the carryforward fragment
+     rendered by settings_entry.html) reads as background ambience, not as a
+     competing UI layer. #}
   <div x-show="open"
-       x-transition:enter="transition-opacity duration-300 ease-out"
+       x-transition:enter="transition-opacity duration-[240ms] ease-out"
        x-transition:enter-start="opacity-0"
        x-transition:enter-end="opacity-100"
-       x-transition:leave="transition-opacity duration-200 ease-in"
+       x-transition:leave="transition-opacity duration-[160ms] ease-in"
        x-transition:leave-start="opacity-100"
        x-transition:leave-end="opacity-0"
-       class="absolute inset-0 bg-overlay-medium backdrop-blur-sm"
+       class="absolute inset-0 bg-overlay-strong backdrop-blur-md"
        @click="open = false"
        aria-hidden="true"></div>
 
-  {# Drawer panel — slides from the right edge using --duration-med / --ease-out-soft
-     (matched by Tailwind's duration-300 + ease-out, close enough to our tokens
-     that hand-converting to arbitrary-value utilities would be busy-work).
+  {# Drawer panel — slides from the right edge. Durations bind to
+     --duration-med (240ms) / --duration-fast (160ms) via arbitrary-value
+     utilities so timing stays in lockstep with the rest of the motion system.
      Width is resizable via the left-edge drag handle. The icon that opens this
      drawer is hidden on mobile, so width binds unconditionally. #}
   <aside id="settings-drawer"
          x-show="open"
-         x-transition:enter="transition-transform duration-300 ease-out"
+         x-transition:enter="transition-transform duration-[240ms] ease-out"
          x-transition:enter-start="translate-x-full"
          x-transition:enter-end="translate-x-0"
-         x-transition:leave="transition-transform duration-200 ease-in"
+         x-transition:leave="transition-transform duration-[160ms] ease-in"
          x-transition:leave-start="translate-x-0"
          x-transition:leave-end="translate-x-full"
          class="absolute inset-y-0 right-0 vibrancy-surface flex flex-col"
@@ -84,13 +93,13 @@
     <div data-testid="settings-drawer-resize-handle"
          style="position: absolute; top: 0; bottom: 0; left: -4px; width: 8px; cursor: col-resize; z-index: 35;"
          @mousedown="startResize($event)"
-         @mouseenter="$el.querySelector('.handle-bar').style.backgroundColor = resizing ? 'var(--color-accent)' : 'rgba(94,92,230,0.7)'"
-         @mouseleave="$el.querySelector('.handle-bar').style.backgroundColor = resizing ? 'var(--color-accent)' : 'rgba(94,92,230,0.25)'"
+         @mouseenter="$el.querySelector('.handle-bar').style.backgroundColor = resizing ? 'var(--color-signature)' : 'var(--color-signature-edge)'"
+         @mouseleave="$el.querySelector('.handle-bar').style.backgroundColor = resizing ? 'var(--color-signature)' : 'var(--color-signature-tint)'"
          role="separator"
          aria-orientation="vertical"
          aria-label="Resize settings drawer">
       <div class="handle-bar"
-           :style="`position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 2px; background-color: ${resizing ? 'var(--color-accent)' : 'rgba(94,92,230,0.25)'}; transition: background-color 0.15s;`"></div>
+           :style="`position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 2px; background-color: ${resizing ? 'var(--color-signature)' : 'var(--color-signature-tint)'}; transition: background-color 0.15s;`"></div>
     </div>
     <header class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--color-hairline);">
       <h2 class="text-[16px] font-semibold tracking-tight m-0">Settings</h2>
