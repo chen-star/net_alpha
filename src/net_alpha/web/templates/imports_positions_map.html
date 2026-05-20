@@ -27,6 +27,11 @@
           <input type="hidden" name="broker_label" value="{{ label }}"/>
           <select name="account_id"
                   class="bg-surface-2 text-text text-[13px] px-2 py-1 rounded-md border border-hairline">
+            {# Blank default so naive Submit doesn't silently alias every label
+               to whichever account happens to sort first alphabetically. The
+               route treats an empty value as "skip", so leaving rows untouched
+               is the safe no-op. #}
+            <option value="" selected>— Pick an account… —</option>
             {% for acct in accounts %}
               <option value="{{ acct.id }}">{{ acct.broker }} / {{ acct.label }}</option>
             {% endfor %}

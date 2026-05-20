@@ -1,4 +1,8 @@
-<div class="relative border-2 border-dashed rounded-lg p-8 text-center bg-surface"
+{# Dragover highlight uses an inline data-flag instead of bg-surface-2 (which
+   is barely distinguishable from bg-surface in dark mode). On dragover we
+   swap the border color to the accent + intensify the background tint so the
+   drop target is unambiguous in both themes. #}
+<div class="relative border-2 border-dashed rounded-lg p-8 text-center bg-surface transition-colors"
      style="border-color: var(--color-hairline-strong);"
      id="drop-zone"
      hx-post="/imports/preview"
@@ -8,15 +12,24 @@
      hx-target="#import-modal-content"
      hx-swap="innerHTML"
      onclick="document.getElementById('csv-input').click()"
-     ondragover="event.preventDefault(); this.classList.add('bg-surface-2');"
-     ondragleave="this.classList.remove('bg-surface-2');"
-     ondrop="event.preventDefault(); this.classList.remove('bg-surface-2');
+     ondragover="event.preventDefault();
+                 this.dataset.dragActive='1';
+                 this.style.borderColor='var(--color-accent)';
+                 this.style.background='var(--color-accent-tint, var(--color-hairline))';"
+     ondragleave="if (event.target !== this) return;
+                  delete this.dataset.dragActive;
+                  this.style.borderColor='var(--color-hairline-strong)';
+                  this.style.background='';"
+     ondrop="event.preventDefault();
+             delete this.dataset.dragActive;
+             this.style.borderColor='var(--color-hairline-strong)';
+             this.style.background='';
              const dt = new DataTransfer();
              for (const f of event.dataTransfer.files) dt.items.add(f);
              const inp = document.getElementById('csv-input');
              inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
              document.getElementById('import-modal').classList.remove('hidden');">
-  <p>Drop one or more Schwab CSVs here or <a class="text-primary underline cursor-pointer">click to browse</a></p>
+  <p>Drop one or more Schwab or Robinhood CSVs here or <a class="text-primary underline cursor-pointer">click to browse</a></p>
   <p class="text-xs text-label-2 mt-1">Transaction History &middot; Realized G/L &middot; max 50 MB each</p>
   <input type="file" id="csv-input" name="files" accept=".csv" multiple required form="import-form" class="hidden"
          data-drop-zone

@@ -36,6 +36,24 @@ from net_alpha.web.fragment_cache import bump_fragment_revision
 
 router = APIRouter()
 
+# Matches the "max 50 MB each" copy in the drop zone. Enforced server-side so
+# a crafted POST can't silently buffer a gigabyte into the spool file.
+_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+
+def _check_upload_size(f: UploadFile, raw: bytes | None = None) -> None:
+    """Reject uploads over the 50 MB cap. Inspects ``f.size`` when Starlette
+    exposes it, then ``len(raw)`` after the read as a defence-in-depth check."""
+    size = getattr(f, "size", None)
+    if size is None and raw is not None:
+        size = len(raw)
+    if size is not None and size > _MAX_UPLOAD_BYTES:
+        mb = size / (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"{(f.filename or 'file')!r} is {mb:.1f} MB; the limit is 50 MB.",
+        )
+
 
 def _enqueue_washsale_watch(request) -> None:
     """Add a one-shot washsale_watch job to the running scheduler.
@@ -293,10 +311,20 @@ async def preview_upload(
     sample_trades: list = []
     total_parsed = 0
     for f in files:
+        _check_upload_size(f)
         raw = await f.read()
+        _check_upload_size(f, raw=raw)
         tmp = _save_to_temp(raw, f.filename or "uploaded.csv")
         try:
             headers, rows = load_csv(str(tmp))
+        except UnicodeDecodeError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{(f.filename or 'file')!r} isn't a UTF-8 text file "
+                    f"(decode failed at byte {e.start}). Save as plain CSV and retry."
+                ),
+            ) from e
         finally:
             try:
                 tmp.unlink()
@@ -365,10 +393,20 @@ async def upload(
 
     materialized = []
     for f, file_label in zip(files, per_file_labels, strict=True):
+        _check_upload_size(f)
         raw = await f.read()
+        _check_upload_size(f, raw=raw)
         tmp = _save_to_temp(raw, f.filename or "uploaded.csv")
         try:
             headers, rows = load_csv(str(tmp))
+        except UnicodeDecodeError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{(f.filename or 'file')!r} isn't a UTF-8 text file "
+                    f"(decode failed at byte {e.start}). Save as plain CSV and retry."
+                ),
+            ) from e
         finally:
             try:
                 tmp.unlink()
@@ -515,7 +553,19 @@ async def upload_positions_csv(
     if request.app.state.demo_mode:
         return RedirectResponse("/welcome", status_code=303)
 
-    content = (await file.read()).decode("utf-8", errors="replace")
+    _check_upload_size(file)
+    raw = await file.read()
+    _check_upload_size(file, raw=raw)
+    try:
+        content = raw.decode("utf-8")
+    except UnicodeDecodeError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{(file.filename or 'file')!r} isn't a UTF-8 text file "
+                f"(decode failed at byte {e.start}). Export as plain CSV and retry."
+            ),
+        ) from e
     try:
         rows, as_of = parse_positions_csv(content)
     except PositionsCSVParseError as e:

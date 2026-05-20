@@ -23,5 +23,17 @@
     <a href="/tax" class="btn">See my wash sales &rarr;</a>
     <a href="/" class="btn-ghost">See my portfolio &rarr;</a>
   </div>
+
+  {# Recovery affordance — without this, undoing an accidental import means
+     hunting through Settings → Imports → find the row → Remove. #}
+  {% if import_id %}
+    <p class="text-[11px] text-label-3 mt-6">
+      Imported the wrong file?
+      <a href="/settings/imports?highlight={{ import_id }}"
+         class="text-label-2 hover:text-text underline underline-offset-2">
+        Remove this import &rarr;
+      </a>
+    </p>
+  {% endif %}
 </div>
 {% endblock %}
