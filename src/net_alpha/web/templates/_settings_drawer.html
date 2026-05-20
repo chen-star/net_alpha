@@ -9,7 +9,8 @@
 
    `tab` is optional; defaults to 'imports' if not set or unknown. #}
 <div id="settings-drawer-root"
-     class="fixed inset-0 z-30"
+     class="fixed inset-0 z-30 pointer-events-none"
+     :class="{ 'pointer-events-auto': open }"
      x-data="{
        open: false,
        tab: 'imports',
@@ -44,18 +45,35 @@
          document.addEventListener('mouseup', onUp);
        }
      }"
-     x-show="open"
      x-on:open-settings-drawer.window="openTab($event.detail?.tab || 'imports')"
      x-on:keydown.window.escape="open = false"
      x-cloak>
-  {# Backdrop #}
-  <div class="absolute inset-0 bg-overlay-medium backdrop-blur-sm"
+  {# Backdrop — fades in/out independent of the panel slide so the dim feels
+     like ambient context, not part of the panel's geometry. #}
+  <div x-show="open"
+       x-transition:enter="transition-opacity duration-300 ease-out"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition-opacity duration-200 ease-in"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="absolute inset-0 bg-overlay-medium backdrop-blur-sm"
        @click="open = false"
        aria-hidden="true"></div>
 
-  {# Drawer panel — width is resizable via the left-edge drag handle. The icon
-     that opens this drawer is hidden on mobile, so width binds unconditionally. #}
+  {# Drawer panel — slides from the right edge using --duration-med / --ease-out-soft
+     (matched by Tailwind's duration-300 + ease-out, close enough to our tokens
+     that hand-converting to arbitrary-value utilities would be busy-work).
+     Width is resizable via the left-edge drag handle. The icon that opens this
+     drawer is hidden on mobile, so width binds unconditionally. #}
   <aside id="settings-drawer"
+         x-show="open"
+         x-transition:enter="transition-transform duration-300 ease-out"
+         x-transition:enter-start="translate-x-full"
+         x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition-transform duration-200 ease-in"
+         x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="translate-x-full"
          class="absolute inset-y-0 right-0 vibrancy-surface flex flex-col"
          :style="'box-shadow: var(--shadow-drawer); width: ' + width + 'px; max-width: 100vw;'"
          role="dialog"
