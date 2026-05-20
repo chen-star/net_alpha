@@ -1,8 +1,12 @@
+{# Success toast that redirects after a short delay. Single-shot across stacked
+   toasts via a window-level guard so two simultaneous toasts don't race two
+   navigations. #}
 <div class="bg-pos/10 text-pos rounded p-3 mb-4 text-sm"
+     role="status"
+     aria-live="polite"
      style="border:0.5px solid var(--color-pos-tint);"
-     hx-trigger="load delay:1500ms"
-     hx-get="{{ redirect_to }}"
-     hx-target="body"
-     hx-swap="outerHTML">
+     data-redirect="{{ redirect_to|e }}"
+     x-data
+     x-init="setTimeout(() => { if (window.__toastRedirected) return; window.__toastRedirected = true; window.location.href = $el.dataset.redirect; }, 1500)">
   {{ message }}
 </div>

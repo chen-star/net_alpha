@@ -154,7 +154,32 @@ def sim_run(
             "_sim_form_error.html",
             {"message": "Account is required for Sell."},
         )
-    on_date = _date.fromisoformat(trade_date) if trade_date else _date.today()
+    if qty <= 0:
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_sim_form_error.html",
+            {"message": "Quantity must be greater than 0."},
+        )
+    if price <= 0:
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_sim_form_error.html",
+            {"message": "Price must be greater than 0."},
+        )
+    if not ticker.strip():
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_sim_form_error.html",
+            {"message": "Ticker is required."},
+        )
+    try:
+        on_date = _date.fromisoformat(trade_date) if trade_date else _date.today()
+    except ValueError:
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "_sim_form_error.html",
+            {"message": f"Invalid date: {trade_date!r}. Use YYYY-MM-DD."},
+        )
     accounts = repo.list_accounts()
     accounts_filtered = [a for a in accounts if a.display() == account] if account else accounts
 

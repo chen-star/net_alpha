@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date
 from datetime import date as _date
@@ -21,6 +22,10 @@ router = APIRouter()
 
 PAGE_SIZE = 25
 PAGE_SIZE_OPTIONS = (10, 25, 50, 100)
+
+# Accept equity tickers (A–Z, possibly with .-/), and OCC roots; rejects garbage
+# like /ticker/aaaaaaa or /ticker/%20 before we render a blank-shell page.
+_TICKER_SYMBOL_RX = re.compile(r"^[A-Z0-9.\-/]{1,12}$")
 
 
 @dataclass(frozen=True)
@@ -171,8 +176,19 @@ def _build_timeline_rows(
         # proceeds=0 so the row reads "Closed by Expiry" with the full
         # premium booked as a realized loss.
         is_short = key in short_open_keys
+        # Deterministic id so ?jump=trade-... resolves on fresh requests
+        # (uuid4 default-factory would mint a new id per request).
+        synth_id = "synth-{t}-{s}-{e}-{cp}-{d}-{side}".format(
+            t=gl.ticker,
+            s=int(round(float(gl.option_strike) * 100)),
+            e=expiry.isoformat(),
+            cp=gl.option_call_put,
+            d=gl.closed_date.isoformat(),
+            side="s" if is_short else "l",
+        )
         if is_short:
             synth = Trade(
+                id=synth_id,
                 account=gl.account_display,
                 date=gl.closed_date,
                 ticker=gl.ticker,
@@ -189,6 +205,7 @@ def _build_timeline_rows(
             )
         else:
             synth = Trade(
+                id=synth_id,
                 account=gl.account_display,
                 date=gl.closed_date,
                 ticker=gl.ticker,
@@ -255,7 +272,9 @@ def ticker_drilldown(
     jump: str | None = Query(None),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
-    symbol = symbol.upper()
+    symbol = symbol.upper().strip()
+    if not _TICKER_SYMBOL_RX.match(symbol):
+        raise HTTPException(status_code=404, detail=f"invalid symbol: {symbol!r}")
     if view not in {"timeline", "lots", "recon"}:
         view = "timeline"
     if page_size not in PAGE_SIZE_OPTIONS:
@@ -377,8 +396,19 @@ def ticker_drilldown(
         symbol=symbol,
     )
 
+    has_option_trade = any(t.option_details is not None for t in trades)
+    has_stock_trade = any(t.option_details is None for t in trades)
+    if has_option_trade and has_stock_trade:
+        instrument_kind = "stock + options"
+    elif has_option_trade:
+        instrument_kind = "option"
+    else:
+        instrument_kind = "stock"
+
     ctx = {
         "symbol": symbol,
+        "company_name": None,
+        "instrument_kind": instrument_kind,
         "trades": trades,
         "timeline_rows": timeline_rows_page,
         "lots": lots_page,

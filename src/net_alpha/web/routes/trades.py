@@ -29,6 +29,9 @@ def _validate_account(repo: Repository, account: str) -> None:
         raise HTTPException(status_code=400, detail=f"unknown account: {account!r}")
 
 
+_MIN_TRADE_DATE = date(1970, 1, 1)
+
+
 def _parse_date(raw: str) -> date:
     try:
         d = date.fromisoformat(raw)
@@ -36,6 +39,11 @@ def _parse_date(raw: str) -> date:
         raise HTTPException(status_code=400, detail=f"invalid date: {raw!r}") from None
     if d > date.today():
         raise HTTPException(status_code=400, detail="date must not be in the future")
+    if d < _MIN_TRADE_DATE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"date must be on or after {_MIN_TRADE_DATE.isoformat()}",
+        )
     return d
 
 

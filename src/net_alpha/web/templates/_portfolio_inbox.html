@@ -8,7 +8,7 @@
 
 <div id="inbox-panel" class="panel mb-4"
      x-data="{ open: false }"
-     {% if account %}data-account="{{ account }}"{% endif %}>
+     {% if accounts %}data-accounts="{{ accounts|join(',') }}"{% endif %}>
   <div class="flex items-center justify-between cursor-pointer select-none" @click="open = !open">
     <div class="flex items-center gap-2">
       <span class="text-[14px] font-semibold">Action Inbox</span>
@@ -69,7 +69,7 @@
                   </div>
                   <button type="button"
                           class="text-label-2 hover:text-text text-[16px] leading-none px-2 py-1 cursor-pointer shrink-0"
-                          hx-post="/portfolio/inbox/dismiss/{{ it.dismiss_key }}{% if account %}?account={{ account }}{% endif %}"
+                          hx-post="/portfolio/inbox/dismiss/{{ it.dismiss_key }}{% if accounts %}?{% for a in accounts %}account={{ a|urlencode }}{% if not loop.last %}&{% endif %}{% endfor %}{% endif %}"
                           hx-target="#inbox-panel"
                           hx-swap="outerHTML"
                           aria-label="Dismiss"

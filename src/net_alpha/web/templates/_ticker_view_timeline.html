@@ -49,7 +49,7 @@
             {% endif %}
           </td>
           <td class="px-2 py-1">{{ display_action(t, assigned_from=row.assigned_from) }}</td>
-          <td class="px-2 py-1 num font-mono">{{ t.quantity }}</td>
+          <td class="px-2 py-1 num font-mono">{{ fmt_quantity(t.quantity) }}</td>
           <td class="px-2 py-1 num font-mono" id="trade-basis-{{ t.id }}">
             {% if t.cost_basis is not none %}
               {{ fmt_currency(t.cost_basis) }}
@@ -59,7 +59,9 @@
               <span class="text-label-3">—</span>
             {% endif %}
           </td>
-          <td class="px-2 py-1 num font-mono">{{ t.proceeds if t.proceeds is not none else "-" }}</td>
+          <td class="px-2 py-1 num font-mono">
+            {% if t.proceeds is not none %}{{ fmt_currency(t.proceeds) }}{% else %}<span class="text-label-3">—</span>{% endif %}
+          </td>
           <td class="px-2 py-1 num font-mono r">
             {% if row.gain_loss is not none %}
               <span class="{% if row.gain_loss >= 0 %}text-pos{% else %}text-neg{% endif %}">

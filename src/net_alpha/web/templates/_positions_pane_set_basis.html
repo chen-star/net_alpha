@@ -11,7 +11,7 @@
           hx-target="closest .panel"
           hx-swap="outerHTML"
           class="space-y-2"
-          x-data='{ basis: 0, qty: {{ transfer_qty|float }} }'>
+          x-data='{ basis: 0, qty: {{ (transfer_qty|float) if transfer_qty is not none else 0 }} }'>
       <input type="hidden" name="trade_id" value="{{ trade_id }}">
       <label class="block text-[12px] text-label-2">
         Acquisition date
@@ -32,7 +32,7 @@
           across <span class="font-mono" x-text="qty"></span> shares
         </span>
         <span class="block mt-1 text-[10px] text-label-3" x-show="!(basis > 0)">
-          Enter the total $ for all {{ transfer_qty }} shares (multiply per-share basis by quantity).
+          {% if transfer_qty is not none %}Enter the total $ for all {{ transfer_qty }} shares (multiply per-share basis by quantity).{% else %}Enter the total $ for the entire lot (multiply per-share basis by quantity).{% endif %}
         </span>
       </label>
       <button type="submit"
