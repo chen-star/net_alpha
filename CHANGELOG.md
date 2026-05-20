@@ -2,6 +2,124 @@
 
 
 
+## v0.74.0 (2026-05-20)
+
+### Chore
+
+* chore(web): scrub plan-artifact comments from dark-mode v2 diff
+
+Surfaced by the final review: four inline comments referenced
+the implementation plan (&#34;// NEW&#34;, &#34;// bumped to match Task 1&#34;,
+&#34;motion deployment in Task 5&#34;) instead of the business reason.
+CLAUDE.md says comments must explain WHY, not reference the
+current task — those references rot as the codebase evolves.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`cf7c311`](https://github.com/chen-star/net_alpha/commit/cf7c3116cc46c1c67c20942573d6a28be2df0525))
+
+### Documentation
+
+* docs(readme): refresh narrative + screenshots from demo dataset
+
+Re-capture wash-sale ledger, NVDA drilldown, sim, and portfolio shots
+from the built-in demo (no real positions). Updates README copy to
+reflect v0.73.x surface: cash-deployment chart, equity-curve click-to-
+explain, positions side-pane (lot ladder, ST→LT clock, wash-sale
+outlook, j/k/o nav), per-account sim verdict, and Cross-account source
+pill on the violations table.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0d17b87`](https://github.com/chen-star/net_alpha/commit/0d17b87035c6679f5c325ab22fac0b655c70add1))
+
+### Feature
+
+* feat(web): promote Tax &#34;Pre-tax realized&#34; to .kpi-hero
+
+Apply the .kpi-hero class to the first KPI tile on the Tax
+performance panel so the violet brand-glow halo anchors the page
+headline number, matching the pattern Portfolio established with
+its first KPI. Spec called this the eventual extension of the
+hero-KPI pattern to Tax / Sim / Positions; Sim has no .kpi tiles
+and Positions plan uses .panel (different base class) — both out
+of scope for this followup.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`21d2956`](https://github.com/chen-star/net_alpha/commit/21d2956dff3c47aa7bbe8a43b35d7bfcfcaf673b))
+
+* feat(web): drawer slide-from-right + backdrop fade transition
+
+Spec G4 listed &#34;Drawer/dialog open: translate + backdrop-blur ramp&#34;
+as the 4th named motion deployment; not added in the original v2
+pass (final review flagged it as deferrable). Wire it now.
+
+Move x-show off the wrapper onto the backdrop and panel children
+so each gets its own x-transition pair. Wrapper stays in DOM but
+defaults to pointer-events-none, flips to auto when open — preserves
+the existing IDs and event listeners that tests + open-drawer
+dispatches rely on.
+
+Panel slides from translate-x-full to 0 over 300ms ease-out on
+open (200ms ease-in on close). Backdrop fades opacity over the
+same window. Existing backdrop-blur-sm is unchanged — only the
+overlay opacity is animated, since transitioning backdrop-filter
+inflates paint cost on heavier pages.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7413e57`](https://github.com/chen-star/net_alpha/commit/7413e578ec1e0e6449cc47a1efc7d51c693f3166))
+
+* feat(web): light-mode signature parity + dark-mode v2 QA pass
+
+Mirror --color-signature / --color-link / --color-brand-glow into the
+light theme block (darker violet for white-surface contrast).
+Manual QA across Portfolio / Positions / Sim / Tax / Imports / Ticker /
+Verify / overlays in both themes, with reduced-motion and system
+appearance-flip verified. ([`f9abe04`](https://github.com/chen-star/net_alpha/commit/f9abe04c66b79e87f241479bb3f9adb797612760))
+
+* feat(web): tune ApexCharts defaults + vibrancy tooltip CSS
+
+Update buildDefaults() — violet-led palette, faster --duration-slow
+animation speed with light stagger, dotted gridlines, axis border/ticks
+hidden, thinner 1.5px stroke. Add .apexcharts-tooltip rule mirroring
+.vibrancy-surface so tooltips feel like part of the same chrome.
+All three existing chart templates pick up the new defaults via the
+existing register()/theme:change registry — no per-chart edits. ([`fdd4dc7`](https://github.com/chen-star/net_alpha/commit/fdd4dc767ca3067e0c92f041831bdda2c1bc2bfb))
+
+* feat(web): motion deployment — KPI lift, halo intensify, tokenized transitions
+
+Replace bare 120ms literals on .nav-link / .tab / .seg / .status-pill /
+.net-table with --duration-fast / --ease-out-soft. Add 2px KPI hover
+lift + pane-shadow, and ramp the .kpi-hero brand-glow halo on hover.
+Guard with prefers-reduced-motion: reduce so all transitions and
+animations collapse to 0ms when the OS asks for less motion. ([`a2f2ce1`](https://github.com/chen-star/net_alpha/commit/a2f2ce1e68bf480512caab6895f812f8723eac00))
+
+* feat(web): G3 finishing — kpi-hero glow, positions-pane shadow, focus-visible
+
+Three small depth-token deployments: top-anchored brand-glow on
+.kpi-hero (replaces the prior type-only weight strategy on the
+page-hero KPI), --shadow-pane + violet 1px left edge on the active
+positions cockpit pane, and a expansion of the focus-visible
+selector list to cover bare anchor links and [role=button] elements. ([`fc04a77`](https://github.com/chen-star/net_alpha/commit/fc04a77a1d9170b19896c4374b56f5cae971c829))
+
+* feat(web): violet signature on nav/tabs/segmented controls + theme-color
+
+Identity surfaces collapse onto --color-signature (#BF5AF2): active
+nav-link gains an underline+glow, active tab underline retints, active
+segmented-control gradient retints. theme-color meta tag updated for
+PWA chrome. Brand-mark auto-updates via --color-brand-glow (retinted
+in Task 1). ([`33357d5`](https://github.com/chen-star/net_alpha/commit/33357d51c7d6a6fc655a42c36196a2f5d8f75874))
+
+* feat(web): vibrancy-surface utility + apply to drawer/palette/dialogs
+
+Add .vibrancy-surface (surface @ 72% + 20px blur + 180% saturate) and
+swap onto the settings drawer, command palette, profile-picker modal,
+and provenance dialog. Same vibrancy formula the topbar already uses,
+extracted into a reusable utility. ([`35b35d6`](https://github.com/chen-star/net_alpha/commit/35b35d6bc66dcb6a39fc51161417c0bada605112))
+
+* feat(web): dark-mode v2 tokens — graphite canvas + signature + motion
+
+Add --color-signature / --color-link / motion tokens to @theme.
+Shift dark canvas to graphite #1A1A1C with surface ladder up one tier
+(#26262A / #2F2F33 / #3A3A3C). Bump hairlines to 0.10/0.16 to keep
+contrast on the new canvas. Retint brand-glow to violet. No template
+changes — wiring lands in later commits. ([`083cdfa`](https://github.com/chen-star/net_alpha/commit/083cdface25ae99f8bf41a9adfccf1dccb6dc797))
+
+
 ## v0.73.8 (2026-05-19)
 
 ### Chore
