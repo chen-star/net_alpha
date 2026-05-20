@@ -100,6 +100,36 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
     app = FastAPI(title="net-alpha", lifespan=_lifespan)
     app.state.settings = settings
     app.state.demo_mode = demo_mode
+
+    # Same-origin enforcement on mutating requests.
+    #
+    # net-alpha binds loopback only, so the threat surface is "another tab in
+    # the same browser session running a bookmarklet / extension that fires
+    # POSTs at our routes". Browsers always attach an Origin (XHR/fetch) or
+    # Referer (form post / link click); we require the host of either header
+    # to match the request's own Host so a foreign tab can't drive our routes.
+    # CLI tools (curl, httpie) typically send neither header; allow that path
+    # so the user's own scripts keep working.
+    @app.middleware("http")
+    async def _same_origin_guard(request, call_next):
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            from urllib.parse import urlparse
+
+            from starlette.responses import Response
+
+            request_host = (request.headers.get("host") or "").split(":")[0].lower()
+            for header_name in ("origin", "referer"):
+                raw = request.headers.get(header_name)
+                if not raw:
+                    continue
+                origin_host = (urlparse(raw).hostname or "").lower()
+                if origin_host and request_host and origin_host != request_host:
+                    return Response(
+                        content="forbidden: cross-origin mutation blocked",
+                        status_code=403,
+                        media_type="text/plain",
+                    )
+        return await call_next(request)
     app.state.etf_pairs = load_etf_pairs(user_path=str(settings.user_etf_pairs_path))
     app.state.etf_replacements = load_etf_replacements(
         user_path=settings.data_dir / "etf_replacements.yaml",

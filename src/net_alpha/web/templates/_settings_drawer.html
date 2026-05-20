@@ -19,6 +19,7 @@
          return Number.isFinite(v) ? v : 420;
        })(),
        resizing: false,
+       handleHovered: false,
        init() {
          // Dispatch a bubbling event whenever the drawer transitions to closed,
          // so the underlying settings_entry.html carryforward fragment can defer
@@ -93,13 +94,17 @@
     <div data-testid="settings-drawer-resize-handle"
          style="position: absolute; top: 0; bottom: 0; left: -4px; width: 8px; cursor: col-resize; z-index: 35;"
          @mousedown="startResize($event)"
-         @mouseenter="$el.querySelector('.handle-bar').style.backgroundColor = resizing ? 'var(--color-signature)' : 'var(--color-signature-edge)'"
-         @mouseleave="$el.querySelector('.handle-bar').style.backgroundColor = resizing ? 'var(--color-signature)' : 'var(--color-signature-tint)'"
+         @mouseenter="handleHovered = true"
+         @mouseleave="handleHovered = false"
          role="separator"
          aria-orientation="vertical"
          aria-label="Resize settings drawer">
+      {# Hover + active state both drive the bar via :style so Alpine stays in
+         control of the binding. The previous inline-style mutation on
+         mouseenter shadowed the :style binding, leaving the resize-active
+         highlight visually stuck after the first hover. #}
       <div class="handle-bar"
-           :style="`position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 2px; background-color: ${resizing ? 'var(--color-signature)' : 'var(--color-signature-tint)'}; transition: background-color 0.15s;`"></div>
+           :style="`position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 2px; background-color: ${resizing ? 'var(--color-signature)' : (handleHovered ? 'var(--color-signature-edge)' : 'var(--color-signature-tint)')}; transition: background-color 0.15s;`"></div>
     </div>
     <header class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--color-hairline);">
       <h2 class="text-[16px] font-semibold tracking-tight m-0">Settings</h2>
