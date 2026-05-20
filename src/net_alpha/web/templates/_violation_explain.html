@@ -50,9 +50,16 @@
 
   {% if e.is_permanent_ira %}
     <div class="text-[12px] text-neg mb-2 italic">
-      Permanently disallowed — replacement leg is in a tax-advantaged account
-      (IRA / Roth / 401(k) / HSA), so §1091(d)'s basis rollover cannot apply.
-      The loss is gone for good (Rev. Rul. 2008-5).
+      Permanently disallowed — replacement leg is in a tax-advantaged account,
+      so §1091(d)'s basis rollover cannot apply. The loss is gone for good
+      (Rev. Rul. 2008-5).
+    </div>
+    <div class="text-[11px] text-label-3 mb-2 leading-snug">
+      Rev. Rul. 2008-5 names <strong>traditional and Roth IRAs</strong> only.
+      net-alpha extends the rule to <strong>401(k) and HSA</strong> by analogy
+      — same lack of a basis ledger inside the wrapper. Confirm treatment
+      with your CPA if you're depending on the analogy holding for a specific
+      account type.
     </div>
   {% elif e.adjusted_basis_target %}
     <div class="text-[12px] text-label-2 mb-2">

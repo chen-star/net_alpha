@@ -3,8 +3,15 @@
   <div class="text-sm text-text">
     <strong>Loss in</strong> {{ violation.loss_account or "-" }} → <strong>triggered by</strong> {{ violation.buy_account or "-" }} on {{ violation.triggering_buy_date or "-" }}
     {% if violation.kind == "permanent_ira" %}
-      <span class="ml-2 chip-confirmed"
-            title="Rev. Rul. 2008-5 — replacement leg is in a tax-advantaged account; loss is permanently disallowed (no §1091(d) basis rollover)">Permanent (IRA trap)</span>
+      {# Lock icon + "Permanent (IRA trap)" so this chip reads distinct from
+         the same-color Schwab / Cross-account chips next to it — the loss is
+         permanently gone, not merely rolled forward. #}
+      <span class="ml-2 chip-confirmed inline-flex items-center gap-1"
+            data-kind="permanent_ira"
+            title="Rev. Rul. 2008-5 — replacement leg is in a tax-advantaged account; loss is permanently disallowed (no §1091(d) basis rollover). The ruling names IRAs only; net-alpha extends to 401(k) / HSA by analogy.">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Permanent (IRA trap)
+      </span>
     {% endif %}
     {% if violation.source == "schwab_g_l" %}
       <span class="ml-2 chip-confirmed"
