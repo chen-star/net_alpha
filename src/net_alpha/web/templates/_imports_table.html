@@ -78,7 +78,9 @@
               <td class="px-3 py-2 font-mono">#{{ imp.id }}</td>
               <td class="px-3 py-2 font-mono text-xs">{{ imp.imported_at.strftime("%Y-%m-%d %H:%M") }}</td>
               <td class="px-3 py-2">{{ imp.account_display }}</td>
-              <td class="px-3 py-2">{{ imp.csv_filename }}</td>
+              <td class="px-3 py-2 max-w-[220px]">
+                <span class="block truncate font-mono text-xs" title="{{ imp.csv_filename }}">{{ imp.csv_filename }}</span>
+              </td>
               <td class="px-3 py-2 text-xs text-label-2">
                 {%- if has_dates -%}
                   {{ imp.min_trade_date }} → {{ imp.max_trade_date }} ·
