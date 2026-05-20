@@ -21,9 +21,11 @@
 {% else %}
   <div class="space-y-4">
 
-    {# KPI row — 4 cards #}
+    {# KPI row — 4 cards. First tile gets .kpi-hero so the violet brand-glow
+       halo anchors the eye on the page's headline pre-tax number, matching
+       the Portfolio overview's hero KPI pattern. #}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-      <div class="kpi p-3">
+      <div class="kpi kpi-hero p-3">
         <div class="label-uc">Pre-tax realized</div>
         <div class="num text-[22px] font-semibold mt-1 {% if breakdown.pre_tax_realized_pnl < 0 %}text-neg{% elif breakdown.pre_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
           {% if breakdown.pre_tax_realized_pnl < 0 %}−{% elif breakdown.pre_tax_realized_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.pre_tax_realized_pnl|float|abs) }}
