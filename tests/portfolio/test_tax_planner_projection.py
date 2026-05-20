@@ -184,3 +184,45 @@ def test_projection_emits_bracket_warning_when_st_swings_large(
     seed_import(repo, schwab_account, [buy, sell])
     p = project_year_end_tax(repo=repo, year=2026, brackets=_BRACKETS)
     assert any("bracket" in w.lower() for w in p.bracket_warnings)
+
+
+def test_total_tax_equals_sum_of_displayed_components(
+    repo,
+    schwab_account,
+    seed_import,
+) -> None:
+    """Header total = federal_tax + state_tax exactly (no rounding drift).
+
+    Regression: previously ``total_tax = _quantize(federal + state)`` while
+    ``federal_tax = _quantize(federal)`` and ``state_tax = _quantize(state)``,
+    which could drift one cent — surfacing as e.g. $50 fed + $15 state ≠ $64 total.
+
+    Under the standard _BRACKETS (fed 0.32 / state 0.093), a ST gain of $141.42
+    yields fed_raw=45.2544 → 45.25, state_raw=13.15206 → 13.15. The sum of the
+    raw values is 58.40646 → quantized to 58.41 (old, drifted), whereas the
+    sum of the rounded components is 58.40 (new, matches the displayed total).
+    """
+    today = date(2026, 5, 1)
+    buy = Trade(
+        account=schwab_account.display(),
+        date=today - timedelta(days=10),
+        ticker="DRIFT",
+        action="Buy",
+        quantity=Decimal("100"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("1000"),
+    )
+    sell = Trade(
+        account=schwab_account.display(),
+        date=today,
+        ticker="DRIFT",
+        action="Sell",
+        quantity=Decimal("100"),
+        proceeds=Decimal("1141.42"),
+        cost_basis=Decimal("1000"),
+    )
+    seed_import(repo, schwab_account, [buy, sell])
+    p = project_year_end_tax(repo=repo, year=2026, brackets=_BRACKETS)
+    assert p.federal_tax + p.state_tax == p.total_tax, (
+        f"Drift: fed={p.federal_tax} + state={p.state_tax} != total={p.total_tax}"
+    )

@@ -147,7 +147,7 @@ def project_year_end_tax(
         interest_income=interest_income,
         federal_tax=_quantize(federal),
         state_tax=_quantize(state),
-        total_tax=_quantize(federal + state),
+        total_tax=_quantize(federal) + _quantize(state),
         bracket_warnings=warnings_list,
     )
 
