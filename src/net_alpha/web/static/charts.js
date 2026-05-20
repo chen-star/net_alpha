@@ -50,9 +50,10 @@
     var c = readColors();
     var isLight = activeTheme() === "light";
     // In dark mode label3 (35% white) reads fine on near-black; in light
-    // mode the same opacity on white falls below WCAG, so step axis labels
-    // up to label2 (60%) and legend up to label1 (~85%).
-    var axisColor = isLight ? c.label2 : c.label3;
+    // mode label2 (60% black) on white only hits ~3.3:1, below WCAG AA
+    // (4.5:1), so axis ticks + date labels use slate-600 (#475569 ≈ 8:1).
+    // Legend uses label1 in light (~9:1) / label2 in dark.
+    var axisColor = isLight ? "#475569" : c.label3;
     var legendColor = isLight ? c.label1 : c.label2;
     return {
       chart: {
