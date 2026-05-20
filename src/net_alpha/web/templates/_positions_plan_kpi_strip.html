@@ -3,7 +3,7 @@
   {# Total Planned #}
   <div class="panel p-2">
     <div class="label-uc text-[10px] text-label-2">Total Planned</div>
-    <div class="num text-[14px] font-semibold">${{ "%.2f"|format(plan_view.total_planned_dollar|float) }}</div>
+    <div class="num text-[14px] font-semibold">${{ "{:,.2f}".format(plan_view.total_planned_dollar|float) }}</div>
     {% if plan_view.planned_rows_with_quote < plan_view.planned_rows_total %}
       <div class="text-[10px] text-label-3" title="Targets without a quote are excluded from this total.">
         {{ plan_view.planned_rows_with_quote }}/{{ plan_view.planned_rows_total }} priced
@@ -14,13 +14,13 @@
   <div class="panel p-2">
     <div class="label-uc text-[10px] text-label-2">To Fill</div>
     <div class="num text-[14px] font-semibold {% if plan_view.total_to_fill_dollar > 0 %}text-pos{% endif %}">
-      {% if plan_view.total_to_fill_dollar > 0 %}+{% endif %}${{ "%.2f"|format(plan_view.total_to_fill_dollar|float) }}
+      {% if plan_view.total_to_fill_dollar > 0 %}+{% endif %}${{ "{:,.2f}".format(plan_view.total_to_fill_dollar|float) }}
     </div>
   </div>
   {# Free Cash #}
   <div class="panel p-2">
     <div class="label-uc text-[10px] text-label-2">Free Cash</div>
-    <div class="num text-[14px] font-semibold">${{ "%.2f"|format(plan_view.free_cash|float) }}</div>
+    <div class="num text-[14px] font-semibold">${{ "{:,.2f}".format(plan_view.free_cash|float) }}</div>
   </div>
   {# Coverage #}
   <div class="panel p-2">
@@ -30,10 +30,10 @@
       {% elif cov >= 50 %}{% set cov_color = 'var(--color-warn)' %}
       {% else %}{% set cov_color = 'var(--color-neg)' %}{% endif %}
       <div class="label-uc text-[10px] text-label-2">Coverage</div>
-      <div class="num text-[14px] font-semibold" style="color:{{ cov_color }};">{{ "%.0f"|format(cov) }}%</div>
+      <div class="num text-[14px] font-semibold" style="color:{{ cov_color }};">{{ "{:,.0f}".format(cov) }}%</div>
       {% if cov < 100 %}
         <div class="text-[10px] text-label-3">
-          short by ${{ "%.2f"|format((plan_view.total_to_fill_dollar - plan_view.free_cash)|float) }}
+          short by ${{ "{:,.2f}".format((plan_view.total_to_fill_dollar - plan_view.free_cash)|float) }}
         </div>
       {% endif %}
     {% else %}

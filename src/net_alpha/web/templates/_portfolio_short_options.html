@@ -15,7 +15,7 @@
       {% if _puts and _calls %} · {% endif %}
       {% if _calls %}{{ _calls }} CC{% if _calls != 1 %}s{% endif %}{% endif %}
       {% if open_shorts %} · cash secured ${{ "{:,.0f}".format(cash_secured_total) }}{% endif %}
-      {% if premium_received_total %} · premium <span class="text-pos">+${{ "%.2f"|format(premium_received_total) }}</span>{% endif %}
+      {% if premium_received_total %} · premium <span class="text-pos">+${{ "{:,.2f}".format(premium_received_total) }}</span>{% endif %}
     </span>
   </summary>
 
@@ -58,7 +58,7 @@
           </div>
         </div>
         <div class="text-right num text-[12px]">
-          <div class="text-pos font-medium">+${{ "%.2f"|format(s.premium_received) }}</div>
+          <div class="text-pos font-medium">+${{ "{:,.2f}".format(s.premium_received) }}</div>
           {% if s.call_put == 'P' %}<div class="text-[10px] text-label-2">${{ "{:,.0f}".format(s.cash_secured) }} secured</div>{% endif %}
         </div>
         <div class="text-right">

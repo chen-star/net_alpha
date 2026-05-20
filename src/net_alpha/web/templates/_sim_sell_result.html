@@ -16,7 +16,7 @@
           {% endif %}
         </div>
         <div class="label-uc">Realized P&L</div>
-        <div class="text-lg font-mono mb-2 num">${{ "%.2f"|format(opt.realized_pnl|float) }}</div>
+        <div class="text-lg font-mono mb-2 num">${{ "{:,.2f}".format(opt.realized_pnl|float) }}</div>
         {% if opt.insufficient_shares %}
           <div class="text-xs text-warn mb-2">Insufficient shares: only {{ opt.available_shares }} held.</div>
         {% endif %}
@@ -28,7 +28,7 @@
                 <tr>
                   <td class="py-1 font-mono">{{ lot.purchase_date }}</td>
                   <td class="r num">{{ lot.quantity }}</td>
-                  <td class="r num">${{ "%.2f"|format(lot.basis_per_share|float) }}/sh</td>
+                  <td class="r num">${{ "{:,.2f}".format(lot.basis_per_share|float) }}/sh</td>
                 </tr>
               {% endfor %}
             </tbody>

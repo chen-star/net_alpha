@@ -44,9 +44,9 @@
             </td>
             <td class="px-2 py-1 font-mono">{{ s.opened_at if s.opened_at else "—" }}</td>
             <td class="px-2 py-1 num font-mono r">-{{ s.qty_short }}</td>
-            <td class="px-2 py-1 num font-mono r text-pos">+${{ "%.2f"|format(s.premium_received) }}</td>
+            <td class="px-2 py-1 num font-mono r text-pos">+${{ "{:,.2f}".format(s.premium_received) }}</td>
             <td class="px-2 py-1 num font-mono r">
-              {% if s.call_put == 'P' %}${{ "%.0f"|format(s.cash_secured) }}{% else %}—{% endif %}
+              {% if s.call_put == 'P' %}${{ "{:,.0f}".format(s.cash_secured) }}{% else %}—{% endif %}
             </td>
             <td class="px-2 py-1 num font-mono r {% if dte is not none and dte <= 7 %}text-warn{% endif %}">
               {% if dte is not none %}{{ dte }}d{% else %}—{% endif %}

@@ -28,10 +28,10 @@
           </td>
           <td class="px-2 py-1 font-mono">{{ lot.date }}</td>
           <td class="px-2 py-1 num font-mono">{{ lot.quantity }}</td>
-          <td class="px-2 py-1 num font-mono">${{ "%.2f"|format(lot.cost_basis) }}</td>
-          <td class="px-2 py-1 num font-mono">${{ "%.2f"|format(lot.adjusted_basis) }}</td>
+          <td class="px-2 py-1 num font-mono">${{ "{:,.2f}".format(lot.cost_basis) }}</td>
+          <td class="px-2 py-1 num font-mono">${{ "{:,.2f}".format(lot.adjusted_basis) }}</td>
           <td class="px-2 py-1 num font-mono {% if delta > 0 %}text-accent{% endif %}">
-            {% if delta > 0 %}+${{ "%.2f"|format(delta) }}{% else %}-{% endif %}
+            {% if delta > 0 %}+${{ "{:,.2f}".format(delta) }}{% else %}-{% endif %}
           </td>
           <td class="px-2 py-1" x-data="{ editing: false }">
             <button type="button" x-show="!editing" @click="editing = true"

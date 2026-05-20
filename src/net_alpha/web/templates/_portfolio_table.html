@@ -188,7 +188,7 @@
             <td class="r num">{{ fmt_quantity(r.qty) }}</td>
             <td class="r num">
               {% if r.market_value is none %}<span class="text-label-3">—</span>
-              {% else %}${{ "%.2f"|format(r.market_value|float) }}{% endif %}
+              {% else %}${{ "{:,.2f}".format(r.market_value|float) }}{% endif %}
             </td>
             <td class="r num">
               {% if (r.open_cost is none or r.open_cost == 0) and not r.basis_known and r.qty and r.qty != 0 %}
@@ -209,10 +209,10 @@
               {% if r.unrealized_pl is none %}
                 <span class="text-label-3">—</span>
               {% else %}
-                <div>{% if r.unrealized_pl < 0 %}-{% else %}+{% endif %}${{ "%.2f"|format(r.unrealized_pl|float|abs) }}</div>
+                <div>{% if r.unrealized_pl < 0 %}-{% else %}+{% endif %}${{ "{:,.2f}".format(r.unrealized_pl|float|abs) }}</div>
                 {% if r.open_cost and r.open_cost|float != 0 %}
                   {% set pct = (r.unrealized_pl|float / r.open_cost|float) * 100 %}
-                  <div class="text-[11px] opacity-80">{% if pct < 0 %}-{% else %}+{% endif %}{{ "%.1f"|format(pct|abs) }}%</div>
+                  <div class="text-[11px] opacity-80">{% if pct < 0 %}-{% else %}+{% endif %}{{ "{:,.1f}".format(pct|abs) }}%</div>
                 {% else %}
                   <div class="text-[11px] text-label-3">—</div>
                 {% endif %}
@@ -221,7 +221,7 @@
             {% if extra_columns is defined %}
               {% if 'days_held' in extra_columns %}<td class="r num">{{ r.days_held if r.days_held is not none else '—' }}{% if r.days_held is not none %}d{% endif %}</td>{% endif %}
               {% if 'lt_st_split' in extra_columns %}<td class="r num">{{ fmt_quantity(r.lt_qty) }}LT / {{ fmt_quantity(r.st_qty) }}ST</td>{% endif %}
-              {% if 'premium_received' in extra_columns %}<td class="r num">${{ "%.0f"|format(r.premium_received|float) }}</td>{% endif %}
+              {% if 'premium_received' in extra_columns %}<td class="r num">${{ "{:,.0f}".format(r.premium_received|float) }}</td>{% endif %}
               {% if 'origin_event' in extra_columns %}<td>—</td>{% endif %}
               {% if 'days_to_ltcg' in extra_columns %}<td class="r num">—</td>{% endif %}
               {% if 'harvestable' in extra_columns %}<td class="r">—</td>{% endif %}
@@ -250,7 +250,7 @@
                           <div style="width:{{ _pct }}%; height:100%; background:{{ _color }};"></div>
                         {% endif %}
                       </div>
-                      <span class="num text-[10px]" style="color:{{ _color }};">{{ "%.0f"|format(_pct) }}%</span>
+                      <span class="num text-[10px]" style="color:{{ _color }};">{{ "{:,.0f}".format(_pct) }}%</span>
                     </div>
                   {% else %}
                     {# Use an em-dash alone at strong-tertiary opacity so this

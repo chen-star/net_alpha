@@ -28,13 +28,13 @@
           {%- set parts = m.position_key.split("|") -%}
           {{ parts[1] }} {{ parts[3] }} {{ parts[2] }}
         </td>
-        <td class="py-1 text-right tabular-nums">${{ "%.2f"|format(m.basis_before) }}</td>
-        <td class="py-1 text-right tabular-nums">${{ "%.2f"|format(m.fmv) }}</td>
+        <td class="py-1 text-right tabular-nums">${{ "{:,.2f}".format(m.basis_before) }}</td>
+        <td class="py-1 text-right tabular-nums">${{ "{:,.2f}".format(m.fmv) }}</td>
         <td class="py-1 text-right tabular-nums {% if m.unrealized_pnl < 0 %}text-neg{% else %}text-pos{% endif %}">
-          ${{ "%.2f"|format(m.unrealized_pnl) }}
+          ${{ "{:,.2f}".format(m.unrealized_pnl) }}
         </td>
-        <td class="py-1 text-right tabular-nums">${{ "%.2f"|format(m.long_term_portion) }}</td>
-        <td class="py-1 text-right tabular-nums">${{ "%.2f"|format(m.short_term_portion) }}</td>
+        <td class="py-1 text-right tabular-nums">${{ "{:,.2f}".format(m.long_term_portion) }}</td>
+        <td class="py-1 text-right tabular-nums">${{ "{:,.2f}".format(m.short_term_portion) }}</td>
         <td class="py-1 text-xs">
           {%- if m.fmv_source == "yahoo_close" -%}
             <span class="text-label-2">Yahoo close</span>

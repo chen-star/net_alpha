@@ -19,6 +19,6 @@
       {% endif %}
     {% endif %}
   </div>
-  <div class="text-sm">Disallowed: <span class="font-mono text-neg">${{ "%.2f"|format(violation.disallowed_loss) }}</span> · Matched qty: <span class="font-mono text-text">{{ violation.matched_quantity }}</span></div>
+  <div class="text-sm">Disallowed: <span class="font-mono text-neg">${{ "{:,.2f}".format(violation.disallowed_loss) }}</span> · Matched qty: <span class="font-mono text-text">{{ violation.matched_quantity }}</span></div>
   <a href="/ticker/{{ violation.ticker }}" class="text-primary text-sm underline">View ticker drilldown →</a>
 </div>

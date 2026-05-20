@@ -14,7 +14,7 @@
         {{ wash_sale_count }} wash sale{{ "s" if wash_sale_count != 1 else "" }} found
       </div>
       <div class="text-sm text-label-2 mt-1">
-        ${{ "%.2f"|format(disallowed_total) }} of losses are disallowed under &sect;1091 and rolled into replacement-lot basis.
+        ${{ "{:,.2f}".format(disallowed_total) }} of losses are disallowed under &sect;1091 and rolled into replacement-lot basis.
       </div>
     </div>
   {% endif %}

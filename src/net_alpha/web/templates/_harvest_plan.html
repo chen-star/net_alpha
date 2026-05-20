@@ -51,7 +51,7 @@
                  hx-include="[name='pick']:checked,[name='exclude_locked']">
         </td>
         <td class="font-semibold">{{ row.symbol }}</td>
-        <td class="r num text-neg">−${{ "%.2f"|format(row.loss|abs) }}</td>
+        <td class="r num text-neg">−${{ "{:,.2f}".format(row.loss|abs) }}</td>
         <td><span class="chip-{% if row.lt_st|lower == 'lt' %}unclear{% else %}probable{% endif %}">{{ row.lt_st }}</span></td>
         <td class="text-[12px]">{{ row.account_label }}</td>
         <td>
@@ -65,7 +65,7 @@
         <td id="tax-saved-{{ row.symbol }}-{{ _acct_slug }}" class="r num">
           {% if has_tax_config %}
           {% set _ts = tax_saved_by_key[(row.symbol, row.account_label)] %}
-            <span class="text-pos">${{ "%.2f"|format(_ts|float) }}</span>
+            <span class="text-pos">${{ "{:,.2f}".format(_ts|float) }}</span>
           {% else %}
             <span class="text-label-3">—</span>
           {% endif %}

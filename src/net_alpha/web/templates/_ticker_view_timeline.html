@@ -63,7 +63,7 @@
           <td class="px-2 py-1 num font-mono r">
             {% if row.gain_loss is not none %}
               <span class="{% if row.gain_loss >= 0 %}text-pos{% else %}text-neg{% endif %}">
-                {% if row.gain_loss >= 0 %}+{% else %}−{% endif %}${{ "%.2f"|format(row.gain_loss|abs) }}
+                {% if row.gain_loss >= 0 %}+{% else %}−{% endif %}${{ "{:,.2f}".format(row.gain_loss|abs) }}
               </span>
             {% else %}
               <span class="text-label-3">—</span>

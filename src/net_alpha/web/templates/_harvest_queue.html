@@ -33,7 +33,7 @@
       {% for row in rows %}
       <tr data-symbol="{{ row.symbol|upper }}">
         <td class="sticky left-0 z-[1] bg-inherit shadow-[2px_0_0_0_var(--hairline)] font-semibold">{{ row.symbol }}</td>
-        <td class="r num text-neg">−${{ "%.2f"|format(row.loss|abs) }}</td>
+        <td class="r num text-neg">−${{ "{:,.2f}".format(row.loss|abs) }}</td>
         <td><span class="chip-{% if row.lt_st|lower == 'lt' %}unclear{% else %}probable{% endif %}">{{ row.lt_st }}</span></td>
         <td class="text-[12px]">{{ row.account_label }}</td>
         <td>
@@ -45,7 +45,7 @@
         </td>
         <td class="r num">
           {% if row.premium_offset %}
-            <span class="text-warn">&#8722;${{ "%.2f"|format(row.premium_offset) }}</span>
+            <span class="text-warn">&#8722;${{ "{:,.2f}".format(row.premium_offset) }}</span>
             {% if row.premium_origin_event %}
               <div class="text-[11px] text-label-2">CSP premium received {{ row.premium_origin_event.assignment_date }}</div>
             {% endif %}

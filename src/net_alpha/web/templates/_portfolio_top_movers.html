@@ -19,8 +19,8 @@
                style="border-bottom: 0.5px solid var(--color-hairline);">
             <span class="font-semibold text-[13px]">{{ r.symbol }}</span>
             <span class="num text-pos text-[13px]">
-              +${{ "%.2f"|format(r.unrealized_dollar|float) }}{% if r.unrealized_pct is not none %}
-                <span class="text-label-2 text-[11px] ml-1">({% if r.unrealized_pct > 0 %}+{% endif %}{{ "%.1f"|format(r.unrealized_pct|float) }}%)</span>
+              +${{ "{:,.2f}".format(r.unrealized_dollar|float) }}{% if r.unrealized_pct is not none %}
+                <span class="text-label-2 text-[11px] ml-1">({% if r.unrealized_pct > 0 %}+{% endif %}{{ "{:,.1f}".format(r.unrealized_pct|float) }}%)</span>
               {% endif %}
             </span>
           </div>
@@ -37,8 +37,8 @@
                style="border-bottom: 0.5px solid var(--color-hairline);">
             <span class="font-semibold text-[13px]">{{ r.symbol }}</span>
             <span class="num text-neg text-[13px]">
-              −${{ "%.2f"|format(r.unrealized_dollar|float|abs) }}{% if r.unrealized_pct is not none %}
-                <span class="text-label-2 text-[11px] ml-1">({{ "%.1f"|format(r.unrealized_pct|float) }}%)</span>
+              −${{ "{:,.2f}".format(r.unrealized_dollar|float|abs) }}{% if r.unrealized_pct is not none %}
+                <span class="text-label-2 text-[11px] ml-1">({{ "{:,.1f}".format(r.unrealized_pct|float) }}%)</span>
               {% endif %}
             </span>
           </div>

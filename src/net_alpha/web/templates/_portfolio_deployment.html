@@ -38,10 +38,10 @@
   {# Hero stat: % of account deployed in positions #}
   <div class="flex items-baseline gap-3 mb-3">
     <div class="num text-[28px] font-bold tracking-tight">
-      {{ "%.1f"|format(positions_pct) }}%
+      {{ "{:,.1f}".format(positions_pct) }}%
     </div>
     <div class="text-[12px] text-label-2">
-      deployed · ${{ "%.1f"|format(positions_val / 1000) }}k of ${{ "%.1f"|format(total_val / 1000) }}k
+      deployed · ${{ "{:,.1f}".format(positions_val / 1000) }}k of ${{ "{:,.1f}".format(total_val / 1000) }}k
     </div>
   </div>
 
@@ -68,8 +68,8 @@
         <span class="font-semibold tracking-tightish">Positions</span>
       </span>
       <span class="num">
-        <span class="text-label-2">${{ "%.1f"|format(positions_val / 1000) }}k</span>
-        <span class="ml-2 font-semibold">{{ "%.1f"|format(positions_pct) }}%</span>
+        <span class="text-label-2">${{ "{:,.1f}".format(positions_val / 1000) }}k</span>
+        <span class="ml-2 font-semibold">{{ "{:,.1f}".format(positions_pct) }}%</span>
       </span>
     </div>
     <div class="flex items-center justify-between text-[12px]"
@@ -79,8 +79,8 @@
         <span class="font-semibold tracking-tightish">Cash · free</span>
       </span>
       <span class="num">
-        <span class="text-label-2">${{ "%.1f"|format(ns.free_cash / 1000) }}k</span>
-        <span class="ml-2 font-semibold">{{ "%.1f"|format(free_pct) }}%</span>
+        <span class="text-label-2">${{ "{:,.1f}".format(ns.free_cash / 1000) }}k</span>
+        <span class="ml-2 font-semibold">{{ "{:,.1f}".format(free_pct) }}%</span>
       </span>
     </div>
     <div class="flex items-center justify-between text-[12px]"
@@ -90,8 +90,8 @@
         <span class="font-semibold tracking-tightish">Cash · pledged</span>
       </span>
       <span class="num">
-        <span class="text-label-2">${{ "%.1f"|format(ns.pledged_cash / 1000) }}k</span>
-        <span class="ml-2 font-semibold">{{ "%.1f"|format(pledged_pct) }}%</span>
+        <span class="text-label-2">${{ "{:,.1f}".format(ns.pledged_cash / 1000) }}k</span>
+        <span class="ml-2 font-semibold">{{ "{:,.1f}".format(pledged_pct) }}%</span>
       </span>
     </div>
   </div>
@@ -99,9 +99,9 @@
   {# Summary: total cash share so the user can read the inverse at a glance #}
   <div class="mt-3 pt-3 text-[11px] text-label-3"
        style="border-top: 0.5px solid var(--color-hairline);">
-    Total cash: ${{ "%.1f"|format((ns.free_cash + ns.pledged_cash) / 1000) }}k · {{ "%.1f"|format(cash_pct) }}%
+    Total cash: ${{ "{:,.1f}".format((ns.free_cash + ns.pledged_cash) / 1000) }}k · {{ "{:,.1f}".format(cash_pct) }}%
     {% if ns.pledged_cash > 0 %}
-      · pledged share of cash: {{ "%.0f"|format(ns.pledged_cash / (ns.free_cash + ns.pledged_cash) * 100) }}%
+      · pledged share of cash: {{ "{:,.0f}".format(ns.pledged_cash / (ns.free_cash + ns.pledged_cash) * 100) }}%
     {% endif %}
   </div>
 {% endif %}

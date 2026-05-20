@@ -18,8 +18,8 @@
       {% if _long_count and _short_count %} · {% endif %}
       {% if _short_count %}{{ _short_count }} short{% endif %}
       {% if cash_secured_total %} · ${{ "{:,.0f}".format(cash_secured_total) }} secured{% endif %}
-      {% if premium_received_total %} · premium <span class="text-pos">+${{ "%.2f"|format(premium_received_total) }}</span>{% endif %}
-      {% if long_cost_total %} · long cost <span class="text-label-1">${{ "%.2f"|format(long_cost_total) }}</span>{% endif %}
+      {% if premium_received_total %} · premium <span class="text-pos">+${{ "{:,.2f}".format(premium_received_total) }}</span>{% endif %}
+      {% if long_cost_total %} · long cost <span class="text-label-1">${{ "{:,.2f}".format(long_cost_total) }}</span>{% endif %}
       {% if expired_count is defined and expired_count > 0 %} · <span class="text-label-2" title="Expired contracts no longer hold collateral or carry market exposure; broker typically closes them server-side at expiry.">{{ expired_count }} expired (awaiting broker close)</span>{% endif %}
     </span>
   </summary>
@@ -86,7 +86,7 @@
         </div>
         <div class="text-right num text-[12px]">
           <div class="{% if is_long %}text-label-1 font-medium{% else %}text-pos font-medium{% endif %}">
-            {% if is_long %}-${{ "%.2f"|format(s.cash_basis) }}{% else %}+${{ "%.2f"|format(s.cash_basis) }}{% endif %}
+            {% if is_long %}-${{ "{:,.2f}".format(s.cash_basis) }}{% else %}+${{ "{:,.2f}".format(s.cash_basis) }}{% endif %}
           </div>
           <div class="text-[10px] text-label-2">
             {% if is_long %}cost paid{% elif s.call_put == 'P' %}${{ "{:,.0f}".format(s.cash_secured) }} secured{% else %}premium{% endif %}

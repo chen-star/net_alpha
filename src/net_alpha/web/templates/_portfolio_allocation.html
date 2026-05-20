@@ -48,7 +48,7 @@
       <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <div class="text-[10px] text-label-2 font-medium">Total</div>
         <div class="num text-[19px] font-bold tracking-tight mt-[2px]">
-          ${{ "%.1f"|format(allocation.total_market_value|float / 1000) }}k
+          ${{ "{:,.1f}".format(allocation.total_market_value|float / 1000) }}k
         </div>
         <div class="text-[10px] text-label-2 mt-[2px]">{{ allocation.symbol_count }} symbol{% if allocation.symbol_count != 1 %}s{% endif %}</div>
       </div>
@@ -59,20 +59,20 @@
       <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid var(--color-hairline);">
         <span class="text-label-2">Top holding</span>
         <span class="text-text num font-medium">
-          {% set top = allocation.slices[0] %}{{ top.symbol }} · {{ "%.1f"|format(top.pct|float) }}%
+          {% set top = allocation.slices[0] %}{{ top.symbol }} · {{ "{:,.1f}".format(top.pct|float) }}%
         </span>
       </div>
       <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid var(--color-hairline);">
         <span class="text-label-2">Top 3 share</span>
-        <span class="text-text num font-medium">{{ "%.1f"|format(allocation.top3_pct|float) }}%</span>
+        <span class="text-text num font-medium">{{ "{:,.1f}".format(allocation.top3_pct|float) }}%</span>
       </div>
       <div class="flex justify-between py-[6px] text-[12px]" style="border-bottom: 0.5px solid var(--color-hairline);">
         <span class="text-label-2">Top 5 share</span>
-        <span class="text-text num font-medium">{{ "%.1f"|format(allocation.top5_pct|float) }}%</span>
+        <span class="text-text num font-medium">{{ "{:,.1f}".format(allocation.top5_pct|float) }}%</span>
       </div>
       <div class="flex justify-between py-[6px] text-[12px]">
         <span class="text-label-2">Top 10 share</span>
-        <span class="text-text num font-medium">{{ "%.1f"|format(allocation.top10_pct|float) }}%</span>
+        <span class="text-text num font-medium">{{ "{:,.1f}".format(allocation.top10_pct|float) }}%</span>
       </div>
     </div>
   </div>
@@ -85,8 +85,8 @@
         {% if s.is_rest %}
           <span class="inline-flex items-center gap-[6px] py-1 pl-1 pr-1 text-[11px] text-label-3">
             <span class="text-label-3">+{{ allocation.symbol_count - allocation.slices|rejectattr('is_rest')|rejectattr('is_cash')|list|length }} more</span>
-            <span class="num">${{ "%.1f"|format(s.market_value|float / 1000) }}k</span>
-            <span class="num">{{ "%.1f"|format(s.pct|float) }}%</span>
+            <span class="num">${{ "{:,.1f}".format(s.market_value|float / 1000) }}k</span>
+            <span class="num">{{ "{:,.1f}".format(s.pct|float) }}%</span>
           </span>
         {% elif s.is_cash %}
           {% set _color = cash_pledged_color if s.is_pledged_cash else cash_color %}
@@ -97,8 +97,8 @@
                 title="{{ _title }}">
             <span style="width:6px; height:6px; border-radius:50%; background:{{ _color }};"></span>
             <span class="font-semibold tracking-tightish text-text">{{ _label }}</span>
-            <span class="num text-label-2">${{ "%.1f"|format(s.market_value|float / 1000) }}k</span>
-            <span class="num font-semibold">{{ "%.1f"|format(s.pct|float) }}%</span>
+            <span class="num text-label-2">${{ "{:,.1f}".format(s.market_value|float / 1000) }}k</span>
+            <span class="num font-semibold">{{ "{:,.1f}".format(s.pct|float) }}%</span>
           </span>
         {% else %}
           {% set color = rank_palette[s.rank - 1] %}
@@ -107,8 +107,8 @@
                 style="background: var(--color-skeleton); border: 0.5px solid var(--color-hairline);">
             <span style="width:6px; height:6px; border-radius:50%; background:{{ color }};{% if glow %} box-shadow: 0 0 5px {{ color }};{% endif %}"></span>
             <span class="font-semibold tracking-tightish text-text">{{ s.symbol }}</span>
-            <span class="num text-label-2">${{ "%.1f"|format(s.market_value|float / 1000) }}k</span>
-            <span class="num font-semibold">{{ "%.1f"|format(s.pct|float) }}%</span>
+            <span class="num text-label-2">${{ "{:,.1f}".format(s.market_value|float / 1000) }}k</span>
+            <span class="num font-semibold">{{ "{:,.1f}".format(s.pct|float) }}%</span>
           </span>
         {% endif %}
       {% endfor %}
@@ -182,7 +182,7 @@
                 </td>
                 <td class="text-[11px] text-label-2" style="padding:4px 8px;">{{ _type }}</td>
                 <td class="r num" style="padding:4px 8px;">${{ "{:,.2f}".format(s.market_value|float) }}</td>
-                <td class="r num font-semibold" style="padding:4px 8px;">{{ "%.2f"|format(s.pct|float) }}%</td>
+                <td class="r num font-semibold" style="padding:4px 8px;">{{ "{:,.2f}".format(s.pct|float) }}%</td>
               </tr>
             {% endfor %}
           </tbody>

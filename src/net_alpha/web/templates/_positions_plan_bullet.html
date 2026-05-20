@@ -15,9 +15,9 @@
     {% set color = 'var(--color-neg)' %}
   {% endif %}
   {% set tip %}
-    Target: ${{ "%.2f"|format(r.target_dollar_equiv|float) if r.target_dollar_equiv else '—' }} ·
-    Current: ${{ "%.2f"|format(r.current_dollar|float) }} ·
-    Gap: {% if r.gap_dollar > 0 %}+{% endif %}${{ "%.2f"|format(r.gap_dollar|float) }}
+    Target: ${{ "{:,.2f}".format(r.target_dollar_equiv|float) if r.target_dollar_equiv else '—' }} ·
+    Current: ${{ "{:,.2f}".format(r.current_dollar|float) }} ·
+    Gap: {% if r.gap_dollar > 0 %}+{% endif %}${{ "{:,.2f}".format(r.gap_dollar|float) }}
   {% endset %}
   <div class="flex items-center gap-2" title="{{ tip|trim }}">
     <div class="flex-1 relative rounded-full overflow-hidden"
@@ -35,7 +35,7 @@
                   width:1px; background:var(--color-text); opacity:0.55;"></div>
     </div>
     <span class="num text-[11px] font-semibold" style="color:{{ color }};">
-      {{ "%.0f"|format(pct) }}%
+      {{ "{:,.0f}".format(pct) }}%
     </span>
   </div>
 {% else %}

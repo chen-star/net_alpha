@@ -35,18 +35,18 @@
   <div class="mt-3 text-[13px] text-label-1 leading-[1.55]">
     Selected: <span class="num font-semibold">{{ plan.selected|length }}</span>
     of {{ rows|length }} candidates
-    &middot; <span class="num text-neg">−${{ "%.2f"|format(plan.total_loss_harvested|float|abs) }}</span>
+    &middot; <span class="num text-neg">−${{ "{:,.2f}".format(plan.total_loss_harvested|float|abs) }}</span>
     loss harvested
     {% if has_tax_config %}
-      &middot; tax saved (est.): <span class="num text-pos">${{ "%.2f"|format(plan.estimated_tax_saved|float) }}</span>
+      &middot; tax saved (est.): <span class="num text-pos">${{ "{:,.2f}".format(plan.estimated_tax_saved|float) }}</span>
     {% else %}
       &middot; <a href="/tax?view=projection" class="text-label-2 underline">configure tax rates</a> to see tax-saved estimates
     {% endif %}
   </div>
   <div class="text-[11px] text-label-2 mt-1">
-    Offsets gains: <span class="num">${{ "%.2f"|format(plan.gain_offset_used|float) }}</span>
+    Offsets gains: <span class="num">${{ "{:,.2f}".format(plan.gain_offset_used|float) }}</span>
     &middot; against ordinary income (capped $3K):
-    <span class="num">${{ "%.2f"|format(plan.ordinary_offset_used|float) }}</span>
+    <span class="num">${{ "{:,.2f}".format(plan.ordinary_offset_used|float) }}</span>
   </div>
 </div>
 

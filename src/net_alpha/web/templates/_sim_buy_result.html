@@ -16,14 +16,14 @@
         </div>
 
         <div class="label-uc">Proposed basis</div>
-        <div class="text-base font-mono mb-1 num">${{ "%.2f"|format(opt.proposed_basis|float) }}</div>
+        <div class="text-base font-mono mb-1 num">${{ "{:,.2f}".format(opt.proposed_basis|float) }}</div>
 
         {% if opt.total_disallowed > 0 %}
           <div class="label-uc">Disallowed loss rolled in</div>
-          <div class="text-base font-mono text-confirmed mb-1 num">+${{ "%.2f"|format(opt.total_disallowed|float) }}</div>
+          <div class="text-base font-mono text-confirmed mb-1 num">+${{ "{:,.2f}".format(opt.total_disallowed|float) }}</div>
 
           <div class="label-uc">Adjusted basis on new lot</div>
-          <div class="text-lg font-mono mb-2 num">${{ "%.2f"|format(opt.adjusted_basis|float) }}</div>
+          <div class="text-lg font-mono mb-2 num">${{ "{:,.2f}".format(opt.adjusted_basis|float) }}</div>
 
           <div class="label-uc mb-1">Matched losses</div>
           <div class="panel" style="padding:0;">
@@ -35,7 +35,7 @@
                     <td class="py-1">{{ m.loss_account }}</td>
                     <td class="py-1 font-mono">{{ m.loss_ticker }}</td>
                     <td class="r num">{{ m.matched_quantity }}</td>
-                    <td class="r num text-confirmed">${{ "%.2f"|format(m.disallowed_loss|float) }}</td>
+                    <td class="r num text-confirmed">${{ "{:,.2f}".format(m.disallowed_loss|float) }}</td>
                     <td class="py-1"><span class="badge-{{ m.confidence|lower }}">{{ m.confidence }}</span></td>
                   </tr>
                 {% endfor %}
@@ -43,7 +43,7 @@
             </table>
           </div>
         {% else %}
-          <div class="text-xs text-label-2 mt-1">Adjusted basis: ${{ "%.2f"|format(opt.adjusted_basis|float) }}</div>
+          <div class="text-xs text-label-2 mt-1">Adjusted basis: ${{ "{:,.2f}".format(opt.adjusted_basis|float) }}</div>
         {% endif %}
       </div>
     {% endfor %}

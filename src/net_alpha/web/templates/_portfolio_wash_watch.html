@@ -29,7 +29,7 @@
           <span style="width:6px; height:6px; border-radius:50%; background:var(--color-neg); box-shadow: 0 0 6px var(--color-neg);"></span>
           {{ r.symbol }}
         </div>
-        <div class="num text-neg text-[12px] font-medium">−${{ "%.2f"|format(r.loss_amount|float) }}</div>
+        <div class="num text-neg text-[12px] font-medium">−${{ "{:,.2f}".format(r.loss_amount|float) }}</div>
         <div class="flex items-center gap-[10px]">
           <span class="text-[11px] text-label-2 num min-w-[80px]">closed {{ r.days_since }}d ago</span>
           <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: var(--color-hairline);">

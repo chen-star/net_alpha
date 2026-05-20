@@ -14,7 +14,7 @@
       <header class="flex items-baseline justify-between gap-3 pb-3"
               style="border-bottom:0.5px solid var(--color-hairline);">
         <h3 class="text-lg font-semibold">{{ trace.metric_label }}</h3>
-        <div class="num text-2xl font-bold">${{ "%.2f"|format(trace.total) }}</div>
+        <div class="num text-2xl font-bold">${{ "{:,.2f}".format(trace.total) }}</div>
       </header>
 
       {% if trace.trades %}
@@ -32,9 +32,9 @@
                 <td class="font-mono">{{ t.trade_date.isoformat() }}</td>
                 <td>{{ t.account }}</td>
                 <td>{{ t.action }}</td>
-                <td class="r num font-mono">{{ "%.4f"|format(t.quantity) }}</td>
+                <td class="r num font-mono">{{ "{:,.4f}".format(t.quantity) }}</td>
                 <td class="r num font-mono {% if t.amount < 0 %}text-neg{% else %}text-pos{% endif %}">
-                  ${{ "%.2f"|format(t.amount|abs) }}
+                  ${{ "{:,.2f}".format(t.amount|abs) }}
                 </td>
                 <td class="font-mono">{{ t.symbol }}</td>
               </tr>
@@ -59,7 +59,7 @@
               <tr>
                 <td class="font-mono text-xs">{{ a.loss_trade_id[:8] }}…</td>
                 <td class="font-mono text-xs">{{ a.replacement_trade_id[:8] }}…</td>
-                <td class="r num font-mono">${{ "%.2f"|format(a.rolled_amount) }}</td>
+                <td class="r num font-mono">${{ "{:,.2f}".format(a.rolled_amount) }}</td>
                 <td>{{ a.confidence }}</td>
                 <td class="text-xs text-label-2">{{ a.rule_citation }}</td>
               </tr>
@@ -86,7 +86,7 @@
                 <td>{{ e.account }}</td>
                 <td>{{ e.kind }}</td>
                 <td class="r num font-mono {% if e.amount < 0 %}text-neg{% else %}text-pos{% endif %}">
-                  ${{ "%.2f"|format(e.amount|abs) }}
+                  ${{ "{:,.2f}".format(e.amount|abs) }}
                 </td>
                 <td class="text-xs text-label-2">{{ e.description }}</td>
               </tr>
