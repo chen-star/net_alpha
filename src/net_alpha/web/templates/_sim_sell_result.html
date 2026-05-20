@@ -20,7 +20,7 @@
         {% if opt.insufficient_shares %}
           <div class="text-xs text-warn mb-2">Insufficient shares: only {{ opt.available_shares }} held.</div>
         {% endif %}
-        <div class="label-uc mb-1">Lots consumed (FIFO)</div>
+        <div class="label-uc mb-1" title="This per-account view always uses FIFO consumption — it's the conservative default Schwab applies if you don't elect specific-lot ID. For other strategies (HIFO, MinTax, MaxLoss) see the Lot strategy comparison below.">Lots consumed (FIFO baseline)</div>
         <div class="panel" style="padding:0;">
           <table class="net-table text-xs">
             <tbody>
