@@ -91,7 +91,8 @@
                style="width: {{ _cash_pct|round(0,'ceil')|int }}%; background: var(--color-violet);"></div>
         </div>
         <div class="flex items-center justify-between mt-2 text-[11px]">
-          <span class="inline-flex items-center gap-1.5">
+          <span class="inline-flex items-center gap-1.5"
+                title="Equity market value plus open long-option basis. This is the broker-statement style of mark — long options carry at their adjusted cost basis (no live option marks available). For equity-exposure-only allocation analysis, see the Allocation/Deployment panel below.">
             <span class="inline-block w-2 h-2 rounded-[2px]" style="background:var(--color-indigo);"></span>
             <span class="text-label-2">Holdings</span>
             <span class="num text-label-1 font-medium">${{ "{:,.0f}".format(_holdings) }}</span>
