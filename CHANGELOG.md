@@ -2,6 +2,249 @@
 
 
 
+## v0.75.1 (2026-05-20)
+
+### Fix
+
+* fix(tax): Batch 3 — IRA-trap classification correctness
+
+When a user re-classified an account taxable ↔ IRA / Roth / 401(k) / HSA
+via /settings/accounts, every existing WashSaleViolation.kind stayed
+frozen at whatever the previous run produced. That left taxable→IRA
+flips silently misclassified as kind=&#34;deferred&#34;, which §1091(d)-rolls
+the disallowed loss into the IRA replacement lot&#39;s adjusted_basis —
+exactly the wrong outcome under Rev. Rul. 2008-5 (the loss is
+permanently disallowed; no basis ledger inside the wrapper).
+
+- routes/accounts: capture the old type before set_account_type; if the
+  flip crosses the taxable ↔ tax-advantaged boundary, trigger
+  recompute_all_violations so every affected WashSaleViolation.kind
+  re-classifies and lot.adjusted_basis rebuilds from cost. Flips within
+  the same side (trad_ira → roth_ira) skip the recompute.
+- _violation_card: permanent_ira chip picks up a lock icon + a data-kind
+  attribute so it reads distinct from the same-color Schwab /
+  Cross-account chips next to it. Title carries the &#34;ruling names IRAs
+  only; 401(k)/HSA extended by analogy&#34; caveat.
+- _violation_explain: spell the same caveat out inline below the
+  &#34;permanently disallowed&#34; line — confirm with your CPA if you&#39;re
+  depending on the analogy holding for a specific account type.
+- _import_modal: add an info banner near the account-label input
+  reminding users that new accounts default to taxable and pointing at
+  /settings/accounts for IRA / Roth / 401(k) / HSA classification.
+- tests/web/test_accounts_type_flip_recompute: cover taxable → IRA,
+  IRA → taxable, and same-side (trad_ira → roth_ira) flips.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`4ab9990`](https://github.com/chen-star/net_alpha/commit/4ab999072df1bf1b7c4e0c75012e691b299853be))
+
+* fix(web): Batch 8 — discoverability &amp; inline help
+
+- _sim_buy_result / _sell_result: append the required &#34;⚠ informational
+  only — consult a tax professional&#34; disclaimer locally. base.html has
+  the global footer, but the sim result cards are the highest-stakes
+  surface and previously left users without a near-field reminder.
+- backup.html: promote the CLI-only restore line from an 11px hint to a
+  full info panel with reasoning (running restore while the service is
+  live could corrupt active jobs), so users stop expecting a per-row
+  Restore button.
+- _section_1256_mtm: inline help explaining IRC §1256(a)(1) MTM and the
+  §1256(a)(3) 60/40 LT/ST split applies regardless of holding period;
+  also notes the closed-trade portion is folded into the mix bar above.
+- _offset_budget_tile: tile title now describes §1212(b) cross-category
+  netting and the §1211(b) $3K ordinary cap; carryforward row gets a
+  (?) tooltip with the same explanation.
+- _projection_card: caveat extended to mention NIIT (§1411 — 3.8% above
+  MAGI threshold); tooltip carries the threshold numbers ($200K single
+  / $250K MFJ) so users above that line can add it manually.
+- positions.html: symbol search wraps with an Alpine x-data scope so a
+  × clear button appears when the input is non-empty (no clear button
+  before — users had to backspace).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fd4a26f`](https://github.com/chen-star/net_alpha/commit/fd4a26fc933a5ac7f9f1cb2cf30935b9a5ad7baf))
+
+* fix(web): Batch 7 — color/encoding &amp; a11y signals
+
+- app.src.css: add chip-neutral (label-2 on hairline) + chip-pos (pos on
+  pos-tint), reserving the red/yellow/blue chip-confirmed/probable/unclear
+  trio for the 3-tier wash-sale confidence palette (CLAUDE.md). Plus
+  tl-dot CSS dots for the traffic-light verdict (replaces emoji circles
+  that rendered monochrome on Linux without a color-emoji font) and
+  .skip-link for keyboard skip-to-content.
+- _sim_lot_comparison: LT/ST chip → chip-neutral, Recommended chip →
+  chip-pos (was inline rgba). Recommended row highlight via the new
+  .sim-recommended-row utility instead of hardcoded rgba.
+- _sim_suggestions: wash_risk stays chip-confirmed (red — real warning);
+  largest_loss / largest_gain become chip-neutral (informational, not a
+  confidence tier).
+- _harvest_plan: LT/ST + lockout-clear-date → chip-neutral; the red
+  chip-confirmed previously made the clear-date look like a wash-sale
+  alarm. Currently-harvestable &#34;clear&#34; tag uses chip-pos.
+- _traffic_light: &lt;span class=tl-dot tl-dot--{color}&gt; instead of emoji;
+  add an sr-only verdict word so screen readers don&#39;t lose the meaning.
+- _service_install_offer / _tour_banner: theme-token colors (accent +
+  warn-tint) instead of raw Tailwind amber-50 / blue-700, which looked
+  out of place in dark mode (the user&#39;s primary surface).
+- base.html: skip-to-content link + id=main-content target.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8e5e863`](https://github.com/chen-star/net_alpha/commit/8e5e86377c11340bae939423e2f529efd11bc436))
+
+* fix(web): Batch 6 — modal &amp; keyboard hygiene
+
+- _keyboard_cheatsheet: list ⌘K / / (palette) and the j/k/o pane-nav
+  shortcuts that table_nav.js already implements. Existing entries
+  advertised the bindings via aria-keyshortcuts but the cheatsheet
+  itself didn&#39;t enumerate them, so users had to read the source.
+- keyboard.js: skip nav shortcuts when any overlay is open (native
+  dialog[open], [role=dialog] not display:none, #trade-modal /
+  #import-modal / #settings-drawer). Without this, pressing , or g o
+  while a delete-confirm modal is up navigated away from the
+  partially-completed action.
+- palette.js: no-op when the target route equals the current URL
+  (path + search + hash). Same-tab clicks on the active page were a
+  full reload that wiped any in-progress form. Cmd/Ctrl-click still
+  opens a new tab.
+- ticker.html / _drop_zone.html: trade-modal + import-modal pick up
+  role=dialog + aria-modal + Esc-to-close. Previously they only closed
+  on backdrop click — Esc was a no-op.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`19f0f96`](https://github.com/chen-star/net_alpha/commit/19f0f96b41ae9b905c0cb24c60722a74d2e68b4b))
+
+* fix(web): Batch 5 — imports flow safety
+
+- routes/imports: enforce the &#34;max 50 MB each&#34; promise advertised by the
+  drop zone (preview, upload, positions). Wrap UnicodeDecodeError from
+  load_csv / positions_csv with a friendly 400 instead of a 500 stack —
+  hands binary uploads (PDF, XLSX) back with a &#34;save as plain CSV&#34; hint.
+- imports_positions_map: blank &#34;— Pick an account… —&#34; default so naive
+  Submit no longer silently aliases every unresolved broker label to
+  whichever account happened to sort first alphabetically. Empty value
+  is already treated as &#34;skip&#34; by the route — safer no-op default.
+- _imports_table: delete-confirm branches on total_units. Positions-
+  sentinel rows now read &#34;broker_position rows will be dropped from the
+  verify reconciliation&#34; instead of &#34;0 trades, 0 G/L lots, 0 cash events&#34;.
+- _drop_zone: dashed-border + accent-tint on dragover (was bg-surface-2,
+  barely distinguishable in dark mode). Copy mentions Robinhood — the
+  parser is already wired in _import_modal.html, just not advertised.
+- imports_success: inline &#34;Remove this import →&#34; recovery link to
+  /settings/imports?highlight=&lt;id&gt;; was only reachable via Settings →
+  Imports → find the row → Remove.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fbbbf7f`](https://github.com/chen-star/net_alpha/commit/fbbbf7f7c02dba3b07946e69318131e885e01dcd))
+
+* fix(web): Batch 4 — chart leak + race conditions
+
+- charts.js: add mountChart(el, opts) that destroys any prior chart stored
+  on the node before remounting. Apex keeps internal refs even after
+  innerHTML=&#34;&#34;, so every theme:change re-render previously leaked a chart
+  instance plus its listeners + animation timers. Replace the empty catch
+  in refresh() with a console.warn so future chart failures are visible.
+- _portfolio_equity_curve / _cash_curve / _monthly_pl: use mountChart;
+  equity-curve also tracks main._spyListener and removes the prior listener
+  on each render so theme toggles don&#39;t grow the listener registry.
+- _harvest_plan: hx-sync=&#34;closest table:queue last&#34; on the per-row
+  checkbox so rapid click-throughs queue one final request instead of
+  racing 10 outerHTML swaps against #harvest-summary.
+- plan_reorder.js: in-flight guard against racing drag-drop-drag (second
+  drop would POST a stale order from the just-swapped tbody). Inspect
+  response.ok and add .catch so 4xx/5xx surface in the console.
+- overview_layout.js: response.ok check + .catch for the same reason.
+- _portfolio_body.html: visibility toggle rolls back the optimistic
+  hidden/visible flip on a non-OK response so UI matches server state.
+- positions.html: pane click.outside skips clicks on tr[data-symbol] +
+  modal hosts. Eliminates the false-close flicker that fired when the
+  capture-phase click.outside ran before the row&#39;s @click.stop.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3185ddc`](https://github.com/chen-star/net_alpha/commit/3185ddc08188838f9c83292a6608eb237476f08f))
+
+* fix(web): Batch 2 — HTMX swap correctness
+
+- routes/system: error handlers branch on HX-Request; HTMX fragment requests
+  get a compact `&lt;div role=alert&gt;` instead of a full &lt;html&gt;-rooted error.html
+  swapped into a tiny target slot.
+- base.html: extend the htmx:beforeSwap allow-list to 5xx so the server
+  fragment renders inline (was 4xx-only, dropping 500s silently).
+- _positions_view_plan: pagination footer target #plan-body (the wrapping id
+  in this template), not #positions-tab-content (which only exists on at-loss
+  / closed views) — Next/Prev was a no-op on Plan.
+- _positions_view_all / _stocks: propagate ?page= from the outer URL into
+  the inner holdings hx-get (was hardcoded page=1, dropping deep-link state).
+- routes/positions: thread `page` into ctx so the views above can use it.
+- _positions_plan_toolbar: preserve page_size across sort-change form submits;
+  guard Mark-as-seen reload on event.detail.successful so a failed POST no
+  longer reloads and masks the error.
+- _portfolio_toolbar: freshness chip + Sync splits use
+  hx-on::after-request=&#34;if (event.detail.successful) reload&#34; instead of a
+  bare onclick=reload — onclick race-cancelled the in-flight hx-post.
+- _ticker_pagination: add hx-push-url=&#34;true&#34; on Prev/Next/page-size so the
+  address bar tracks the current page (browser back/forward + share-link).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`18e753c`](https://github.com/chen-star/net_alpha/commit/18e753c415126c570f30705afa3795234f3257dd))
+
+* fix(web): Batch 1 — crashes &amp; silent-wrong-data sweep
+
+- _positions_pane_set_basis: guard transfer_qty|float for None (single-lot
+  equity fallback path); rewrite hint when qty is unknown.
+- _portfolio_inbox: rename undefined `account` to `accounts` (plural list
+  the route actually passes); fan out per-account on dismiss URL.
+- sim: reject qty/price &lt;= 0, empty ticker, malformed trade_date with
+  friendly _sim_form_error.html instead of 500.
+- ticker: 404 invalid symbols (regex gate) before rendering a blank-shell
+  page. Populate instrument_kind (stock / option / stock + options) so the
+  subtitle isn&#39;t permanently &#34;— · stock&#34;. Give synthesized GL-expiry rows
+  deterministic ids so ?jump=trade-... resolves on fresh requests.
+- backup: html.escape the exception before injecting into the error fragment.
+- trades: reject dates before 1970-01-01 (sentinel garbage).
+- _ticker_view_timeline: fmt_quantity / fmt_currency on qty and proceeds
+  columns; em-dash placeholder for None proceeds.
+- _toast: stack-safe single-shot redirect via window-level guard; add
+  role=&#34;status&#34; + aria-live=&#34;polite&#34;.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`09ca277`](https://github.com/chen-star/net_alpha/commit/09ca2778f48f35ee8d59d757bb47dd4470995a16))
+
+### Performance
+
+* perf(web): Batch 9 — performance hygiene
+
+- base.html + _settings_service: hx-trigger picks up the
+  [document.visibilityState === &#39;visible&#39;] filter so the status pill and
+  service-runs panel stop polling every 30s while the tab is
+  backgrounded. Long-lived sessions previously burned a request per
+  panel even when the user wasn&#39;t looking.
+- charts.js: branch animations.enabled (+ animateGradually +
+  dynamicAnimation) on prefers-reduced-motion. CSS handles transitions
+  elsewhere with the same media query; Apex configured its own engine,
+  so chart entrance animations ran regardless of the OS-level opt-out.
+- charts.js refresh(): iterate over a snapshot of the registry so a
+  render function that re-mounts (via mountChart) doesn&#39;t shift the
+  loop index. Each render still early-returns when its target node has
+  been detached.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e3826a6`](https://github.com/chen-star/net_alpha/commit/e3826a6ec1f6b80fbcdea5de4ef6c7f72a1fbe81))
+
+### Unknown
+
+* sec(web): Batch 10 — local hardening
+
+- app.py: same-origin middleware on POST / PUT / PATCH / DELETE. Origin
+  and Referer hosts must match the request&#39;s own Host (whatever loopback
+  name uvicorn bound to), blocking bookmarklets / extensions in a
+  malicious tab from driving our local routes. CLI tools (curl, httpie)
+  that send neither header keep working. Replaces ad-hoc per-route CSRF
+  plumbing on /quit, /preferences, reorder, layout, backup/create, etc.
+- base.html: &lt;meta name=&#34;htmx-config&#34; content=&#39;{&#34;allowEval&#34;: false}&#39;&gt;.
+  None of our templates use HTMX&#39;s hx-on / hx-vals eval-style attrs;
+  the default was CSP-unfriendly.
+- _settings_drawer: Alpine handleHovered state replaces an inline
+  style.backgroundColor mutation on @mouseenter / @mouseleave. The
+  inline mutation previously shadowed the :style binding, leaving the
+  resize-active highlight visually stuck after the first hover.
+- tests/web/test_same_origin_guard: covers same-origin (TestClient
+  default), cross-origin via Referer, cross-origin via Origin (Referer
+  absent), read-only request with foreign Referer (allowed), and CLI
+  POST with neither header (allowed).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`fdd1733`](https://github.com/chen-star/net_alpha/commit/fdd173326ce1d7e68b8f9e03190be6fcc188ff67))
+
+
 ## v0.75.0 (2026-05-20)
 
 ### Documentation
