@@ -147,3 +147,21 @@ def fmt_date(value: date | datetime | str | None) -> str:
     if isinstance(value, date):
         return value.strftime("%Y-%m-%d")
     return str(value)
+
+
+def fmt_days_held(days: int | None) -> str:
+    """Format a days-held count.
+
+    < 365 days: 'Nd' (e.g. '330d').
+    365–1094 days (1–2 years): 'N.Yy' with one decimal (e.g. '1.5y').
+    >= 1095 days (3+ years): 'Ny' with zero decimals (e.g. '5y').
+    None: em-dash.
+    """
+    if days is None:
+        return "—"
+    if days < 365:
+        return f"{days}d"
+    years = days / 365.25
+    if years < 3:
+        return f"{years:.1f}y"
+    return f"{int(round(years))}y"

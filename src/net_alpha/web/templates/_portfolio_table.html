@@ -219,7 +219,7 @@
               {% endif %}
             </td>
             {% if extra_columns is defined %}
-              {% if 'days_held' in extra_columns %}<td class="r num">{{ r.days_held if r.days_held is not none else '—' }}{% if r.days_held is not none %}d{% endif %}</td>{% endif %}
+              {% if 'days_held' in extra_columns %}<td class="r num">{{ fmt_days_held(r.days_held) }}</td>{% endif %}
               {% if 'lt_st_split' in extra_columns %}<td class="r num">{{ fmt_quantity(r.lt_qty) }}LT / {{ fmt_quantity(r.st_qty) }}ST</td>{% endif %}
               {% if 'premium_received' in extra_columns %}<td class="r num">${{ "{:,.0f}".format(r.premium_received|float) }}</td>{% endif %}
               {% if 'origin_event' in extra_columns %}<td>—</td>{% endif %}
