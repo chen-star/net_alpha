@@ -61,3 +61,15 @@ def test_post_with_no_origin_or_referer_not_blocked(client: TestClient):
     allows that path so the user's own scripts keep working."""
     resp = client.post("/tour/dismiss", follow_redirects=False)
     assert resp.status_code != 403
+
+
+def test_origin_null_is_blocked(client: TestClient):
+    """`Origin: null` is what browsers send from sandboxed iframes / file://
+    pages — refuse those rather than silently passing past the same-host
+    comparison (urlparse('null').hostname is None)."""
+    resp = client.post(
+        "/tour/dismiss",
+        headers={"origin": "null"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 403

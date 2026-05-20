@@ -156,7 +156,10 @@ def _build_timeline_rows(
         rows.append(TimelineRow(trade=t, assigned_from=assigned_from, gain_loss=_row_gain_loss(t)))
 
     # --- Synthesize Closed-by-Expiry rows from GL ---
-    seen_synth: set[tuple[str, float, date, str, date]] = set()
+    # Dedup key includes account_display so two accounts that closed the same
+    # option contract on the same day each get a row — previously one was
+    # silently dropped.
+    seen_synth: set[tuple[str, str, float, date, str, date]] = set()
     for gl in gl_lots:
         if gl.option_strike is None or gl.option_expiry is None or gl.option_call_put is None:
             continue
@@ -167,7 +170,7 @@ def _build_timeline_rows(
         key = (gl.ticker, float(gl.option_strike), expiry, gl.option_call_put)
         if key in closed_keys_in_trades:
             continue  # already represented by a BTC / STC / assigned-close trade
-        synth_key = (gl.ticker, float(gl.option_strike), expiry, gl.option_call_put, gl.closed_date)
+        synth_key = (gl.account_display, gl.ticker, float(gl.option_strike), expiry, gl.option_call_put, gl.closed_date)
         if synth_key in seen_synth:
             continue
         seen_synth.add(synth_key)
@@ -177,8 +180,12 @@ def _build_timeline_rows(
         # premium booked as a realized loss.
         is_short = key in short_open_keys
         # Deterministic id so ?jump=trade-... resolves on fresh requests
-        # (uuid4 default-factory would mint a new id per request).
-        synth_id = "synth-{t}-{s}-{e}-{cp}-{d}-{side}".format(
+        # (uuid4 default-factory would mint a new id per request). account
+        # included so two accounts closing the same contract on the same day
+        # mint distinct ids (matches the seen_synth dedup key above).
+        from net_alpha.web.format import dom_id_slug
+        synth_id = "synth-{a}-{t}-{s}-{e}-{cp}-{d}-{side}".format(
+            a=dom_id_slug(gl.account_display),
             t=gl.ticker,
             s=int(round(float(gl.option_strike) * 100)),
             e=expiry.isoformat(),

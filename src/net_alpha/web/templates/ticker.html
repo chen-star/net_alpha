@@ -6,7 +6,7 @@
     <div>
       <h1>{{ symbol }}</h1>
       <div class="text-[13px] text-label-2 mt-[3px]">
-        {{ company_name|default('—') }} · {{ instrument_kind|default('stock') }}
+        {{ company_name|default('—', true) }} · {{ instrument_kind|default('stock', true) }}
       </div>
     </div>
     <div class="flex gap-2">

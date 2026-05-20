@@ -76,17 +76,13 @@
            accountId = $event.detail.account_id || null;
            htmx.ajax('GET', '/positions/pane?sym=' + encodeURIComponent(sym) + (accountId ? '&account_id=' + accountId : ''), '#positions-pane-body');
          "
+         {# click.outside skips clicks on positions-table rows + modal hosts —
+            without this guard, the capture-phase click.outside fires before
+            the row's @click.stop, briefly closing the pane (visible flicker).
+            Modals spawned at body level are also excluded so their backdrop
+            clicks don't collateral-close the pane. #}
          x-on:keydown.window.escape="open = false"
-         x-on:click.outside="
-           // Clicks on positions-table rows dispatch open-positions-pane to
-           // swap content. Without this guard, click.outside (capture-phase)
-           // fires before the row's @click.stop, briefly closing the pane —
-           // flicker visible on the next render. Modal dialogs spawned at
-           // body level are also excluded so their backdrop clicks don't
-           // collateral-close the pane.
-           if ($event.target.closest('tr[data-symbol], [role=dialog], [data-modal-host]')) return;
-           open = false;
-         "
+         x-on:click.outside="if ($event.target.closest('tr[data-symbol], [role=dialog], [data-modal-host]')) return; open = false"
          x-cloak
          role="complementary"
          aria-label="Position details">

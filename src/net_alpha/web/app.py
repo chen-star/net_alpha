@@ -117,13 +117,21 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
 
             from starlette.responses import Response
 
-            request_host = (request.headers.get("host") or "").split(":")[0].lower()
+            # request.url.hostname handles IPv6 bracketing ([::1] → "::1") and
+            # port stripping correctly; a naive split-on-colon on the raw Host
+            # header would yield "[" for IPv6 and never match.
+            request_host = (request.url.hostname or "").lower()
             for header_name in ("origin", "referer"):
                 raw = request.headers.get(header_name)
                 if not raw:
                     continue
                 origin_host = (urlparse(raw).hostname or "").lower()
-                if origin_host and request_host and origin_host != request_host:
+                # An empty origin_host means the header was present but
+                # unparseable — most commonly `Origin: null` from a sandboxed
+                # iframe or `file://` page. Treat that as cross-origin: if a
+                # browser declined to attribute the request to a real origin,
+                # we won't trust it.
+                if not origin_host or (request_host and origin_host != request_host):
                     return Response(
                         content="forbidden: cross-origin mutation blocked",
                         status_code=403,

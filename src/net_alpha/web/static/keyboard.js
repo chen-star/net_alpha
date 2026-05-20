@@ -43,15 +43,22 @@
 
   document.addEventListener("keydown", (e) => {
     if (isTypingTarget(e.target)) { awaiting = null; return; }
-    if (isOverlayOpen()) { awaiting = null; return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
+    // `?` must keep working even when an overlay is open — it toggles the
+    // cheatsheet itself. Pressing `?` while the cheatsheet is open dispatches
+    // open-keyboard-cheatsheet; the cheatsheet's Alpine handler toggles open.
     if (e.key === "?") {
       e.preventDefault();
       window.dispatchEvent(new CustomEvent("open-keyboard-cheatsheet"));
       awaiting = null;
       return;
     }
+
+    // Other shortcuts (`,`, `g <x>`) are suppressed while a modal / palette /
+    // drawer is open so they don't navigate away from partially-completed work.
+    if (isOverlayOpen()) { awaiting = null; return; }
+
     if (e.key === ",") {
       e.preventDefault();
       window.dispatchEvent(new CustomEvent("open-settings-drawer", { detail: { tab: "imports" } }));

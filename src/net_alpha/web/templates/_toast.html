@@ -1,12 +1,14 @@
 {# Success toast that redirects after a short delay. Single-shot across stacked
    toasts via a window-level guard so two simultaneous toasts don't race two
-   navigations. #}
+   navigations. redirect_to is restricted to path-relative URLs (/foo) — refuses
+   `javascript:` schemes and absolute URLs so a future caller that threads user
+   input through `redirect_to` can't end up with a one-line DOM XSS. #}
 <div class="bg-pos/10 text-pos rounded p-3 mb-4 text-sm"
      role="status"
      aria-live="polite"
      style="border:0.5px solid var(--color-pos-tint);"
      data-redirect="{{ redirect_to|e }}"
      x-data
-     x-init="setTimeout(() => { if (window.__toastRedirected) return; window.__toastRedirected = true; window.location.href = $el.dataset.redirect; }, 1500)">
+     x-init="setTimeout(() => { if (window.__toastRedirected) return; const r = $el.dataset.redirect; if (!r || !r.startsWith('/') || r.startsWith('//')) return; window.__toastRedirected = true; window.location.href = r; }, 1500)">
   {{ message }}
 </div>

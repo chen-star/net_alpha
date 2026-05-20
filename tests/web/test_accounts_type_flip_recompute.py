@@ -117,10 +117,14 @@ def test_type_flip_back_to_taxable_reverts_classification(
 
 
 def test_type_flip_within_tax_advantaged_skips_recompute(
-    client: TestClient, repo, builders
+    client: TestClient, repo, builders, monkeypatch
 ):
     """trad_ira → roth_ira must NOT change wash-sale classification — both
-    are tax-advantaged, so the IRA-trap classifier output is identical."""
+    are tax-advantaged, so the IRA-trap classifier output is identical.
+
+    Spies on recompute_all_violations to confirm the route actually skips it
+    (state-only assertion would pass even if the guard were removed, since
+    the recompute is idempotent on this fixture)."""
     _seed_cross_account_wash_sale(repo, builders)
     repo.set_account_type(broker="schwab", label="Roth", type_="trad_ira")
     recompute_all_violations(repo, load_etf_pairs())
@@ -128,11 +132,21 @@ def test_type_flip_within_tax_advantaged_skips_recompute(
     assert before, "fixture didn't produce a violation"
     assert all(k == "permanent_ira" for _, k in before)
 
+    calls: list[tuple] = []
+
+    def _spy(repo_arg, pairs_arg):
+        calls.append((repo_arg, pairs_arg))
+
+    monkeypatch.setattr("net_alpha.web.routes.accounts.recompute_all_violations", _spy)
+
     resp = client.post(
         "/settings/accounts",
         data={"broker": "schwab", "label": "Roth", "type": "roth_ira"},
     )
     assert resp.status_code == 200
+    assert calls == [], (
+        f"recompute_all_violations must not be invoked for same-side flips; got {len(calls)} call(s)"
+    )
 
     after = [(v.id, v.kind) for v in repo.all_violations() if v.ticker == "AAPL"]
     assert after == before, (
