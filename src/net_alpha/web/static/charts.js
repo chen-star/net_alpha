@@ -46,6 +46,14 @@
     },
   });
 
+  function prefersReducedMotion() {
+    try {
+      return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function buildDefaults() {
     var c = readColors();
     var isLight = activeTheme() === "light";
@@ -55,6 +63,10 @@
     // Legend uses label1 in light (~9:1) / label2 in dark.
     var axisColor = isLight ? "#475569" : c.label3;
     var legendColor = isLight ? c.label1 : c.label2;
+    // CSS handles transitions/animations elsewhere with prefers-reduced-motion;
+    // Apex configures its own engine, so suppress entrance + dynamic animations
+    // when the user has opted out of motion at the OS level.
+    var animationsEnabled = !prefersReducedMotion();
     return {
       chart: {
         background: "transparent",
@@ -63,11 +75,11 @@
         toolbar: { show: false },
         zoom: { enabled: false },
         animations: {
-          enabled: true,
+          enabled: animationsEnabled,
           easing: "easeout",
           speed: 480,                                // was 800 — matches --duration-slow
-          animateGradually: { enabled: true, delay: 80 },  // light stagger
-          dynamicAnimation: { enabled: true, speed: 240 },
+          animateGradually: { enabled: animationsEnabled, delay: 80 },
+          dynamicAnimation: { enabled: animationsEnabled, speed: 240 },
         },
       },
       theme: { mode: activeTheme() },
@@ -139,9 +151,13 @@
   }
 
   function refresh() {
-    for (var i = 0; i < registry.length; i++) {
+    // Walk a snapshot so render functions that re-register (via the post-swap
+    // re-mount path) don't shift the loop index. Each render function is
+    // expected to early-return when its target node is no longer in the DOM.
+    var snapshot = registry.slice();
+    for (var i = 0; i < snapshot.length; i++) {
       try {
-        registry[i]();
+        snapshot[i]();
       } catch (e) {
         // A single chart failure shouldn't kill the others, but the error must
         // not be invisible — silent catch made chart leaks impossible to spot.

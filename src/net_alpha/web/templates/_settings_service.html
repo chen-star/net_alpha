@@ -183,7 +183,11 @@
       <h4>Recent runs</h4>
       <span class="meta">auto-refreshes</span>
     </div>
-    <div hx-get="/settings/service/runs" hx-trigger="load, every 30s"></div>
+    {# Pause polling when the tab is hidden — the panel is in the DOM
+       regardless of whether the settings drawer is open, so without this
+       guard it requested /settings/service/runs every 30s indefinitely. #}
+    <div hx-get="/settings/service/runs"
+         hx-trigger="load, every 30s [document.visibilityState === 'visible']"></div>
   </div>
 </section>
 {% endblock %}
