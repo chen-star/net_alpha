@@ -138,23 +138,32 @@
     return out;
   }
 
-  // Registry of render functions. Each chart template wraps its inline
-  // render() with `register(render)` so theme switches can re-invoke them.
-  var registry = [];
+  // Keyed registry of render functions: one entry per chart target id. Each
+  // HTMX swap of a chart fragment re-runs its inline IIFE which calls
+  // `register(key, render)` to OVERWRITE the prior closure for that key — so
+  // theme:change re-renders the latest closure (with fresh data) instead of
+  // a stack of stale ones accumulated across every prior swap.
+  var registry = new Map();
 
-  function register(fn) {
-    if (typeof fn === "function") {
-      registry.push(fn);
-      // Run it now so the chart appears on initial load.
-      fn();
+  function register(key, fn) {
+    // Legacy single-arg form (no callers in tree but defensive) — synthesize
+    // a unique key so old behavior of append-and-grow is preserved rather
+    // than collapsing every legacy registration onto the same slot.
+    if (typeof key === "function" && fn === undefined) {
+      fn = key;
+      key = "__anon_" + (registry.size + 1);
     }
+    if (typeof fn !== "function") return;
+    registry.set(key, fn);
+    // Run it now so the chart appears on initial load / post-swap.
+    try { fn(); } catch (e) { console.warn("chart initial render failed:", e); }
   }
 
   function refresh() {
-    // Walk a snapshot so render functions that re-register (via the post-swap
-    // re-mount path) don't shift the loop index. Each render function is
+    // Walk a snapshot of values so render functions that re-register (via the
+    // post-swap re-mount path) don't mutate the iterator. Each render is
     // expected to early-return when its target node is no longer in the DOM.
-    var snapshot = registry.slice();
+    var snapshot = Array.from(registry.values());
     for (var i = 0; i < snapshot.length; i++) {
       try {
         snapshot[i]();

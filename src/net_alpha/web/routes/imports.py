@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+import net_alpha.backup as backup
 from net_alpha.audit.hygiene import collect_issues, collect_missing_basis_rows
 from net_alpha.brokers.registry import detect_broker
 from net_alpha.brokers.schwab_realized_gl import SchwabRealizedGLParser
@@ -209,6 +210,10 @@ def remove_import(
     existing_record = repo.get_import(import_id)
     if existing_record is None:
         raise HTTPException(status_code=404, detail=f"Import #{import_id} not found")
+    # Mirror the CLI (cli/imports.py:25): a pre-mutation snapshot makes the
+    # delete recoverable. Without this the UI path silently loses data the
+    # CLI path preserves.
+    backup.snapshot_pre(reason="pre-imports-rm")
     account_id = existing_record.account_id
     result = repo.remove_import(import_id)
     if result.recompute_window is not None:
@@ -239,6 +244,11 @@ def bulk_remove_imports(
     repo: Repository = Depends(get_repository),
     etf_pairs: dict = Depends(get_etf_pairs),
 ) -> HTMLResponse:
+    # Pre-mutation snapshot (mirrors the per-id DELETE path). Take it once
+    # outside the loop so a bulk delete of N imports produces a single
+    # backup, not N.
+    if ids:
+        backup.snapshot_pre(reason="pre-imports-rm")
     affected_account_ids: set[int] = set()
     needs_recompute = False
     for import_id in ids:
@@ -370,6 +380,12 @@ async def upload(
 ) -> HTMLResponse:
     if request.app.state.demo_mode:
         return RedirectResponse("/welcome", status_code=303)
+
+    # Mirror the CLI (cli/default.py:73): a pre-import snapshot lets the user
+    # roll back an unintended ingest. Take it before any DB write — file
+    # parsing failures below this point won't have mutated the DB anyway,
+    # so a wasted snapshot is harmless and the failure-tolerant path is right.
+    backup.snapshot_pre(reason="pre-import")
 
     # Per-file account labels. The modal renders one input per file when
     # multiple are uploaded so the user can route each file to its own

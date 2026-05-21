@@ -157,12 +157,12 @@
     }
 
     if (window.ApexCharts && window.netAlphaChartTheme) {
-      window.netAlphaChartTheme.register(render);
+      window.netAlphaChartTheme.register("monthly-pl-chart", render);
     } else {
       const iv = setInterval(() => {
         if (window.ApexCharts && window.netAlphaChartTheme) {
           clearInterval(iv);
-          window.netAlphaChartTheme.register(render);
+          window.netAlphaChartTheme.register("monthly-pl-chart", render);
         }
       }, 50);
     }

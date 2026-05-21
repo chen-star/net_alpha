@@ -884,6 +884,47 @@ def _modal_error(request: Request, msg: str, status: int) -> HTMLResponse:
     return response
 
 
+async def _plan_toolbar_state(request: Request) -> dict:
+    """Extract the Plan-view toolbar state from a mutation request.
+
+    Mutations (upsert / delete / tag add+remove / reorder) re-render the
+    plan body and must preserve account / tag / sort / page / page_size /
+    period selections — otherwise every edit silently snaps the toolbar
+    back to defaults (All / no tag / manual / page 1 / 25 / YTD). Form
+    data wins where present; query params are the fallback for HX-Boosted
+    requests where the form omits a key.
+    """
+    form_data = await request.form()
+
+    def _pick(name: str) -> str | None:
+        v = form_data.get(name) or request.query_params.get(name)
+        return v.strip() if isinstance(v, str) and v.strip() else None
+
+    raw_accounts: list[str] = list(form_data.getlist("account")) + list(
+        request.query_params.getlist("account")
+    )
+    page_raw = _pick("page")
+    try:
+        page = max(1, int(page_raw)) if page_raw else 1
+    except ValueError:
+        page = 1
+    ps_raw = _pick("page_size")
+    try:
+        page_size = int(ps_raw) if ps_raw else 25
+    except ValueError:
+        page_size = 25
+    sort_key = _pick("sort") or "manual"
+    selected_period = _pick("period") or "ytd"
+    return {
+        "accounts": parse_accounts(raw_accounts) or None,
+        "selected_tag": _pick("tag"),
+        "sort_key": sort_key,
+        "page": page,
+        "page_size": page_size,
+        "selected_period": selected_period,
+    }
+
+
 def _render_plan_body(
     request: Request,
     repo: Repository,
@@ -893,6 +934,7 @@ def _render_plan_body(
     page_size: int = 25,
     selected_tag: str | None = None,
     sort_key: str = "manual",
+    selected_period: str = "ytd",
 ) -> HTMLResponse:
     import dataclasses as _dc
 
@@ -917,7 +959,7 @@ def _render_plan_body(
             "plan_view": plan_view,
             "selected_accounts": _accounts,
             "selected_account": _accounts[0] if len(_accounts) == 1 else "",
-            "selected_period": "ytd",
+            "selected_period": selected_period,
             "watch_by_target_id": watch_results,
             "change_states": change_states,
             "pagination": {
@@ -990,18 +1032,20 @@ async def plan_target_upsert(
         parts = [p.strip() for p in raw_tags.split(",")]
         repo.set_target_tags(sym, parts)
 
-    return _render_plan_body(request, repo, pricing)
+    state = await _plan_toolbar_state(request)
+    return _render_plan_body(request, repo, pricing, **state)
 
 
 @router.delete("/positions/plan/target/{symbol}", response_class=HTMLResponse)
-def plan_target_delete(
+async def plan_target_delete(
     request: Request,
     symbol: str,
     repo: Repository = Depends(get_repository),
     pricing: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
     repo.delete_target(symbol)
-    return _render_plan_body(request, repo, pricing)
+    state = await _plan_toolbar_state(request)
+    return _render_plan_body(request, repo, pricing, **state)
 
 
 @router.post("/positions/plan/mark-seen")
@@ -1036,7 +1080,7 @@ def plan_mark_seen(
 
 
 @router.post("/positions/plan/target/{symbol}/tag", response_class=HTMLResponse)
-def plan_target_tag_add(
+async def plan_target_tag_add(
     request: Request,
     symbol: str,
     tag: str = Form(""),
@@ -1049,14 +1093,15 @@ def plan_target_tag_add(
         raise HTTPException(status_code=404, detail=f"No target for {sym}")
     if not repo.add_target_tag(sym, tag):
         raise HTTPException(status_code=422, detail="Invalid tag")
-    return _render_plan_body(request, repo, pricing)
+    state = await _plan_toolbar_state(request)
+    return _render_plan_body(request, repo, pricing, **state)
 
 
 @router.delete(
     "/positions/plan/target/{symbol}/tag/{tag}",
     response_class=HTMLResponse,
 )
-def plan_target_tag_remove(
+async def plan_target_tag_remove(
     request: Request,
     symbol: str,
     tag: str,
@@ -1065,7 +1110,8 @@ def plan_target_tag_remove(
 ) -> HTMLResponse:
     """Remove a tag from a target. Idempotent. Returns refreshed plan body."""
     repo.remove_target_tag(symbol, tag)
-    return _render_plan_body(request, repo, pricing)
+    state = await _plan_toolbar_state(request)
+    return _render_plan_body(request, repo, pricing, **state)
 
 
 @router.post("/positions/plan/reorder", response_class=HTMLResponse)
@@ -1077,34 +1123,13 @@ async def plan_target_reorder(
     """Persist a new manual ordering of Plan targets and re-render the body.
 
     Body: form-encoded, repeated `order` keys (e.g. order=AAPL&order=MSFT).
-    Optional query/form params propagated for the re-render: `account`,
-    `tag`, `page`. Always re-renders in Manual mode (sort_key='manual').
+    Toolbar state (account, tag, page, page_size, period) is propagated
+    via _plan_toolbar_state. Always re-renders in Manual mode regardless
+    of the inbound sort param.
     """
     form_data = await request.form()
     raw_order = form_data.getlist("order")
-
-    def _pick(name: str) -> str | None:
-        v = form_data.get(name) or request.query_params.get(name)
-        return v.strip() if isinstance(v, str) and v.strip() else None
-
-    # Multi-account: collect all `account` values from form data + query params.
-    raw_accounts: list[str] = list(form_data.getlist("account")) + list(request.query_params.getlist("account"))
-    accounts_reorder = parse_accounts(raw_accounts)
-    selected_tag = _pick("tag")
-    page_raw = _pick("page")
-    try:
-        page = max(1, int(page_raw)) if page_raw else 1
-    except ValueError:
-        page = 1
-
     repo.set_target_order(raw_order)
-
-    return _render_plan_body(
-        request,
-        repo,
-        pricing,
-        accounts=accounts_reorder or None,
-        page=page,
-        selected_tag=selected_tag,
-        sort_key="manual",
-    )
+    state = await _plan_toolbar_state(request)
+    state["sort_key"] = "manual"
+    return _render_plan_body(request, repo, pricing, **state)
