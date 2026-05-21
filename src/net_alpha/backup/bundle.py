@@ -139,8 +139,44 @@ def extract_bundle(
         try:
             tf.extractall(out_dir, filter="data")
         except TypeError:
-            # Python 3.11 without the filter-aware tarfile patch
-            tf.extractall(out_dir)
+            # Python 3.11.0–3.11.3 (pre-CVE-2007-4559 backport) doesn't
+            # accept the `filter` keyword. The previous fallback called the
+            # unfiltered tf.extractall(out_dir), which is the path-traversal
+            # vulnerability the filter was added to prevent. _safe_extract
+            # validates each member against the destination root before
+            # writing.
+            _safe_extract(tf, out_dir)
 
     manifest_path = out_dir / "manifest.json"
     return Manifest.from_json_bytes(manifest_path.read_bytes())
+
+
+def _safe_extract(tf: tarfile.TarFile, out_dir: Path) -> None:
+    """Path-traversal-safe tar extraction.
+
+    Mirrors the protections of ``tarfile.data_filter`` (Python 3.11.4+ /
+    3.12+) for the rare runtime where that filter isn't available. Rejects:
+    - symlinks and hardlinks (we don't write any in our bundles, and an
+      attacker-supplied symlink can redirect later file writes outside
+      out_dir even after a clean extract);
+    - absolute paths (``/etc/passwd``);
+    - any member whose resolved destination escapes ``out_dir`` (``../``
+      traversal, including via symlinks already in out_dir).
+    """
+    out_root = out_dir.resolve()
+    for member in tf.getmembers():
+        if member.issym() or member.islnk():
+            raise ValueError(f"refusing tar member with link target: {member.name!r}")
+        # PurePosixPath catches both '/' on POSIX and '\\' on Windows; rejecting
+        # any absolute or '..'-bearing name is simpler and safer than a
+        # platform-specific normalization.
+        if member.name.startswith("/") or ".." in Path(member.name).parts:
+            raise ValueError(f"refusing tar member with unsafe path: {member.name!r}")
+        target = (out_dir / member.name).resolve()
+        try:
+            target.relative_to(out_root)
+        except ValueError as e:
+            raise ValueError(
+                f"refusing tar member that escapes destination: {member.name!r}"
+            ) from e
+        tf.extract(member, out_dir)

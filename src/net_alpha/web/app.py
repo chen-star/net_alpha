@@ -103,13 +103,33 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
 
     # Same-origin enforcement on mutating requests.
     #
-    # net-alpha binds loopback only, so the threat surface is "another tab in
-    # the same browser session running a bookmarklet / extension that fires
-    # POSTs at our routes". Browsers always attach an Origin (XHR/fetch) or
-    # Referer (form post / link click); we require the host of either header
-    # to match the request's own Host so a foreign tab can't drive our routes.
-    # CLI tools (curl, httpie) typically send neither header; allow that path
-    # so the user's own scripts keep working.
+    # net-alpha binds loopback only, so the threat surface is:
+    #   (a) another tab in the same browser running a bookmarklet/extension
+    #       that POSTs at our routes — blocked by the Origin/Referer check
+    #       below, and
+    #   (b) DNS rebinding — attacker maps evil.example.com → 127.0.0.1, then
+    #       a page on evil.example.com fetches its own origin after the DNS
+    #       TTL flips. The browser sends Host: evil.example.com AND
+    #       Origin: http://evil.example.com so they "match" — bypassing a
+    #       bare same-host equality check. Closed by the _LOOPBACK_HOSTS
+    #       allowlist below, which rejects any mutating request whose URL
+    #       hostname isn't a name the server is actually meant to answer on.
+    # CLI tools (curl, httpie) typically send neither Origin nor Referer; that
+    # path remains allowed when the Host is loopback so user scripts keep
+    # working.
+    _LOOPBACK_HOSTS = frozenset(
+        {
+            "127.0.0.1",
+            "localhost",
+            "::1",
+            # Starlette's TestClient defaults to Host: testserver. Keeping it
+            # in the allowlist costs nothing in production (no public DNS
+            # name "testserver" exists, and the user would have to add a
+            # /etc/hosts entry to self-attack) and avoids a test-only hook.
+            "testserver",
+        }
+    )
+
     @app.middleware("http")
     async def _same_origin_guard(request, call_next):
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
@@ -121,6 +141,12 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
             # port stripping correctly; a naive split-on-colon on the raw Host
             # header would yield "[" for IPv6 and never match.
             request_host = (request.url.hostname or "").lower()
+            if request_host and request_host not in _LOOPBACK_HOSTS:
+                return Response(
+                    content="forbidden: non-loopback host header rejected",
+                    status_code=403,
+                    media_type="text/plain",
+                )
             for header_name in ("origin", "referer"):
                 raw = request.headers.get(header_name)
                 if not raw:
@@ -138,6 +164,37 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
                         media_type="text/plain",
                     )
         return await call_next(request)
+
+    # Baseline security headers on every response.
+    #
+    # The app uses inline <script> / <style> heavily (HTMX `hx-on:` handlers,
+    # Alpine `x-on:`, per-chart inline IIFE render blocks, theme variables),
+    # so script-src/style-src must include 'unsafe-inline'. Tightening to
+    # hashes/nonces would be a meaningful follow-up but is out of scope for
+    # the local-only threat model. frame-ancestors 'none' is the modern
+    # clickjack defense and is set alongside the legacy X-Frame-Options for
+    # browser-coverage redundancy.
+    _CSP = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
+
+    @app.middleware("http")
+    async def _security_headers(request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        response.headers.setdefault("Content-Security-Policy", _CSP)
+        return response
+
     app.state.etf_pairs = load_etf_pairs(user_path=str(settings.user_etf_pairs_path))
     app.state.etf_replacements = load_etf_replacements(
         user_path=settings.data_dir / "etf_replacements.yaml",

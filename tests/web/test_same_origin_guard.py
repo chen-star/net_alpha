@@ -73,3 +73,44 @@ def test_origin_null_is_blocked(client: TestClient):
         follow_redirects=False,
     )
     assert resp.status_code == 403
+
+
+def test_dns_rebinding_blocked_by_host_allowlist(client: TestClient):
+    """DNS rebinding: attacker registers evil.example.com → 127.0.0.1, lures
+    the victim to a page on evil.example.com that, after the DNS TTL flips,
+    fetches http://evil.example.com:18765/quit. The browser sends both
+    Host: evil.example.com AND Origin: http://evil.example.com — strings
+    match, so the bare same-origin equality check would pass.
+
+    The fix: reject any mutating request whose Host header is not one of
+    the loopback names the server is actually meant to answer on. That
+    Host allowlist closes the rebinding window even when Origin lines up.
+    """
+    resp = client.post(
+        "/tour/dismiss",
+        headers={
+            "host": "evil.example.com",
+            "origin": "http://evil.example.com",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 403
+    assert "host" in resp.text.lower()
+
+
+def test_dns_rebinding_blocked_when_host_changed_but_origin_loopback(
+    client: TestClient,
+):
+    """Even if the browser-attached Origin somehow says 127.0.0.1, a Host
+    header that points elsewhere must still block. Defense in depth: the
+    allowlist gates on Host alone so a single misset header can't defeat it.
+    """
+    resp = client.post(
+        "/tour/dismiss",
+        headers={
+            "host": "evil.example.com",
+            "origin": "http://127.0.0.1:18765",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 403
