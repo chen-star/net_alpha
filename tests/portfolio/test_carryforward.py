@@ -88,18 +88,18 @@ def test_excess_lt_loss_offsets_st_gain():
 
 def test_both_categories_negative_each_rolls_in_bucket():
     # 2024: ST loss $4,000, LT loss $2,000. Total $6,000 loss.
-    # $3,000 against ordinary; $3,000 surplus splits proportionally:
-    #   ST share = 4000/6000 * 3000 = 2000
-    #   LT share = 2000/6000 * 3000 = 1000
+    # Schedule D Capital Loss Carryover Worksheet absorbs the $3K cap
+    # against ST loss FIRST (line 7 = line 4 + line 6), then any cap
+    # remaining against LT loss. ST CF = $4K − $3K = $1K; LT CF = $2K.
     repo = _StubRepo({2024: (Decimal("-4000"), Decimal("-2000"))})
     cf = derive_carryforward(repo, year=2025)
-    assert cf == Carryforward(st=Decimal("2000"), lt=Decimal("1000"), source="derived")
+    assert cf == Carryforward(st=Decimal("1000"), lt=Decimal("2000"), source="derived")
 
 
 def test_two_year_chain_carryforward_consumes_next_year_gain():
     # 2023: ST loss $5,000 → $2,000 ST carry into 2024.
-    # 2024: ST gain $1,500 → carry consumed down to $500 ST.
-    # $500 carries into 2025.
+    # 2024: ST gain $1,500 + $2,000 ST carry → net $500 ST loss.
+    # $500 absorbed against 2024 ordinary income under §1211(b); $0 to 2025.
     repo = _StubRepo(
         {
             2023: (Decimal("-5000"), Decimal("0")),
@@ -107,7 +107,58 @@ def test_two_year_chain_carryforward_consumes_next_year_gain():
         }
     )
     cf = derive_carryforward(repo, year=2025)
-    assert cf == Carryforward(st=Decimal("500"), lt=Decimal("0"), source="derived")
+    assert cf == Carryforward(st=Decimal("0"), lt=Decimal("0"), source="derived")
+
+
+def test_carryforward_drains_in_idle_year_against_ordinary_income():
+    # §1211(b) caps deductions against ordinary at $3,000 PER YEAR.
+    # A $2,000 ST carry into an idle year is fully consumed that year — it
+    # does NOT roll forward indefinitely until offset by a gain.
+    #
+    # 2023: $5,000 ST loss → $2,000 ST carry into 2024.
+    # 2024: no activity → $2,000 absorbed against ordinary → $0 to 2025.
+    repo = _StubRepo(
+        {
+            2023: (Decimal("-5000"), Decimal("0")),
+            # 2024 deliberately omitted: stub returns (0, 0).
+        }
+    )
+    cf = derive_carryforward(repo, year=2025)
+    assert cf == Carryforward(st=Decimal("0"), lt=Decimal("0"), source="derived")
+
+
+def test_carryforward_drain_with_new_losses_combined_for_cap():
+    # The $3K cap applies ONCE per year to the COMBINED total of carry + new
+    # losses, not to each separately.
+    #
+    # 2023: $8,000 ST loss → $5,000 ST carry into 2024.
+    # 2024: $1,000 LT new loss + $5,000 ST carry. Combined net = $6,000 loss.
+    # $3,000 cap absorbed against ordinary. $3,000 rolls forward — ST first
+    # per Schedule D worksheet (ST cap consumed before LT), leaving $2,000 ST
+    # and $1,000 LT carry into 2025.
+    repo = _StubRepo(
+        {
+            2023: (Decimal("-8000"), Decimal("0")),
+            2024: (Decimal("0"), Decimal("-1000")),
+        }
+    )
+    cf = derive_carryforward(repo, year=2025)
+    assert cf == Carryforward(st=Decimal("2000"), lt=Decimal("1000"), source="derived")
+
+
+def test_carryforward_large_residue_partially_drained_by_gain_then_capped():
+    # 2023: $10,000 ST loss → $7,000 ST carry into 2024.
+    # 2024: $500 ST gain. Carry first absorbs gain ($7,000 - $500 = $6,500
+    # ST loss remains). $3,000 cap absorbed against ordinary in 2024.
+    # $3,500 ST rolls forward into 2025.
+    repo = _StubRepo(
+        {
+            2023: (Decimal("-10000"), Decimal("0")),
+            2024: (Decimal("500"), Decimal("0")),
+        }
+    )
+    cf = derive_carryforward(repo, year=2025)
+    assert cf == Carryforward(st=Decimal("3500"), lt=Decimal("0"), source="derived")
 
 
 def test_three_year_chain_with_cross_category():

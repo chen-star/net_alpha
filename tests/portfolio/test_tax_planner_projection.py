@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from net_alpha.models.domain import Trade
+from net_alpha.models.domain import Section1256MTM, Trade
 from net_alpha.portfolio.tax_planner import (
     MissingTaxConfig,
     PlannedTrade,
@@ -226,3 +226,53 @@ def test_total_tax_equals_sum_of_displayed_components(
     assert p.federal_tax + p.state_tax == p.total_tax, (
         f"Drift: fed={p.federal_tax} + state={p.state_tax} != total={p.total_tax}"
     )
+
+
+def test_projection_includes_section_1256_mtm_60_40_split(
+    repo,
+    schwab_account,
+    seed_import,
+) -> None:
+    """§1256(a)(1) year-end MTM rows must flow into the projection's ST/LT.
+
+    Without this, the headline projection card understates tax by ignoring
+    open §1256 positions that get marked-to-market on Dec 31 each year.
+    Tax Performance shows them — the projection card must agree.
+    """
+    today = date(2026, 5, 1)
+    # Seed a placeholder taxable trade just so the year has any activity.
+    buy = Trade(
+        account=schwab_account.display(),
+        date=today - timedelta(days=10),
+        ticker="UUUU",
+        action="Buy",
+        quantity=Decimal("1"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("100"),
+    )
+    seed_import(repo, schwab_account, [buy])
+
+    # Open SPX 4000C at year-end with $1,000 unrealized gain → 60/40 = $600 LT, $400 ST.
+    repo.save_section_1256_mtm(
+        [
+            Section1256MTM(
+                position_key=f"SPX|4000.0|2027-06-19|C|{schwab_account.display()}",
+                tax_year=2026,
+                last_business_day=date(2026, 12, 31),
+                fmv=Decimal("1100"),
+                basis_before=Decimal("100"),
+                unrealized_pnl=Decimal("1000.00"),
+                long_term_portion=Decimal("600.00"),
+                short_term_portion=Decimal("400.00"),
+                fmv_source="yahoo_close",
+                ticker="SPX",
+                account=schwab_account.display(),
+            )
+        ]
+    )
+
+    p = project_year_end_tax(repo=repo, year=2026, brackets=_BRACKETS)
+    # §1256 LT (60%) taxed at ltcg_rate (15%); ST (40%) at ordinary (32% fed).
+    # State (9.3%) taxes both at the same rate. UUUU buy contributes nothing.
+    assert p.realized_lt_gain == Decimal("600.00")
+    assert p.realized_st_gain == Decimal("400.00")

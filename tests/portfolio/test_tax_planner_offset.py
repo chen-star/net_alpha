@@ -172,6 +172,91 @@ def test_offset_budget_no_carryforward_arg_defaults_to_zero(repo) -> None:
     assert budget.incoming_carryforward_lt == Decimal("0")
 
 
+def test_offset_budget_lt_carryforward_absorbs_st_gain_no_ordinary_used(
+    repo,
+    schwab_account,
+    seed_import,
+) -> None:
+    """§1212(b)(1)(B): a $4K LT capital-loss carryforward netting against a
+    $5K ST gain leaves $1K ST gain — no net loss, no §1211(b) cap consumed,
+    no CF rolls forward.
+
+    Old buggy behavior would lump cf_total + |net| together, treat the $4K
+    LT CF as an unused loss, and clamp it at the $3K cap — showing $3K
+    "used against ordinary" the user never actually realized.
+    """
+    from net_alpha.portfolio.carryforward import Carryforward
+
+    buy = Trade(
+        account=schwab_account.display(),
+        date=date(2026, 1, 5),
+        ticker="UUUU",
+        action="Buy",
+        quantity=Decimal("100"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("1000"),
+    )
+    sell = Trade(
+        account=schwab_account.display(),
+        date=date(2026, 3, 1),
+        ticker="UUUU",
+        action="Sell",
+        quantity=Decimal("100"),
+        proceeds=Decimal("6000"),
+        cost_basis=Decimal("1000"),
+    )
+    seed_import(repo, schwab_account, [buy, sell])
+
+    cf = Carryforward(st=Decimal("0"), lt=Decimal("4000"), source="user")
+    budget = compute_offset_budget(repo=repo, year=2026, carryforward=cf)
+    # $5K ST gain absorbed by $4K LT CF (§1212(b)(1)(B) cross-bucket).
+    # Net: $1K ST gain. No deduction against ordinary; no CF rolls forward.
+    assert budget.used_against_ordinary == Decimal("0")
+    assert budget.carryforward_projection == Decimal("0")
+
+
+def test_offset_budget_excludes_tax_advantaged_account_losses(
+    repo,
+    schwab_account,
+    seed_import,
+) -> None:
+    """Losses inside an IRA / Roth / 401(k) / HSA are NOT realized for tax —
+    they must not show up in the offset budget. §1211(b) headroom is a
+    taxable-account concept.
+    """
+    # Set up a taxable schwab account (default) with no activity, plus an
+    # IRA-typed account with a $1,000 "loss" that doesn't count for taxes.
+    ira_acct = repo.get_or_create_account(broker="schwab", label="IRA")
+    repo.set_account_type(broker="schwab", label="IRA", type_="trad_ira")
+
+    buy = Trade(
+        account=ira_acct.display(),
+        date=date(2026, 1, 5),
+        ticker="UUUU",
+        action="Buy",
+        quantity=Decimal("100"),
+        proceeds=Decimal("0"),
+        cost_basis=Decimal("5000"),
+    )
+    sell = Trade(
+        account=ira_acct.display(),
+        date=date(2026, 3, 1),
+        ticker="UUUU",
+        action="Sell",
+        quantity=Decimal("100"),
+        proceeds=Decimal("4000"),
+        cost_basis=Decimal("5000"),
+    )
+    seed_import(repo, ira_acct, [buy, sell])
+
+    b = compute_offset_budget(repo=repo, year=2026)
+    # IRA losses are not tax-realized — budget should be flat.
+    assert b.realized_losses_ytd == Decimal("0")
+    assert b.realized_gains_ytd == Decimal("0")
+    assert b.net_realized == Decimal("0")
+    assert b.used_against_ordinary == Decimal("0")
+
+
 def test_offset_budget_carryforward_inflates_used_against_ordinary(
     repo,
     schwab_account,

@@ -395,7 +395,13 @@ def compute_harvest_queue(
 
 
 def _realized_in_year(repo: Repository, year: int) -> tuple[Decimal, Decimal]:
-    """Return (gross_losses_ytd_signed_negative, gross_gains_ytd_positive)."""
+    """Return (gross_losses_ytd_signed_negative, gross_gains_ytd_positive).
+
+    Excludes tax-advantaged accounts (IRA / Roth / 401(k) / HSA): a loss
+    realized inside one of these is not a taxable event and must not consume
+    §1211(b) headroom or inflate ``used_against_ordinary``.
+    """
+    types_by_display = repo.account_types_by_display()
     losses = Decimal("0")
     gains = Decimal("0")
     for t in repo.all_trades():
@@ -404,6 +410,9 @@ def _realized_in_year(repo: Repository, year: int) -> tuple[Decimal, Decimal]:
         if t.date.year != year:
             continue
         if t.proceeds is None or t.cost_basis is None:
+            continue
+        acct_type = types_by_display.get(t.account)
+        if acct_type is not None and acct_type.is_tax_advantaged:
             continue
         pnl = Decimal(str(t.proceeds)) - Decimal(str(t.cost_basis))
         if pnl < 0:
@@ -451,24 +460,25 @@ def compute_offset_budget(
     ``carryforward_projection`` (the amount that will roll forward into the
     next year).
     """
-    from net_alpha.portfolio.carryforward import ordinary_loss_cap
+    from net_alpha.portfolio.carryforward import apply_net_and_cap, ordinary_loss_cap
 
     losses, gains = _realized_in_year(repo, year)
     net = losses + gains
 
     cf_st = carryforward.st if carryforward else Decimal("0")
     cf_lt = carryforward.lt if carryforward else Decimal("0")
-    cf_total = cf_st + cf_lt
+
+    # Bucket-separated current-year P&L (taxable accounts only, §1256 folded in)
+    # so §1212(b)(1)(B) cross-bucket netting honors character: an LT CF first
+    # absorbs LT gain then ST gain (and vice versa) before any §1211(b) cap
+    # consumption — never the unbucketed total.
+    st_pnl, lt_pnl = repo.realized_pnl_split_by_year(year)
 
     cap = ordinary_loss_cap(filing_status)
-    used = Decimal("0")
-    carry = Decimal("0")
-
-    # Prior carryforward + this year's net loss combine; the $3K cap applies.
-    total_loss_with_cf = max(Decimal("0"), -net) + cf_total
-    if total_loss_with_cf > 0:
-        used = min(total_loss_with_cf, cap)
-        carry = max(total_loss_with_cf - cap, Decimal("0"))
+    st_carry_out, lt_carry_out, used = apply_net_and_cap(
+        cf_st, cf_lt, st_pnl, lt_pnl, cap=cap
+    )
+    carry = st_carry_out + lt_carry_out
 
     planned_delta = _planned_pnl(planned_trades or [], repo)
 

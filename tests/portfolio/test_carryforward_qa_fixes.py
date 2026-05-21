@@ -83,13 +83,13 @@ def test_section_1256_pnl_folds_into_multiyear_carryforward(tmp_path):
             return (Decimal("0"), Decimal("0"))
 
     cf = derive_carryforward(_StubRepo(), 2025)
-    # Combined loss = $10,000. Single-filer cap = $3,000.
-    # Remaining $7,000 carries; proportionally ST:$2,800, LT:$4,200.
+    # Combined loss = $10,000. Single-filer cap = $3,000 absorbs ST loss
+    # first per Schedule D Capital Loss Carryover Worksheet line 7 → line 8:
+    # ST CF = $4,000 − $3,000 = $1,000; LT CF = $6,000 (cap fully spent).
     assert cf.source == "derived"
-    assert cf.st + cf.lt == Decimal("7000.00")
-    # Character is preserved proportionally (within cents).
-    assert abs(cf.st - Decimal("2800.00")) < Decimal("0.01")
-    assert abs(cf.lt - Decimal("4200.00")) < Decimal("0.01")
+    assert cf.st + cf.lt == Decimal("7000")
+    assert cf.st == Decimal("1000")
+    assert cf.lt == Decimal("6000")
 
 
 def test_carryforward_namedtuple_smoke():
