@@ -2,6 +2,124 @@
 
 
 
+## v0.75.3 (2026-05-21)
+
+### Fix
+
+* fix(web): Batch 12 — UI safety sweep
+
+Four UI-safety fixes surfaced by deep code review:
+
+(1) Pre-mutation backup on UI imports + deletes. The CLI calls
+    backup.snapshot_pre() before every import / imports rm
+    (cli/default.py:73, cli/imports.py:25); the corresponding web
+    routes (POST /imports, DELETE /imports/{id}, POST
+    /imports/bulk-delete) skipped it entirely, leaving the UI path
+    lossy where the CLI path was recoverable. Wired the same hook.
+
+(2) Plan-view toolbar state preservation across mutations. Edits
+    via plan_target_upsert/delete/tag_add/tag_remove/reorder all
+    called _render_plan_body() with default args, silently
+    snapping the toolbar back to All-accounts, no-tag, manual
+    sort, page 1, page_size 25, YTD on every save. Added
+    _plan_toolbar_state(request) helper that pulls account /
+    tag / sort / page / page_size / period from form-data
+    (preferred) or query params (fallback) and threaded it
+    through every mutator. _render_plan_body now also accepts
+    selected_period instead of hardcoding &#34;ytd&#34;.
+
+(3) Chart registry closure leak. charts.js kept a flat list of
+    render closures and appended a new one on every HTMX swap
+    of a chart fragment, so theme:change after N swaps walked
+    N stale closures (each early-returning or — worse — mounting
+    stale data on the freshly-swapped node). Switched the
+    registry to a Map keyed by chart-target-id; each fragment
+    template now calls register(&#34;equity-chart&#34;, render) etc.,
+    overwriting its prior closure. Theme:change cost drops from
+    O(N) to O(charts).
+
+(4) Drop-zone dragover highlight referenced an undefined CSS
+    variable (--color-accent-tint), falling back to the
+    near-invisible --color-hairline. Switched to
+    --color-signature-tint which is defined in both themes.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`299c1d1`](https://github.com/chen-star/net_alpha/commit/299c1d17ae3200d1c05cdc729e86ccbd62a7e3eb))
+
+* fix(tax): Batch 4 — §1211/§1212 carryforward correctness
+
+Three silent-wrong-data bugs surfaced by deep code review:
+
+(1) _roll_one_year leaked unconsumed prior carryforward forever.
+    The function only applied the §1211(b) $3K cap to NEW losses
+    and rolled prior carry forward unchanged — meaning a $2K CF
+    into an idle year would re-deduct $2K against ordinary every
+    subsequent year ad infinitum. Rewrote per the IRS Schedule D
+    Capital Loss Carryover Worksheet: combine prior carry with
+    current activity, apply §1212(b) cross-bucket netting, then
+    consume the cap ST-loss-first (line 7 → line 8) with any
+    cap remaining absorbing LT. Factored into new public
+    apply_net_and_cap helper that also returns cap_used.
+
+(2) compute_offset_budget counted IRA / Roth / 401(k) / HSA
+    losses against the §1211(b) headroom. A taxable-account
+    concept must not see tax-advantaged activity; filter via
+    repo.account_types_by_display in _realized_in_year.
+
+(3) compute_offset_budget collapsed cf_st + cf_lt + net into a
+    single bag of dollars and applied the cap to the total —
+    missing §1212(b)(1)(B) cross-bucket netting entirely. A
+    pure-LT $4K carryforward against a $5K ST gain falsely
+    showed $3K &#34;used against ordinary&#34; the user never realized.
+    Switched to bucket-separated current-year P&amp;L via
+    realized_pnl_split_by_year and the new apply_net_and_cap
+    helper so §1212 character and the §1211 cap apply
+    consistently with the multi-year replay.
+
+Three existing tests asserted the buggy behavior (proportional
+surplus split, CF surviving idle years, LT CF mis-clamped):
+updated to the correct IRS values.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b344c15`](https://github.com/chen-star/net_alpha/commit/b344c156a6b423ea759b5325c1cfbf332b3bdb53))
+
+### Unknown
+
+* sec(web): Batch 13 — DNS rebinding, security headers, tar fallback safety
+
+(1) DNS-rebinding-proof same-origin guard.
+    The existing guard compared Origin to request.url.hostname (the URL
+    host derived from the Host header). A DNS-rebinding attack flips
+    evil.example.com → 127.0.0.1; the victim&#39;s browser then sends BOTH
+    Host: evil.example.com AND Origin: http://evil.example.com — the
+    strings match, so the equality check passes. Added a _LOOPBACK_HOSTS
+    allowlist {127.0.0.1, localhost, ::1, testserver} that gates the
+    middleware: a mutating request whose Host isn&#39;t one of those names
+    is rejected before the same-origin comparison runs. testserver is
+    in the allowlist for Starlette TestClient compatibility — it has
+    no public DNS and would require a /etc/hosts self-attack to abuse.
+
+(2) Baseline security headers middleware.
+    X-Frame-Options: DENY + CSP frame-ancestors &#39;none&#39; (clickjack);
+    X-Content-Type-Options: nosniff (MIME-sniff drive-bys);
+    Referrer-Policy: same-origin (don&#39;t leak local URLs to outbound clicks);
+    Content-Security-Policy with default-src &#39;self&#39;, script/style
+    &#39;unsafe-inline&#39; (HTMX hx-on, Alpine x-on, per-chart inline IIFE
+    blocks), and form-action/base-uri &#39;self&#39;. Tightening script/style
+    to hashes/nonces is the meaningful follow-up but out of scope for
+    the local-only threat model.
+
+(3) Path-traversal-safe tar fallback in extract_bundle.
+    Python 3.11.0–3.11.3 lacks tarfile.data_filter; bundle.py previously
+    fell back to the bare tf.extractall(out_dir), which is the
+    CVE-2007-4559 path-traversal the filter was added to prevent.
+    Replaced with _safe_extract: per-member validation rejecting
+    symlinks/hardlinks, absolute paths, and any &#34;..&#34;-bearing or
+    out_dir-escaping name before tf.extract.
+
++13 tests (2 DNS-rebinding, 5 security headers, 6 safe-extract).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`dcc776e`](https://github.com/chen-star/net_alpha/commit/dcc776ee1b64449b84d96814d36b74f787894858))
+
+
 ## v0.75.2 (2026-05-20)
 
 ### Fix
