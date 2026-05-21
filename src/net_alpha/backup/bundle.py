@@ -176,7 +176,5 @@ def _safe_extract(tf: tarfile.TarFile, out_dir: Path) -> None:
         try:
             target.relative_to(out_root)
         except ValueError as e:
-            raise ValueError(
-                f"refusing tar member that escapes destination: {member.name!r}"
-            ) from e
+            raise ValueError(f"refusing tar member that escapes destination: {member.name!r}") from e
         tf.extract(member, out_dir)

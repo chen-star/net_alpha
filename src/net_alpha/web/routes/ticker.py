@@ -184,6 +184,7 @@ def _build_timeline_rows(
         # included so two accounts closing the same contract on the same day
         # mint distinct ids (matches the seen_synth dedup key above).
         from net_alpha.web.format import dom_id_slug
+
         synth_id = "synth-{a}-{t}-{s}-{e}-{cp}-{d}-{side}".format(
             a=dom_id_slug(gl.account_display),
             t=gl.ticker,

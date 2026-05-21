@@ -28,12 +28,13 @@ def _hx_error_fragment(status: int, detail: str) -> HTMLResponse:
     body = (
         '<div role="alert" class="panel" '
         'style="background:var(--color-neg-tint); color:var(--color-neg);'
-        ' padding:0.6rem 0.75rem; border-radius:6px; font-size:12px;'
+        " padding:0.6rem 0.75rem; border-radius:6px; font-size:12px;"
         ' border:0.5px solid var(--color-neg);">'
-        f'<strong>{title} ({status}).</strong> {safe}'
+        f"<strong>{title} ({status}).</strong> {safe}"
         "</div>"
     )
     return HTMLResponse(body, status_code=status)
+
 
 router = APIRouter()
 

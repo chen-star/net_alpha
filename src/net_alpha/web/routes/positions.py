@@ -900,9 +900,7 @@ async def _plan_toolbar_state(request: Request) -> dict:
         v = form_data.get(name) or request.query_params.get(name)
         return v.strip() if isinstance(v, str) and v.strip() else None
 
-    raw_accounts: list[str] = list(form_data.getlist("account")) + list(
-        request.query_params.getlist("account")
-    )
+    raw_accounts: list[str] = list(form_data.getlist("account")) + list(request.query_params.getlist("account"))
     page_raw = _pick("page")
     try:
         page = max(1, int(page_raw)) if page_raw else 1

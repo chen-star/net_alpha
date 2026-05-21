@@ -475,9 +475,7 @@ def compute_offset_budget(
     st_pnl, lt_pnl = repo.realized_pnl_split_by_year(year)
 
     cap = ordinary_loss_cap(filing_status)
-    st_carry_out, lt_carry_out, used = apply_net_and_cap(
-        cf_st, cf_lt, st_pnl, lt_pnl, cap=cap
-    )
+    st_carry_out, lt_carry_out, used = apply_net_and_cap(cf_st, cf_lt, st_pnl, lt_pnl, cap=cap)
     carry = st_carry_out + lt_carry_out
 
     planned_delta = _planned_pnl(planned_trades or [], repo)

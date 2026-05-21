@@ -63,9 +63,7 @@ def _seed_cross_account_wash_sale(repo, builders) -> None:
     )
 
 
-def test_type_flip_to_tax_advantaged_reclassifies_existing_violation(
-    client: TestClient, repo, builders
-):
+def test_type_flip_to_tax_advantaged_reclassifies_existing_violation(client: TestClient, repo, builders):
     _seed_cross_account_wash_sale(repo, builders)
     # Initial state: both accounts taxable → kind="deferred".
     recompute_all_violations(repo, load_etf_pairs())
@@ -90,9 +88,7 @@ def test_type_flip_to_tax_advantaged_reclassifies_existing_violation(
     )
 
 
-def test_type_flip_back_to_taxable_reverts_classification(
-    client: TestClient, repo, builders
-):
+def test_type_flip_back_to_taxable_reverts_classification(client: TestClient, repo, builders):
     _seed_cross_account_wash_sale(repo, builders)
     # Pre-flip Roth → trad_ira directly on the repo + recompute so we start
     # in the permanent_ira state.
@@ -116,9 +112,7 @@ def test_type_flip_back_to_taxable_reverts_classification(
     )
 
 
-def test_type_flip_within_tax_advantaged_skips_recompute(
-    client: TestClient, repo, builders, monkeypatch
-):
+def test_type_flip_within_tax_advantaged_skips_recompute(client: TestClient, repo, builders, monkeypatch):
     """trad_ira → roth_ira must NOT change wash-sale classification — both
     are tax-advantaged, so the IRA-trap classifier output is identical.
 
@@ -144,11 +138,7 @@ def test_type_flip_within_tax_advantaged_skips_recompute(
         data={"broker": "schwab", "label": "Roth", "type": "roth_ira"},
     )
     assert resp.status_code == 200
-    assert calls == [], (
-        f"recompute_all_violations must not be invoked for same-side flips; got {len(calls)} call(s)"
-    )
+    assert calls == [], f"recompute_all_violations must not be invoked for same-side flips; got {len(calls)} call(s)"
 
     after = [(v.id, v.kind) for v in repo.all_violations() if v.ticker == "AAPL"]
-    assert after == before, (
-        f"expected violations unchanged, got before={before} after={after}"
-    )
+    assert after == before, f"expected violations unchanged, got before={before} after={after}"
