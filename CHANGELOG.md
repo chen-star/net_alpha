@@ -2,6 +2,38 @@
 
 
 
+## v0.76.2 (2026-05-22)
+
+### Fix
+
+* fix(web): unstick settings drawer + UI audit follow-ups
+
+P0 — Settings drawer was unclickable because the toggled
+`pointer-events-none` / `pointer-events-auto` classes coexisted on the
+wrapper and `pointer-events-none` won source-order; the inherited
+`none` then blocked every child (tabs, close, drop-zone, etc.).
+Switched to a mutually-exclusive ternary class binding.
+
+P1: only render the Profile tab&#39;s per-account selects when active
+(template x-if), sim recents now use sessionStorage to match the
+&#34;this session&#34; label, hide the bare em-dash on ticker pages when
+company_name is empty.
+
+P2/P3 polish: aria-label on Positions Plan tab badge, styled chevron
+on the Tax filter disclosure, captions over the Tax mini-calendar
+strip + win/loss bar, &#34;Service: …&#34; prefix on the topbar pill to
+disambiguate it from the data-check pill, collapsed the single-item
+Overview kebab into a direct ghost button, renamed open-options
+header to &#34;short premium&#34; so it no longer collides with the signed
+&#34;Net premium&#34; KPI, drawer focus-trap (close button on open, trigger
+on close), max-height + scroll on the per-account profile popover.
+
+Tests updated for the new direct-button toolbar pattern and the
+larger drawer-HTML window after the focus-trap init code.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`788bd54`](https://github.com/chen-star/net_alpha/commit/788bd5483b27f18f6254e8f94cea444f9933ff4a))
+
+
 ## v0.76.1 (2026-05-22)
 
 ### Fix
