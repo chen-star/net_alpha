@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{ asset_v }}">
   <link rel="alternate icon" type="image/svg+xml" href="/static/favicon.svg?v={{ asset_v }}">
   <link rel="apple-touch-icon" href="/static/favicon.svg?v={{ asset_v }}">
-  <meta name="theme-color" content="#BF5AF2">
+  <meta name="theme-color" content="#0A84FF">
   {# FOUC-prevention: resolve theme preference and apply data-theme to <html>
      before any stylesheet loads. Reads localStorage first (client cache),
      then falls back to the server-rendered ProfileSettings.theme, then to
@@ -82,9 +82,9 @@
   <a href="#main-content" class="skip-link">Skip to content</a>
   <header class="topbar hidden md:flex">
     <div class="flex items-center gap-6">
-      <a href="/" class="flex items-center gap-2 no-underline text-text">
-        <span class="brand-mark">α</span>
-        <span class="font-semibold tracking-tight text-[14px]">net-alpha</span>
+      <a href="/" class="brand-type no-underline" aria-label="net-alpha home">
+        <span class="alpha">α</span>
+        <span class="wordmark">net-alpha</span>
       </a>
       <nav class="flex gap-1">
         <a href="/" class="nav-link{% if active_page == 'overview' %} active{% endif %}" aria-keyshortcuts="g o">Overview</a>

@@ -66,8 +66,8 @@
         </div>
         <div class="flex items-center gap-2 font-semibold tracking-tightish">
           <span style="width:6px; height:6px; border-radius:50%;
-                       background:{% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-indigo){% endif %};
-                       box-shadow: 0 0 6px {% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-indigo){% endif %};"></span>
+                       background:{% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-violet){% endif %};
+                       box-shadow: 0 0 6px {% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-violet){% endif %};"></span>
           <a href="/ticker/{{ s.ticker }}" class="no-underline text-text">{{ s.ticker }}</a>
         </div>
         <div class="text-[12px] font-mono text-label-1">
