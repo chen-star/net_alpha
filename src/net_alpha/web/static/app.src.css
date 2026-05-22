@@ -308,8 +308,9 @@
   --shadow-drawer: 0 0 0 1px var(--color-hairline), -24px 0 48px rgba(0,0,0,0.10);
   --shadow-pane:   0 0 0 0.5px var(--color-hairline), 0 12px 32px rgba(0,0,0,0.08);
 
-  /* Focus ring retinted to light-indigo (#3634A3) so the keyboard halo matches
-     the rest of the light palette. Dark uses the @theme default (rgba 94,92,230,0.6). */
+  /* Focus ring retinted to light systemBlue (#007AFF) so the keyboard halo
+     matches the rest of the light palette. Dark uses the @theme default
+     (rgba 10,132,255,0.6). */
   --ring-focus: 0 0 0 2px rgba(0,122,255,0.5);
 }
 
