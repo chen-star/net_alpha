@@ -723,12 +723,18 @@
     opacity: 0.7;
   }
 
-  /* Back-compat: keep existing classes alive until templates are restyled */
+  /* Back-compat: keep existing classes alive until templates are restyled.
+     Hover uses a deeper blue (#0066CC dark / #0064D1 light), not the cyan
+     accent — cyan is reserved for highlight moments (KPI hero halo, chart
+     callouts), and using it on every button hover would read as a
+     "premium" state. */
   .btn {
-    @apply inline-flex items-center px-3 py-2 rounded-md bg-indigo text-white text-sm font-medium cursor-pointer;
+    @apply inline-flex items-center px-3 py-2 rounded-md text-white text-sm font-medium cursor-pointer;
+    background: var(--color-signature);
     transition: background-color 200ms;
   }
-  .btn:hover { @apply bg-violet; }
+  .btn:hover { background: #0066CC; }
+  [data-theme="light"] .btn:hover { background: #0064D1; }
   .btn-ghost {
     @apply inline-flex items-center px-3 py-2 rounded-md bg-surface text-sm cursor-pointer;
     color: var(--color-text);
