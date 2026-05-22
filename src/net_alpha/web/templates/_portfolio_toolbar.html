@@ -94,37 +94,20 @@
       Prices {{ price_freshness_label|default('—') }}
     </button>
 
-    {# Overflow menu — admin-grade actions live behind a kebab to keep the
-       primary toolbar focused on Period/Account + freshness. Pattern mirrors
-       _row_actions.html. #}
-    <div class="relative" x-data="{ open: false }" data-testid="toolbar-overflow">
-      <button type="button"
-              class="inline-flex items-center justify-center w-7 h-7 rounded-md text-label-2 hover:text-text hover:bg-surface-2"
-              aria-label="More actions"
-              aria-haspopup="menu"
-              :aria-expanded="open"
-              @click.stop="open = !open"
-              @keydown.escape.stop="open = false">
-        <img src="/static/icons/ellipsis.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="">
-      </button>
-      <div x-show="open"
-           x-cloak
-           @click.outside="open = false"
-           class="absolute right-0 mt-1 w-56 bg-bg border rounded shadow-lg z-10"
-           style="box-shadow: var(--shadow-pane); border-color: var(--color-hairline);"
-           role="menu">
-        <button type="button"
-                class="w-full text-left flex items-center justify-between px-3 py-2 text-[13px] hover:bg-surface-2"
-                role="menuitem"
-                hx-post="/splits/sync?symbols=ALL"
-                hx-target="body"
-                hx-swap="none"
-                hx-on::after-request="if (event.detail.successful) window.location.reload()"
-                @click="open = false">
-          <span>Sync splits</span>
-          <span class="text-label-3 text-[11px]">↕</span>
-        </button>
-      </div>
-    </div>
+    {# Single direct action — was an overflow kebab when this slot held
+       multiple admin-grade actions; collapsed back to a button while only
+       "Sync splits" lives here. Keep data-testid="toolbar-overflow" so
+       existing tests + screenreaders still find it. #}
+    <button type="button"
+            data-testid="toolbar-overflow"
+            class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[12px] text-label-2 hover:text-text hover:bg-surface-2"
+            title="Re-apply broker stock-split adjustments to lot quantities"
+            hx-post="/splits/sync?symbols=ALL"
+            hx-target="body"
+            hx-swap="none"
+            hx-on::after-request="if (event.detail.successful) window.location.reload()">
+      <span aria-hidden="true" class="text-[11px]">↕</span>
+      <span>Sync splits</span>
+    </button>
   </div>
 </form>

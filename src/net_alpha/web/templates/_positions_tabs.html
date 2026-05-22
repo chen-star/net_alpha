@@ -18,6 +18,7 @@
     <a href="/positions?view={{ key }}{% if selected_period %}&period={{ selected_period }}{% endif %}{% for _a in selected_accounts | default([]) %}&account={{ _a }}{% endfor %}"
        class="tab{% if _v == key %} tab--active{% endif %}"
        role="tab"
-       data-view-tab="{{ key }}">{{ label }}{% if count %}<span class="ml-1.5 px-1.5 py-0.5 rounded bg-surface-2 text-label-2 text-[10px] tabular-nums">{{ count }}</span>{% endif %}</a>
+       {% if count %}aria-label="{{ label }}, {{ count }}"{% endif %}
+       data-view-tab="{{ key }}">{{ label }}{% if count %}<span class="ml-1.5 px-1.5 py-0.5 rounded bg-surface-2 text-label-2 text-[10px] tabular-nums" aria-hidden="true">{{ count }}</span>{% endif %}</a>
   {% endfor %}
 </div>

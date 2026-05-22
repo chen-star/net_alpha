@@ -64,8 +64,10 @@ def test_drawer_density_tab_renders_inside_drawer(tmp_path):
     html = resp.text
     drawer_idx = html.find('id="settings-drawer-root"')
     assert drawer_idx > 0, "drawer root not found in HTML"
-    # Use a generous window — density tab content sits ~4KB into the drawer
-    drawer_html = html[drawer_idx : drawer_idx + 12000]
+    # Window sized so all five tab partials fit; drawer chrome + focus-trap
+    # init + the Imports table push the Density tab content further out than
+    # the original 12KB cap accounted for.
+    drawer_html = html[drawer_idx : drawer_idx + 20000]
     # Check data-density attributes (unambiguous, no whitespace variation)
     assert 'data-density="compact"' in drawer_html
     assert 'data-density="comfortable"' in drawer_html

@@ -63,19 +63,19 @@ def test_equity_and_cash_curves_use_vertical_stack(seeded_client):
     assert "grid-template-columns: 2fr 1fr;" in alloc_preceding
 
 
-def test_toolbar_overflow_menu_holds_sync_splits(seeded_client):
-    """Sync splits is admin-grade — it belongs behind a kebab menu, not as
-    a primary inline button competing with Period and Account."""
+def test_toolbar_overflow_holds_sync_splits(seeded_client):
+    """Sync splits stays styled as a quiet ghost button so it doesn't compete
+    with Period/Account, but as long as it's the only admin-grade action in
+    this slot it's a direct button (not a single-item kebab). The
+    data-testid="toolbar-overflow" hook is kept stable for HTMX/tests."""
     html = seeded_client.get("/").text
-    # Kebab menu trigger uses the existing ellipsis icon + Alpine pattern.
     assert 'data-testid="toolbar-overflow"' in html
-    # Sync splits is reachable inside the menu, not as a top-level button.
     overflow_idx = html.find('data-testid="toolbar-overflow"')
     assert overflow_idx > 0
-    # The Sync-splits markup (POST to /splits/sync) must live AFTER the
-    # overflow trigger, inside the dropdown.
+    # POST target is right there on the same element.
     sync_idx = html.find('hx-post="/splits/sync', overflow_idx)
-    assert sync_idx > 0, "Sync splits action must live inside the overflow menu"
+    assert sync_idx > 0, "Sync splits must POST to /splits/sync"
+    assert sync_idx - overflow_idx < 400, "Sync splits action must live on/near the overflow control"
 
 
 def test_toolbar_does_not_show_inline_yahoo_disclaimer(seeded_client):

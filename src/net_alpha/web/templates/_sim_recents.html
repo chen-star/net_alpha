@@ -1,4 +1,4 @@
-{# Sim recents — this-session list backed by localStorage (§6.2 S2). When
+{# Sim recents — this-session list backed by sessionStorage (§6.2 S2). When
    the user runs a sim, the parent template's hx-on::after-request handler
    pushes a new entry to the Alpine `recents` array and persists.
    The panel hides itself when the list is empty. #}
@@ -6,15 +6,15 @@
 <div data-testid="sim-recents"
      class="panel p-3 mt-4"
      x-data="{
-       recents: JSON.parse(localStorage.getItem('sim_recents_v1') || '[]'),
+       recents: JSON.parse(sessionStorage.getItem('sim_recents_v1') || '[]'),
        push(entry) {
          this.recents.unshift(entry);
          this.recents = this.recents.slice(0, 10);
-         localStorage.setItem('sim_recents_v1', JSON.stringify(this.recents));
+         sessionStorage.setItem('sim_recents_v1', JSON.stringify(this.recents));
        },
        clear() {
          this.recents = [];
-         localStorage.removeItem('sim_recents_v1');
+         sessionStorage.removeItem('sim_recents_v1');
        }
      }"
      x-on:sim-ran.window="push($event.detail)">

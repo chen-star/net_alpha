@@ -9,8 +9,8 @@
 
    `tab` is optional; defaults to 'imports' if not set or unknown. #}
 <div id="settings-drawer-root"
-     class="fixed inset-0 z-30 pointer-events-none"
-     :class="{ 'pointer-events-auto': open }"
+     class="fixed inset-0 z-30"
+     :class="open ? 'pointer-events-auto' : 'pointer-events-none'"
      x-data="{
        open: false,
        tab: 'imports',
@@ -20,11 +20,29 @@
        })(),
        resizing: false,
        handleHovered: false,
+       previouslyFocused: null,
        init() {
          // Dispatch a bubbling event whenever the drawer transitions to closed,
          // so the underlying settings_entry.html carryforward fragment can defer
          // its lazy fetch until the user is actually looking at it.
-         this.$watch('open', (v) => { if (!v) this.$dispatch('settings-drawer-closed'); });
+         this.$watch('open', (v) => {
+           if (v) {
+             // Capture the trigger so we can restore focus on close; move
+             // focus to the close button so screenreaders + keyboard users
+             // land inside the dialog instead of staying at the gear icon.
+             this.previouslyFocused = document.activeElement;
+             this.$nextTick(() => {
+               const closeBtn = this.$root.querySelector('[data-testid=\'settings-drawer-close\']');
+               if (closeBtn) closeBtn.focus();
+             });
+           } else {
+             this.$dispatch('settings-drawer-closed');
+             if (this.previouslyFocused && this.previouslyFocused.focus) {
+               this.previouslyFocused.focus();
+               this.previouslyFocused = null;
+             }
+           }
+         });
        },
        openTab(name) { this.tab = name; this.open = true; },
        startResize(ev) {
@@ -149,9 +167,9 @@
       <div x-show="tab === 'imports'" x-cloak>
         {% include "_settings_drawer_imports_tab.html" %}
       </div>
-      <div x-show="tab === 'profile'" x-cloak>
-        {% include "_settings_drawer_profile_tab.html" %}
-      </div>
+      <template x-if="tab === 'profile'">
+        <div>{% include "_settings_drawer_profile_tab.html" %}</div>
+      </template>
       <div x-show="tab === 'density'" x-cloak>
         {% include "_settings_drawer_density_tab.html" %}
       </div>

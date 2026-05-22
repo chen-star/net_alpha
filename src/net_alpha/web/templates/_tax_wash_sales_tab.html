@@ -9,8 +9,9 @@
 
 {# Unified filter bar — fields used by both views #}
 {% set _has_filters = filter_ticker or selected_accounts or filter_confidence or filter_year_explicit %}
-<details class="mb-4" {% if _has_filters %}open{% endif %}>
-  <summary class="cursor-pointer text-sm text-label-2 mb-2 select-none">
+<details class="mb-4 disclosure" {% if _has_filters %}open{% endif %}>
+  <summary class="disclosure__summary cursor-pointer text-sm text-label-2 mb-2 select-none inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-surface-2 transition-colors" style="border:0.5px solid var(--color-hairline);">
+    <span class="disclosure__chevron text-label-3 text-[10px]" aria-hidden="true">▸</span>
     <span class="text-label-1 font-medium">Filter</span>
     {% if _has_filters %}<span class="text-label-3">— {% if filter_ticker %}{{ filter_ticker }} · {% endif %}{% if selected_accounts %}{{ selected_accounts|join(', ') }} · {% endif %}{% if filter_year %}{{ filter_year }} · {% endif %}{% if filter_confidence %}{{ filter_confidence }}{% endif %}</span>{% endif %}
   </summary>
@@ -97,7 +98,11 @@
 {# W3: compact calendar strip — always rendered so the testid is always in the DOM.
    On the table view this renders as a minimal month-header strip. The full
    ribbon (portfolio equity-curve page) keeps its own rich chart. #}
-<div data-testid="calendar-strip" class="mb-4 flex items-center gap-2 text-[11px] text-label-3">
+<div class="flex items-baseline justify-between mb-1 text-[11px] text-label-3 uppercase tracking-wide">
+  <span>Months · {{ selected_year if not all_years else 'all years' }}</span>
+  <span class="normal-case tracking-normal">align with bar below</span>
+</div>
+<div data-testid="calendar-strip" class="mb-1 flex items-center gap-2 text-[11px] text-label-3">
   {% for label in ["J","F","M","A","M","J","J","A","S","O","N","D"] %}
     <span class="flex-1 text-center">{{ label }}</span>
   {% endfor %}
@@ -110,6 +115,7 @@
   {% set _gains  = realized_kpis.realized_gains_ytd|abs %}
   {% set _max    = (_losses if _losses > _gains else _gains) %}
   {% if _max > 0 %}
+    <div class="text-[10px] text-label-3 mb-1">Gross realized losses (left) vs gains (right), YTD across all accounts</div>
     <div data-testid="realized-mini-bar" class="mb-4 flex items-center gap-2 text-[11px] text-label-2"
          title="Gross gains and losses YTD across raw trades (all accounts, all asset types). Used for §1211 $3,000 ordinary-loss cap planning. May differ from the Portfolio Realized P/L (which is GL-canonical) and Tax Performance (which excludes §1256 and tax-advantaged accounts).">
       <div class="flex-1 grid grid-cols-2 h-4 rounded overflow-hidden" style="background: var(--color-hairline);">

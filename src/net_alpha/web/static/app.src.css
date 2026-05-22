@@ -578,6 +578,20 @@
   .chip-neutral  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-label-2); background: var(--color-hairline); }
   .chip-pos      { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-pos); background: var(--color-pos-tint); }
 
+  /* Disclosure (<details>) — hide the default UA triangle so a styled
+     `.disclosure__chevron` can rotate in lockstep with the open state.
+     The default marker rendered in some browsers as a black triangle that
+     fights the dark palette and reads as dead text in the wash-sale tab. */
+  .disclosure__summary::-webkit-details-marker { display: none; }
+  .disclosure__summary { list-style: none; }
+  .disclosure__chevron {
+    display: inline-block;
+    transition: transform var(--duration-fast) var(--ease-out-soft);
+  }
+  details[open] > .disclosure__summary .disclosure__chevron {
+    transform: rotate(90deg);
+  }
+
   /* Traffic-light dot — replaces emoji circles that rendered monochrome on
      Linux without a color emoji font. */
   .tl-dot {

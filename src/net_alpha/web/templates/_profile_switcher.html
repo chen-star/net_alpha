@@ -12,7 +12,7 @@
     <span class="text-label-3" aria-hidden="true">▾</span>
   </button>
   <div x-show="open" x-cloak
-       class="absolute right-0 mt-1 z-30 bg-surface text-text rounded shadow-lg p-3 min-w-[280px]"
+       class="absolute right-0 mt-1 z-30 bg-surface text-text rounded shadow-lg p-3 min-w-[280px] max-h-[min(70vh,520px)] overflow-y-auto"
        style="border:0.5px solid var(--color-hairline);">
     <div class="text-[11px] text-label-2 mb-2">Profile per account</div>
     {% for a in accounts %}
