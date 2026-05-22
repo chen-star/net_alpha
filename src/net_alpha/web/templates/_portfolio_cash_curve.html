@@ -77,14 +77,14 @@
             { name: "Free cash", type: "area", data: freeSeries },
             { name: "Invested",  type: "area", data: investedSeries },
           ];
-      // Free cash = bright info-blue; Pledged = indigo (cool-family but a
-      // distinct hue so the two cash regions read separately even when one
-      // dominates — info+info-low-opacity blends into a single thin strip).
+      // Free cash = info-blue (cyan); Pledged = warn-amber — matches the
+      // Cash KPI tile convention (pledged is shown as warn there too), so
+      // the pledged share reads as the same semantic across the page.
       // Invested = label-2 gray.
       const colors = hasPledged
         ? [
             window.netAlphaChartTheme.colors.info,
-            window.netAlphaChartTheme.colors.indigo,
+            window.netAlphaChartTheme.colors.warn,
             window.netAlphaChartTheme.colors.label2,
           ]
         : [
