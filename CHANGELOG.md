@@ -2,6 +2,32 @@
 
 
 
+## v0.76.1 (2026-05-22)
+
+### Fix
+
+* fix(web): retint favicon gradient to signature blue palette
+
+The favicon was missed during the blue-palette shift — still shipped
+the legacy indigo (#5E5CE6) → violet (#BF5AF2) gradient, making the
+browser-tab icon clash with the now-blue topbar wordmark. Move the
+gradient stops to #0A84FF → #00D4FF to match `.brand-type .alpha`
+in app.src.css.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e6baa01`](https://github.com/chen-star/net_alpha/commit/e6baa01efaf49155256c9c46bc1dfdefd59c4b22))
+
+### Test
+
+* test(web): loosen pane-render perf budget to 1s for CI variance
+
+The 400ms wall-clock budget was flaking on GH runners (479ms, 515ms in
+recent failures) despite rendering well under 100ms locally. The check
+is a soft regression guard, not a perf measurement — 1.0s still catches
+a multi-x regression without flaking on shared CI infra.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`0122437`](https://github.com/chen-star/net_alpha/commit/012243739446cda11b278140db45aeae44b150ca))
+
+
 ## v0.76.0 (2026-05-22)
 
 ### Build
