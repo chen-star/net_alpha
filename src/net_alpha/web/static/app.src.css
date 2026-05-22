@@ -396,7 +396,8 @@
     inset: 0;
     background: radial-gradient(120% 80% at 50% 0%,
                 var(--color-brand-glow) 0%,
-                transparent 60%);
+                var(--color-signature-2-glow) 35%,
+                transparent 65%);
     opacity: 0.55;
     pointer-events: none;
     border-radius: inherit;
