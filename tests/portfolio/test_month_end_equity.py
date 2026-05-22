@@ -210,7 +210,7 @@ def test_summary_returns_none_for_empty_year():
         get_close=_const_close,
         monthly_realized=[],
     )
-    assert month_end_equity_summary(tiles, today=dt.date(2026, 5, 22), prior_year_end_value=None) is None
+    assert month_end_equity_summary(tiles, prior_year_end_value=None) is None
 
 
 def test_summary_ytd_delta_uses_prior_year_end_anchor():
@@ -233,7 +233,6 @@ def test_summary_ytd_delta_uses_prior_year_end_anchor():
     )
     summary = month_end_equity_summary(
         tiles,
-        today=dt.date(2026, 5, 22),
         prior_year_end_value=Decimal("100000"),
     )
     assert summary is not None
@@ -257,7 +256,7 @@ def test_summary_omits_ytd_when_anchor_unknown():
         get_close=_const_close,
         monthly_realized=[],
     )
-    summary = month_end_equity_summary(tiles, today=dt.date(2026, 2, 15), prior_year_end_value=None)
+    summary = month_end_equity_summary(tiles, prior_year_end_value=None)
     assert summary is not None
     assert summary["ytd_delta_abs"] is None
     assert summary["ytd_delta_pct"] is None
@@ -279,7 +278,7 @@ def test_summary_with_zero_anchor_returns_pct_none_not_divzero():
         get_close=_const_close,
         monthly_realized=[],
     )
-    summary = month_end_equity_summary(tiles, today=dt.date(2026, 2, 15), prior_year_end_value=Decimal("0"))
+    summary = month_end_equity_summary(tiles, prior_year_end_value=Decimal("0"))
     assert summary is not None
     assert summary["ytd_delta_abs"] == Decimal("5000.00")
     assert summary["ytd_delta_pct"] is None

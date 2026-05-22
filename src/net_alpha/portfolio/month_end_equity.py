@@ -191,15 +191,12 @@ def month_end_equity_series(
 def month_end_equity_summary(
     tiles: Sequence[MonthEndEquityTile],
     *,
-    today: dt.date,
     prior_year_end_value: Decimal | None,
 ) -> dict[str, Decimal | str | None] | None:
     """Footer-caption summary over a year's tiles.
 
     Args:
         tiles: 12 tiles from ``month_end_equity_series``.
-        today: needed only for excluding the current partial month from
-            best/worst (the tile already carries ``is_current``).
         prior_year_end_value: end-of-prior-year account value, used as the
             YTD anchor. When None, ytd_delta_abs / ytd_delta_pct are omitted.
 
@@ -210,9 +207,10 @@ def month_end_equity_summary(
     - ``ytd_delta_pct``: ytd_delta_abs / prior_year_end_value × 100
       (None when anchor is None or 0).
     - ``best_month_label`` / ``best_month_delta_pct``: completed month with
-      the largest ``mom_delta_pct`` (ties: earliest wins).
+      the largest ``mom_delta_pct`` (ties: earliest wins). Both None when
+      no completed tile has a non-None ``mom_delta_pct``.
     - ``worst_month_label`` / ``worst_month_delta_pct``: completed month
-      with the smallest ``mom_delta_pct``.
+      with the smallest ``mom_delta_pct``. Both None when no ranking signal.
 
     "Completed" = ``end_value is not None`` AND NOT ``is_current``. If only
     the current partial month has data, it's treated as completed for the
@@ -239,16 +237,29 @@ def month_end_equity_summary(
         )
 
     ranked = [t for t in completed if t.mom_delta_pct is not None]
-    if not ranked:
-        ranked = completed
-    best = max(ranked, key=lambda t: t.mom_delta_pct or Decimal("-Infinity"))
-    worst = min(ranked, key=lambda t: t.mom_delta_pct or Decimal("Infinity"))
+    best_label: str | None
+    worst_label: str | None
+    best_pct: Decimal | None
+    worst_pct: Decimal | None
+    if ranked:
+        best = max(ranked, key=lambda t: t.mom_delta_pct)
+        worst = min(ranked, key=lambda t: t.mom_delta_pct)
+        best_label, best_pct = best.label, best.mom_delta_pct
+        worst_label, worst_pct = worst.label, worst.mom_delta_pct
+    else:
+        # No tile carries a MoM delta — surface a single representative label
+        # (the only month we have) without inventing a ranking.
+        only = completed[0]
+        best_label = only.label if len(completed) == 1 else None
+        worst_label = only.label if len(completed) == 1 else None
+        best_pct = None
+        worst_pct = None
 
     return {
         "ytd_delta_abs": ytd_delta_abs,
         "ytd_delta_pct": ytd_delta_pct,
-        "best_month_label": best.label,
-        "best_month_delta_pct": best.mom_delta_pct,
-        "worst_month_label": worst.label,
-        "worst_month_delta_pct": worst.mom_delta_pct,
+        "best_month_label": best_label,
+        "best_month_delta_pct": best_pct,
+        "worst_month_label": worst_label,
+        "worst_month_delta_pct": worst_pct,
     }
