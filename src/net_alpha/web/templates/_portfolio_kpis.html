@@ -10,11 +10,11 @@
     {% set _pledged_pct = (_csp / _cash * 100) if _cash > 0 else 0 %}
     <div class="mt-2 h-[5px] rounded-full overflow-hidden flex" style="background: var(--color-hairline);"
          title="Free vs pledged">
-      <div style="width: {{ (100 - _pledged_pct)|round(0,'floor')|int }}%; background: var(--color-violet); height: 100%;"></div>
+      <div style="width: {{ (100 - _pledged_pct)|round(0,'floor')|int }}%; background: var(--color-cash); height: 100%;"></div>
       <div style="width: {{ _pledged_pct|round(0,'ceil')|int }}%; background: var(--color-warn); height: 100%;"></div>
     </div>
     <div class="flex items-center justify-between mt-1 text-[11px]">
-      <span class="text-label-2"><span class="num" style="color:var(--color-violet);">${{ "{:,.0f}".format(_free) }}</span> free</span>
+      <span class="text-label-2"><span class="num" style="color:var(--color-cash);">${{ "{:,.0f}".format(_free) }}</span> free</span>
       <span class="text-label-2"
             title="Cash pledged as cash-secured-put collateral. Includes any expired short puts your broker hasn't yet released (typically 1-2 business days post-expiry). The Open Options panel below filters expired contracts and may show a lower secured total until broker settlement completes."><span class="num" style="color:var(--color-warn);">${{ "{:,.0f}".format(_csp) }}</span> pledged · {{ csp_n }} CSP{% if csp_n != 1 %}s{% endif %}</span>
     </div>
@@ -66,9 +66,9 @@
       {% endif %}
     </div>
     {# Two compact bar visualizations fill the previously empty hero body:
-         1. Composition — holdings (indigo) vs cash (violet). Brand-gradient
-            categorical pair so it doesn't collide with the green used for
-            gains elsewhere on the page.
+         1. Composition — holdings (signature blue) vs cash (neutral). The
+            signature/cash pair reads as "invested vs cash" and avoids the
+            green used for gains elsewhere on the page.
          2. Lifetime — contributed (muted) baseline vs growth (pos/neg).
             For gains, the bar's full width = current account value; for
             losses, it = lifetime contributed and the loss is the red tail. #}
@@ -87,14 +87,14 @@
              style="background: var(--color-hairline);"
              title="Holdings vs cash share of total account value">
           <div class="h-full"
-               style="width: {{ _holdings_pct|round(0,'floor')|int }}%; background: var(--color-indigo);"></div>
+               style="width: {{ _holdings_pct|round(0,'floor')|int }}%; background: var(--color-signature);"></div>
           <div class="h-full"
-               style="width: {{ _cash_pct|round(0,'ceil')|int }}%; background: var(--color-violet);"></div>
+               style="width: {{ _cash_pct|round(0,'ceil')|int }}%; background: var(--color-cash);"></div>
         </div>
         <div class="flex items-center justify-between mt-2 text-[11px]">
           <span class="inline-flex items-center gap-1.5"
                 title="Equity market value plus open long-option basis. This is the broker-statement style of mark — long options carry at their adjusted cost basis (no live option marks available). For equity-exposure-only allocation analysis, see the Allocation/Deployment panel below.">
-            <span class="inline-block w-2 h-2 rounded-[2px]" style="background:var(--color-indigo);"></span>
+            <span class="inline-block w-2 h-2 rounded-[2px]" style="background:var(--color-signature);"></span>
             <span class="text-label-2">Holdings</span>
             <span class="num text-label-1 font-medium">${{ "{:,.0f}".format(_holdings) }}</span>
             <span class="text-label-3">{{ _holdings_pct|round(0,'floor')|int }}%</span>
@@ -103,7 +103,7 @@
             <span class="text-label-3">{{ _cash_pct|round(0,'ceil')|int }}%</span>
             <span class="num text-label-1 font-medium">${{ "{:,.0f}".format(_cash) }}</span>
             <span class="text-label-2">Cash</span>
-            <span class="inline-block w-2 h-2 rounded-[2px]" style="background:var(--color-violet);"></span>
+            <span class="inline-block w-2 h-2 rounded-[2px]" style="background:var(--color-cash);"></span>
           </span>
         </div>
       </div>
