@@ -1144,6 +1144,110 @@ def _compute_portfolio_body_context(
     }
 
 
+def _resolve_equity_year(
+    *,
+    period_tuple: tuple[int, int] | None,
+    equity_year_override: int | None,
+    current_year: int,
+) -> int:
+    """Pick the year shown by the month-end equity tile panel.
+
+    - YTD / specific-year periods pin the year (override is ignored).
+    - Lifetime mode honors ``equity_year_override`` if supplied, else
+      defaults to ``current_year``.
+    """
+    if period_tuple is not None:
+        return period_tuple[0]
+    return equity_year_override if equity_year_override is not None else current_year
+
+
+@router.get("/portfolio/month-end-equity", response_class=HTMLResponse)
+def portfolio_month_end_equity(
+    request: Request,
+    period: str | None = None,
+    account: list[str] = Query(default_factory=list),
+    equity_year: int | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Year-picker swap target. Computes only the month-end-equity slice
+    (cheaper than re-running the full portfolio_body) and renders the panel
+    fragment alone, which the picker swaps into #portfolio-month-end-equity
+    via hx-swap=outerHTML.
+    """
+    accounts = parse_accounts(account)
+    today = date.today()
+    period_tuple, _period_label = _parse_period(period, today.year)
+    current_year = today.year
+    import_years = {imp.imported_at.year for imp in repo.list_imports()}
+    available_years = sorted(import_years | {current_year}, reverse=True)
+
+    all_trades = repo.all_trades()
+    all_lots = repo.all_lots()
+    if accounts:
+        accs_set = set(accounts)
+        scoped_trades = [t for t in all_trades if t.account in accs_set]
+        scoped_lots = [lt for lt in all_lots if lt.account in accs_set]
+    else:
+        scoped_trades = all_trades
+        scoped_lots = all_lots
+
+    cash_events = repo.list_cash_events(account_id=None)
+    if accounts:
+        cash_events = [e for e in cash_events if e.account in set(accounts)]
+    cash_points = build_cash_balance_series(
+        events=cash_events,
+        trades=scoped_trades,
+        period=None,
+    )
+
+    resolved_year = _resolve_equity_year(
+        period_tuple=period_tuple,
+        equity_year_override=equity_year,
+        current_year=current_year,
+    )
+    monthly_realized_for_year = monthly_realized_pl(
+        trades=scoped_trades,
+        year=resolved_year,
+        ticker=None,
+        accounts=accounts if accounts else None,
+    )
+    prior_anchor: Decimal | None = account_value_at(
+        on=date(resolved_year - 1, 12, 31),
+        trades=scoped_trades,
+        lots=scoped_lots,
+        cash_points=cash_points,
+        get_close=svc.get_historical_close,
+    )
+    if prior_anchor == Decimal("0") and not any(cp.on < date(resolved_year, 1, 1) for cp in cash_points):
+        prior_anchor = None
+    tiles = month_end_equity_series(
+        year=resolved_year,
+        today=today,
+        trades=scoped_trades,
+        lots=scoped_lots,
+        cash_points=cash_points,
+        get_close=svc.get_historical_close,
+        monthly_realized=monthly_realized_for_year,
+    )
+    summary = month_end_equity_summary(tiles, prior_year_end_value=prior_anchor)
+
+    ctx = {
+        "month_end_tiles": tiles,
+        "month_end_summary": summary,
+        "month_end_year": resolved_year,
+        "month_end_year_picker_visible": period_tuple is None,
+        "available_years": available_years,
+        "selected_period": period or "ytd",
+        "selected_accounts": accounts,
+    }
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_portfolio_month_end_equity_wrap.html",
+        ctx,
+    )
+
+
 @router.get("/portfolio/body", response_class=HTMLResponse)
 def portfolio_body(
     request: Request,
