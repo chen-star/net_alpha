@@ -1,3 +1,9 @@
-<div id="portfolio-monthly-pl" class="panel mb-4">
-  {% include "_portfolio_monthly_pl.html" %}
+{# Two-panel row: Month-end equity (left, 2fr) + Monthly realized P&L (right, 3fr). #}
+<div class="grid gap-3 mb-4" style="grid-template-columns: 2fr 3fr;">
+  <div id="portfolio-month-end-equity" class="panel">
+    {% include "_portfolio_month_end_equity.html" %}
+  </div>
+  <div id="portfolio-monthly-pl" class="panel">
+    {% include "_portfolio_monthly_pl.html" %}
+  </div>
 </div>

@@ -567,11 +567,15 @@ def test_equity_curve_omits_brush_strip(tmp_path):
 def test_portfolio_body_includes_month_end_context(tmp_path):
     """The body context exposes the month-end equity series + summary + year picker flag.
 
-    UI rendering of the new panel is Task 6 — here we only verify the route
-    handler doesn't blow up and the body still returns 200 for all three
-    period modes (ytd, specific year, lifetime).
+    Task 6 wires the panel into the row template — assert the container and
+    panel title render for all three period modes (ytd, specific year, lifetime).
     """
     client = _client(tmp_path)
     for period in ("ytd", "2025", "lifetime"):
         response = client.get(f"/portfolio/body?period={period}&account=")
         assert response.status_code == 200, f"period={period!r} returned {response.status_code}"
+
+    # Panel container is now rendered by the row template.
+    response = client.get("/portfolio/body?period=ytd&account=")
+    assert 'id="portfolio-month-end-equity"' in response.text
+    assert "Month-end equity" in response.text  # panel title
