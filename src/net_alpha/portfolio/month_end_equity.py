@@ -47,6 +47,20 @@ class MonthEndEquityTile:
     is_future: bool
 
 
+def _cash_at(cash_points: Sequence[CashBalancePoint], on: dt.date) -> Decimal | None:
+    """Most recent cash_balance with ``cp.on <= on``, or None if none qualify.
+
+    Requires *cash_points* to be sorted ascending by ``on``.
+    """
+    latest: Decimal | None = None
+    for cp in cash_points:
+        if cp.on <= on:
+            latest = cp.cash_balance
+        else:
+            break
+    return latest
+
+
 def month_end_equity_series(
     *,
     year: int,
@@ -70,14 +84,41 @@ def month_end_equity_series(
       AND only when end_value is not None.
     - ``is_future`` is True for months strictly after today.month in the
       current year; never True for historical years.
+    - ``mom_delta_pct`` is the % change vs the prior month's end_value,
+      carried forward across None gaps.
+    - ``mv_delta`` / ``cash_delta`` are absolute Decimal changes for tooltip.
+    - ``realized_pl`` is sourced from ``monthly_realized`` rows (net_pl).
     """
     is_current_year = year == today.year
-    # Materialize the input sequences once — account_value_at takes lists and
-    # we'd otherwise allocate three new lists per month iteration.
+    # Materialize and sort cash points once — _cash_at relies on sorted order;
+    # account_value_at takes lists and we'd otherwise allocate per iteration.
     trades_list = list(trades)
     lots_list = list(lots)
-    cash_list = list(cash_points)
+    cash_list = sorted(cash_points, key=lambda p: p.on)
     first_cash = min((p.on for p in cash_list), default=None)
+
+    # Build month → realized P&L lookup once.
+    realized_by_month: dict[int, Decimal] = {row.month: row.net_pl for row in monthly_realized}
+
+    # Prior-month state, carried forward across None gaps.
+    prior_end: Decimal | None = None
+    prior_cash: Decimal | None = None
+    prior_holdings: Decimal | None = None
+
+    # Seed prior_* from the last cash point that falls before the year starts
+    # (i.e. the Dec 31 of the previous year if present), so Jan can compute
+    # deltas against the year-opening balance.
+    year_start = dt.date(year, 1, 1)
+    prior_cash = _cash_at(cash_list, year_start - dt.timedelta(days=1))
+    if prior_cash is not None and first_cash is not None and year_start > first_cash:
+        prior_end = account_value_at(
+            on=year_start - dt.timedelta(days=1),
+            trades=trades_list,
+            lots=lots_list,
+            cash_points=cash_list,
+            get_close=get_close,
+        )
+        prior_holdings = prior_end - prior_cash if prior_end is not None else None
 
     tiles: list[MonthEndEquityTile] = []
     for m in range(1, 13):
@@ -101,15 +142,45 @@ def month_end_equity_series(
 
         is_current = is_current_year and m == today.month and end_value is not None
 
+        # Derived breakdown fields — only when we have real data this month.
+        cash_at: Decimal | None = None
+        holdings_at: Decimal | None = None
+        mom_delta_pct: Decimal | None = None
+        mv_delta: Decimal | None = None
+        cash_delta: Decimal | None = None
+        realized_pl: Decimal | None = None
+
+        if not is_future:
+            realized_pl = realized_by_month.get(m)
+
+        if end_value is not None:
+            cash_at = _cash_at(cash_list, sample_date)
+            if cash_at is not None:
+                holdings_at = end_value - cash_at
+
+            if prior_end is not None and prior_end != Decimal("0"):
+                mom_delta_pct = ((end_value - prior_end) / prior_end * Decimal("100")).quantize(Decimal("0.01"))
+
+            if holdings_at is not None and prior_holdings is not None:
+                mv_delta = holdings_at - prior_holdings
+
+            if cash_at is not None and prior_cash is not None:
+                cash_delta = cash_at - prior_cash
+
+        # Carry prior_* forward (across None gaps).
+        prior_end = end_value if end_value is not None else prior_end
+        prior_cash = cash_at if cash_at is not None else prior_cash
+        prior_holdings = holdings_at if holdings_at is not None else prior_holdings
+
         tiles.append(
             MonthEndEquityTile(
                 month=m,
                 label=_MONTH_ABBR[m - 1],
                 end_value=end_value,
-                mom_delta_pct=None,
-                mv_delta=None,
-                cash_delta=None,
-                realized_pl=None,
+                mom_delta_pct=mom_delta_pct,
+                mv_delta=mv_delta,
+                cash_delta=cash_delta,
+                realized_pl=realized_pl,
                 is_current=is_current,
                 is_future=is_future,
             )

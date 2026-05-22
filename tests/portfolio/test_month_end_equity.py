@@ -1,7 +1,7 @@
 import datetime as dt
 from decimal import Decimal
 
-from net_alpha.portfolio.models import CashBalancePoint
+from net_alpha.portfolio.models import CashBalancePoint, MonthlyPnl
 from net_alpha.portfolio.month_end_equity import (
     month_end_equity_series,
 )
@@ -117,3 +117,83 @@ def test_year_before_any_cash_history_is_all_empty():
     )
     assert all(t.end_value is None for t in tiles)
     assert all(not t.is_future for t in tiles)
+
+
+def _monthly_pnl_row(month: int, net: str) -> MonthlyPnl:
+    return MonthlyPnl(
+        month=month,
+        net_pl=Decimal(net),
+        gross_gain=Decimal("0") if Decimal(net) < 0 else Decimal(net),
+        gross_loss=Decimal("0") if Decimal(net) >= 0 else -Decimal(net),
+        trade_count=1 if Decimal(net) != 0 else 0,
+    )
+
+
+def test_mom_delta_pct_computed_when_prior_month_present():
+    cash_points = [
+        _cp(dt.date(2025, 12, 31), "10000"),
+        _cp(dt.date(2026, 1, 31), "11000"),
+        _cp(dt.date(2026, 2, 28), "10450"),
+    ]
+    tiles = month_end_equity_series(
+        year=2026,
+        today=dt.date(2026, 5, 22),
+        trades=[],
+        lots=[],
+        cash_points=cash_points,
+        get_close=_const_close,
+        monthly_realized=[],
+    )
+    assert tiles[0].mom_delta_pct == Decimal("10.00")
+    assert tiles[1].mom_delta_pct == Decimal("-5.00")
+
+
+def test_mom_delta_pct_null_when_prior_missing():
+    cash_points = [_cp(dt.date(2026, 3, 31), "10000")]
+    tiles = month_end_equity_series(
+        year=2026,
+        today=dt.date(2026, 5, 22),
+        trades=[],
+        lots=[],
+        cash_points=cash_points,
+        get_close=_const_close,
+        monthly_realized=[],
+    )
+    assert tiles[0].end_value is None and tiles[0].mom_delta_pct is None
+    assert tiles[1].end_value is None and tiles[1].mom_delta_pct is None
+    assert tiles[2].end_value == Decimal("10000")
+    assert tiles[2].mom_delta_pct is None
+
+
+def test_cash_delta_tracks_cash_balance_change():
+    cash_points = [
+        _cp(dt.date(2025, 12, 31), "10000"),
+        _cp(dt.date(2026, 1, 31), "12000"),
+    ]
+    tiles = month_end_equity_series(
+        year=2026,
+        today=dt.date(2026, 5, 22),
+        trades=[],
+        lots=[],
+        cash_points=cash_points,
+        get_close=_const_close,
+        monthly_realized=[],
+    )
+    assert tiles[0].cash_delta == Decimal("2000")
+
+
+def test_realized_pl_sourced_from_monthly_realized():
+    cash_points = [_cp(dt.date(2025, 12, 31), "10000")]
+    monthly = [_monthly_pnl_row(m, "0") for m in range(1, 13)]
+    monthly[3] = _monthly_pnl_row(4, "1500")
+    tiles = month_end_equity_series(
+        year=2026,
+        today=dt.date(2026, 5, 22),
+        trades=[],
+        lots=[],
+        cash_points=cash_points,
+        get_close=_const_close,
+        monthly_realized=monthly,
+    )
+    assert tiles[3].realized_pl == Decimal("1500")
+    assert tiles[0].realized_pl == Decimal("0")
