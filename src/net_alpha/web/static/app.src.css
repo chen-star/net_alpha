@@ -85,7 +85,7 @@
   --color-probable:  #FF9F0A;
   --color-unclear:   #64D2FF;
   --color-primary:   #0A84FF;
-  --color-secondary: #5E5CE6;
+  --color-secondary: #0A84FF;
   --color-accent:    #0A84FF;
   --color-ink:       #FFFFFF;
 
@@ -95,7 +95,7 @@
   --color-overlay-soft:   rgba(0,0,0,0.20);
   --color-row-hover:      rgba(255,255,255,0.02);
   --color-topbar-bg:      rgba(0,0,0,0.60);
-  --color-brand-glow:     rgba(94,92,230,0.35);
+  --color-brand-glow:     rgba(10,132,255,0.32);
   --color-cash:           rgba(142,142,147,0.60);
   --color-pos-tint:       rgba(48,209,88,0.10);
   --color-neg-tint:       rgba(255,69,58,0.14);
@@ -206,7 +206,7 @@
   --color-probable:  #FF9F0A;
   --color-unclear:   #64D2FF;
   --color-primary:   #0A84FF;
-  --color-secondary: #5E5CE6;
+  --color-secondary: #0A84FF;
   --color-accent:    #0A84FF;
   --color-ink:       #FFFFFF;
 
@@ -284,7 +284,7 @@
   --color-probable:  #B25000;
   --color-unclear:   #0071A4;
   --color-primary:   #007AFF;
-  --color-secondary: #3634A3;
+  --color-secondary: #007AFF;
   --color-accent:    #007AFF;
   --color-ink:       #1D1D1F;
 
