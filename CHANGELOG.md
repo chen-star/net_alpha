@@ -2,6 +2,160 @@
 
 
 
+## v0.77.0 (2026-05-22)
+
+### Feature
+
+* feat(web): add /portfolio/month-end-equity fragment route for year-picker swap
+
+Adds _resolve_equity_year helper (honors equity_year override only in
+Lifetime mode; YTD/specific-year pin from period_tuple) and the
+GET /portfolio/month-end-equity fragment route that wraps the panel in
+the outerHTML-swap target div. Adds wrap template and 3 new tests.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`493d280`](https://github.com/chen-star/net_alpha/commit/493d28028d09b5caef9158e1e7cd571026f13f1a))
+
+* feat(web): render month-end equity tile panel beside monthly P&amp;L bars
+
+Converts the single-panel monthly-P&amp;L row into a 2-panel grid row (2fr 3fr),
+adding the new month-end equity tile grid on the left with MoM delta colouring,
+a year picker for Lifetime mode, and a YTD/best/worst summary footer.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6c12c8b`](https://github.com/chen-star/net_alpha/commit/6c12c8bea222509087ed5a01ec192f13c399a286))
+
+* feat(web): compute month-end equity tile context in portfolio body
+
+Wires month_end_equity_series + month_end_equity_summary into
+_compute_portfolio_body_context() so the route handler exposes
+month_end_tiles, month_end_summary, month_end_year, and
+month_end_year_picker_visible to the template. Adds smoke test
+covering ytd/year/lifetime period modes.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eebca68`](https://github.com/chen-star/net_alpha/commit/eebca68ccb503d2389b2de29307b01ea23a3a8ac))
+
+* feat(portfolio): add month-end equity summary helper for footer caption
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b55266f`](https://github.com/chen-star/net_alpha/commit/b55266f145b76c8dfb0f7c72e07e6f35c24ab457))
+
+* feat(portfolio): add MoM delta + tooltip breakdown fields to equity tiles
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ec50747`](https://github.com/chen-star/net_alpha/commit/ec5074728c0386a34db9b5ae7e23414bb5933f0c))
+
+* feat(portfolio): compute month-end equity end_value via account_value_at
+
+Wire real end_value computation in month_end_equity_series by calling
+account_value_at() at each month&#39;s last calendar day (or today for the
+current month). Months before the first cash history point return None
+to distinguish no-history from a $0 balance.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`603398f`](https://github.com/chen-star/net_alpha/commit/603398f3b8144ec76d7a959e66809555ca2a2366))
+
+* feat(portfolio): scaffold month-end equity tile dataclass
+
+Adds MonthEndEquityTile frozen dataclass and month_end_equity_series
+placeholder function returning 12 calendar-labeled tiles with correct
+is_future flags; real values deferred to Tasks 2-4.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`4ce5079`](https://github.com/chen-star/net_alpha/commit/4ce507942d19312501f87be9a8485ea67cfd9642))
+
+### Fix
+
+* fix(web): sweep UI/UX bugs, polish, and align home-page totals
+
+Background-job fixes (the silent failures that had been bleeding for days):
+- service/jobs/price_refresh: skip cleanly when pricing isn&#39;t wired (was
+  crashing with `&#39;NoneType&#39; object has no attribute &#39;refresh&#39;`)
+- web/app: build a real PricingService from the app.state pricing
+  primitives in the lifespan so the scheduler doesn&#39;t pass None
+- service/jobs/washsale_watch: iterate (target, account) pairs and
+  upsert the worst-severity result per target_id — bridges the engine&#39;s
+  per-account contract with the schema&#39;s per-symbol PositionTarget rows
+  (was crashing with missing-attribute errors)
+- db/repository: add list_target_rows() so the watch job can keep row id
+
+Web bug fixes:
+- routes/tax: redirect non-HTMX GET /tax/harvest/plan to
+  /positions?view=at-loss so the bare fragment doesn&#39;t leak out as a
+  full page when bookmarked
+- _portfolio_monthly_pl: pin chart + wrap heights and disable
+  animations past 24 categories to clear the
+  `translate(NaN,…) scale(1)` ApexCharts errors on Lifetime
+- _sim_{buy,sell}_result + sim.html: emit OOB clear for #sim-form-error
+  on success and gate the Recents push on a sim-result-ok marker so
+  stale validation errors don&#39;t stick and failed submits don&#39;t log
+- tabs: add aria-selected on Positions / Tax / Settings-drawer tab strips
+- verify/index: title em-dash → middle-dot for parity with the rest
+- _tax_performance_panel: always full-saturation colors on the
+  ST/LT/§1256 mix bar (single-tranche tint was invisible at 0.16 alpha)
+
+UX polish:
+- _profile_switcher: button reads `Profile: active ▾` (was just `active`)
+- _settings_service_status_pill: `Service: not installed` instead of `—`
+- portfolio/freshness + _portfolio_toolbar: `none yet` instead of `—`
+- inbox/signals/option_expiry: subtitle distinguishes `OTM, $0 intrinsic`
+  from no-quote when dollar_impact is exactly 0
+- _projection_form: helper text under each rate field clarifying
+  decimal-vs-percent
+- _settings_drawer: default width 520 (was 420) so Imports table shows
+  enough of FILENAME without forcing the user to discover the resizer
+- sim.html: hide `All` option under action=Sell and auto-pick the first
+  real account on load + toggle so users don&#39;t submit-fail-correct
+
+Data alignment on the home page (was showing two different numbers for
+the same concept):
+- routes/portfolio: filter open_shorts to expiry &gt;= today before
+  computing cash_secured_total and csp_count so the Cash KPI&#39;s
+  `$X pledged · N CSPs` matches the Cash deployment chart and the
+  Allocation donut wedge (was $4,100/5 vs $3,900/4)
+- routes/portfolio: align the latest AccountValuePoint&#39;s holdings_value
+  to kpis.open_position_value so the equity-curve current annotation
+  and the Cash deployment `invested` wedge agree with the hero KPI
+  tile on the today data point (was $83,941 vs $87,493)
+- _portfolio_kpis + _portfolio_open_options: tooltips updated to
+  reflect the new consistent rule
+
+Tests:
+- test_jobs_washsale_watch rewritten against the new contract
+  (list_target_rows + list_accounts + per-account evaluation)
+- 6 harvest-plan tests now pass `HX-Request: true` since the bare
+  fragment route gates on it
+
+2559 passed, 1 skipped via `uv run pytest --ignore=tests/web/e2e`.
+ruff clean.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a553677`](https://github.com/chen-star/net_alpha/commit/a55367733915a3178ba19f686a2ccef84593757f))
+
+### Refactor
+
+* refactor(web): use _resolve_equity_year in body context for parity with fragment route
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`99c47c3`](https://github.com/chen-star/net_alpha/commit/99c47c3f1f94ef6197928a3eac62a4bfa2700d0f))
+
+* refactor(portfolio): drop dead `today` param and guard best/worst when no ranking signal
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`e0967d2`](https://github.com/chen-star/net_alpha/commit/e0967d22abf4b0940031d6d2dde33789e3a00b52))
+
+* refactor(portfolio): hoist input materialization out of month-end loop
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ff7c136`](https://github.com/chen-star/net_alpha/commit/ff7c13606743169cb37d596852436fe16847ff2e))
+
+### Unknown
+
+* Merge feat/month-end-equity-tiles
+
+Add 4x3 month-end equity tile panel beside the monthly realized P&amp;L bars
+on the Portfolio overview. New pure-function module
+portfolio/month_end_equity.py reuses account_value_at + monthly_realized_pl
+(no new pricing or aggregation logic). Row template rewritten as a 2fr 3fr
+split. Lifetime mode adds a year-picker that drives a new
+GET /portfolio/month-end-equity fragment route for in-place HTMX swap.
+
+Spec: docs/superpowers/specs/2026-05-22-month-end-equity-tile-grid-design.md
+Plan: docs/superpowers/plans/2026-05-22-month-end-equity-tile-grid.md
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`ac99f69`](https://github.com/chen-star/net_alpha/commit/ac99f69b2800f35ca73e4263bd856cbbfea8dcba))
+
+
 ## v0.76.2 (2026-05-22)
 
 ### Fix
