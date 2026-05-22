@@ -20,7 +20,7 @@
       neg:       readVar("--color-neg")       || "#FF453A",
       indigo:    readVar("--color-indigo")    || "#5E5CE6",
       violet:    readVar("--color-violet")    || "#BF5AF2",
-      signature: readVar("--color-signature") || "#BF5AF2",
+      signature: readVar("--color-signature") || "#0A84FF",
       info:      readVar("--color-info")      || "#64D2FF",
       warn:      readVar("--color-warn")      || "#FF9F0A",
       label1:    readVar("--color-label-1")   || "rgba(235,235,245,0.92)",
