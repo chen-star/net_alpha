@@ -86,7 +86,7 @@
   --color-unclear:   #64D2FF;
   --color-primary:   #0A84FF;
   --color-secondary: #5E5CE6;
-  --color-accent:    #BF5AF2;
+  --color-accent:    #0A84FF;
   --color-ink:       #FFFFFF;
 
   /* Theme-flexible tokens (overridden under [data-theme="light"]) */
@@ -128,28 +128,28 @@
   --duration-slow: 480ms;
 
   /* Phase 0 additions (UI/UX redesign §5.1) */
-  --accent-hero: linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%);
+  --accent-hero: linear-gradient(135deg, #0A84FF 0%, #00D4FF 100%);
 
   /* Signature — violet binds to the α brand mark and supersedes the soft-
      deprecated `--color-accent` (same value, but `signature` is the
      canonical name going forward). Outside chart contexts, all identity
      accent usage routes through these three tokens; indigo demotes to
      functional accent (links, focus rings). */
-  --color-signature:      #BF5AF2;
-  --color-signature-tint: rgba(191,90,242,0.16);
-  --color-signature-edge: rgba(191,90,242,0.32);
+  --color-signature:      #0A84FF;
+  --color-signature-tint: rgba(10,132,255,0.16);
+  --color-signature-edge: rgba(10,132,255,0.32);
   --color-signature-2:      #00D4FF;
   --color-signature-2-glow: rgba(0,212,255,0.50);
 
   /* Functional aliases */
-  --color-link: #5E5CE6;  /* hyperlinks; same as --color-indigo */
+  --color-link: #0A84FF;  /* hyperlinks; same as --color-signature */
 
   --font-feature-num: "tnum", "ss01", "cv11";
   --color-skeleton: rgba(255,255,255,0.04);
   --color-skeleton-shimmer: rgba(255,255,255,0.08);
   --shadow-drawer: 0 0 0 1px var(--color-hairline), -24px 0 48px rgba(0,0,0,0.4);
   --shadow-pane:   0 0 0 0.5px var(--color-hairline), 0 12px 32px rgba(0,0,0,0.3);
-  --ring-focus: 0 0 0 2px rgba(94,92,230,0.6);
+  --ring-focus: 0 0 0 2px rgba(10,132,255,0.6);
 }
 
 /* Explicit dark block — declared so the FOUC script can set
