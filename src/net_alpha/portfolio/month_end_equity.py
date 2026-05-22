@@ -186,3 +186,69 @@ def month_end_equity_series(
             )
         )
     return tiles
+
+
+def month_end_equity_summary(
+    tiles: Sequence[MonthEndEquityTile],
+    *,
+    today: dt.date,
+    prior_year_end_value: Decimal | None,
+) -> dict[str, Decimal | str | None] | None:
+    """Footer-caption summary over a year's tiles.
+
+    Args:
+        tiles: 12 tiles from ``month_end_equity_series``.
+        today: needed only for excluding the current partial month from
+            best/worst (the tile already carries ``is_current``).
+        prior_year_end_value: end-of-prior-year account value, used as the
+            YTD anchor. When None, ytd_delta_abs / ytd_delta_pct are omitted.
+
+    Returns ``None`` when no tile has data. Otherwise returns:
+
+    - ``ytd_delta_abs``: latest_completed.end_value − prior_year_end_value
+      (None when ``prior_year_end_value`` is None).
+    - ``ytd_delta_pct``: ytd_delta_abs / prior_year_end_value × 100
+      (None when anchor is None or 0).
+    - ``best_month_label`` / ``best_month_delta_pct``: completed month with
+      the largest ``mom_delta_pct`` (ties: earliest wins).
+    - ``worst_month_label`` / ``worst_month_delta_pct``: completed month
+      with the smallest ``mom_delta_pct``.
+
+    "Completed" = ``end_value is not None`` AND NOT ``is_current``. If only
+    the current partial month has data, it's treated as completed for the
+    purpose of populating best/worst.
+    """
+    completed = [t for t in tiles if t.end_value is not None and not t.is_current]
+    if not completed:
+        with_value = [t for t in tiles if t.end_value is not None]
+        if not with_value:
+            return None
+        completed = with_value
+
+    latest = completed[-1]
+
+    if prior_year_end_value is None:
+        ytd_delta_abs: Decimal | None = None
+        ytd_delta_pct: Decimal | None = None
+    else:
+        ytd_delta_abs = (latest.end_value - prior_year_end_value).quantize(Decimal("0.01"))
+        ytd_delta_pct = (
+            (ytd_delta_abs / prior_year_end_value * Decimal("100")).quantize(Decimal("0.01"))
+            if prior_year_end_value != Decimal("0")
+            else None
+        )
+
+    ranked = [t for t in completed if t.mom_delta_pct is not None]
+    if not ranked:
+        ranked = completed
+    best = max(ranked, key=lambda t: t.mom_delta_pct or Decimal("-Infinity"))
+    worst = min(ranked, key=lambda t: t.mom_delta_pct or Decimal("Infinity"))
+
+    return {
+        "ytd_delta_abs": ytd_delta_abs,
+        "ytd_delta_pct": ytd_delta_pct,
+        "best_month_label": best.label,
+        "best_month_delta_pct": best.mom_delta_pct,
+        "worst_month_label": worst.label,
+        "worst_month_delta_pct": worst.mom_delta_pct,
+    }

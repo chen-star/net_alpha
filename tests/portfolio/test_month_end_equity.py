@@ -4,6 +4,7 @@ from decimal import Decimal
 from net_alpha.portfolio.models import CashBalancePoint, MonthlyPnl
 from net_alpha.portfolio.month_end_equity import (
     month_end_equity_series,
+    month_end_equity_summary,
 )
 
 
@@ -197,3 +198,88 @@ def test_realized_pl_sourced_from_monthly_realized():
     )
     assert tiles[3].realized_pl == Decimal("1500")
     assert tiles[0].realized_pl == Decimal("0")
+
+
+def test_summary_returns_none_for_empty_year():
+    tiles = month_end_equity_series(
+        year=2026,
+        today=dt.date(2026, 5, 22),
+        trades=[],
+        lots=[],
+        cash_points=[],
+        get_close=_const_close,
+        monthly_realized=[],
+    )
+    assert month_end_equity_summary(tiles, today=dt.date(2026, 5, 22), prior_year_end_value=None) is None
+
+
+def test_summary_ytd_delta_uses_prior_year_end_anchor():
+    cash_points = [
+        _cp(dt.date(2025, 12, 31), "100000"),
+        _cp(dt.date(2026, 1, 31), "102000"),
+        _cp(dt.date(2026, 2, 28), "101000"),
+        _cp(dt.date(2026, 3, 31), "104000"),
+        _cp(dt.date(2026, 4, 30), "108000"),
+        _cp(dt.date(2026, 5, 22), "107000"),
+    ]
+    tiles = month_end_equity_series(
+        year=2026,
+        today=dt.date(2026, 5, 22),
+        trades=[],
+        lots=[],
+        cash_points=cash_points,
+        get_close=_const_close,
+        monthly_realized=[],
+    )
+    summary = month_end_equity_summary(
+        tiles,
+        today=dt.date(2026, 5, 22),
+        prior_year_end_value=Decimal("100000"),
+    )
+    assert summary is not None
+    assert summary["ytd_delta_abs"] == Decimal("8000.00")
+    assert summary["ytd_delta_pct"] == Decimal("8.00")
+    assert summary["best_month_label"] == "Apr"
+    assert summary["worst_month_label"] == "Feb"
+
+
+def test_summary_omits_ytd_when_anchor_unknown():
+    cash_points = [
+        _cp(dt.date(2025, 12, 31), "100000"),
+        _cp(dt.date(2026, 1, 31), "102000"),
+    ]
+    tiles = month_end_equity_series(
+        year=2026,
+        today=dt.date(2026, 2, 15),
+        trades=[],
+        lots=[],
+        cash_points=cash_points,
+        get_close=_const_close,
+        monthly_realized=[],
+    )
+    summary = month_end_equity_summary(tiles, today=dt.date(2026, 2, 15), prior_year_end_value=None)
+    assert summary is not None
+    assert summary["ytd_delta_abs"] is None
+    assert summary["ytd_delta_pct"] is None
+    assert summary["best_month_label"] == "Jan"
+    assert summary["worst_month_label"] == "Jan"
+
+
+def test_summary_with_zero_anchor_returns_pct_none_not_divzero():
+    cash_points = [
+        _cp(dt.date(2025, 12, 31), "0"),
+        _cp(dt.date(2026, 1, 31), "5000"),
+    ]
+    tiles = month_end_equity_series(
+        year=2026,
+        today=dt.date(2026, 2, 15),
+        trades=[],
+        lots=[],
+        cash_points=cash_points,
+        get_close=_const_close,
+        monthly_realized=[],
+    )
+    summary = month_end_equity_summary(tiles, today=dt.date(2026, 2, 15), prior_year_end_value=Decimal("0"))
+    assert summary is not None
+    assert summary["ytd_delta_abs"] == Decimal("5000.00")
+    assert summary["ytd_delta_pct"] is None
