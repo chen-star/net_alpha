@@ -908,12 +908,13 @@ def _compute_portfolio_body_context(
 
     # Month-end equity tiles for the new panel paired with monthly_pl bars.
     # Year resolution: YTD/specific-year pin from period_tuple; Lifetime defaults
-    # to current year (year-picker rebinds via the dedicated fragment route in
-    # Task 7).
-    if period_tuple is not None:
-        equity_year = period_tuple[0]
-    else:
-        equity_year = current_year
+    # to current year. The bundled body never carries an equity_year override —
+    # only the standalone fragment route does.
+    equity_year = _resolve_equity_year(
+        period_tuple=period_tuple,
+        equity_year_override=None,
+        current_year=current_year,
+    )
 
     monthly_realized_for_year = monthly_realized_pl(
         trades=scoped_trades,
