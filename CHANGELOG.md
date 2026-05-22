@@ -2,6 +2,147 @@
 
 
 
+## v0.76.0 (2026-05-22)
+
+### Build
+
+* build(web): rebuild app.css with new palette tokens
+
+Picks up --color-signature-strong + --color-cash-strong, the retuned
+light --color-signature-2-glow, the .btn:hover token swap, and the
+brand-mark .brand-type styles from the source.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`3dfc3c8`](https://github.com/chen-star/net_alpha/commit/3dfc3c86c2af9532aae674e1de3c4896a4399b8f))
+
+* build(web): rebuild app.css with blue palette ([`54b7669`](https://github.com/chen-star/net_alpha/commit/54b76698b4aec6262336aaa68f43d0f8bd58719c))
+
+### Chore
+
+* chore(web): _harvest_queue accent-indigo → inline signature accent
+
+The &#34;Currently harvestable only&#34; checkbox was the last interactive
+primitive still pulling its accent color from --color-indigo via the
+Tailwind accent-indigo utility, leaving native-form chrome out of step
+with the new signature blue used by every other interactive surface
+(buttons, segmented controls, focus rings).
+
+Switched to an inline `style=&#34;accent-color: var(--color-signature);&#34;`
+so the checkbox tracks --color-signature across themes. The template
+is currently orphaned (the harvest view moved to /positions?view=at-loss
+and renders a different fragment) but updating it keeps the source
+consistent for any future re-inclusion.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b4b6d5c`](https://github.com/chen-star/net_alpha/commit/b4b6d5cf7da1cf697e5a4ac6673bc9684fc81537))
+
+### Documentation
+
+* docs(web): update _tax_performance_panel stale violet comment to blue ([`b1f24e6`](https://github.com/chen-star/net_alpha/commit/b1f24e6780a6eb811f80925b557b62ca982fedb4))
+
+* docs(web): update stale focus-ring comment after Phase A retint ([`6395402`](https://github.com/chen-star/net_alpha/commit/6395402963ce243d3bf5893ae6422cc00559e74d))
+
+### Feature
+
+* feat(web): add --color-signature-strong + --color-cash-strong palette tokens
+
+Two new design tokens fill gaps the blue-palette shift exposed:
+
+- --color-signature-strong (#0066CC dark / #0064D1 light) replaces the
+  hardcoded hex in .btn:hover so hover intensity is theme-aware and
+  routable from one place.
+- --color-cash-strong (#8E8E93 dark / #6E6E73 light) gives cash fills a
+  visible variant for fills on hairline backgrounds, where the existing
+  60%-alpha --color-cash is too faint to read.
+
+Also retunes light --color-signature-2-glow from a darker teal
+(rgba(0,113,164,0.40)) to a light cyan (rgba(90,200,250,0.35)) so the
+kpi-hero radial halo reads as a soft cyan haze on white instead of a
+murky shadow. The solid --color-signature-2 (#0071A4) stays put for
+contexts that need contrast on white surfaces.
+
+Refreshes the now-stale palette comments that still referenced
+violet/indigo as identity tokens (signature block, .positions-pane
+left edge, focus-ring), and pins a new comment on --color-indigo /
+--color-violet documenting their demoted role as chart-series only
+(donut wedges, equity overlays, call/put dots) — NOT chrome accents.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d755f52`](https://github.com/chen-star/net_alpha/commit/d755f52d3ddd6652bd1fe5e8be7b7bd03bf10e2d))
+
+* feat(web): retint _portfolio_kpis composition + cash subtitle to signature/cash ([`69279d9`](https://github.com/chen-star/net_alpha/commit/69279d9c45eac53db955f5a3b1d26b944ca11212))
+
+* feat(web): retint overview Edit-layout button to signature ([`230911a`](https://github.com/chen-star/net_alpha/commit/230911a83fee559f44a7cbaf34a69e9adba3a684))
+
+* feat(web): migrate base.html brand-mark to typography-as-logo + retint theme-color ([`6c06af0`](https://github.com/chen-star/net_alpha/commit/6c06af06fdc52a8fd6981db199ce80009bbc3eb1))
+
+* feat(web): retint @theme brand-glow + --color-secondary across themes to systemBlue
+
+Spec gap from Phase A: @theme block had a dormant indigo --color-brand-glow
+that was never reached (FOUC script always sets data-theme), and
+--color-secondary is referenced via bg-secondary in _calendar_focus.html for
+the triggering-row highlight — both were chrome leaks. ([`1f3763c`](https://github.com/chen-star/net_alpha/commit/1f3763c47eface0c47258f7ca397eaddcaba789e))
+
+* feat(web): widen kpi-hero halo to blue→cyan two-stop gradient ([`f7d1b67`](https://github.com/chen-star/net_alpha/commit/f7d1b67a3d8d3baea8f7c226a19f4243b367e98b))
+
+* feat(web): rewrite .btn to signature blue + deeper blue hover ([`023da0c`](https://github.com/chen-star/net_alpha/commit/023da0cbd20f45c9b0c79547b9ec96e03983323f))
+
+* feat(web): retint .seg-active gradient to systemBlue ([`d879cd9`](https://github.com/chen-star/net_alpha/commit/d879cd9cd7f7521b71e5d081d9dba91eca8f1815))
+
+* feat(web): remove nav-link active underline glow ([`ce315b5`](https://github.com/chen-star/net_alpha/commit/ce315b57e4a13d67fc03db2022b0f6ae22b0f962))
+
+* feat(web): replace .brand-mark block with .brand-type typography logo ([`0618763`](https://github.com/chen-star/net_alpha/commit/06187638c2557d9498b0def32513fa31256d0820))
+
+* feat(web): retint [data-theme=light] chrome tokens to light systemBlue ([`9ab8af7`](https://github.com/chen-star/net_alpha/commit/9ab8af715ed9ff63fb5bcaedecc49b24015f6fcc))
+
+* feat(web): retint [data-theme=dark] chrome tokens to systemBlue ([`3840fd3`](https://github.com/chen-star/net_alpha/commit/3840fd389a00235ec3f48fae8b2abe699f13ea3c))
+
+* feat(web): retint @theme chrome tokens to systemBlue ([`8a989c5`](https://github.com/chen-star/net_alpha/commit/8a989c58cf87a7019ac29bc7a03f68313b9196fe))
+
+* feat(web): add --color-signature-2 cyan accent token ([`7fb1af2`](https://github.com/chen-star/net_alpha/commit/7fb1af22c785080891e9c05d00e99fef24431a83))
+
+### Fix
+
+* fix(web): retint KPI bars, call dots, cash-curve pledged off palette clashes
+
+Three template-side fixes for color collisions the palette shift left
+behind:
+
+- _portfolio_kpis.html: free-cash fill in the Cash KPI tile and the
+  Cash segment in the hero composition bar (+ its legend dot) now use
+  --color-cash-strong. The 60%-alpha --color-cash sat directly on
+  --color-hairline at a contrast ratio low enough to read as a smudge,
+  especially in the 5px Cash KPI bar.
+- _portfolio_open_options.html / _portfolio_short_options.html:
+  CALL dots route through --color-violet instead of --color-indigo.
+  Post-retint, indigo (#5E5CE6) sits visually adjacent to the new
+  signature blue (#0A84FF), so the CALL/PUT identity dot was reading
+  as brand chrome rather than a distinct call leg. Violet keeps the
+  cool-accent semantic without colliding with brand.
+- _portfolio_cash_curve.html: Pledged-cash series colored
+  colors.warn (amber) instead of colors.indigo. The KPI Cash tile
+  already shows Pledged as warn; using warn in the chart too makes
+  &#34;pledged&#34; the same semantic across the page, and gives the three
+  cash series (info / warn / label2) three clearly distinct hues
+  on both themes.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`1cd1710`](https://github.com/chen-star/net_alpha/commit/1cd17105975b4eade456afa1653ab87ad3d5f4f9))
+
+* fix(web): charts.js signature fallback to systemBlue ([`845f7dc`](https://github.com/chen-star/net_alpha/commit/845f7dcbaeccb48808c5baa96d2a43b92654d9d9))
+
+### Style
+
+* style: ruff format pass on 6 drifted files
+
+CI&#39;s `ruff format --check` was failing on 6 files. Also resync uv.lock to
+the current 0.75.3 version (was stale at 0.73.1).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7226929`](https://github.com/chen-star/net_alpha/commit/72269292d4e24ce0f96ca48697a358c7b27c8a60))
+
+### Unknown
+
+* Merge pull request #11 from chen-star/feat/ui-blue-palette-shift
+
+Feat/UI blue palette shift ([`7b035e1`](https://github.com/chen-star/net_alpha/commit/7b035e10a2690c1f90124ed4ad67c36909dff301))
+
+
 ## v0.75.3 (2026-05-21)
 
 ### Fix
