@@ -34,7 +34,11 @@ from net_alpha.portfolio.account_value import (
     build_eval_dates,
 )
 from net_alpha.portfolio.allocation import build_allocation
-from net_alpha.portfolio.calendar_pnl import monthly_pl_lifetime_stats, monthly_realized_pl_series
+from net_alpha.portfolio.calendar_pnl import (
+    monthly_pl_lifetime_stats,
+    monthly_realized_pl,
+    monthly_realized_pl_series,
+)
 from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.cash_flow import (
     build_cash_balance_series,
@@ -45,6 +49,10 @@ from net_alpha.portfolio.cash_flow import (
 )
 from net_alpha.portfolio.freshness import compute_price_freshness
 from net_alpha.portfolio.models import AccountValuePoint
+from net_alpha.portfolio.month_end_equity import (
+    month_end_equity_series,
+    month_end_equity_summary,
+)
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import (
     compute_open_option_positions,
@@ -898,6 +906,52 @@ def _compute_portfolio_body_context(
         trades=scoped_trades,
     )
 
+    # Month-end equity tiles for the new panel paired with monthly_pl bars.
+    # Year resolution: YTD/specific-year pin from period_tuple; Lifetime defaults
+    # to current year. The bundled body never carries an equity_year override —
+    # only the standalone fragment route does.
+    equity_year = _resolve_equity_year(
+        period_tuple=period_tuple,
+        equity_year_override=None,
+        current_year=current_year,
+    )
+
+    monthly_realized_for_year = monthly_realized_pl(
+        trades=scoped_trades,
+        year=equity_year,
+        ticker=None,
+        accounts=accounts if accounts else None,
+    )
+    # YTD anchor for the panel's footer caption — account value at Dec 31 of the
+    # year prior to equity_year. Independent of period_starting_value (which is
+    # computed from the page's Period selector, not the equity panel's year).
+    month_end_prior_anchor: Decimal | None = account_value_at(
+        on=date(equity_year - 1, 12, 31),
+        trades=scoped_trades,
+        lots=scoped_lots,
+        cash_points=cash_points,
+        get_close=svc.get_historical_close,
+    )
+    # account_value_at returns Decimal("0") when there's no history before the
+    # date. Treat that as "anchor unknown" rather than "anchor is zero" to
+    # avoid misleading +Infinity% YTD on accounts that started inside equity_year.
+    if month_end_prior_anchor == Decimal("0") and not any(cp.on < date(equity_year, 1, 1) for cp in cash_points):
+        month_end_prior_anchor = None
+
+    month_end_tiles = month_end_equity_series(
+        year=equity_year,
+        today=today,
+        trades=scoped_trades,
+        lots=scoped_lots,
+        cash_points=cash_points,
+        get_close=svc.get_historical_close,
+        monthly_realized=monthly_realized_for_year,
+    )
+    month_end_summary = month_end_equity_summary(
+        month_end_tiles,
+        prior_year_end_value=month_end_prior_anchor,
+    )
+
     # Account-value series (the redesigned equity curve). Built off the
     # lifetime cash_points + an event-anchored eval-date axis. See
     # docs/superpowers/specs/2026-05-02-equity-curve-redesign-design.md.
@@ -1084,7 +1138,115 @@ def _compute_portfolio_body_context(
         "lifetime_kpis": lifetime_kpis,
         "current_year": current_year,
         "available_years": available_years,
+        "month_end_tiles": month_end_tiles,
+        "month_end_summary": month_end_summary,
+        "month_end_year": equity_year,
+        "month_end_year_picker_visible": period_tuple is None,
     }
+
+
+def _resolve_equity_year(
+    *,
+    period_tuple: tuple[int, int] | None,
+    equity_year_override: int | None,
+    current_year: int,
+) -> int:
+    """Pick the year shown by the month-end equity tile panel.
+
+    - YTD / specific-year periods pin the year (override is ignored).
+    - Lifetime mode honors ``equity_year_override`` if supplied, else
+      defaults to ``current_year``.
+    """
+    if period_tuple is not None:
+        return period_tuple[0]
+    return equity_year_override if equity_year_override is not None else current_year
+
+
+@router.get("/portfolio/month-end-equity", response_class=HTMLResponse)
+def portfolio_month_end_equity(
+    request: Request,
+    period: str | None = None,
+    account: list[str] = Query(default_factory=list),
+    equity_year: int | None = None,
+    repo: Repository = Depends(get_repository),
+    svc: PricingService = Depends(get_pricing_service),
+) -> HTMLResponse:
+    """Year-picker swap target. Computes only the month-end-equity slice
+    (cheaper than re-running the full portfolio_body) and renders the panel
+    fragment alone, which the picker swaps into #portfolio-month-end-equity
+    via hx-swap=outerHTML.
+    """
+    accounts = parse_accounts(account)
+    today = date.today()
+    period_tuple, _period_label = _parse_period(period, today.year)
+    current_year = today.year
+    import_years = {imp.imported_at.year for imp in repo.list_imports()}
+    available_years = sorted(import_years | {current_year}, reverse=True)
+
+    all_trades = repo.all_trades()
+    all_lots = repo.all_lots()
+    if accounts:
+        accs_set = set(accounts)
+        scoped_trades = [t for t in all_trades if t.account in accs_set]
+        scoped_lots = [lt for lt in all_lots if lt.account in accs_set]
+    else:
+        scoped_trades = all_trades
+        scoped_lots = all_lots
+
+    cash_events = repo.list_cash_events(account_id=None)
+    if accounts:
+        cash_events = [e for e in cash_events if e.account in set(accounts)]
+    cash_points = build_cash_balance_series(
+        events=cash_events,
+        trades=scoped_trades,
+        period=None,
+    )
+
+    resolved_year = _resolve_equity_year(
+        period_tuple=period_tuple,
+        equity_year_override=equity_year,
+        current_year=current_year,
+    )
+    monthly_realized_for_year = monthly_realized_pl(
+        trades=scoped_trades,
+        year=resolved_year,
+        ticker=None,
+        accounts=accounts if accounts else None,
+    )
+    prior_anchor: Decimal | None = account_value_at(
+        on=date(resolved_year - 1, 12, 31),
+        trades=scoped_trades,
+        lots=scoped_lots,
+        cash_points=cash_points,
+        get_close=svc.get_historical_close,
+    )
+    if prior_anchor == Decimal("0") and not any(cp.on < date(resolved_year, 1, 1) for cp in cash_points):
+        prior_anchor = None
+    tiles = month_end_equity_series(
+        year=resolved_year,
+        today=today,
+        trades=scoped_trades,
+        lots=scoped_lots,
+        cash_points=cash_points,
+        get_close=svc.get_historical_close,
+        monthly_realized=monthly_realized_for_year,
+    )
+    summary = month_end_equity_summary(tiles, prior_year_end_value=prior_anchor)
+
+    ctx = {
+        "month_end_tiles": tiles,
+        "month_end_summary": summary,
+        "month_end_year": resolved_year,
+        "month_end_year_picker_visible": period_tuple is None,
+        "available_years": available_years,
+        "selected_period": period or "ytd",
+        "selected_accounts": accounts,
+    }
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "_portfolio_month_end_equity_wrap.html",
+        ctx,
+    )
 
 
 @router.get("/portfolio/body", response_class=HTMLResponse)

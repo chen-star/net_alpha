@@ -562,3 +562,56 @@ def test_equity_curve_omits_brush_strip(tmp_path):
         assert "/portfolio/equity-curve/brush" not in r.text, period
     # The endpoint itself is gone too.
     assert client.get("/portfolio/equity-curve/brush?period=ytd").status_code == 404
+
+
+def test_portfolio_body_includes_month_end_context(tmp_path):
+    """The body context exposes the month-end equity series + summary + year picker flag.
+
+    Task 6 wires the panel into the row template — assert the container and
+    panel title render for all three period modes (ytd, specific year, lifetime).
+    """
+    client = _client(tmp_path)
+    for period in ("ytd", "2025", "lifetime"):
+        response = client.get(f"/portfolio/body?period={period}&account=")
+        assert response.status_code == 200, f"period={period!r} returned {response.status_code}"
+
+    # Panel container is now rendered by the row template.
+    response = client.get("/portfolio/body?period=ytd&account=")
+    assert 'id="portfolio-month-end-equity"' in response.text
+    assert "Month-end equity" in response.text  # panel title
+
+
+def test_month_end_equity_fragment_route_returns_panel_only(tmp_path):
+    client = _client(tmp_path)
+    response = client.get(
+        "/portfolio/month-end-equity?period=lifetime",
+        headers={"HX-Request": "true"},
+    )
+    assert response.status_code == 200
+    body = response.text
+    # Fragment contains the outer container and tile labels, but NOT the bars panel title.
+    assert 'id="portfolio-month-end-equity"' in body
+    assert "Monthly realized P&amp;L" not in body
+    assert "Jan" in body and "Dec" in body
+
+
+def test_equity_year_param_overrides_in_lifetime_mode(tmp_path):
+    client = _client(tmp_path)
+    response = client.get(
+        "/portfolio/month-end-equity?period=lifetime&equity_year=2024",
+        headers={"HX-Request": "true"},
+    )
+    assert response.status_code == 200
+    # Panel header should show 2024 in the year display.
+    assert "2024" in response.text
+
+
+def test_equity_year_param_ignored_in_ytd_mode(tmp_path):
+    client = _client(tmp_path)
+    response = client.get(
+        "/portfolio/month-end-equity?period=ytd&equity_year=2024",
+        headers={"HX-Request": "true"},
+    )
+    assert response.status_code == 200
+    # Year-picker should NOT render in YTD mode (period pins the year).
+    assert 'name="equity_year"' not in response.text

@@ -1,0 +1,77 @@
+{# Inputs:
+     month_end_tiles: list[MonthEndEquityTile]
+     month_end_summary: dict | None
+     month_end_year: int
+     month_end_year_picker_visible: bool
+     available_years: list[int]
+     selected_period: str
+     selected_accounts: list[str]
+#}
+<div class="panel-head">
+  <h4>Month-end equity</h4>
+  <span class="meta num">
+    {{ month_end_year }}
+    {% if month_end_year_picker_visible %}
+      <select
+        name="equity_year"
+        class="meta-select ml-1"
+        hx-get="/portfolio/month-end-equity"
+        hx-trigger="change"
+        hx-target="#portfolio-month-end-equity"
+        hx-swap="outerHTML"
+        hx-include="[name='period'], [name='account']">
+        {% for yr in available_years %}
+          <option value="{{ yr }}" {% if yr == month_end_year %}selected{% endif %}>{{ yr }}</option>
+        {% endfor %}
+      </select>
+    {% endif %}
+  </span>
+</div>
+
+<div class="month-end-grid">
+  {% for tile in month_end_tiles %}
+    {% set _empty = tile.end_value is none %}
+    {% set _pos = tile.mom_delta_pct is not none and tile.mom_delta_pct > 0 %}
+    {% set _neg = tile.mom_delta_pct is not none and tile.mom_delta_pct < 0 %}
+    <div class="month-tile{% if _empty %} month-tile-empty{% endif %}{% if _pos %} month-tile-gain{% endif %}{% if _neg %} month-tile-loss{% endif %}{% if tile.is_current %} month-tile-current{% endif %}"
+         {% if not _empty %}title="{{ tile.label }} {{ month_end_year }} · ${{ '{:,.0f}'.format(tile.end_value|float) }}{% if tile.mom_delta_pct is not none %} · MoM {{ '{:+.2f}'.format(tile.mom_delta_pct|float) }}%{% endif %}{% if tile.mv_delta is not none %} · MV Δ ${{ '{:+,.0f}'.format(tile.mv_delta|float) }}{% endif %}{% if tile.cash_delta is not none %} · Cash Δ ${{ '{:+,.0f}'.format(tile.cash_delta|float) }}{% endif %}{% if tile.realized_pl is not none %} · Realized ${{ '{:+,.0f}'.format(tile.realized_pl|float) }}{% endif %}"{% endif %}>
+      <div class="month-tile-label">{{ tile.label }}{% if tile.is_current %} <span class="month-tile-current-tag">· current</span>{% endif %}</div>
+      {% if _empty %}
+        <div class="month-tile-value num">—</div>
+      {% else %}
+        <div class="month-tile-value num">${{ '{:,.1f}'.format(tile.end_value|float / 1000) }}k</div>
+        {% if tile.mom_delta_pct is not none %}
+          <div class="month-tile-delta num {% if _pos %}text-pos{% elif _neg %}text-neg{% else %}text-label-3{% endif %}">
+            {% if _pos %}▲{% elif _neg %}▼{% else %}·{% endif %}
+            {{ '{:+.1f}'.format(tile.mom_delta_pct|float) }}%
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+{% if month_end_summary %}
+  <div class="text-[11px] text-label-3 num mt-2">
+    {% if month_end_summary.ytd_delta_abs is not none %}
+      {% set _ytd_pos = month_end_summary.ytd_delta_abs > 0 %}
+      YTD
+      <span class="{% if _ytd_pos %}text-pos{% else %}text-neg{% endif %}">
+        {{ '{:+,.0f}'.format(month_end_summary.ytd_delta_abs|float) }}
+        {% if month_end_summary.ytd_delta_pct is not none %}
+          ({{ '{:+.1f}'.format(month_end_summary.ytd_delta_pct|float) }}%)
+        {% endif %}
+      </span>
+      {% if month_end_summary.best_month_label or month_end_summary.worst_month_label %}·{% endif %}
+    {% endif %}
+    {% if month_end_summary.best_month_label %}
+      best <span class="text-pos">{{ month_end_summary.best_month_label }}</span>
+      {% if month_end_summary.worst_month_label %}·{% endif %}
+    {% endif %}
+    {% if month_end_summary.worst_month_label %}
+      worst <span class="text-neg">{{ month_end_summary.worst_month_label }}</span>
+    {% endif %}
+  </div>
+{% else %}
+  <div class="text-label-2 text-[13px] py-2">No activity in {{ month_end_year }}.</div>
+{% endif %}
