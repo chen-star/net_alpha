@@ -91,7 +91,7 @@
             hx-on::after-request="if (event.detail.successful) window.location.reload()"
             title="Quotes via Yahoo Finance (~15 min delay). {% if price_freshness == 'green' %}Prices are fresh — click to force refresh.{% elif price_freshness == 'amber' %}Some prices are from cache — click to refresh.{% elif price_freshness == 'red' %}Prices are stale — click to refresh.{% else %}No price data yet — click to fetch.{% endif %}">
       <span class="rounded-full w-1.5 h-1.5 {% if price_freshness == 'green' %}bg-pos{% elif price_freshness == 'amber' %}bg-warn{% elif price_freshness == 'red' %}bg-neg{% else %}bg-label-3{% endif %}"></span>
-      Prices {{ price_freshness_label|default('—') }}
+      Prices {{ price_freshness_label|default('none yet') }}
     </button>
 
     {# Single direct action — was an overflow kebab when this slot held

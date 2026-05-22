@@ -61,6 +61,7 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
             try:
                 from net_alpha.db.connection import get_engine
                 from net_alpha.db.repository import Repository
+                from net_alpha.pricing.service import PricingService
                 from net_alpha.service import disabled_flag
                 from net_alpha.service.scheduler import build_scheduler
                 from net_alpha.service.state import ServiceState
@@ -73,10 +74,21 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
                 if repo is None:
                     _sched_engine = get_engine(app.state.settings.db_path)
                     repo = Repository(_sched_engine)
-                # pricing is not wired onto app.state in this factory; pass None
-                # so the price_refresh job fails fast on the actual fetch call
-                # rather than crashing at scheduler registration time.
-                pricing = getattr(app.state, "pricing", None)
+                # Build a PricingService from the primitives create_app() wires
+                # onto app.state (price_provider, price_cache, pricing_config).
+                # Without this the scheduler's price_refresh job blows up with
+                # `'NoneType' object has no attribute 'refresh'`.
+                provider = getattr(app.state, "price_provider", None)
+                cache = getattr(app.state, "price_cache", None)
+                pcfg = getattr(app.state, "pricing_config", None)
+                if provider is not None and cache is not None and pcfg is not None:
+                    pricing = PricingService(
+                        provider=provider,
+                        cache=cache,
+                        enabled=pcfg.enable_remote,
+                    )
+                else:
+                    pricing = None
                 sched = build_scheduler(repo=repo, pricing=pricing, state=state)
                 if not disabled_flag.is_set():
                     sched.start()

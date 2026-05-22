@@ -14,7 +14,7 @@
   <summary class="panel-head cursor-pointer">
     <h4>Open options</h4>
     <span class="meta"
-          title="Live (non-expired) short option contracts only. The Cash card's 'pledged' total may be higher when an expired short is awaiting broker collateral release.">
+          title="Live (non-expired) short option contracts only. Matches the Cash card's 'pledged' total and the Allocation donut's 'Cash · pledged' wedge.">
       {% if _long_count %}{{ _long_count }} long{% endif %}
       {% if _long_count and _short_count %} · {% endif %}
       {% if _short_count %}{{ _short_count }} short{% endif %}

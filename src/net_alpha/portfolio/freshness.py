@@ -5,7 +5,7 @@ Spec §5.11:
   < 15 min  →  green  / "✓ {N}m"
   15min–24h →  amber  / "⚠ {N}h"
   > 24h     →  red    / "✕ stale"
-  no data   →  None   / "—"
+  no data   →  None   / "none yet"
 
 Used by the toolbar freshness chip (Phase 3 B3) and reusable for Positions /
 Tax pages in Phase 4.
@@ -23,7 +23,7 @@ def compute_price_freshness(snapshot) -> tuple[str | None, str]:
     label is a short human-readable string for display in the chip.
     """
     if snapshot is None:
-        return None, "—"
+        return None, "none yet"
 
     # degraded = provider failed; no fresh quotes are available.
     if getattr(snapshot, "degraded", False):
@@ -40,7 +40,7 @@ def compute_price_freshness(snapshot) -> tuple[str | None, str]:
 
     # No quotes served at all (no open positions, or pricing disabled).
     if fetched_at is None and not stale_symbols and not missing_symbols:
-        return None, "—"
+        return None, "none yet"
 
     # If there are any stale symbols (served from >15-min-old cache), report amber/red.
     if stale_symbols:

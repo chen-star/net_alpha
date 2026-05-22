@@ -34,5 +34,9 @@ def test_tax_wash_sales_toolbar_renders_macro(client_with_data: TestClient):
 
 
 def test_harvest_plan_repeated_account_query_returns_200(client: TestClient):
-    resp = client.get("/tax/harvest/plan", params=[("account", "Schwab/Tax"), ("account", "Schwab/IRA")])
+    resp = client.get(
+        "/tax/harvest/plan",
+        params=[("account", "Schwab/Tax"), ("account", "Schwab/IRA")],
+        headers={"HX-Request": "true"},
+    )
     assert resp.status_code == 200

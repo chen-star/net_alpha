@@ -1,3 +1,8 @@
+{# OOB swap clears any stale validation error from a prior submit. The Sim
+   recents JS keys off the presence of this `data-testid="sim-result-ok"`
+   marker to decide whether to log a row. #}
+<div id="sim-form-error" hx-swap-oob="true" class="text-neg text-[12px] mt-1" data-testid="sim-form-error"></div>
+<span data-testid="sim-result-ok" hidden></span>
 {% include "_traffic_light.html" with context %}
 {% if not options %}
   <div class="panel text-label-2 text-sm">No accounts available.</div>

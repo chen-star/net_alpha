@@ -62,7 +62,7 @@ def _seed_harvest_row(builders, repo, engine):
 
 def test_harvest_regions_split(client: TestClient, builders, repo):
     _seed_loss(builders, repo)
-    res = client.get("/tax/harvest/plan")
+    res = client.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     body = res.text
     assert 'id="harvest-summary"' in body
     assert 'id="harvest-table"' in body
@@ -71,7 +71,7 @@ def test_harvest_regions_split(client: TestClient, builders, repo):
 def test_checkbox_targets_summary_not_full_region(client: TestClient, builders, repo, engine):
     # Need a populated table for the checkbox row to render at all.
     _seed_harvest_row(builders, repo, engine)
-    res = client.get("/tax/harvest/plan")
+    res = client.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     body = res.text
     # Checkbox input now targets #harvest-summary, not the wrapping region.
     assert 'hx-target="#harvest-summary"' in body
@@ -81,7 +81,7 @@ def test_tax_saved_cells_have_stable_ids(client: TestClient, builders, repo, eng
     """Tighten the previously-vacuous test: seed an actual harvest row so the
     assertion fires against a populated table."""
     _seed_harvest_row(builders, repo, engine)
-    res = client.get("/tax/harvest/plan")
+    res = client.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     body = res.text
     # Row must exist with the stable per-row id.
     assert "<tr data-symbol=" in body, "harvest fixture did not produce a row"

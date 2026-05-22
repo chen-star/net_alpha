@@ -27,7 +27,7 @@ def test_harvest_tbody_has_table_nav_marker(client: TestClient, builders, repo):
         "lt",
         [builders.make_buy("schwab/lt", "AAPL", date(2026, 1, 5))],
     )
-    res = client.get("/tax/harvest/plan")
+    res = client.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     body = res.text
     if "<tbody>" in body:
         assert "data-table-nav" in body

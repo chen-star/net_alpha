@@ -18,9 +18,13 @@
      min-width keeps each bar at least 32px wide once the count exceeds the
      panel's natural width. #}
   <div class="overflow-x-auto">
+    {# Wrap and inner chart container both pin to 105px — matches the Apex
+       chart.height below. A previous mismatch (wrap=90, chart auto-grew to
+       105) caused Apex to emit `translate(NaN, ...)` SVG transforms in
+       Lifetime view where category count outran available pixels. #}
     <div id="monthly-pl-chart-wrap"
-         style="min-width: max(100%, calc(32px * {{ monthly_pl_points|length }})); height: 90px;">
-      <div id="monthly-pl-chart" style="height: 100%;"></div>
+         style="min-width: max(100%, calc(32px * {{ monthly_pl_points|length }})); height: 105px;">
+      <div id="monthly-pl-chart" style="height: 105px;"></div>
     </div>
   </div>
 
@@ -78,9 +82,13 @@
       return window.netAlphaChartTheme.merge(window.netAlphaChartTheme.defaults, {
         chart: {
           type: "bar",
-          height: 90,
+          height: 105,
           toolbar: { show: false },
           zoom: { enabled: false },
+          // Disable animations in Lifetime view to avoid Apex emitting
+          // `translate(NaN,...)` SVG transforms while the bar series is
+          // still being measured against a 60+ category x-axis.
+          animations: { enabled: points.length <= 24 },
         },
         // distributed:true is required for the per-bar color callback to
         // apply to each column individually within the single series.

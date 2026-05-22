@@ -27,24 +27,28 @@
     <input type="number" name="federal_marginal_rate" step="0.001" min="0" max="0.5" required
            value="{{ tax_brackets_cfg.federal_marginal_rate if tax_brackets_cfg else 0.24 }}"
            class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full" placeholder="0.24"/>
+    <p class="text-[11px] text-label-2 mt-1">Decimal — 0.24 means 24%.</p>
   </div>
   <div>
     <label class="block label-uc">State marginal rate</label>
     <input type="number" name="state_marginal_rate" step="0.001" min="0" max="0.2"
            value="{{ tax_brackets_cfg.state_marginal_rate if tax_brackets_cfg else '' }}"
            class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full" placeholder="0.093"/>
+    <p class="text-[11px] text-label-2 mt-1">Decimal — 0.093 means 9.3%.</p>
   </div>
   <div>
     <label class="block label-uc">LTCG rate</label>
     <input type="number" name="ltcg_rate" step="0.01" min="0" max="0.3" required
            value="{{ tax_brackets_cfg.ltcg_rate if tax_brackets_cfg else 0.15 }}"
            class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full" placeholder="0.15"/>
+    <p class="text-[11px] text-label-2 mt-1">Decimal — 0.15 means 15%.</p>
   </div>
   <div>
     <label class="block label-uc">Qualified dividend rate</label>
     <input type="number" name="qualified_div_rate" step="0.01" min="0" max="0.3"
            value="{{ tax_brackets_cfg.qualified_div_rate if tax_brackets_cfg else 0.15 }}"
            class="bg-surface text-text rounded-md px-2 py-1 text-[13px] w-full" placeholder="0.15"/>
+    <p class="text-[11px] text-label-2 mt-1">Decimal — 0.15 means 15%.</p>
   </div>
   <div class="sm:col-span-2 text-right">
     <button type="submit" class="btn">Save tax rates</button>

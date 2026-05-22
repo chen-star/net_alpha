@@ -18,12 +18,12 @@ def test_carryforward_caveat_present_when_filter_active(client: TestClient):
 
 
 def test_harvest_offset_budget_caveat_absent_when_no_filter(client: TestClient):
-    resp = client.get("/tax/harvest/plan")
+    resp = client.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     assert resp.status_code == 200
     assert "Offset budget is taxpayer-level" not in resp.text
 
 
 def test_harvest_offset_budget_caveat_present_when_filter_active(client: TestClient):
-    resp = client.get("/tax/harvest/plan?account=Schwab%2FTax")
+    resp = client.get("/tax/harvest/plan?account=Schwab%2FTax", headers={"HX-Request": "true"})
     assert resp.status_code == 200
     assert "Offset budget is taxpayer-level" in resp.text

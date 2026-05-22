@@ -321,10 +321,17 @@ def portfolio_kpis(
     # Open shorts (CSPs) — used for cash-secured / pledged-cash badges in the
     # Cash KPI tile so the user can see how much of their cash is collateral.
     scoped_trades_for_shorts = [t for t in trades if t.account in set(accounts)] if accounts else trades
-    open_shorts = compute_open_short_option_positions(
+    open_shorts_all = compute_open_short_option_positions(
         scoped_trades_for_shorts,
         gl_option_closures=repo.get_option_gl_closures(),
     )
+    # Filter expired contracts so the Cash KPI's "$X pledged · N CSPs" matches
+    # the Cash deployment chart's pledged total (which uses pledged_cash_at()
+    # in portfolio/cash_flow.py — that helper also drops expired contracts).
+    # Before this filter the home page showed two different numbers for the
+    # same concept ($4,100 vs $3,900) because expired-but-not-yet-released
+    # contracts still appeared in the open-shorts list.
+    open_shorts = [s for s in open_shorts_all if s.expiry >= today]
     cash_secured_total = sum((s.cash_secured for s in open_shorts), start=Decimal("0"))
     csp_count = sum(1 for s in open_shorts if s.call_put == "P")
     offset_budget = compute_offset_budget(
@@ -975,6 +982,27 @@ def _compute_portfolio_body_context(
         eval_dates=account_eval_dates,
         get_close=svc.get_historical_close,
     )
+    # Align the chart's TODAY data point with the hero KPI by stamping the
+    # KPI's live-quote `open_position_value` onto the last AccountValuePoint.
+    # Historical points still use end-of-day closes (correct for backfill),
+    # but the latest point — which drives the equity-curve "current" annotation,
+    # the cash-deployment "invested" wedge, and the chart-head KPIs — now
+    # matches the KPI tile so users don't see two different "total" numbers.
+    if account_points and kpis.open_position_value is not None:
+        from dataclasses import replace as _dc_replace
+
+        last_ap = account_points[-1]
+        if last_ap.on == today and last_ap.holdings_value is not None:
+            aligned_av = (last_ap.cash_balance + kpis.open_position_value).quantize(Decimal("0.01"))
+            account_points = [
+                *account_points[:-1],
+                _dc_replace(
+                    last_ap,
+                    holdings_value=kpis.open_position_value,
+                    account_value=aligned_av,
+                    net_pl=(aligned_av - last_ap.contributions).quantize(Decimal("0.01")),
+                ),
+            ]
     # Cash deployment series (free / pledged / invested) — feeds the new
     # stacked-area cash chart. Reuses the AccountValuePoint date axis so the
     # equity and cash charts align tick-for-tick.
@@ -988,10 +1016,13 @@ def _compute_portfolio_body_context(
 
     benchmark_points: list = []
 
-    open_shorts = compute_open_short_option_positions(
+    open_shorts_all = compute_open_short_option_positions(
         scoped_trades,
         gl_option_closures=gl_option_closures,
     )
+    # Filter expired (same rule as Cash deployment chart / Open Options panel)
+    # so the allocation donut's "Cash · pledged" wedge agrees with the KPI.
+    open_shorts = [s for s in open_shorts_all if s.expiry >= today]
     cash_secured_total = sum(
         (s.cash_secured for s in open_shorts),
         start=Decimal("0"),

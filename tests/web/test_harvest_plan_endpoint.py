@@ -18,25 +18,25 @@ def _client():
 
 def test_plan_endpoint_returns_fragment_with_region_id():
     with _client() as c:
-        r = c.get("/tax/harvest/plan")
+        r = c.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     assert r.status_code == 200
     assert 'id="harvest-queue-region"' in r.text
 
 
 def test_plan_endpoint_accepts_custom_budget():
     with _client() as c:
-        r = c.get("/tax/harvest/plan?mode=custom&custom_budget=500")
+        r = c.get("/tax/harvest/plan?mode=custom&custom_budget=500", headers={"HX-Request": "true"})
     assert r.status_code == 200
     assert 'id="harvest-queue-region"' in r.text
 
 
 def test_plan_endpoint_manual_mode_renders():
     with _client() as c:
-        r = c.get("/tax/harvest/plan?mode=manual")
+        r = c.get("/tax/harvest/plan?mode=manual", headers={"HX-Request": "true"})
     assert r.status_code == 200
 
 
 def test_plan_endpoint_exclude_locked_off_includes_setting():
     with _client() as c:
-        r = c.get("/tax/harvest/plan?exclude_locked=0")
+        r = c.get("/tax/harvest/plan?exclude_locked=0", headers={"HX-Request": "true"})
     assert r.status_code == 200

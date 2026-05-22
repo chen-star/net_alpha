@@ -22,7 +22,11 @@
         hx-indicator="#sim-submit-spinner"
         x-data="{ action: '{{ action_pref if action_pref else ('sell' if harvest_mode else 'sell') }}' }"
         hx-on::after-request="
-          if (event.detail.successful) {
+          // Only log the run in Recents when the response actually populated
+          // the result panel — validation-error responses come back 200 with
+          // only an OOB clear and would otherwise pollute the list.
+          if (event.detail.successful &&
+              document.querySelector('#sim-result [data-testid=&quot;sim-result-ok&quot;]')) {
             window.dispatchEvent(new CustomEvent('sim-ran', {
               detail: {
                 ticker: this.querySelector('[name=ticker]').value,
@@ -84,11 +88,23 @@
       </div>
       <div class="flex flex-col">
         <label class="block label-uc mb-1 h-[14px] leading-[14px]">
-          Account <span class="text-label-2 text-[11px]" x-text="action === 'sell' ? '(All = per-account breakdown)' : '(optional)'"></span>
+          Account <span class="text-label-2 text-[11px]" x-text="action === 'sell' ? '(required)' : '(optional)'"></span>
         </label>
         <select name="account" class="bg-surface text-text rounded-md px-2 text-[13px] w-full h-[30px]"
-                style="border:0.5px solid var(--color-hairline);">
-          <option value="">All</option>
+                style="border:0.5px solid var(--color-hairline);"
+                x-init="
+                  if (action === 'sell' && !$el.value) {
+                    const _opt = $el.querySelector('option[value]:not([value=&quot;&quot;])');
+                    if (_opt) $el.value = _opt.value;
+                  }
+                  $watch('action', (v) => {
+                    if (v === 'sell' && !$el.value) {
+                      const _opt = $el.querySelector('option[value]:not([value=&quot;&quot;])');
+                      if (_opt) $el.value = _opt.value;
+                    }
+                  });
+                ">
+          <option value="" x-show="action !== 'sell'">All</option>
           {% for a in accounts %}<option value="{{ a }}" {% if account_pref == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
         </select>
         {# Phase 3 review C3: sim form errors target this div via HTMX OOB swap. #}

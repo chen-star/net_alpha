@@ -2207,6 +2207,14 @@ class Repository:
             tags_by_sym.setdefault(sym, []).append(tag)
         return [self._row_to_target(r, tuple(tags_by_sym.get(r.symbol, ()))) for r in rows]
 
+    def list_target_rows(self) -> list[PositionTargetRow]:
+        """Return raw PositionTargetRow records (with `id`) for jobs that need
+        the row primary key — e.g. the washsale_watch background job upserts
+        results keyed on ``target_id``. ``list_targets()`` drops the id when
+        mapping to the public dataclass."""
+        with Session(self.engine) as s:
+            return list(s.exec(select(PositionTargetRow).order_by(PositionTargetRow.symbol)).all())
+
     def list_targets_by_manual_order(self) -> list[PositionTarget]:
         """Return all position targets ordered by sort_order ASC, with
         symbol ASC as the deterministic tiebreaker. Used by the Plan tab's

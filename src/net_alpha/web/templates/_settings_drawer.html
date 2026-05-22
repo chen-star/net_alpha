@@ -15,8 +15,11 @@
        open: false,
        tab: 'imports',
        width: (function () {
-         const v = parseInt(localStorage.getItem('settings-drawer-width') || '420', 10);
-         return Number.isFinite(v) ? v : 420;
+         // Default 520 — wider than the original 420 so the Imports table's
+         // FILENAME column shows enough characters without forcing the user to
+         // discover the resize handle. Existing user-saved values are kept.
+         const v = parseInt(localStorage.getItem('settings-drawer-width') || '520', 10);
+         return Number.isFinite(v) ? v : 520;
        })(),
        resizing: false,
        handleHovered: false,
@@ -140,26 +143,31 @@
               role="tab"
               data-tab="imports"
               :class="tab === 'imports' ? 'tab tab--active' : 'tab'"
+              :aria-selected="tab === 'imports' ? 'true' : 'false'"
               @click="tab = 'imports'">Imports</button>
       <button type="button"
               role="tab"
               data-tab="profile"
               :class="tab === 'profile' ? 'tab tab--active' : 'tab'"
+              :aria-selected="tab === 'profile' ? 'true' : 'false'"
               @click="tab = 'profile'">Profile</button>
       <button type="button"
               role="tab"
               data-tab="density"
               :class="tab === 'density' ? 'tab tab--active' : 'tab'"
+              :aria-selected="tab === 'density' ? 'true' : 'false'"
               @click="tab = 'density'">Density</button>
       <button type="button"
               role="tab"
               data-tab="etf-pairs"
               :class="tab === 'etf-pairs' ? 'tab tab--active' : 'tab'"
+              :aria-selected="tab === 'etf-pairs' ? 'true' : 'false'"
               @click="tab = 'etf-pairs'">ETF pairs</button>
       <button type="button"
               role="tab"
               data-tab="about"
               :class="tab === 'about' ? 'tab tab--active' : 'tab'"
+              :aria-selected="tab === 'about' ? 'true' : 'false'"
               @click="tab = 'about'">About</button>
     </nav>
 

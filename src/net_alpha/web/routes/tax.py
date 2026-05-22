@@ -247,7 +247,18 @@ def harvest_plan(
     Note: compute_harvest_queue and build_plan take account_id: int | None (not
     accounts: list[str]). When multiple accounts are selected, we degrade to
     all-accounts (account_id=None). Task 11 will widen these helpers.
+
+    Direct (non-HTMX) GETs render a bare fragment with no chrome — that's
+    confusing when a user bookmarks or shares the URL. Redirect to the
+    parent /positions?view=at-loss page (which embeds this fragment via
+    HTMX on load), preserving the query string so deep-links survive.
     """
+    if request.headers.get("HX-Request") != "true":
+        qs = request.url.query
+        target = "/positions?view=at-loss"
+        if qs:
+            target = f"{target}&{qs}"
+        return RedirectResponse(url=target, status_code=303)
     from datetime import date
     from decimal import Decimal, InvalidOperation
 

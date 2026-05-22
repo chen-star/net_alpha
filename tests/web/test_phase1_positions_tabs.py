@@ -50,7 +50,7 @@ def test_at_loss_view_renders_harvest_queue_content(client: TestClient):
     # The loading shell must reference the plan endpoint
     assert "/tax/harvest/plan" in html or "harvest-queue-region" in html
     # The plan fragment is served correctly (200 + region id)
-    plan_resp = client.get("/tax/harvest/plan")
+    plan_resp = client.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     assert plan_resp.status_code == 200
     assert 'id="harvest-queue-region"' in plan_resp.text
 

@@ -7,7 +7,9 @@
   <button type="button"
           class="px-2 py-1 rounded bg-surface text-text text-[12px] flex items-center gap-1"
           style="border:0.5px solid var(--color-hairline);"
+          aria-label="Switch rendering profile"
           @click="open = !open">
+    <span class="text-label-2">Profile:</span>
     <span class="capitalize">{{ profile.profile }}</span>
     <span class="text-label-3" aria-hidden="true">▾</span>
   </button>

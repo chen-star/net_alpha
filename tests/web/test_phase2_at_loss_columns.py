@@ -9,7 +9,7 @@ def test_at_loss_table_has_lockout_clear_header(client: TestClient):
     # The table is now lazy-loaded via HTMX from /tax/harvest/plan.
     # When there are no harvestable candidates the table is omitted; verify
     # the fragment itself is served correctly (200 + region id).
-    resp = client.get("/tax/harvest/plan")
+    resp = client.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     assert resp.status_code == 200
     html = resp.text
     # Either there's a table with the Lockout-clear header, or the empty-state
@@ -21,7 +21,7 @@ def test_at_loss_table_has_replacement_header(client: TestClient):
     # The plan fragment includes the Actions column (Simulate harvest link),
     # which replaces the old Replacement column in the lazy-loaded fragment.
     # When no rows exist, the empty-state message is shown instead.
-    resp = client.get("/tax/harvest/plan")
+    resp = client.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     assert resp.status_code == 200
     html = resp.text
     assert "REPLACEMENT" in html or "Replacement" in html or "Actions" in html or "harvestable" in html.lower()

@@ -16,7 +16,7 @@
     <div class="flex items-center justify-between mt-1 text-[11px]">
       <span class="text-label-2"><span class="num" style="color:var(--color-cash);">${{ "{:,.0f}".format(_free) }}</span> free</span>
       <span class="text-label-2"
-            title="Cash pledged as cash-secured-put collateral. Includes any expired short puts your broker hasn't yet released (typically 1-2 business days post-expiry). The Open Options panel below filters expired contracts and may show a lower secured total until broker settlement completes."><span class="num" style="color:var(--color-warn);">${{ "{:,.0f}".format(_csp) }}</span> pledged · {{ csp_n }} CSP{% if csp_n != 1 %}s{% endif %}</span>
+            title="Cash pledged as cash-secured-put collateral on live short puts (expired contracts are excluded — their collateral is released by the broker on settlement). Matches the Cash deployment chart and Open Options panel."><span class="num" style="color:var(--color-warn);">${{ "{:,.0f}".format(_csp) }}</span> pledged · {{ csp_n }} CSP{% if csp_n != 1 %}s{% endif %}</span>
     </div>
   {% else %}
     <div class="text-[11px] text-label-2 mt-1">

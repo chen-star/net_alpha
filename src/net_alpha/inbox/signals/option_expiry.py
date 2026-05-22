@@ -49,12 +49,18 @@ def _expiry_severity(days_until: int) -> Severity:
     return Severity.INFO
 
 
-def _expiry_subtitle(days_until: int) -> str:
+def _expiry_subtitle(days_until: int, *, market_value: Decimal | None = None) -> str:
     if days_until == 0:
-        return "expires today"
-    if days_until == 1:
-        return "1d left"
-    return f"{days_until}d left"
+        head = "expires today"
+    elif days_until == 1:
+        head = "1d left"
+    else:
+        head = f"{days_until}d left"
+    # Distinguish "no quote → no estimate" from "out-of-the-money → $0 intrinsic".
+    # The bare `$0` figure in the inbox was confusing without this hint.
+    if market_value is not None and market_value == 0:
+        return f"{head} · OTM, $0 intrinsic"
+    return head
 
 
 def _is_itm(*, call_put: str, underlying: Decimal, strike: Decimal) -> bool:
@@ -170,7 +176,7 @@ def compute_option_expiry(
                 dismiss_key=f"option_expiry:{lot.trade_id}",
                 ticker=lot.ticker,
                 title=f"{lot.ticker} {opt.strike:g}{cp} exp {opt.expiry.isoformat()}",
-                subtitle=_expiry_subtitle(days_until),
+                subtitle=_expiry_subtitle(days_until, market_value=market_value),
                 event_date=opt.expiry,
                 days_until=days_until,
                 dollar_impact=market_value,

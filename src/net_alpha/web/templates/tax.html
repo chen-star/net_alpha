@@ -70,6 +70,7 @@
       {% for slug, label in tabs %}
         <a role="tab"
            class="tab {% if _active_tab == slug %}tab--active{% endif %}"
+           aria-selected="{{ 'true' if _active_tab == slug else 'false' }}"
            href="/tax?view={{ slug }}{% for a in selected_accounts %}&account={{ a|urlencode }}{% endfor %}">
           {{ label }}
         </a>
