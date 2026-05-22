@@ -646,11 +646,28 @@
     font-feature-settings: "tnum", "ss01";
   }
 
-  /* Brand mark */
-  .brand-mark {
-    @apply w-6 h-6 rounded-md grid place-items-center text-white text-[12px] font-bold;
-    background: linear-gradient(135deg, #5E5CE6 0%, #BF5AF2 100%);
-    box-shadow: 0 0 14px var(--color-brand-glow), inset 0 0 0 0.5px rgba(255,255,255,0.2);
+  /* Brand mark — typography-as-logo. The α character is gradient-filled via
+     background-clip:text so the brand color exists only at character-stroke
+     scale; no container, no glow, the topbar reads as neutral chrome. */
+  .brand-type {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    line-height: 1;
+  }
+  .brand-type .alpha {
+    font: 700 22px -apple-system, "SF Pro Display", sans-serif;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, var(--color-signature) 0%, var(--color-signature-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .brand-type .wordmark {
+    font: 500 11px -apple-system, sans-serif;
+    color: var(--color-label-2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   /* ApexCharts tooltip — vibrancy treatment matching .vibrancy-surface so
