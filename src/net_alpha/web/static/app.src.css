@@ -255,12 +255,13 @@
 
   /* Identity / signature — light-mode equivalents. Violet is darker for
      adequate contrast on white surfaces; tint/edge opacities preserved. */
-  --color-signature:      #8944AB;          /* darker violet for white-bg contrast */
-  --color-signature-tint: rgba(137,68,171,0.12);
-  --color-signature-edge: rgba(137,68,171,0.32);
+  --color-signature:      #007AFF;          /* Apple light systemBlue */
+  --color-signature-tint: rgba(0,122,255,0.12);
+  --color-signature-edge: rgba(0,122,255,0.32);
   --color-signature-2:      #0071A4;
   --color-signature-2-glow: rgba(0,113,164,0.40);
-  --color-link:           #3634A3;          /* same as --color-indigo (light) */
+  --color-link:           #007AFF;          /* same as --color-signature (light) */
+  --accent-hero: linear-gradient(135deg, #007AFF 0%, #0071A4 100%);
 
   --color-pos:  #248A3D;
   --color-neg:  #D70015;
@@ -284,7 +285,7 @@
   --color-unclear:   #0071A4;
   --color-primary:   #007AFF;
   --color-secondary: #3634A3;
-  --color-accent:    #8944AB;
+  --color-accent:    #007AFF;
   --color-ink:       #1D1D1F;
 
   --color-overlay-strong: rgba(0,0,0,0.55);
@@ -292,7 +293,7 @@
   --color-overlay-soft:   rgba(0,0,0,0.20);
   --color-row-hover:      rgba(60,60,67,0.04);
   --color-topbar-bg:      rgba(255,255,255,0.72);
-  --color-brand-glow:     rgba(137,68,171,0.28);
+  --color-brand-glow:     rgba(0,122,255,0.24);
   --color-cash:           rgba(142,142,147,0.55);
   --color-pos-tint:       rgba(36,138,61,0.12);
   --color-neg-tint:       rgba(215,0,21,0.10);
@@ -309,7 +310,7 @@
 
   /* Focus ring retinted to light-indigo (#3634A3) so the keyboard halo matches
      the rest of the light palette. Dark uses the @theme default (rgba 94,92,230,0.6). */
-  --ring-focus: 0 0 0 2px rgba(54,52,163,0.5);
+  --ring-focus: 0 0 0 2px rgba(0,122,255,0.5);
 }
 
 @layer base {
