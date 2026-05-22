@@ -55,7 +55,10 @@
   --color-label-2: rgba(235,235,245,0.60);
   --color-label-3: rgba(235,235,245,0.35);
 
-  /* Brand cyber */
+  /* Chart-series accents — retained as multi-series chart colors (donut
+     wedges, equity curve overlays, option call/put dots, cash-curve
+     pledged series). NOT used in chrome; brand identity routes through
+     --color-signature instead. Light variants override below. */
   --color-indigo: #5E5CE6;
   --color-violet: #BF5AF2;
 
@@ -97,6 +100,7 @@
   --color-topbar-bg:      rgba(0,0,0,0.60);
   --color-brand-glow:     rgba(10,132,255,0.32);
   --color-cash:           rgba(142,142,147,0.60);
+  --color-cash-strong:    #8E8E93;                 /* full-alpha systemGray — for cash fills on hairline backgrounds where the 60%-alpha --color-cash is too faint */
   --color-pos-tint:       rgba(48,209,88,0.10);
   --color-neg-tint:       rgba(255,69,58,0.14);
   --color-warn-tint:      rgba(255,159,10,0.16);
@@ -130,14 +134,17 @@
   /* Phase 0 additions (UI/UX redesign §5.1) */
   --accent-hero: linear-gradient(135deg, #0A84FF 0%, #00D4FF 100%);
 
-  /* Signature — violet binds to the α brand mark and supersedes the soft-
-     deprecated `--color-accent` (same value, but `signature` is the
-     canonical name going forward). Outside chart contexts, all identity
-     accent usage routes through these three tokens; indigo demotes to
-     functional accent (links, focus rings). */
-  --color-signature:      #0A84FF;
-  --color-signature-tint: rgba(10,132,255,0.16);
-  --color-signature-edge: rgba(10,132,255,0.32);
+  /* Signature — systemBlue binds to the α brand mark and supersedes the
+     soft-deprecated `--color-accent` (same value, but `signature` is the
+     canonical name going forward). All identity accent usage in chrome —
+     links, focus rings, active tabs, pane edges — routes through these
+     tokens. `signature-2` (cyan) is reserved for highlight moments
+     (KPI hero halo) and is not for general accent use. `signature-strong`
+     is the intensified variant for hover/pressed states. */
+  --color-signature:        #0A84FF;
+  --color-signature-tint:   rgba(10,132,255,0.16);
+  --color-signature-edge:   rgba(10,132,255,0.32);
+  --color-signature-strong: #0066CC;
   --color-signature-2:      #00D4FF;
   --color-signature-2-glow: rgba(0,212,255,0.50);
 
@@ -179,12 +186,13 @@
 
   --color-indigo: #5E5CE6;
   --color-violet: #BF5AF2;
-  --color-signature:      #0A84FF;
-  --color-signature-tint: rgba(10,132,255,0.16);
-  --color-signature-edge: rgba(10,132,255,0.32);
+  --color-signature:        #0A84FF;
+  --color-signature-tint:   rgba(10,132,255,0.16);
+  --color-signature-edge:   rgba(10,132,255,0.32);
+  --color-signature-strong: #0066CC;
   --color-signature-2:      #00D4FF;
   --color-signature-2-glow: rgba(0,212,255,0.50);
-  --color-link:           #0A84FF;
+  --color-link:             #0A84FF;
   --color-pos:    #30D158;
   --color-neg:    #FF453A;
   --color-warn:   #FF9F0A;
@@ -217,6 +225,7 @@
   --color-topbar-bg:  rgba(26,26,28,0.72);    /* was rgba(0,0,0,0.60) — bg @ 72% so topbar reads as a vibrancy surface above the new graphite canvas */
   --color-brand-glow: rgba(10,132,255,0.32);  /* systemBlue — was violet rgba(191,90,242,0.32) */
   --color-cash:           rgba(142,142,147,0.60);
+  --color-cash-strong:    #8E8E93;
   --color-pos-tint:       rgba(48,209,88,0.10);
   --color-neg-tint:       rgba(255,69,58,0.14);
   --color-warn-tint:      rgba(255,159,10,0.16);
@@ -253,14 +262,19 @@
   --color-indigo: #3634A3;
   --color-violet: #8944AB;
 
-  /* Identity / signature — light-mode equivalents. Violet is darker for
-     adequate contrast on white surfaces; tint/edge opacities preserved. */
-  --color-signature:      #007AFF;          /* Apple light systemBlue */
-  --color-signature-tint: rgba(0,122,255,0.12);
-  --color-signature-edge: rgba(0,122,255,0.32);
+  /* Identity / signature — light-mode equivalents. Apple light-systemBlue
+     #007AFF passes AA contrast on white surfaces; tint/edge opacities
+     preserved from dark. signature-2 stays a deep teal #0071A4 for solid
+     surfaces that need contrast on white, but signature-2-glow uses light
+     cyan #5AC8FA so the KPI hero halo reads as a soft cyan haze (a darker
+     teal at low alpha on white reads as a shadow, not a halo). */
+  --color-signature:        #007AFF;          /* Apple light systemBlue */
+  --color-signature-tint:   rgba(0,122,255,0.12);
+  --color-signature-edge:   rgba(0,122,255,0.32);
+  --color-signature-strong: #0064D1;          /* hover/pressed — Apple light systemBlue pressed */
   --color-signature-2:      #0071A4;
-  --color-signature-2-glow: rgba(0,113,164,0.40);
-  --color-link:           #007AFF;          /* same as --color-signature (light) */
+  --color-signature-2-glow: rgba(90,200,250,0.35);  /* light cyan halo (#5AC8FA @ 35%) so the kpi-hero glow reads on white */
+  --color-link:             #007AFF;          /* same as --color-signature (light) */
   --accent-hero: linear-gradient(135deg, #007AFF 0%, #0071A4 100%);
 
   --color-pos:  #248A3D;
@@ -295,6 +309,7 @@
   --color-topbar-bg:      rgba(255,255,255,0.72);
   --color-brand-glow:     rgba(0,122,255,0.24);
   --color-cash:           rgba(142,142,147,0.55);
+  --color-cash-strong:    #6E6E73;                 /* systemGray2 — darker for white-bg fill contrast */
   --color-pos-tint:       rgba(36,138,61,0.12);
   --color-neg-tint:       rgba(215,0,21,0.10);
   --color-warn-tint:      rgba(178,80,0,0.12);
@@ -422,8 +437,8 @@
   }
 
   /* Active positions cockpit pane — promoted from a flat 1px border
-     panel to a shadowed surface with a violet left edge so it reads
-     as the page's active focus surface, not a sibling column. */
+     panel to a shadowed surface with a signature-blue left edge so it
+     reads as the page's active focus surface, not a sibling column. */
   .positions-pane {
     box-shadow: var(--shadow-pane);
     border-left: 1px solid var(--color-signature);
@@ -726,17 +741,16 @@
   }
 
   /* Back-compat: keep existing classes alive until templates are restyled.
-     Hover uses a deeper blue (#0066CC dark / #0064D1 light), not the cyan
-     accent — cyan is reserved for highlight moments (KPI hero halo, chart
-     callouts), and using it on every button hover would read as a
-     "premium" state. */
+     Hover routes through --color-signature-strong (a deeper blue), not the
+     cyan signature-2 — cyan is reserved for highlight moments (KPI hero
+     halo) and using it on every button hover would read as a "premium"
+     state. Per-theme intensity is encoded in the token itself. */
   .btn {
     @apply inline-flex items-center px-3 py-2 rounded-md text-white text-sm font-medium cursor-pointer;
     background: var(--color-signature);
     transition: background-color 200ms;
   }
-  .btn:hover { background: #0066CC; }
-  [data-theme="light"] .btn:hover { background: #0064D1; }
+  .btn:hover { background: var(--color-signature-strong); }
   .btn-ghost {
     @apply inline-flex items-center px-3 py-2 rounded-md bg-surface text-sm cursor-pointer;
     color: var(--color-text);
@@ -779,8 +793,8 @@
   .text-success { color: var(--color-pos); }
 
   /* §5.14: keyboard-focus ring on every interactive primitive. Uses the
-     --ring-focus token so the indigo halo is consistent across buttons,
-     chips, tabs, nav links, and form inputs. */
+     --ring-focus token so the signature-blue halo is consistent across
+     buttons, chips, tabs, nav links, and form inputs. */
   .btn:focus-visible,
   .btn-ghost:focus-visible,
   .tab:focus-visible,
