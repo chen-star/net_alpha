@@ -179,12 +179,12 @@
 
   --color-indigo: #5E5CE6;
   --color-violet: #BF5AF2;
-  --color-signature:      #BF5AF2;
-  --color-signature-tint: rgba(191,90,242,0.16);
-  --color-signature-edge: rgba(191,90,242,0.32);
+  --color-signature:      #0A84FF;
+  --color-signature-tint: rgba(10,132,255,0.16);
+  --color-signature-edge: rgba(10,132,255,0.32);
   --color-signature-2:      #00D4FF;
   --color-signature-2-glow: rgba(0,212,255,0.50);
-  --color-link:           #5E5CE6;
+  --color-link:           #0A84FF;
   --color-pos:    #30D158;
   --color-neg:    #FF453A;
   --color-warn:   #FF9F0A;
@@ -207,7 +207,7 @@
   --color-unclear:   #64D2FF;
   --color-primary:   #0A84FF;
   --color-secondary: #5E5CE6;
-  --color-accent:    #BF5AF2;
+  --color-accent:    #0A84FF;
   --color-ink:       #FFFFFF;
 
   --color-overlay-strong: rgba(0,0,0,0.60);
@@ -215,7 +215,7 @@
   --color-overlay-soft:   rgba(0,0,0,0.20);
   --color-row-hover:      rgba(255,255,255,0.02);
   --color-topbar-bg:  rgba(26,26,28,0.72);    /* was rgba(0,0,0,0.60) — bg @ 72% so topbar reads as a vibrancy surface above the new graphite canvas */
-  --color-brand-glow: rgba(191,90,242,0.32);  /* was indigo rgba(94,92,230,0.35) — retint to violet signature */
+  --color-brand-glow: rgba(10,132,255,0.32);  /* systemBlue — was violet rgba(191,90,242,0.32) */
   --color-cash:           rgba(142,142,147,0.60);
   --color-pos-tint:       rgba(48,209,88,0.10);
   --color-neg-tint:       rgba(255,69,58,0.14);
