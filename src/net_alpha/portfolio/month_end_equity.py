@@ -72,8 +72,12 @@ def month_end_equity_series(
       current year; never True for historical years.
     """
     is_current_year = year == today.year
-    sorted_cash = sorted(cash_points, key=lambda p: p.on)
-    first_cash = sorted_cash[0].on if sorted_cash else None
+    # Materialize the input sequences once — account_value_at takes lists and
+    # we'd otherwise allocate three new lists per month iteration.
+    trades_list = list(trades)
+    lots_list = list(lots)
+    cash_list = list(cash_points)
+    first_cash = min((p.on for p in cash_list), default=None)
 
     tiles: list[MonthEndEquityTile] = []
     for m in range(1, 13):
@@ -89,9 +93,9 @@ def month_end_equity_series(
         else:
             end_value = account_value_at(
                 on=sample_date,
-                trades=list(trades),
-                lots=list(lots),
-                cash_points=list(cash_points),
+                trades=trades_list,
+                lots=lots_list,
+                cash_points=cash_list,
                 get_close=get_close,
             )
 
