@@ -379,12 +379,23 @@ def _short_option_unrealized_adjustment(
         days_remaining = max(0, (row.expiry - as_of).days)
         contracts = row.qty_short
         multiplier = Decimal(str(row.contract_multiplier))
-        # premium_received is total net dollars across all contracts on this chain
-        premium_per_share = (row.premium_received / contracts / multiplier) if contracts > 0 else Decimal("0")
+        # ``row.premium_received`` is *net of BTC* — the BTC cost has already
+        # been booked as realized P&L (see ``realized_pl_contributions`` BTC
+        # branch). Using it here would subtract the BTC cost a second time
+        # from the unrealized side. The correct base is the STO premium
+        # *attributable to the still-open contracts*, derived by pro-rating
+        # the gross STO total by remaining contract fraction.
+        if row.sto_qty_total > 0:
+            sto_premium_for_remaining = row.sto_premium_total * contracts / row.sto_qty_total
+        else:
+            # Defensive fallback for callers/tests that build rows without
+            # populating the gross STO fields (default = 0).
+            sto_premium_for_remaining = row.premium_received
+        premium_per_share = (sto_premium_for_remaining / contracts / multiplier) if contracts > 0 else Decimal("0")
         time_value_per_share = premium_per_share * (Decimal(days_remaining) / Decimal(days_total))
         est_value_per_share = max(intrinsic_per_share, time_value_per_share)
         est_liability = (est_value_per_share * contracts * multiplier).quantize(Decimal("0.01"))
-        total_adj += row.premium_received - est_liability
+        total_adj += sto_premium_for_remaining - est_liability
     return total_adj.quantize(Decimal("0.01"))
 
 

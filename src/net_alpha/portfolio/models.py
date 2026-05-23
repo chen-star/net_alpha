@@ -84,7 +84,16 @@ class OpenShortOptionRow:
     Surfaced on the ticker drilldown so cash-secured puts and covered calls
     show up alongside long lots. Quantity is reported as a positive number of
     contracts short. ``cash_secured`` is the strike-times-shares the user has
-    pledged when this is a put (NaN when not applicable / call)."""
+    pledged when this is a put (NaN when not applicable / call).
+
+    ``premium_received`` is **net of BTC** — the cash actually still sitting
+    in the chain. ``sto_premium_total`` / ``sto_qty_total`` expose the
+    *gross* STO side so consumers (e.g. the unrealized-liability estimator)
+    can derive the STO premium attributable to the still-open contracts:
+    ``sto_premium_total × qty_short / sto_qty_total``. Using
+    ``premium_received`` for that calc would double-count any BTC cost that
+    has already been booked as realized P&L.
+    """
 
     account: str
     ticker: str
@@ -95,6 +104,8 @@ class OpenShortOptionRow:
     premium_received: Decimal  # net premium kept on this chain
     opened_at: date | None
     contract_multiplier: int = 100
+    sto_premium_total: Decimal = Decimal("0")  # gross STO proceeds across the chain
+    sto_qty_total: Decimal = Decimal("0")  # total STO contract quantity across the chain
 
     @property
     def cash_secured(self) -> Decimal:

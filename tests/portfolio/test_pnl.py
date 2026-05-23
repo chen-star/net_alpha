@@ -1076,3 +1076,141 @@ def test_compute_wash_impact_accounts_list_single_matches_legacy():
     result_a = compute_wash_impact(violations=[v_cross], period_label="YTD", period=(2026, 2027), accounts=["Tax"])
     result_b = compute_wash_impact(violations=[v_cross], period_label="YTD", period=(2026, 2027), accounts=["Tax"])
     assert result_a == result_b
+
+
+def test_partial_btc_does_not_double_count_in_lifetime_net_pl():
+    """STO 2c @ $100/contract (total premium $200), BTC 1c @ $50, leaving 1c open.
+
+    Realized (paired premium - btc cost):    (200 × 1/2) − 50 = +$50
+    Today: spot $100.80, strike $100 call, expiry 60d out, opened 30d ago →
+        intrinsic_per_share  = max(0, 100.80 − 100) = 0.80
+        premium_per_share (TRUE)    = 200/2/100 = 1.00
+        days_remaining/days_total = 30/60 = 0.5
+        time_value_per_share = 1.00 × 0.5 = 0.50
+        est_value_per_share  = max(0.80, 0.50) = 0.80
+        est_liability        = 0.80 × 1 × 100 = $80
+
+    Correct unrealized for the remaining contract:
+        sto_premium_for_remaining (200 × 1/2 = 100) − est_liability(80) = +$20
+    Correct lifetime_net_pl: realized($50) + unrealized($20) = +$70
+
+    Pre-fix: row.premium_received is NET of BTC ($150), so unrealized
+    miscalculates as 150 − 80 = +$70 → lifetime_net_pl = 50 + 70 = $120,
+    overstating by exactly the BTC cost ($50) which was already booked as
+    realized.
+    """
+    today = dt.date(2026, 5, 3)
+    opened = dt.date(2026, 4, 3)
+    btc_date = dt.date(2026, 4, 17)
+    expiry = dt.date(2026, 6, 2)  # 60 days from opened
+    opt = OptionDetails(strike=100.0, expiry=expiry, call_put="C")
+    trades = [
+        Trade(
+            id="sto",
+            account="Tax",
+            date=opened,
+            ticker="ACME",
+            action="Sell",
+            quantity=2.0,
+            cost_basis=None,
+            proceeds=200.0,
+            gross_cash_impact=200.0,
+            basis_source="option_short_open",
+            option_details=opt,
+        ),
+        Trade(
+            id="btc",
+            account="Tax",
+            date=btc_date,
+            ticker="ACME",
+            action="Buy",
+            quantity=1.0,
+            cost_basis=50.0,
+            proceeds=None,
+            gross_cash_impact=-50.0,
+            basis_source="option_short_close",
+            option_details=opt,
+        ),
+    ]
+    prices = {
+        "ACME": Quote(
+            symbol="ACME",
+            price=Decimal("100.80"),
+            previous_close=Decimal("100.80"),
+            as_of=dt.datetime(2026, 5, 3, 16, 0, tzinfo=dt.UTC),
+            source="yahoo",
+        )
+    }
+    kpis = compute_kpis(
+        trades=trades,
+        lots=[],
+        prices=prices,
+        period_label="Lifetime",
+        period=None,
+        as_of=today,
+    )
+    # Realized: +$50
+    assert abs(kpis.lifetime_realized - Decimal("50")) < Decimal("0.01")
+    # Unrealized for the remaining 1c: +$20 (NOT +$70)
+    assert kpis.lifetime_unrealized is not None
+    assert abs(kpis.lifetime_unrealized - Decimal("20")) < Decimal("0.01")
+    # Lifetime net: +$70 (NOT +$120)
+    assert kpis.lifetime_net_pl is not None
+    assert abs(kpis.lifetime_net_pl - Decimal("70")) < Decimal("0.01")
+
+
+def test_compute_open_short_option_exposes_sto_premium_for_remaining_contracts():
+    """`compute_open_short_option_positions` must expose enough info for the
+    unrealized estimator to compute the STO-only per-share premium for the
+    *still-open* contracts (not the chain-wide net-of-BTC figure divided by
+    remaining qty).
+
+    For STO 2c @ $200 total premium then BTC 1c @ $50:
+      - premium_received (net) = $150 — what cash actually stayed in the chain
+      - sto_premium_total      = $200 — gross STO proceeds across the chain
+      - sto_qty_total          = 2 contracts
+      - qty_short              = 1 (still open)
+      → STO premium attributable to remaining = 200 × 1/2 = $100
+      → premium_per_share (STO, remaining) = 100 / 1 / 100 = $1.00
+
+    Pre-fix the only way to derive per-share was net/remaining = 150/1/100 = $1.50,
+    which double-counts the BTC cost.
+    """
+    from net_alpha.portfolio.positions import compute_open_short_option_positions
+
+    opt = OptionDetails(strike=100.0, expiry=dt.date(2026, 6, 2), call_put="C")
+    trades = [
+        Trade(
+            id="sto",
+            account="Tax",
+            date=dt.date(2026, 4, 3),
+            ticker="ACME",
+            action="Sell",
+            quantity=2.0,
+            cost_basis=None,
+            proceeds=200.0,
+            gross_cash_impact=200.0,
+            basis_source="option_short_open",
+            option_details=opt,
+        ),
+        Trade(
+            id="btc",
+            account="Tax",
+            date=dt.date(2026, 4, 17),
+            ticker="ACME",
+            action="Buy",
+            quantity=1.0,
+            cost_basis=50.0,
+            proceeds=None,
+            gross_cash_impact=-50.0,
+            basis_source="option_short_close",
+            option_details=opt,
+        ),
+    ]
+    rows = compute_open_short_option_positions(trades)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.qty_short == Decimal("1")
+    assert row.premium_received == Decimal("150.00")  # net of BTC, unchanged contract
+    assert row.sto_premium_total == Decimal("200.00")  # gross STO proceeds
+    assert row.sto_qty_total == Decimal("2")

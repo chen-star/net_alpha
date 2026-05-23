@@ -399,9 +399,17 @@ def compute_open_short_option_positions(
     #   net_qty: positive for net long, negative for net short
     #   net_premium: cumulative STO proceeds - BTC costs (signed)
     #   latest_sto_date: most recent STO date in the chain
+    #   sto_premium_total: cumulative *gross* STO proceeds (no BTC subtraction)
+    #   sto_qty_total: cumulative *gross* STO contract quantity
+    # The gross STO totals let downstream callers (e.g. the unrealized
+    # liability estimator) derive the STO premium attributable to the
+    # still-open contracts without double-counting BTC costs that have
+    # already been realized.
     Key = tuple[str, str, float, object, str]
     net_qty: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
     net_premium: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
+    sto_premium_total: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
+    sto_qty_total: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
     latest_sto_date: dict[Key, date] = {}
     for t in trades:
         if t.option_details is None:
@@ -417,6 +425,8 @@ def compute_open_short_option_positions(
         else:
             net_qty[key] -= delta
             net_premium[key] += Decimal(str(t.proceeds or 0))
+            sto_premium_total[key] += Decimal(str(t.proceeds or 0))
+            sto_qty_total[key] += delta
             prior = latest_sto_date.get(key)
             if prior is None or t.date > prior:
                 latest_sto_date[key] = t.date
@@ -454,6 +464,8 @@ def compute_open_short_option_positions(
                 qty_short=-qty,  # positive number of contracts short
                 premium_received=net_premium[key].quantize(Decimal("0.01")),
                 opened_at=latest_sto_date.get(key),
+                sto_premium_total=sto_premium_total[key].quantize(Decimal("0.01")),
+                sto_qty_total=sto_qty_total[key],
             )
         )
     rows.sort(key=lambda r: (r.expiry, r.ticker, r.strike))

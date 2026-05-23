@@ -155,11 +155,17 @@ def _estimate_short_option_liability(
     row,  # OpenShortOptionRow
     spot: Decimal,
     as_of: dt.date,
-) -> tuple[Decimal, Decimal, int, int, Decimal, Decimal]:
+) -> tuple[Decimal, Decimal, int, int, Decimal, Decimal, Decimal]:
     """Estimate the cost-to-close for one open short option row.
 
     Returns: (est_liability, intrinsic_per_share, days_total, days_remaining,
-              time_value_per_share, premium_per_share).
+              time_value_per_share, premium_per_share, sto_premium_for_remaining).
+
+    ``sto_premium_for_remaining`` is the gross STO premium pro-rated to the
+    still-open contracts — the correct unrealized baseline, because the BTC
+    cost already netted into ``row.premium_received`` has been separately
+    booked as realized P&L. Using ``row.premium_received`` would double-count
+    the BTC cost on the unrealized side.
 
     Math mirrors `pnl._short_option_unrealized_adjustment()`.
     Pure — no I/O, no quote lookup (caller resolves spot first).
@@ -173,7 +179,11 @@ def _estimate_short_option_liability(
     days_remaining = max(0, (row.expiry - as_of).days)
     contracts = row.qty_short
     multiplier = Decimal(str(row.contract_multiplier))
-    premium_per_share = row.premium_received / contracts / multiplier if contracts > 0 else Decimal("0")
+    if row.sto_qty_total > 0:
+        sto_premium_for_remaining = row.sto_premium_total * contracts / row.sto_qty_total
+    else:
+        sto_premium_for_remaining = row.premium_received  # back-compat for callers that omit gross fields
+    premium_per_share = sto_premium_for_remaining / contracts / multiplier if contracts > 0 else Decimal("0")
     time_value = premium_per_share * (Decimal(days_remaining) / Decimal(days_total))
     est_per_share = max(intrinsic, time_value)
     est_liability = (est_per_share * contracts * multiplier).quantize(Decimal("0.01"))
@@ -184,6 +194,7 @@ def _estimate_short_option_liability(
         days_remaining,
         time_value,
         premium_per_share,
+        sto_premium_for_remaining,
     )
 
 
@@ -305,16 +316,21 @@ def build_unrealized_breakdown(
             days_remaining,
             time_value,
             _premium_per_share,
+            sto_premium_for_remaining,
         ) = _estimate_short_option_liability(row=row, spot=spot, as_of=as_of)
-        unrealized = (row.premium_received - est_liability).quantize(Decimal("0.01"))
+        unrealized = (sto_premium_for_remaining - est_liability).quantize(Decimal("0.01"))
         short_subtotal += unrealized
-        short_premium_total += row.premium_received
+        # ``short_premium_total`` is the unrealized baseline (gross STO premium
+        # for the still-open contracts), matching the line's
+        # ``premium_received`` field below. Reporting net-of-BTC here would
+        # leave the breakdown failing to sum to ``short_subtotal``.
+        short_premium_total += sto_premium_for_remaining
         short_liability_total += est_liability
         short_lines.append(
             UnrealizedShortOptionLine(
                 symbol_display=f"{row.ticker} {strike}{row.call_put} {row.expiry.isoformat()}",
                 contracts=int(row.qty_short),
-                premium_received=row.premium_received,
+                premium_received=sto_premium_for_remaining.quantize(Decimal("0.01")),
                 spot=spot,
                 intrinsic_per_share=intrinsic,
                 days_total=days_total,
@@ -403,8 +419,13 @@ def build_account_value_breakdown(
             # panel's behavior of excluding the row).
             continue
         spot = Decimal(str(quote.price))
-        est_liability, *_ = _estimate_short_option_liability(row=row, spot=spot, as_of=as_of)
-        short_premium_total += row.premium_received
+        # Discard the unused intermediate values; we only need the liability
+        # and the remaining-contracts STO premium to keep this aggregate's
+        # math in lock-step with ``build_unrealized_breakdown``.
+        est_liability, _, _, _, _, _, sto_premium_for_remaining = _estimate_short_option_liability(
+            row=row, spot=spot, as_of=as_of
+        )
+        short_premium_total += sto_premium_for_remaining
         short_liability_total += est_liability
 
     long_stock_mv = long_stock_mv.quantize(Decimal("0.01"))
