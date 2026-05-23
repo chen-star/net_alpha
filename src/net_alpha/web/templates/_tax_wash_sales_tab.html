@@ -63,7 +63,11 @@
   {% if sort %}<input type="hidden" name="sort" value="{{ sort }}"/>{% endif %}
   {% if order %}<input type="hidden" name="order" value="{{ order }}"/>{% endif %}
   <button type="submit" class="btn">Apply</button>
-  <a href="/tax?view={{ view }}" class="btn-ghost">Reset</a>
+  {# Reset clears the in-tab filters (ticker / year / confidence) but
+     preserves the page-level scope (account, period) so the user doesn't
+     lose their toolbar selection — those live in the topbar, not the
+     filter form. #}
+  <a href="/tax?view={{ view }}{% if selected_period %}&period={{ selected_period|urlencode }}{% endif %}{% for a in selected_accounts %}&account={{ a|urlencode }}{% endfor %}" class="btn-ghost">Reset</a>
 </form>
 </details>
 
@@ -92,7 +96,7 @@
               class="ml-1 hover:text-text">&#10007;</button>
     </span>
   {% endif %}
-  <a data-testid="filter-reset" href="/tax?view={{ view }}" class="ml-auto text-label-3 hover:text-text" title="Reset filters">&#10007; reset</a>
+  <a data-testid="filter-reset" href="/tax?view={{ view }}{% if selected_period %}&period={{ selected_period|urlencode }}{% endif %}{% for a in selected_accounts %}&account={{ a|urlencode }}{% endfor %}" class="ml-auto text-label-3 hover:text-text" title="Reset filters">&#10007; reset</a>
 </div>
 
 {# W3: compact calendar strip — always rendered so the testid is always in the DOM.

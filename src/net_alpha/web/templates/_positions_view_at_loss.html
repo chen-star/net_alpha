@@ -27,10 +27,21 @@
         · ETF replacements: {{ replacements_count }}
       {% endif %}
     </div>
-    <form hx-get="{{ harvest_form_action|default('/tax?view=harvest') }}"
+    {# Scope filters (period, account) must round-trip through this HTMX
+       request so the user doesn't get bumped back to the default scope when
+       they toggle the harvestable checkbox. Default action also points back
+       at /positions?view=at-loss so even the fallback path stays on this
+       page instead of bouncing through the /tax?view=harvest 301 redirect. #}
+    <form hx-get="{{ harvest_form_action|default('/positions?view=at-loss') }}"
           hx-target="{{ harvest_form_target|default('#tab-content') }}"
           hx-swap="innerHTML"
           class="flex items-center gap-2">
+      {% if selected_period %}
+        <input type="hidden" name="period" value="{{ selected_period }}">
+      {% endif %}
+      {% for a in selected_accounts %}
+        <input type="hidden" name="account" value="{{ a }}">
+      {% endfor %}
       <label class="text-label-2 text-[12px] flex items-center gap-1 cursor-pointer">
         <input type="checkbox"
                name="only_harvestable"

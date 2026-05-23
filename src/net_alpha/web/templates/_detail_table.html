@@ -5,15 +5,20 @@
     <div class="text-label-2 text-[12px] mt-1">net-alpha checks both directions and across accounts.</div>
   </div>
 {% else %}
-  {# Build the lag-sort URL preserving current filters #}
-  {% set lag_qs = [] %}
-  {% if filter_ticker %}{% set _ = lag_qs.append('ticker=' ~ filter_ticker) %}{% endif %}
-  {% if filter_account %}{% set _ = lag_qs.append('account=' ~ filter_account) %}{% endif %}
+  {# Build the lag-sort URL preserving current filters. The wash-sales tab
+     reads `selected_accounts` (list) and `selected_period`; legacy
+     `filter_account` is singular and no longer populated by the tax route, so
+     we iterate the list and url-encode each entry. Target /tax directly so we
+     don't bounce through the /wash-sales → /tax 301 redirect. #}
+  {% set lag_qs = ['view=' ~ view] %}
+  {% if filter_ticker %}{% set _ = lag_qs.append('ticker=' ~ (filter_ticker|urlencode)) %}{% endif %}
+  {% for a in selected_accounts %}{% set _ = lag_qs.append('account=' ~ (a|urlencode)) %}{% endfor %}
+  {% if selected_period %}{% set _ = lag_qs.append('period=' ~ (selected_period|urlencode)) %}{% endif %}
   {% if filter_year %}{% set _ = lag_qs.append('year=' ~ filter_year) %}{% endif %}
-  {% if filter_confidence %}{% set _ = lag_qs.append('confidence=' ~ filter_confidence) %}{% endif %}
+  {% if filter_confidence %}{% set _ = lag_qs.append('confidence=' ~ (filter_confidence|urlencode)) %}{% endif %}
   {% set _ = lag_qs.append('sort=lag') %}
   {% set _ = lag_qs.append('order=' ~ next_lag_order) %}
-  {% set lag_url = '/wash-sales?' ~ lag_qs|join('&') %}
+  {% set lag_url = '/tax?' ~ lag_qs|join('&') %}
 
   <div class="panel" style="padding:0; overflow:hidden;">
     {% for g in groups %}
