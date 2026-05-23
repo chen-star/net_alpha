@@ -276,6 +276,33 @@ def test_option_loss_buy_stock_probable():
     assert get_match_confidence(sell, buy, {}) == "Probable"
 
 
+def test_long_put_loss_buy_stock_no_match():
+    """Audit #14: a long PUT is a contract to SELL; it is not §1091
+    substantially-identical to the underlying stock. Closing a long put at a
+    loss followed by buying the underlying within ±30 days must NOT be flagged
+    as a wash sale. Only a long-CALL loss → buy-stock is the §1091 case.
+    """
+    sell = Trade(
+        account="A",
+        date=date(2024, 1, 1),
+        ticker="TSLA",
+        action="Sell",  # sell-to-close the long put
+        quantity=1.0,
+        proceeds=100.0,
+        cost_basis=500.0,
+        option_details=OptionDetails(strike=250.0, expiry=date(2024, 12, 20), call_put="P"),
+    )
+    buy = Trade(
+        account="B",
+        date=date(2024, 1, 10),
+        ticker="TSLA",
+        action="Buy",
+        quantity=10.0,
+        cost_basis=2500.0,
+    )
+    assert get_match_confidence(sell, buy, {}) is None
+
+
 # --- ETF confidence tests (Task 9) ---
 
 ETF_PAIRS = {

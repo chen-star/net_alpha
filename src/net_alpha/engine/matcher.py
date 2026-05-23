@@ -55,9 +55,15 @@ def get_match_confidence(
                 return "Probable"
             return None
 
-        # Loss sale is option, candidate is equity
+        # Loss sale is option, candidate is equity.
+        # Audit #14: only a long CALL is "substantially identical" to the
+        # underlying stock under §1091 (both bet on the same upside). A long
+        # PUT is a contract to SELL the underlying — opposite directional
+        # exposure — so its loss + buy-of-stock is NOT a wash sale.
         if loss_sale.is_option() and not candidate.is_option():
-            return "Probable"
+            if loss_sale.option_details.call_put == "C":
+                return "Probable"
+            return None
 
         # Both options on same underlying
         if loss_sale.is_option() and candidate.is_option():
