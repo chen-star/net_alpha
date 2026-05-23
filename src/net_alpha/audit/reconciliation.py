@@ -36,9 +36,22 @@ def reconcile(
     account_id: int,
     repo: Repository,
     tolerance: float = DEFAULT_TOLERANCE,
+    tax_year: int | None = None,
 ) -> ReconciliationResult:
+    """Reconcile net-alpha realized P&L against the broker's Realized G/L.
+
+    By default (``tax_year=None``), both sides are summed over ALL time. This
+    is correct only if the broker file covers the same lifetime scope as the
+    user's net-alpha ledger. In practice users often upload only the current
+    or prior tax year of G/L, so the lifetime totals diverge by exactly the
+    P&L of the years the broker file omits — a misleading DIFF.
+
+    Pass ``tax_year=<YYYY>`` (audit #15) to narrow both sides to closes whose
+    ``closed_date.year == tax_year``. Web routes rendering a single-year period
+    should thread the page-level year through this parameter.
+    """
     provider = get_provider_for_account(account_id, repo)
-    net_alpha_total = _net_alpha_realized(repo, account_id, symbol)
+    net_alpha_total = _net_alpha_realized(repo, account_id, symbol, tax_year=tax_year)
 
     if provider is None:
         return ReconciliationResult(
@@ -53,6 +66,11 @@ def reconcile(
         )
 
     broker_lots = provider.get_lot_detail(account_id, symbol)
+    if tax_year is not None:
+        broker_lots = [
+            lot for lot in broker_lots if getattr(lot, "closed", None) is not None
+            and getattr(lot.closed, "year", None) == tax_year
+        ]
     broker_total = sum((lot.proceeds or 0.0) - lot.cost_basis for lot in broker_lots)
     delta = round(net_alpha_total - broker_total, 4)
     if abs(delta) < 0.005:
@@ -103,8 +121,14 @@ def reconcile_all(
 _OPTION_SHORT_CLOSE_SOURCES = {"option_short_close", "option_short_close_assigned"}
 
 
-def _net_alpha_realized(repo: Repository, account_id: int, symbol: str) -> float:
-    """Sum realized P/L for the (account, symbol) pair across all time.
+def _net_alpha_realized(
+    repo: Repository,
+    account_id: int,
+    symbol: str,
+    *,
+    tax_year: int | None = None,
+) -> float:
+    """Sum realized P/L for the (account, symbol) pair.
 
     Includes:
       * Sell trades — standard equity/long-option close.
@@ -114,6 +138,10 @@ def _net_alpha_realized(repo: Repository, account_id: int, symbol: str) -> float
         which correctly contributes the *expense* leg to a STO/BTC pair's
         net P&L. Excluding BTC left options-heavy accounts always DIFF
         against broker totals.
+
+    Audit #15: when ``tax_year`` is provided, restrict to closes whose
+    trade date falls in that calendar year so reconciliation against a
+    single-year broker G/L file matches scopes.
     """
     total = 0.0
     accounts = {a.id: f"{a.broker}/{a.label}" if a.label else a.broker for a in repo.list_accounts()}
@@ -124,6 +152,8 @@ def _net_alpha_realized(repo: Repository, account_id: int, symbol: str) -> float
         if not (is_sell or is_short_close):
             continue
         if target_display is not None and t.account != target_display:
+            continue
+        if tax_year is not None and t.date.year != tax_year:
             continue
         total += (t.proceeds or 0.0) - (t.cost_basis or 0.0)
     return total
