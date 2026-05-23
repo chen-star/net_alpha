@@ -40,6 +40,29 @@ def test_realized_recon_emits_fail_finding_on_drift(monkeypatch):
     assert any(f.rule_id == "RealizedRecon" and f.severity == Severity.FAIL for f in findings)
 
 
+def test_realized_recon_forwards_tax_year(monkeypatch):
+    """Audit #15 follow-up: ``reconcile_realized_gl`` must thread its
+    ``tax_year`` arg through to ``reconcile_all`` so a page-scoped run
+    (e.g. ``?period=2024``) narrows both sides of the comparison."""
+    from net_alpha.audit import reconciliation as recon_mod
+
+    seen: dict = {}
+
+    def fake_reconcile_all(**kwargs):
+        seen.update(kwargs)
+        return []
+
+    monkeypatch.setattr(recon_mod, "reconcile_all", fake_reconcile_all)
+
+    repo = MagicMock()
+    reconcile_realized_gl(repo=repo, tol_cfg=load_tolerances(), tax_year=2024)
+    assert seen.get("tax_year") == 2024
+
+    seen.clear()
+    reconcile_realized_gl(repo=repo, tol_cfg=load_tolerances())
+    assert seen.get("tax_year") is None
+
+
 def _bp(symbol: str, acct: str, qty: float, basis: float, mv: float, as_of: str) -> BrokerPosition:
     return BrokerPosition(
         import_id=1,

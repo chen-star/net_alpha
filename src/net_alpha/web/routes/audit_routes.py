@@ -58,6 +58,30 @@ def provenance_modal(
     )
 
 
+def _tax_year_from_period(period: str | None) -> int | None:
+    """Map a page-level ``period`` query param onto a ``tax_year`` int.
+
+    Mirrors the convention used elsewhere in the web layer:
+      * ``"lifetime"`` / unset → ``None`` (no year scope)
+      * ``"ytd"``              → current calendar year
+      * ``"<YYYY>"``           → that integer year
+      * anything else          → ``None`` (defensive — preserves lifetime)
+
+    Audit #15 follow-up: the per-symbol reconciliation strip lives on the
+    ticker page (today hardcoded to YTD KPIs) but the route accepts a
+    ``period`` so the same component can drop into a period-scoped page
+    later without further wiring.
+    """
+    if not period or period == "lifetime":
+        return None
+    if period == "ytd":
+        return _date.today().year
+    try:
+        return int(period)
+    except ValueError:
+        return None
+
+
 @router.get("/reconciliation/{symbol}", response_class=HTMLResponse)
 def reconciliation_strip(
     symbol: str,
@@ -65,9 +89,15 @@ def reconciliation_strip(
     account_id: int = Query(...),
     expanded: bool = Query(False),
     variant: str = Query("full"),  # "full" | "badge"
+    period: str | None = Query(None),
+    tax_year: int | None = Query(None),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
-    result = reconcile(symbol=symbol.upper(), account_id=account_id, repo=repo)
+    # Explicit ``tax_year=`` wins over a derived ``period=`` so callers
+    # constructing the URL programmatically can be unambiguous; otherwise
+    # fall back to mapping ``period`` onto a calendar year (audit #15).
+    scoped_year = tax_year if tax_year is not None else _tax_year_from_period(period)
+    result = reconcile(symbol=symbol.upper(), account_id=account_id, repo=repo, tax_year=scoped_year)
     if variant == "badge":
         return request.app.state.templates.TemplateResponse(
             request,

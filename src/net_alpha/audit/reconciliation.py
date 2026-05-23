@@ -97,6 +97,7 @@ def reconcile_all(
     *,
     repo: Repository,
     tolerance: float = DEFAULT_TOLERANCE,
+    tax_year: int | None = None,
 ) -> list[ReconciliationResult]:
     """Reconcile every (account, symbol) pair the repository knows about.
 
@@ -104,6 +105,11 @@ def reconcile_all(
     `repo.get_gl_lots_for_account()` (i.e. only symbols where a broker
     Realized G/L row exists). Accounts without a broker provider yield
     UNAVAILABLE results, which downstream callers skip.
+
+    Audit #15 follow-up: ``tax_year`` is forwarded to every per-symbol
+    ``reconcile()`` call so callers can narrow both sides of the comparison
+    to a single year. ``None`` (default) preserves the original
+    lifetime-scope behaviour.
 
     Thin helper consumed by `verify/broker_recon.py::reconcile_realized_gl`
     — kept in `audit/` so module ownership stays with the reconciliation
@@ -114,7 +120,15 @@ def reconcile_all(
         gl_lots = repo.get_gl_lots_for_account(acct.id)
         symbols = sorted({lot.symbol_raw for lot in gl_lots})
         for sym in symbols:
-            out.append(reconcile(symbol=sym, account_id=acct.id, repo=repo, tolerance=tolerance))
+            out.append(
+                reconcile(
+                    symbol=sym,
+                    account_id=acct.id,
+                    repo=repo,
+                    tolerance=tolerance,
+                    tax_year=tax_year,
+                )
+            )
     return out
 
 

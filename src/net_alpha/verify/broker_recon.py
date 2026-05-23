@@ -15,12 +15,24 @@ from net_alpha.verify.tolerances import Severity, ToleranceConfig, classify
 STALENESS_DAYS = 30
 
 
-def reconcile_realized_gl(*, repo: Any, tol_cfg: ToleranceConfig) -> list[InvariantResult]:
+def reconcile_realized_gl(
+    *,
+    repo: Any,
+    tol_cfg: ToleranceConfig,
+    tax_year: int | None = None,
+) -> list[InvariantResult]:
     """Compare our computed realized P&L against the broker Realized G/L CSV.
 
     Reuses audit.reconciliation.reconcile_all — emits one InvariantResult per
     drift exceeding the realized tolerance. Returns empty when audit lacks
     the helper, no accounts exist, or every account is UNAVAILABLE.
+
+    Audit #15 follow-up: ``tax_year`` is forwarded to ``reconcile_all`` so
+    a page-scoped caller (e.g. a year-filtered web route) narrows both
+    sides of every per-symbol comparison to that calendar year. The
+    default ``None`` preserves the prior lifetime-scope behaviour, which
+    is what the scheduler-driven verify job uses (it has no notion of a
+    "current tax year").
     """
     try:
         from net_alpha.audit.reconciliation import reconcile_all
@@ -28,7 +40,11 @@ def reconcile_realized_gl(*, repo: Any, tol_cfg: ToleranceConfig) -> list[Invari
         return []  # audit.reconciliation lacks reconcile_all yet — graceful no-op
     out: list[InvariantResult] = []
     try:
-        results = reconcile_all(repo=repo, tolerance=tol_cfg.realized.abs)
+        results = reconcile_all(
+            repo=repo,
+            tolerance=tol_cfg.realized.abs,
+            tax_year=tax_year,
+        )
     except Exception:  # noqa: BLE001
         return []
     for r in results:
