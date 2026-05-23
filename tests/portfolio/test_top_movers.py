@@ -84,3 +84,62 @@ def test_unrealized_pct_is_none_when_open_cost_zero():
     )
     view = build_top_movers([row], k=3)
     assert view.winners[0].unrealized_pct is None
+
+
+def test_largest_unrealized_alias_exposes_clarified_naming():
+    """Audit #6: panel called 'Top Movers' but ranks by *lifetime*
+    unrealized P&L since acquisition — not a session/1-day window.
+    The clarified name is 'Largest unrealized gains/losses'. Expose
+    ``build_largest_unrealized`` (function), ``LargestUnrealizedView``
+    (model), and ``gains`` / ``losses`` fields as the primary names —
+    keep ``build_top_movers`` / ``TopMoversView`` / ``winners`` /
+    ``losers`` as back-compat aliases so callers (web route + template)
+    don't break in this commit.
+    """
+    from net_alpha.portfolio.top_movers import (
+        LargestUnrealizedView,
+        TopMoversView,
+        build_largest_unrealized,
+        build_top_movers,
+    )
+
+    # The aliases point at the same callables / classes.
+    assert build_largest_unrealized is build_top_movers
+    assert LargestUnrealizedView is TopMoversView
+
+    rows = [_row("A", Decimal("50")), _row("B", Decimal("-30"))]
+    view = build_largest_unrealized(rows, k=3)
+    # Primary, clarified field names.
+    assert [r.symbol for r in view.gains] == ["A"]
+    assert [r.symbol for r in view.losses] == ["B"]
+    # Back-compat aliases continue to work for now.
+    assert view.winners == view.gains
+    assert view.losers == view.losses
+
+
+def test_largest_unrealized_ranking_is_unchanged_by_rename():
+    """Pure rename: the underlying ranking by absolute lifetime unrealized
+    P&L is the same data the pre-fix function returned.
+    """
+    from net_alpha.portfolio.top_movers import build_largest_unrealized
+
+    rows = [
+        _row("A", Decimal("50")),
+        _row("B", Decimal("100")),
+        _row("C", Decimal("-30")),
+        _row("D", Decimal("200")),
+        _row("E", Decimal("-500")),
+    ]
+    view = build_largest_unrealized(rows, k=3)
+    assert [r.symbol for r in view.gains] == ["D", "B", "A"]
+    assert [r.symbol for r in view.losses] == ["E", "C"]
+
+
+def test_top_movers_module_docstring_clarifies_ranking_window():
+    """The module docstring must NOT imply a session / 1-day window — the
+    ranking is over lifetime unrealized P&L since the position was opened.
+    """
+    import net_alpha.portfolio.top_movers as tm
+
+    doc = (tm.__doc__ or "") + (build_top_movers.__doc__ or "")
+    assert "lifetime" in doc.lower()
