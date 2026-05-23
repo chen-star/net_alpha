@@ -26,6 +26,11 @@
              oninput="this.form.querySelector('input[value=custom]').checked = true">
     </label>
     <label class="inline-flex items-center gap-1">
+      {# Hidden "0" pairs with the checkbox: unchecked → only "0" submits (False);
+         checked → both "0" and "1" submit and FastAPI's bool coercion takes the
+         LAST value ("1" = True). Without this, an unchecked box submits nothing
+         and the server-side default (True) silently overrides the user's intent. #}
+      <input type="hidden" name="exclude_locked" value="0">
       <input type="checkbox" name="exclude_locked" value="1"
              {% if exclude_locked %}checked{% endif %}>
       Exclude locked
