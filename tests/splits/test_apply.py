@@ -244,6 +244,76 @@ def test_apply_splits_handles_multiple_consecutive_splits(repo, builders):
     assert lots[0].adjusted_basis == 200.0  # basis preserved across both splits
 
 
+def test_option_lots_are_not_split_adjusted(repo, builders):
+    """Audit #12: when an underlying ticker splits, the option chain's strike
+    and multiplier are adjusted by the OCC, NOT the broker-held contract
+    count. apply_splits must skip option lots so a 2-for-1 underlying split
+    leaves option-lot.quantity untouched. The sibling equity lot in the same
+    symbol IS still adjusted (existing behavior).
+    """
+    from datetime import datetime
+
+    from net_alpha.models.domain import ImportRecord, OptionDetails, Trade
+
+    # Manually seed: equity buy + option buy on same ticker, same pre-split day.
+    account = repo.get_or_create_account("schwab", "lt")
+    equity_buy = Trade(
+        account="schwab/lt",
+        date=date(2020, 1, 5),
+        ticker="AAPL",
+        action="Buy",
+        quantity=10.0,
+        proceeds=None,
+        cost_basis=1500.0,
+    )
+    option_buy = Trade(
+        account="schwab/lt",
+        date=date(2020, 1, 5),
+        ticker="AAPL",
+        action="Buy",
+        quantity=2.0,  # 2 contracts
+        proceeds=None,
+        cost_basis=400.0,
+        option_details=OptionDetails(
+            strike=200.0, expiry=date(2021, 1, 15), call_put="C"
+        ),
+    )
+    record = ImportRecord(
+        account_id=account.id,
+        csv_filename="seed-opt.csv",
+        csv_sha256="sha-seed-opt",
+        imported_at=datetime.now(),
+        trade_count=2,
+    )
+    repo.add_import(account, record, [equity_buy, option_buy])
+
+    repo.add_split("AAPL", date(2020, 8, 31), 2.0, "yahoo")
+
+    from net_alpha.engine.etf_pairs import load_etf_pairs
+    from net_alpha.engine.recompute import recompute_all_violations
+
+    recompute_all_violations(repo, load_etf_pairs())
+    apply_splits(repo)
+
+    # Equity lot is doubled to 20 shares; option-contract lot stays at 2.
+    lot_rows = repo.get_lot_rows_for_symbol("AAPL")
+    equity_qty = None
+    option_qty = None
+    for row in lot_rows:
+        trade = repo.get_trade_by_id(int(row["trade_id"]))
+        if trade is None:
+            continue
+        if trade.option_details is None:
+            equity_qty = float(row["quantity"])
+        else:
+            option_qty = float(row["quantity"])
+
+    assert equity_qty == 20.0, f"equity lot should be split-adjusted; got {equity_qty}"
+    assert option_qty == 2.0, (
+        f"option lot must NOT be split-adjusted (OCC handles strike/multiplier); got {option_qty}"
+    )
+
+
 def test_split_survives_repeated_recompute(repo, builders):
     """Regression: after a split is recorded and recompute applies it once,
     a SUBSEQUENT recompute (e.g., triggered by another CSV import) must not

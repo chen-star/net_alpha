@@ -57,6 +57,12 @@ def apply_splits(repo: Repository) -> int:
             trade = repo.get_trade_by_id(int(lot["trade_id"]))
             if trade is None:
                 continue
+            # Audit #12: option-contract lots are NOT adjusted by underlying
+            # stock splits. The OCC/broker adjusts the option's strike and
+            # multiplier separately; the contract count the user holds is
+            # unchanged. Apply splits only to equity (non-option) lots.
+            if trade.option_details is not None:
+                continue
             target_qty = float(trade.quantity) * cumulative
             current_qty = float(lot["quantity"])
             current_basis = float(lot["adjusted_basis"])
