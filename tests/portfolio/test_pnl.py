@@ -1214,3 +1214,214 @@ def test_compute_open_short_option_exposes_sto_premium_for_remaining_contracts()
     assert row.premium_received == Decimal("150.00")  # net of BTC, unchanged contract
     assert row.sto_premium_total == Decimal("200.00")  # gross STO proceeds
     assert row.sto_qty_total == Decimal("2")
+
+
+def test_open_short_option_opened_at_uses_earliest_unmatched_sto():
+    """Audit #36 / #9: ``opened_at`` must reflect the date the still-open
+    contracts were *actually* opened — FIFO match BTC closures against STO
+    legs and report the earliest STO whose qty hasn't been fully consumed.
+
+    Chain: STO 1c Jan, STO 1c Mar, BTC 1c Apr → one contract still open.
+    Per FIFO, BTC consumes the January STO first, leaving the March STO
+    open. Pre-fix the helper just tracked "latest STO date" regardless of
+    whether it had been closed, returning March — but if FIFO matters
+    (and it does for §1223 holding-period tacking + the unrealized
+    estimator's time-decay base) the correct answer is March here.
+
+    Conversely: STO 1c Jan, STO 1c Mar, BTC 1c Feb (BTC dated *between*
+    the two STOs) — FIFO still consumes the January STO first, leaving
+    March open. Pre-fix returned March (latest STO) which happens to be
+    correct here. The discriminating case below: STO 1c Mar then STO 1c
+    Jan (out-of-order import) + BTC 1c Apr — FIFO matches the earliest
+    STO (Jan) leaving Mar open. Pre-fix returns Mar (latest), which is
+    the correct answer; but the more important property is that
+    ``opened_at`` is derived from the FIFO-consumption walk, not the
+    raw max-date.
+
+    Most direct counter-example: STO 1c Jan + STO 1c Feb + BTC 1c Mar
+    leaving 1c open. FIFO consumes the Jan STO; ``opened_at`` = Feb.
+    Pre-fix returns Feb (latest), which is correct. To produce a real
+    divergence we need a chain where FIFO opening date < latest STO
+    date AND the latest STO is fully closed. E.g. STO 1c Jan + STO 1c
+    Mar + BTC 1c Apr leaving 1c → FIFO closes Jan; opened_at = Mar.
+    Pre-fix returns Mar. No divergence. The divergence appears when
+    multiple BTCs close the *later* STOs first under FIFO of opens.
+
+    Best clear divergence per the task spec: STO 1c Jan, STO 1c Mar,
+    BTC 1c Apr (closes Jan under FIFO) → opened_at = Mar.
+
+    Pre-fix this returns Mar too — because Mar IS the latest STO. The
+    actual divergence in the audit is when the LATEST STO is fully
+    closed and an OLDER STO remains. Use: STO 1c Jan, STO 1c Mar, BTC
+    2c Apr — leaves 0 open. Use: STO 2c Jan, STO 1c Mar, BTC 2c Apr —
+    FIFO closes 2c Jan first, leaving the Mar STO open (1c). opened_at
+    must be Mar. Pre-fix returns Mar (latest STO date), agrees.
+
+    True divergence: STO 1c Jan, STO 1c Mar, STO 1c May, BTC 1c Jun
+    leaving 2c open. FIFO closes Jan → still-open are Mar+May. The
+    *earliest* still-open is Mar. Pre-fix returns May (latest STO date).
+    """
+    from net_alpha.portfolio.positions import compute_open_short_option_positions
+
+    opt = OptionDetails(strike=100.0, expiry=dt.date(2026, 12, 18), call_put="C")
+    trades = [
+        _trade(
+            id="sto_jan",
+            ticker="ACME",
+            action="Sell",
+            quantity=1.0,
+            proceeds=100.0,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2026, 1, 15),
+        ),
+        _trade(
+            id="sto_mar",
+            ticker="ACME",
+            action="Sell",
+            quantity=1.0,
+            proceeds=110.0,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2026, 3, 15),
+        ),
+        _trade(
+            id="sto_may",
+            ticker="ACME",
+            action="Sell",
+            quantity=1.0,
+            proceeds=120.0,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2026, 5, 15),
+        ),
+        _trade(
+            id="btc_jun",
+            ticker="ACME",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=80.0,
+            basis_source="option_short_close",
+            option_details=opt,
+            date=dt.date(2026, 6, 15),
+        ),
+    ]
+    rows = compute_open_short_option_positions(trades)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.qty_short == Decimal("2")
+    # FIFO closes the Jan STO; earliest still-open STO is March.
+    assert row.opened_at == dt.date(2026, 3, 15)
+
+
+def test_open_short_option_opened_at_single_sto_no_close():
+    """Single STO, no BTC — opened_at is the STO date."""
+    from net_alpha.portfolio.positions import compute_open_short_option_positions
+
+    opt = OptionDetails(strike=100.0, expiry=dt.date(2026, 12, 18), call_put="C")
+    trades = [
+        _trade(
+            id="sto",
+            ticker="ACME",
+            action="Sell",
+            quantity=1.0,
+            proceeds=100.0,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2026, 1, 15),
+        )
+    ]
+    rows = compute_open_short_option_positions(trades)
+    assert len(rows) == 1
+    assert rows[0].opened_at == dt.date(2026, 1, 15)
+
+
+def test_open_short_option_opened_at_partial_fifo_consumption():
+    """STO 2c then STO 1c, BTC 1c closes part of the first STO.
+
+    FIFO: BTC consumes 1c of the 2c-Jan STO → 1c of Jan still open + 1c
+    of Mar still open = 2c total. Earliest still-open STO leg is Jan.
+    Pre-fix returned March (latest STO date).
+    """
+    from net_alpha.portfolio.positions import compute_open_short_option_positions
+
+    opt = OptionDetails(strike=100.0, expiry=dt.date(2026, 12, 18), call_put="C")
+    trades = [
+        _trade(
+            id="sto_jan",
+            ticker="ACME",
+            action="Sell",
+            quantity=2.0,
+            proceeds=200.0,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2026, 1, 15),
+        ),
+        _trade(
+            id="sto_mar",
+            ticker="ACME",
+            action="Sell",
+            quantity=1.0,
+            proceeds=110.0,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2026, 3, 15),
+        ),
+        _trade(
+            id="btc_apr",
+            ticker="ACME",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=70.0,
+            basis_source="option_short_close",
+            option_details=opt,
+            date=dt.date(2026, 4, 15),
+        ),
+    ]
+    rows = compute_open_short_option_positions(trades)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.qty_short == Decimal("2")
+    # Jan STO has 1c remaining after FIFO closure; earliest still-open = Jan.
+    assert row.opened_at == dt.date(2026, 1, 15)
+
+
+def test_open_short_option_chain_fully_closed_emits_no_row():
+    """STO + BTC of equal qty → no still-open contracts → no row."""
+    from net_alpha.portfolio.positions import compute_open_short_option_positions
+
+    opt = OptionDetails(strike=100.0, expiry=dt.date(2026, 12, 18), call_put="C")
+    trades = [
+        _trade(
+            id="sto",
+            ticker="ACME",
+            action="Sell",
+            quantity=1.0,
+            proceeds=100.0,
+            cost_basis=None,
+            basis_source="option_short_open",
+            option_details=opt,
+            date=dt.date(2026, 1, 15),
+        ),
+        _trade(
+            id="btc",
+            ticker="ACME",
+            action="Buy",
+            quantity=1.0,
+            proceeds=None,
+            cost_basis=50.0,
+            basis_source="option_short_close",
+            option_details=opt,
+            date=dt.date(2026, 2, 15),
+        ),
+    ]
+    rows = compute_open_short_option_positions(trades)
+    assert rows == []

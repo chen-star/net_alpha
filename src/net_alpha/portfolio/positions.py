@@ -398,9 +398,15 @@ def compute_open_short_option_positions(
     # Per (account, ticker_base, strike, expiry, call_put):
     #   net_qty: positive for net long, negative for net short
     #   net_premium: cumulative STO proceeds - BTC costs (signed)
-    #   latest_sto_date: most recent STO date in the chain
     #   sto_premium_total: cumulative *gross* STO proceeds (no BTC subtraction)
     #   sto_qty_total: cumulative *gross* STO contract quantity
+    #   sto_legs: chronological list of (date, qty) per STO trade — FIFO-
+    #     consumed against BTC trades + GL closures so ``opened_at`` reflects
+    #     the date of the earliest STO whose contracts are *still open*
+    #     (audit #36). Pre-fix this was "latest STO date regardless of
+    #     whether it had been closed", which lied about the holding-period
+    #     start for the still-open leg.
+    #   btc_qty_total: cumulative BTC quantity (closure pressure from trades).
     # The gross STO totals let downstream callers (e.g. the unrealized
     # liability estimator) derive the STO premium attributable to the
     # still-open contracts without double-counting BTC costs that have
@@ -410,7 +416,8 @@ def compute_open_short_option_positions(
     net_premium: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
     sto_premium_total: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
     sto_qty_total: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
-    latest_sto_date: dict[Key, date] = {}
+    sto_legs: dict[Key, list[tuple[date, Decimal]]] = defaultdict(list)
+    btc_qty_total: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
     for t in trades:
         if t.option_details is None:
             continue
@@ -422,17 +429,18 @@ def compute_open_short_option_positions(
         if t.action.lower() == "buy":
             net_qty[key] += delta
             net_premium[key] -= Decimal(str(t.cost_basis or 0))
+            btc_qty_total[key] += delta
         else:
             net_qty[key] -= delta
             net_premium[key] += Decimal(str(t.proceeds or 0))
             sto_premium_total[key] += Decimal(str(t.proceeds or 0))
             sto_qty_total[key] += delta
-            prior = latest_sto_date.get(key)
-            if prior is None or t.date > prior:
-                latest_sto_date[key] = t.date
+            sto_legs[key].append((t.date, delta))
 
     # Apply GL closures: shrink net short toward zero (treat closures as
-    # additional buys-to-close that simply weren't in the trade table).
+    # additional buys-to-close that simply weren't in the trade table) and
+    # also feed them into the FIFO match used by ``opened_at``.
+    gl_closure_qty: dict[Key, Decimal] = defaultdict(lambda: Decimal("0"))
     for (acct, ticker_raw, strike, expiry_iso, cp), gl_qty in (gl_option_closures or {}).items():
         if gl_qty <= 0:
             continue
@@ -448,6 +456,30 @@ def compute_open_short_option_positions(
             net_qty[key] = min(n + Decimal(str(gl_qty)), Decimal("0"))
         elif n > 0:
             net_qty[key] = max(n - Decimal(str(gl_qty)), Decimal("0"))
+        gl_closure_qty[key] += Decimal(str(gl_qty))
+
+    def _earliest_open_sto_date(key: Key) -> date | None:
+        """Return the date of the earliest STO leg whose qty is not fully
+        consumed by accumulated BTC + GL closures (FIFO match).
+
+        Closures only meaningfully shrink the short side. We FIFO-consume
+        the *short* side: if total closure exceeds STO qty (e.g. the chain
+        flipped net-long), the earliest still-open SHORT leg is undefined
+        and we fall back to None — the caller skips rows where qty >= 0
+        anyway, so this only matters for net-short rows.
+        """
+        legs = sto_legs.get(key, [])
+        if not legs:
+            return None
+        ordered = sorted(legs, key=lambda dq: dq[0])
+        closure_pressure = btc_qty_total.get(key, Decimal("0")) + gl_closure_qty.get(key, Decimal("0"))
+        for leg_date, leg_qty in ordered:
+            if closure_pressure >= leg_qty:
+                closure_pressure -= leg_qty
+                continue
+            # This leg has remaining qty — it's the earliest still-open STO.
+            return leg_date
+        return None
 
     rows: list[OpenShortOptionRow] = []
     for key, qty in net_qty.items():
@@ -463,7 +495,7 @@ def compute_open_short_option_positions(
                 call_put=cp,
                 qty_short=-qty,  # positive number of contracts short
                 premium_received=net_premium[key].quantize(Decimal("0.01")),
-                opened_at=latest_sto_date.get(key),
+                opened_at=_earliest_open_sto_date(key),
                 sto_premium_total=sto_premium_total[key].quantize(Decimal("0.01")),
                 sto_qty_total=sto_qty_total[key],
             )
