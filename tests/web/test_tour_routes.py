@@ -48,3 +48,10 @@ def test_settings_about_tab_has_replay_tour_form(client_with_data: TestClient) -
     body = resp.text
     assert 'action="/tour/replay"' in body
     assert "Replay onboarding tour" in body
+    # audit #31 — button must use theme-aware tokens, not light-only
+    # `border-slate-300` / `hover:bg-slate-50` (which render almost invisibly
+    # against the dark canvas the user defaults to).
+    assert "border-slate-300" not in body
+    assert "hover:bg-slate-50" not in body
+    assert "border-hairline" in body
+    assert "hover:bg-surface-2" in body
