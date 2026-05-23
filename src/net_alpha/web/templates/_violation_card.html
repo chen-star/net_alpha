@@ -18,7 +18,13 @@
             title="Confirmed by Schwab's 1099-B reporting">Schwab</span>
     {% elif violation.source == "engine" %}
       {% if violation.loss_account != violation.buy_account %}
-        <span class="ml-2 chip-probable"
+        {# audit #32 — `chip-source` (neutral slate) instead of `chip-probable`
+           (yellow). The red/yellow/blue triplet is reserved by CLAUDE.md for
+           the wash-sale confidence palette; a yellow "Cross-account" chip
+           sitting next to a "Confirmed" red chip in the same row was
+           reading as a second, parallel verdict instead of as a data-source
+           tag. #}
+        <span class="ml-2 chip-source"
               title="Cross-account wash sale detected by net-alpha">Cross-account</span>
       {% else %}
         <span class="ml-2 chip-unclear"

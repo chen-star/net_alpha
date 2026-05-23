@@ -52,6 +52,9 @@ def compiled_css() -> str:
         ".bg-warn-soft-5",
         ".bg-warn-soft-10",
         ".bg-info-soft-10",
+        # Task 3.6 — audit #32 (neutral source decoration for the
+        # `_violation_card.html` Cross-account chip).
+        ".chip-source",
     ],
 )
 def test_template_class_ships_in_compiled_css(compiled_css: str, selector: str) -> None:

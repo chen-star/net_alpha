@@ -587,6 +587,13 @@
   .chip-unclear  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-info); background: var(--color-info-tint); }
   .chip-neutral  { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-label-2); background: var(--color-hairline); }
   .chip-pos      { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-pos); background: var(--color-pos-tint); }
+  /* Provenance / source decoration — used by `_violation_card.html` for the
+     "Cross-account" tag that previously borrowed `.chip-probable` (yellow)
+     and collided with the wash-sale confidence palette (CLAUDE.md reserves
+     red/yellow/blue for Confirmed/Probable/Unclear). Render as a subtle
+     slate chip so it reads as data-source metadata, not as a confidence
+     verdict. */
+  .chip-source   { @apply text-[11px] px-2 py-[2px] rounded-full font-medium; color: var(--color-label-2); background: var(--color-surface-2); border: 0.5px solid var(--color-hairline); }
 
   /* Disclosure (<details>) — hide the default UA triangle so a styled
      `.disclosure__chevron` can rotate in lockstep with the open state.
