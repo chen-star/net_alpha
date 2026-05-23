@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -30,6 +31,29 @@ def _validate_account(repo: Repository, account: str) -> None:
 
 
 _MIN_TRADE_DATE = date(1970, 1, 1)
+
+# Plain equity tickers: 1-6 uppercase letters with an optional class suffix
+# (e.g. BRK.B). The manual trade form has no inputs for strike, expiry, or
+# call/put — anything that doesn't match this pattern (e.g. "SPY 250117C500",
+# OCC "AAPL250117C150000") would silently land in the DB as an equity row
+# without ``option_details``, corrupting downstream P&L (audit #19).
+_EQUITY_TICKER_RE = re.compile(r"^[A-Z]{1,6}(\.[A-Z]{1,3})?$")
+
+
+def _validate_equity_ticker(ticker: str) -> None:
+    """Reject ticker strings that look like option contract symbols.
+
+    The manual trade form does not collect option details, so we refuse to
+    persist anything other than a plain equity ticker.
+    """
+    if not _EQUITY_TICKER_RE.match(ticker):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Manual entry for option contracts is not supported. "
+                "Import an option trade via CSV instead."
+            ),
+        )
 
 
 def _parse_date(raw: str) -> date:
@@ -66,6 +90,8 @@ def create_trade(
         raise HTTPException(status_code=400, detail="quantity must be > 0")
     if basis_or_proceeds < 0:
         raise HTTPException(status_code=400, detail="basis/proceeds must be >= 0")
+    normalized_ticker = ticker.strip().upper()
+    _validate_equity_ticker(normalized_ticker)
     _validate_account(repo, account)
     d = _parse_date(trade_date)
 
@@ -74,7 +100,7 @@ def create_trade(
     trade = Trade(
         account=account,
         date=d,
-        ticker=ticker.strip().upper(),
+        ticker=normalized_ticker,
         action=action,
         quantity=quantity,
         cost_basis=basis_or_proceeds if is_buy_side else None,
@@ -110,6 +136,8 @@ def edit_manual(
         raise HTTPException(status_code=400, detail="quantity must be > 0")
     if basis_or_proceeds < 0:
         raise HTTPException(status_code=400, detail="basis/proceeds must be >= 0")
+    normalized_ticker = ticker.strip().upper()
+    _validate_equity_ticker(normalized_ticker)
     _validate_account(repo, account)
     d = _parse_date(trade_date)
 
@@ -119,7 +147,7 @@ def edit_manual(
         id=trade_id,
         account=account,
         date=d,
-        ticker=ticker.strip().upper(),
+        ticker=normalized_ticker,
         action=action,
         quantity=quantity,
         cost_basis=basis_or_proceeds if is_buy_side else None,
