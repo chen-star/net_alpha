@@ -4,7 +4,8 @@ Pure function. Reads from Repository (split realized P&L, §1256 net P&L,
 wash-sale disallowed total). Returns an AfterTaxBreakdown.
 
 Out-of-scope simplifications (caveats surface inline):
-- MAGI-based NIIT threshold ($200K single / $250K MFJ)
+- MAGI-based NIIT threshold ($200K single / $250K MFJ) — NIIT applies
+  unconditionally when ``brackets.niit_enabled``; user toggles based on MAGI
 - Qualified dividends, §199A, AMT
 - Per-year historical brackets for Lifetime period
 """
@@ -165,8 +166,13 @@ def compute_after_tax(
 
     caveats = [
         "Estimate using your configured marginal rates — not a tax filing.",
-        f"NIIT applied at 3.8% above MAGI threshold ($200K single / $250K MFJ) "
-        f"when enabled (currently: {'on' if brackets.niit_enabled else 'off'}).",
+        # The math is unconditional whenever ``niit_enabled`` is set — we do
+        # NOT model the MAGI threshold ($200K single / $250K MFJ) here. Spell
+        # that out so users don't assume a gate exists and can manually
+        # toggle the flag based on their own MAGI.
+        f"NIIT applied at 3.8% on all net positive capital gains whenever enabled "
+        f"(currently: {'on' if brackets.niit_enabled else 'off'}). "
+        f"Toggle NIIT off in tax config if MAGI is below $200K single / $250K MFJ.",
         "§1256 contracts open Dec 31 are marked to fair-market-value per IRC §1256(a). "
         "Year-end FMV is sourced from Yahoo (option closes) with a Black-Scholes fallback "
         "for thin-volume strikes; verify against your 1099-B / Form 6781 before filing.",

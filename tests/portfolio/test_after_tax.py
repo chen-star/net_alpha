@@ -136,6 +136,46 @@ def test_caveats_includes_lifetime_warning_when_lifetime():
     assert any("Lifetime" in c or "current rates" in c for c in r.caveats)
 
 
+def test_niit_caveat_says_unconditional_when_enabled_no_magi_gate():
+    """The NIIT math applies the 3.8% surtax to all positive net capital
+    gains whenever ``niit_enabled=True`` — it does NOT check MAGI. The
+    caveat must say so honestly and point the user at the manual toggle,
+    not imply we gate on the $200K / $250K threshold.
+    """
+    repo = _StubRepo(st=Decimal("100"))
+    r_on = compute_after_tax(repo, _ytd(), _brackets(niit=True))
+    niit_caveats = [c for c in r_on.caveats if "NIIT" in c]
+    assert niit_caveats, "expected an NIIT caveat to be present"
+    blob = " ".join(niit_caveats)
+    # Truthful framing: surtax applies whenever the flag is on (no MAGI gate).
+    assert "all net positive capital gains" in blob
+    assert "whenever enabled" in blob
+    # Pointer to the manual toggle, with the threshold given as context for
+    # when the user should turn it off — not as a gate the math implements.
+    assert "Toggle NIIT off in tax config" in blob
+    assert "$200K" in blob
+    assert "$250K" in blob
+    # Currently-on / currently-off status still appears so the user can
+    # confirm at a glance which side of the toggle they're on.
+    assert "on" in blob
+
+    r_off = compute_after_tax(repo, _ytd(), _brackets(niit=False))
+    niit_caveats_off = [c for c in r_off.caveats if "NIIT" in c]
+    assert any("off" in c for c in niit_caveats_off)
+
+
+def test_niit_math_unchanged_when_enabled():
+    """Behavioral check: the caveat rewrite must NOT change the actual tax
+    arithmetic. With $10K ST gain and NIIT on, expect federal + NIIT =
+    10000*0.37 + 10000*0.038 = $4080.
+    """
+    repo = _StubRepo(st=Decimal("10000"))
+    r = compute_after_tax(repo, _ytd(), _brackets(niit=True))
+    assert r.estimated_tax_bill == Decimal("4080")
+    r_off = compute_after_tax(repo, _ytd(), _brackets(niit=False))
+    assert r_off.estimated_tax_bill == Decimal("3700")  # no NIIT
+
+
 def test_caveats_drop_capital_loss_limitation_note():
     """Task 9: the old "$3K capital-loss limitation / multi-year carryforward
     not modeled" caveat is gone — those are now modeled via the carryforward
