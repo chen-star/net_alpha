@@ -32,7 +32,7 @@
             <a href="/ticker/{{ g.ticker }}" class="font-mono text-primary underline">{{ g.ticker }}</a>
             <span class="text-xs text-label-2">{{ g.violation_count }} violation{{ '' if g.violation_count == 1 else 's' }}</span>
           </div>
-          <div class="text-sm font-mono text-confirmed num">${{ "{:,.2f}".format(g.disallowed_total|float) }}</div>
+          <div class="text-sm font-mono text-neg num">${{ "{:,.2f}".format(g.disallowed_total|float) }}</div>
         </button>
 
         <div x-show="open" x-cloak>
@@ -69,7 +69,7 @@
                   <td class="px-3 py-2">{{ v.loss_account or "—" }} → {{ v.buy_account or "—" }}</td>
                   <td class="px-3 py-2 font-mono">{{ v.triggering_buy_date or "—" }}</td>
                   <td class="px-3 py-2 font-mono num">{% if lag is not none %}{{ lag }}d{% else %}—{% endif %}</td>
-                  <td class="r num text-confirmed">${{ "{:,.2f}".format(v.disallowed_loss) }}</td>
+                  <td class="r num text-neg">${{ "{:,.2f}".format(v.disallowed_loss) }}</td>
                   <td class="r num">{{ v.matched_quantity }}</td>
                   <td class="px-3 py-2"><span class="chip-{{ v.confidence|lower }}">{{ v.confidence }}</span></td>
                   <td class="px-3 py-2">

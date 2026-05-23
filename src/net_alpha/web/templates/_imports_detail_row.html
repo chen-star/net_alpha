@@ -35,7 +35,7 @@
     {% if detail.parse_warnings %}
       <div class="md:col-span-3">
         <div class="label-uc">Parse warnings</div>
-        <ul class="list-disc list-inside text-confirmed">
+        <ul class="list-disc list-inside text-warn">
           {% for w in detail.parse_warnings %}<li>{{ w }}</li>{% endfor %}
         </ul>
       </div>
