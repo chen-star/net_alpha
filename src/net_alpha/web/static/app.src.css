@@ -632,6 +632,14 @@
     background-color: var(--color-pos-tint);
   }
 
+  /* Soft amber wash for the verify stale-reference banner. Uses
+     color-mix on the live --color-warn token so dark and light themes both
+     get a tonally-correct surface (not the heavier --color-warn-tint, which
+     is meant for chip backgrounds, not full-width banner fills). */
+  .bg-warn-soft {
+    background: color-mix(in srgb, var(--color-warn) 12%, transparent);
+  }
+
   /* Table — snug density */
   .net-table { @apply w-full text-[12px] border-collapse; }
   .net-table thead th {
@@ -794,7 +802,31 @@
   .badge-success { color: var(--color-pos);  background: var(--color-pos-tint); border-color: var(--color-hairline); }
   .badge-info    { color: var(--color-info); background: var(--color-info-tint); border-color: var(--color-hairline); }
   .badge-warn    { color: var(--color-warn); background: var(--color-warn-tint); border-color: var(--color-hairline); }
+  /* Mirrors .badge-warn but uses the negative palette for severity="error"
+     hygiene rows (`_data_hygiene.html`). Not a confidence chip — those are
+     `.chip-confirmed/.chip-probable/.chip-unclear` and reserved by CLAUDE.md. */
+  .badge-error   { color: var(--color-neg);  background: var(--color-neg-tint); border-color: var(--color-hairline); }
   .badge-muted   { color: var(--color-label-2); background: var(--color-skeleton); }
+
+  /* Verify-dashboard status pills (used by `verify/index.html` and
+     `verify/_findings_table.html`). Each variant retints the inline text via
+     the semantic token. `.status-error` is the high-severity sibling of
+     `.status-fail` — same hue, but rendered as a solid pill so it pops out of
+     a long table of mostly-passing rows. These are reconciliation severities,
+     NOT wash-sale confidence (which uses --color-confirmed). */
+  .status-pass  { color: var(--color-pos);     font-weight: 500; }
+  .status-fail  { color: var(--color-neg);     font-weight: 500; }
+  .status-warn  { color: var(--color-warn);    font-weight: 500; }
+  .status-error {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: #FFFFFF;
+    background: var(--color-neg);
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 14px;
+  }
 
   /* Phase 3: aliases that templates have been using inconsistently. Map to the
      semantic tokens so existing markup colors correctly. */
@@ -805,6 +837,12 @@
   .text-loss    { color: var(--color-neg); }
   .text-gain    { color: var(--color-pos); }
   .text-success { color: var(--color-pos); }
+
+  /* Map the project's `--color-accent` token (systemBlue in both themes) to a
+     `border-accent` utility so welcome-card hover states resolve to the brand
+     blue rather than the silently-no-op Tailwind default. */
+  .border-accent        { border-color: var(--color-accent); }
+  .hover\:border-accent:hover { border-color: var(--color-accent); }
 
   /* §5.14: keyboard-focus ring on every interactive primitive. Uses the
      --ring-focus token so the signature-blue halo is consistent across
