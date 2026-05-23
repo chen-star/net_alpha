@@ -29,9 +29,7 @@ def test_run_washsale_watch_iterates_targets_and_persists_results(monkeypatch):
 
     fake_results = {
         "SPY": ws_mod.WatchResult(status="clean", severity="none"),
-        "TSLA": ws_mod.WatchResult(
-            status="ira_trap_risk", severity="hard", reason="x", triggering_trade_ids=[42]
-        ),
+        "TSLA": ws_mod.WatchResult(status="ira_trap_risk", severity="hard", reason="x", triggering_trade_ids=[42]),
     }
     monkeypatch.setattr(ws_mod, "evaluate_target", lambda **kw: fake_results[kw["target"].symbol])
 
@@ -60,9 +58,7 @@ def test_run_washsale_watch_picks_worst_severity_across_accounts(monkeypatch):
     seq = iter(
         [
             ws_mod.WatchResult(status="ira_trap_risk", severity="soft", reason="a"),
-            ws_mod.WatchResult(
-                status="ira_trap_risk", severity="hard", reason="b", triggering_trade_ids=[9]
-            ),
+            ws_mod.WatchResult(status="ira_trap_risk", severity="hard", reason="b", triggering_trade_ids=[9]),
         ]
     )
     monkeypatch.setattr(ws_mod, "evaluate_target", lambda **kw: next(seq))
