@@ -30,14 +30,18 @@ def _read_user(user_path: str | Path | None) -> str:
 
 
 def load_universe(user_path: str | Path | None = None) -> set[str]:
-    """Return the merged set of §1256 underlyings (bundled ∪ user override)."""
+    """Return the merged set of §1256 underlyings (bundled ∪ user override).
+
+    All symbols are upper-cased so callers can do case-insensitive lookups
+    against ``trade.ticker.upper()``.
+    """
     bundled: dict[str, list[str]] = yaml.safe_load(_read_bundled()) or {}
-    syms: set[str] = set(bundled.get("broad_based_index_options", []))
+    syms: set[str] = {s.upper() for s in bundled.get("broad_based_index_options", [])}
 
     user_text = _read_user(user_path)
     if user_text:
         user: dict[str, list[str]] = yaml.safe_load(user_text) or {}
-        syms.update(user.get("broad_based_index_options", []))
+        syms.update(s.upper() for s in user.get("broad_based_index_options", []))
 
     return syms
 
@@ -48,10 +52,13 @@ def is_section_1256(trade: Trade, *, user_path: str | Path | None = None) -> boo
     Returns False for stock trades on the same ticker — §1256 applies only to
     listed option/futures contracts, not spot equity. SPX has no spot stock but
     the guard belongs in this function for safety.
+
+    Audit #11: normalize ``trade.ticker`` with ``.upper()`` so broker-exported
+    casing variants ("spx", "Spx", etc.) still match.
     """
     if trade.option_details is None:
         return False
-    return trade.ticker in load_universe(user_path=user_path)
+    return trade.ticker.upper() in load_universe(user_path=user_path)
 
 
 def universe_hash(user_path: str | Path | None = None) -> str:

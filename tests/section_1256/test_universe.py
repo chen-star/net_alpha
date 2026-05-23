@@ -56,6 +56,24 @@ def test_is_section_1256_false_for_aapl_option():
     assert is_section_1256(_option_trade("AAPL")) is False
 
 
+def test_is_section_1256_true_for_spxw_ndxp_rutw_weeklies():
+    """Audit #11: Weekly variants of the bundled broad-based indexes are still
+    §1256 contracts. SPXW/NDXP/RUTW must be recognized."""
+    assert is_section_1256(_option_trade("SPXW")) is True
+    assert is_section_1256(_option_trade("NDXP")) is True
+    assert is_section_1256(_option_trade("RUTW")) is True
+
+
+def test_is_section_1256_case_insensitive():
+    """Audit #11: Lookup must normalize casing so brokers exporting lowercase
+    (or mixed-case) tickers still match the universe."""
+    assert is_section_1256(_option_trade("spx")) is True
+    assert is_section_1256(_option_trade("Spx")) is True
+    assert is_section_1256(_option_trade("spxw")) is True
+    # Negative case still negative regardless of casing.
+    assert is_section_1256(_option_trade("aapl")) is False
+
+
 def test_load_universe_contains_bundled_symbols():
     syms = load_universe()
     assert {"SPX", "NDX", "RUT", "VIX", "OEX", "XSP", "MXEF", "MXEA"}.issubset(syms)
