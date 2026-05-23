@@ -80,3 +80,85 @@ def test_no_contributions_returns_empty_list():
         get_close=lambda s, d: Decimal("100"),
     )
     assert series == []
+
+
+def test_contribution_on_weekend_forward_fills_to_next_trading_day():
+    """Audit #37: cash that arrives on a weekend or holiday must still buy
+    benchmark shares — markets are closed so we forward-fill the close to
+    the next trading day. Pre-fix the cash was permanently lost from the
+    benchmark series because ``get_close(symbol, weekend_date)`` returned
+    None and the helper bailed.
+
+    Setup: Saturday 2026-01-03 contribution $1,000 with SPY close None
+    on Saturday and Sunday, but $400 on Monday 2026-01-05.
+    Expected shares purchased: $1,000 / $400 = 2.5.
+    """
+    sat = date(2026, 1, 3)
+    sun = date(2026, 1, 4)
+    mon = date(2026, 1, 5)
+    cash_points = [
+        CashBalancePoint(on=sat, cash_balance=Decimal("1000"), cumulative_contributions=Decimal("1000")),
+    ]
+    quotes = {
+        sat: None,
+        sun: None,
+        mon: Decimal("400"),
+    }
+    series = build_benchmark_series(
+        symbol="SPY",
+        eq_dates=[mon],
+        cash_points=cash_points,
+        get_close=lambda s, d: quotes.get(d),
+    )
+    # 2.5 shares × $400 on Monday = $1,000.
+    assert series[-1].value == Decimal("1000.00")
+
+
+def test_contribution_on_long_weekend_forward_fills_up_to_five_days():
+    """Long weekend / Monday holiday: a Friday-evening contribution that
+    settles Saturday with the next trading day on Tuesday must still buy
+    shares. Forward-fill probes a small window (5 calendar days) so a
+    typical 3-day holiday weekend is covered.
+    """
+    sat = date(2026, 1, 17)  # Saturday, prior to MLK Monday
+    tue = date(2026, 1, 20)  # Markets open Tuesday after MLK Monday
+    cash_points = [
+        CashBalancePoint(on=sat, cash_balance=Decimal("500"), cumulative_contributions=Decimal("500")),
+    ]
+    quotes = {
+        sat: None,
+        date(2026, 1, 18): None,  # Sun
+        date(2026, 1, 19): None,  # MLK Monday
+        tue: Decimal("250"),
+    }
+    series = build_benchmark_series(
+        symbol="SPY",
+        eq_dates=[tue],
+        cash_points=cash_points,
+        get_close=lambda s, d: quotes.get(d),
+    )
+    # 2 shares × $250 = $500 → cash isn't dropped from the series.
+    assert series[-1].value == Decimal("500.00")
+
+
+def test_contribution_with_no_close_within_window_is_skipped():
+    """Defensive: if no trading day appears within the forward-fill window
+    (e.g. the user's last quote is from 6+ days before the contribution
+    date), the contribution is silently skipped rather than crashing.
+    Matches pre-fix behavior for the truly-unrecoverable case.
+    """
+    cash_points = [
+        CashBalancePoint(
+            on=date(2026, 1, 1), cash_balance=Decimal("1000"), cumulative_contributions=Decimal("1000")
+        ),
+    ]
+    # No quote anywhere — get_close returns None everywhere.
+    series = build_benchmark_series(
+        symbol="SPY",
+        eq_dates=[date(2026, 1, 1)],
+        cash_points=cash_points,
+        get_close=lambda s, d: None,
+    )
+    # No quote for any eval date → BenchmarkPoint(value=None) for the eval
+    # date and zero shares purchased.
+    assert series == [BenchmarkPoint(on=date(2026, 1, 1), value=None)]
