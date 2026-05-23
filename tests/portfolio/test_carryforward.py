@@ -209,3 +209,114 @@ def test_falls_back_to_derived_when_no_override():
     cf = get_effective_carryforward(repo, year=2025)
     # No trades in repo → "none"
     assert cf.source == "none"
+
+
+class _StubRepoWithOverrides(_StubRepo):
+    """Stub that also records year-keyed carryforward overrides."""
+
+    def __init__(self, by_year, overrides=None):
+        super().__init__(by_year)
+        self._overrides = overrides or {}
+
+    def get_carryforward_override(self, year: int):
+        return self._overrides.get(year)
+
+
+class _Override:
+    """Minimal LossCarryforwardRow-shaped struct for the stub."""
+
+    def __init__(self, st: Decimal, lt: Decimal):
+        self.st_amount = st
+        self.lt_amount = lt
+
+
+def test_intermediate_override_freezes_replay_state(_=None):
+    """Audit #38: ``derive_carryforward`` must honor user-recorded
+    overrides for intermediate years, not just the target year. Semantic:
+    an override at year N IS the post-year-N CF state — year N+1 derives
+    from that override directly (no year-N PnL re-applied on top).
+
+    Setup:
+        2022 ST loss -$10,000 → would derive ST CF $7,000 into 2023
+        2023 ST loss -$2,000 → would derive ST CF $4,000 into 2024
+        2024 user override at end of 2023 says ST=$1,500 (their tax
+            software is authoritative); we expect 2024's replay to
+            START from $1,500 and apply 2024's PnL.
+
+    Year-2024 PnL is +$500 ST. With override-frozen 2023 state
+    (ST=$1,500): net ST = +500 - 1500 = -$1,000 loss; below $3K cap →
+    fully absorbed; no carry into 2025. Without the override-respect
+    fix the replay would compute ST CF into 2025 from raw P&L only.
+    """
+    repo = _StubRepoWithOverrides(
+        by_year={
+            2022: (Decimal("-10000"), Decimal("0")),
+            2023: (Decimal("-2000"), Decimal("0")),
+            2024: (Decimal("500"), Decimal("0")),
+        },
+        overrides={
+            # Override AT year 2023 = post-2023 CF state going into 2024.
+            2023: _Override(st=Decimal("1500"), lt=Decimal("0")),
+        },
+    )
+    cf = derive_carryforward(repo, year=2025)
+    # Year 2024 starts from override (ST=1500), net ST = 500 - 1500 = -1000,
+    # below $3K cap → fully absorbed; no CF rolls into 2025.
+    assert cf == Carryforward(st=Decimal("0"), lt=Decimal("0"), source="derived")
+
+
+def test_intermediate_override_replaces_not_adds():
+    """If a year-N override exists, the post-year-N CF state is the
+    override values — year-N PnL is NOT re-applied on top.
+
+    Without the override, year 2023 raw replay would give ST=$5K (from
+    -$8K loss minus $3K cap). With an override saying ST=$10K at end of
+    2023, that $10K is the authoritative starting state for 2024.
+    """
+    repo = _StubRepoWithOverrides(
+        by_year={
+            2023: (Decimal("-8000"), Decimal("0")),  # raw replay → CF $5K
+        },
+        overrides={
+            2023: _Override(st=Decimal("10000"), lt=Decimal("0")),
+        },
+    )
+    # 2024 starts from override $10K. No 2024 P&L → minus $3K cap = $7K rolls.
+    cf = derive_carryforward(repo, year=2025)
+    assert cf == Carryforward(st=Decimal("7000"), lt=Decimal("0"), source="derived")
+
+
+def test_no_intermediate_override_uses_raw_replay_unchanged():
+    """Control: no overrides recorded for intermediate years → behavior
+    is identical to pre-fix (raw multi-year replay).
+    """
+    repo = _StubRepoWithOverrides(
+        by_year={
+            2022: (Decimal("-10000"), Decimal("0")),
+            2023: (Decimal("-2000"), Decimal("0")),
+        },
+        overrides={},
+    )
+    cf = derive_carryforward(repo, year=2024)
+    # Year 2022: -10K → CF $7K. Year 2023: -$2K loss + CF $7K = -$9K total ST
+    # loss → -$3K cap → $6K rolls into 2024.
+    assert cf == Carryforward(st=Decimal("6000"), lt=Decimal("0"), source="derived")
+
+
+def test_override_target_year_is_consumed_by_get_effective_not_derive():
+    """An override at the TARGET year is the get_effective_carryforward
+    contract — derive_carryforward must NOT also apply it (would double
+    up). Only intermediate-year overrides reshape the replay state.
+    """
+    repo = _StubRepoWithOverrides(
+        by_year={2023: (Decimal("-5000"), Decimal("0"))},
+        overrides={
+            2024: _Override(st=Decimal("999"), lt=Decimal("0")),  # at target year
+        },
+    )
+    # derive_carryforward(year=2024) replays 2023 only — the 2024 override is
+    # for the target year and is consumed by get_effective_carryforward, not
+    # by derive_carryforward.
+    cf = derive_carryforward(repo, year=2024)
+    # 2023: -$5K - $3K cap → $2K rolls into 2024.
+    assert cf == Carryforward(st=Decimal("2000"), lt=Decimal("0"), source="derived")

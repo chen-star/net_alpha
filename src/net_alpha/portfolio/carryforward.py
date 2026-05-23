@@ -57,6 +57,17 @@ def derive_carryforward(
     Returns the (st, lt) magnitude that rolls INTO `year`. `filing_status`
     controls the §1211(b) cap (MFS halves to $1,500); when unknown, the
     standard $3,000 cap is used.
+
+    Intermediate-year overrides (audit #38): if the repo supports
+    ``get_carryforward_override`` and the user has recorded an override
+    for some intermediate year N < ``year``, that override IS the
+    authoritative post-year-N CF state — the replay loop substitutes the
+    override values for the (st_carry, lt_carry) walk *after* applying
+    year-N's roll, and resumes from there. The override is a "freeze +
+    reset" point, not an addend; year-(N+1) derives directly from the
+    override. Overrides at the *target* year are NOT consumed here — the
+    contract of ``get_effective_carryforward`` is that target-year
+    overrides win over the derive result entirely.
     """
     first = repo.earliest_trade_year()
     if first is None or first >= year:
@@ -65,9 +76,19 @@ def derive_carryforward(
     cap = ordinary_loss_cap(filing_status)
     st_carry = Decimal("0")
     lt_carry = Decimal("0")
+    get_override = getattr(repo, "get_carryforward_override", None)
     for y in range(first, year):
         st_pnl, lt_pnl = repo.realized_pnl_split_by_year(y)
         st_carry, lt_carry = _roll_one_year(st_carry, lt_carry, st_pnl, lt_pnl, cap=cap)
+        # Intermediate-year override = authoritative post-year-y CF state.
+        # Replace (st_carry, lt_carry) and continue from there. The loop
+        # range stops at year-1 so the target year is never hit here —
+        # target-year overrides are consumed by ``get_effective_carryforward``.
+        if get_override is not None:
+            override = get_override(y)
+            if override is not None:
+                st_carry = Decimal(str(override.st_amount))
+                lt_carry = Decimal(str(override.lt_amount))
     return Carryforward(st=st_carry, lt=lt_carry, source="derived")
 
 
