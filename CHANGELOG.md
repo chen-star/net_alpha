@@ -2,6 +2,647 @@
 
 
 
+## v0.77.1 (2026-05-23)
+
+### Documentation
+
+* docs: restructure README for clarity and visual hierarchy
+
+Tighten hero, convert feature lists into scannable tables, surface
+privacy guarantee and supported brokers as first-class sections, and
+link out to docs/ for deeper development guides.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e6de2b9`](https://github.com/chen-star/net_alpha/commit/e6de2b9cb8538867afdcecaf2f46c33989840fd5))
+
+### Fix
+
+* fix(web): make harvest-plan exclude_locked toggle actually work (audit #21)
+
+The &#34;Exclude locked&#34; checkbox on /tax/harvest/plan was a dead control: clicking
+it to UNCHECK had no effect — locked targets remained hidden from the plan.
+
+Root cause is a classic HTML + server-default interaction:
+  1. Browsers omit unchecked checkboxes from form submission entirely.
+  2. The route signature was `exclude_locked: bool = True`.
+  3. So unchecking the box sent no `exclude_locked` param at all → FastAPI
+     fell back to the default `True` → the filter silently re-enabled itself.
+
+Fix uses the standard hidden-sentinel idiom: place
+`&lt;input type=&#34;hidden&#34; name=&#34;exclude_locked&#34; value=&#34;0&#34;&gt;` immediately BEFORE
+the checkbox in the form. Now:
+
+  - Unchecked → only &#34;0&#34; submits → bool(&#34;0&#34; as query string) → False (correct)
+  - Checked   → &#34;0&#34; then &#34;1&#34; submit → FastAPI bool coercion takes the LAST
+                value → True (correct)
+
+Verified empirically with a FastAPI TestClient harness that FastAPI&#39;s scalar
+`bool` parameter coercion does take the trailing value when a query key
+repeats — so no route signature change was needed.
+
+Added 4 tests that exercise the form-submission contract through the rendered
+fragment (hidden-input ordering, unchecked state, checked state, default
+state) so future template edits can&#39;t silently break the round trip again.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c8bb9d0`](https://github.com/chen-star/net_alpha/commit/c8bb9d0a94f0b7009fea5d778c0537f6c91046c7))
+
+* fix(web): take carryforward reset year from form body (audit #20)
+
+``settings_carryforward_reset`` declared ``year: int`` as a query parameter,
+so any form POST carrying ``year=`` in the body would 422. Switch to
+``year: int = Form(...)`` and wrap the Reset button in a tiny inline form
+with a hidden ``year`` input so the canonical submission shape matches the
+typed handler. The existing query-string-only test is updated to use the
+form body.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ceebb34`](https://github.com/chen-star/net_alpha/commit/ceebb34f1d2690aab3cbb2f65711b9dd7aeee5f8))
+
+* fix(web): reject option-shaped tickers on manual trade form (audit #19)
+
+The manual trade form has only ticker/qty/basis/date/action — no inputs for
+strike, expiry, or call/put. The route built ``Trade(option_details=None)``
+regardless of the ticker shape, so submitting an option contract string
+(``&#34;SPY 250117C500&#34;``, OCC ``&#34;AAPL250117C150000&#34;``) silently persisted a
+corrupt equity row. Validate the normalized ticker against a plain
+equity pattern (1-6 uppercase letters plus optional ``.X`` class suffix to
+allow ``BRK.B``) on both create and edit; reject with a 400 + clear message
+directing the user to import options via CSV.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`625ac5e`](https://github.com/chen-star/net_alpha/commit/625ac5e395048c375db8383be15b59e15c9beaeb))
+
+* fix(web): preserve per-account scope on overview layout reorder (audit #17)
+
+The Sortable handler posted only `row=` keys to `/portfolio/layout/reorder`,
+so the route always resolved to the taxpayer-level profile even when the
+user was viewing a per-account Overview. Two-pronged fix: the JS now
+threads the current URL&#39;s ?account= values into the POST body, and the
+route falls back to parsing the Referer header when neither form body nor
+query string carries an account. Either path (new JS, old cached JS, or
+direct API call) lands writes on the correct profile bucket.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e9c7025`](https://github.com/chen-star/net_alpha/commit/e9c70251f98226d7af3bc2826c699ccd453dda14))
+
+* fix(web): filter options-only rows out of the Stocks tab (audit #16)
+
+`/positions?view=stocks` previously called `/portfolio/positions` with only
+`group_options=none`, which controls grouping — not filtering. Underlyings
+with only open option exposure (qty=0 equity, open contracts) silently
+mirrored onto the Stocks tab. Add an `instrument_kind` query arg to the
+route that drops `qty == 0` rows when set to `&#34;stocks&#34;`, and pass it from
+the stocks-view template. Preserved in the toolbar qsTemplate so sort and
+pagination keep the filter.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6765b59`](https://github.com/chen-star/net_alpha/commit/6765b59ec3158dd13209ca13bbdd3339dff117a7))
+
+* fix(web): use generic text-neg for HTTP status numeral instead of confidence color (audit #33)
+
+`error.html` rendered the 404 / 500 numeral with `.text-confirmed` — the
+wash-sale Confirmed tier color reserved by CLAUDE.md. The HTTP status is not
+a wash-sale verdict, so the design-system meaning of `--color-confirmed`
+should not leak to it. Swaps to `.text-neg` (same red in practice, since
+both tokens resolve to the same value per theme, but semantically distinct).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6b5045e`](https://github.com/chen-star/net_alpha/commit/6b5045eca30d3645faf8aaa92edef6a8bdb08c5c))
+
+* fix(web): retag cross-account violation source with neutral chip (audit #32)
+
+`_violation_card.html` rendered the &#34;Cross-account&#34; source tag with
+`.chip-probable` (yellow), borrowing from the wash-sale confidence palette
+that CLAUDE.md reserves for Confirmed (red) / Probable (yellow) /
+Unclear (blue). When a Confirmed cross-account wash sale rendered, the row
+showed a red confidence chip next to a yellow Cross-account chip — reading
+as two parallel verdicts instead of &#34;confidence: Confirmed, source: cross-
+account&#34;.
+
+Adds a neutral `.chip-source` (slate background, label-2 text, hairline
+border) and swaps the Cross-account span to use it.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9d95628`](https://github.com/chen-star/net_alpha/commit/9d956280fac948971fb849ba9d8ac05337fca453))
+
+* fix(web): retheme Replay-tour button with theme-aware tokens (audit #31)
+
+The About tab&#39;s &#34;Replay onboarding tour&#34; button used `border-slate-300` and
+`hover:bg-slate-50` — both light-only utilities that render almost
+invisibly against the dark canvas the user defaults to. Swap to
+`border-hairline` / `hover:bg-surface-2` so the button reads correctly in
+both themes.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8866e34`](https://github.com/chen-star/net_alpha/commit/8866e344407ed63bc5c391855e94d0903f58d64a))
+
+* fix(web): preserve page-level period+account scope in tab/sort/reset/toggle URLs (audit #27, #28, #29)
+
+Three related leaks where links and forms inside scoped pages were stripping
+the user&#39;s toolbar selection on navigation:
+
+- audit #27 (`tax.html`): each tab anchor (Wash sales / Projection /
+  Performance) appended `account=` but not `period=`, so clicking a tab from
+  a non-default period bumped the user back to YTD.
+
+- audit #28 (`_detail_table.html`, `_tax_wash_sales_tab.html`): the lag-sort
+  header link iterated the legacy singular `filter_account` (no longer
+  populated by the tax route — context provides the `selected_accounts` list
+  + `selected_period`), and pointed at `/wash-sales` which 301-redirects
+  through `/tax`. The Reset button and the ⌫ reset chip dropped both scope
+  params entirely. All three now build URLs from `selected_accounts` (one
+  `account=` per entry) + `selected_period`, target `/tax` directly, and
+  url-encode each value.
+
+- audit #29 (`_positions_view_at_loss.html`): the harvestable-only
+  HTMX form carried only the checkbox; no scope. Adds hidden `period` and
+  `account` inputs so the toggle round-trips them. Default
+  `harvest_form_action` also changed from `/tax?view=harvest` (a 301
+  redirect target) to `/positions?view=at-loss` so the fallback stays
+  on the current page.
+
+Adds `tests/web/test_scope_filter_preservation.py` to lock down all three
+URL-construction sites against future regressions.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`70fc1b5`](https://github.com/chen-star/net_alpha/commit/70fc1b565c075b2b75b2fb5420ee6bdf2422d859))
+
+* fix(web): align imports detail row colspan with 8-column thead (audit #18)
+
+`_imports_table.html` renders 8 thead columns
+(checkbox-spacer, checkbox, ID, Imported-at, Account, Filename, Summary,
+Actions), but the expand-detail row hard-coded colspan=&#34;7&#34;, misaligning the
+detail panel across the full table width on every imports-page expand.
+
+Extends `test_import_detail_returns_fragment` to assert colspan=&#34;8&#34; so a
+future thead column add/remove that drifts from this row fails loudly.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b03a485`](https://github.com/chen-star/net_alpha/commit/b03a485f14319308cfb3f20aa66b7e3355ab2d1d))
+
+* fix(web): replace silent-no-op Tailwind alpha modifiers with explicit color-mix tints (audit #25)
+
+Templates were using Tailwind&#39;s `border-confirmed/30`, `bg-warn/5`,
+`bg-warn/10`, `bg-info/10` alpha-modifier syntax, but these silently no-op
+because the underlying `--color-confirmed/--color-warn/--color-info` tokens
+have no alpha channel for Tailwind to crack into. Result: no border tint on
+&#34;Delete&#34; buttons in the imports table, no row highlight for split-adjusted
+lots, no source-tagged background on detail-table wash-sale rows.
+
+Fix at the token side: define `--color-{confirmed,warn,info}-tint-{N}` using
+`color-mix(in srgb, var(--color-X) N%, transparent)` so the tints auto-
+retheme with the live token in both dark and light. Wire small utilities
+(`.border-confirmed-soft`, `.bg-warn-soft-5`, `.bg-warn-soft-10`,
+`.bg-info-soft-10`) and update the four template sites.
+
+Extends `tests/web/test_static_css.py` to assert each new utility ships in
+the compiled CSS.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`3cce2ef`](https://github.com/chen-star/net_alpha/commit/3cce2ef97b884483f86d14ec38b0aab1b554d84e))
+
+* fix(web): add missing CSS classes for hygiene badges, verify pills, freshness banner, welcome card hover (audit #22, #23, #24, #26)
+
+Templates were emitting class names with no CSS rule behind them, so the UI
+rendered with default/no styling for severity=&#34;error&#34; hygiene rows, verify-
+dashboard status text, the stale-reference banner, and welcome card hover.
+
+- `.badge-error` — pairs `--color-neg` fg with `--color-neg-tint` bg, mirrors
+  the existing `.badge-warn`. Used by `_data_hygiene.html` when issue
+  severity is &#34;error&#34; (hygiene.py emits info/warn/error).
+- `.status-pass/.status-fail/.status-warn/.status-error` — verify-run severity
+  text. `.status-error` is the high-severity sibling of `.status-fail` —
+  rendered as a solid pill so it pops out of a long mostly-passing table.
+- `.bg-warn-soft` — 12% color-mix amber wash for the verify stale-reference
+  banner. Lighter than `--color-warn-tint` (which is for chip backgrounds).
+- `.border-accent` + `.hover\:border-accent` — maps the project&#39;s
+  `--color-accent` token (systemBlue in both themes) so the welcome-card
+  hover border resolves to the brand blue instead of no-op&#39;ing.
+
+All tokens dark-mode-first; light-mode parity comes for free via the
+existing `[data-theme=&#34;light&#34;]` overrides on `--color-neg`, `--color-warn`,
+and `--color-accent`.
+
+Adds `tests/web/test_static_css.py` so future Tailwind purges or typos that
+drop these classes fail loudly instead of silently shipping a broken UI.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`344c3e3`](https://github.com/chen-star/net_alpha/commit/344c3e3fa611ad27e683c135d67dcf0f7000593d))
+
+* fix(portfolio): expose pre-CF realized P&amp;L on AfterTaxBreakdown (audit #39)
+
+``AfterTaxBreakdown.pre_tax_realized_pnl`` was populated AFTER the
+``st_pnl = st_after_cf`` rebind, so the Tax Performance tile reported
+post-carryforward P&amp;L while the home page&#39;s ``period_realized``
+(carryforward-blind) reported the pre-CF number. Same input, two
+different &#34;pre-tax&#34; tiles, silent disagreement.
+
+Fix: capture the pre-CF realized total before any rebinding and expose
+it as a sibling field ``pre_tax_realized_before_cf``. Keep
+``pre_tax_realized_pnl`` for back-compat with the post-CF semantic the
+downstream tax bill is computed against; clarified docstring. Add
+``carryforward_absorbed`` (= pre − post) so the UI can render the
+netting explicitly without re-deriving it from the CF struct.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9d1c4b7`](https://github.com/chen-star/net_alpha/commit/9d1c4b79a2b8a972e81bc5fa39292d7c9d65b6ab))
+
+* fix(portfolio): honor intermediate-year carryforward overrides in derive (audit #38)
+
+``get_effective_carryforward`` checked overrides only at the *target*
+year. The replay loop in ``derive_carryforward`` then walked raw broker
+data for every intermediate year — silently ignoring any &#34;I have $X CF
+at end of year N&#34; override the user recorded for the path getting to
+the target.
+
+Fix: after rolling year y inside the replay, consult
+``repo.get_carryforward_override(y)``. If set, REPLACE (st_carry,
+lt_carry) with the override values and continue from there. Semantic
+documented inline and in the function docstring: an override at year N
+IS the post-year-N CF state, not an addend — year (N+1) derives from
+the override directly. Target-year overrides remain the contract of
+``get_effective_carryforward`` and are NOT re-applied here.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6e5b5f8`](https://github.com/chen-star/net_alpha/commit/6e5b5f8cf08d38bbe0d6fb14cab3cd04f14f1a0a))
+
+* fix(portfolio): forward-fill benchmark close for weekend contributions (audit #37)
+
+Cash arriving on a weekend or market holiday previously bought zero
+benchmark shares because ``get_close(symbol, weekend_date)`` returns
+None and the helper silently dropped the contribution from the shadow
+series — permanently lost from the user&#39;s &#34;what if I&#39;d bought SPY&#34;
+comparison.
+
+Fix: when the close is None on the contribution date, probe forward up
+to 5 calendar days for the next trading-day close (covers Sat/Sun and
+typical 3-day holiday weekends like MLK / Memorial Day). Falls through
+to the original &#34;silently skip&#34; behavior only if no close is available
+anywhere in that window.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`63f9951`](https://github.com/chen-star/net_alpha/commit/63f99517e60fa63d49ed235cea190d7dfaf3d6c8))
+
+* fix(portfolio): short-option opened_at is earliest still-open STO (audit #36)
+
+``compute_open_short_option_positions`` reported the chain&#39;s most recent
+STO date regardless of whether that contract had been closed. For a
+chain STO(Jan,1) → STO(Mar,1) → STO(May,1) → BTC(Jun,1) leaving 2c open,
+FIFO closes the January STO and the still-open contracts trace back to
+March — but pre-fix the helper returned May. This is consequential for
+the unrealized estimator (uses ``opened_at`` as the time-decay
+denominator) and for §1223 holding-period tacking.
+
+Fix: track each STO trade as a per-chain (date, qty) leg, FIFO-consume
+accumulated BTC + GL closure quantity against those legs, and report
+the earliest leg whose qty isn&#39;t fully consumed. Chains with no STO
+legs (defensive) or whose closures exceed total STO qty (chain flipped
+net-long) fall through to None — the caller already skips non-short
+rows.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`5804bf4`](https://github.com/chen-star/net_alpha/commit/5804bf403073ceb00f041777a59e275777e47983))
+
+* fix(engine): enumerate partial-fill placements in brute lot picker (audit #8)
+
+``_select_brute`` walked each combo with a single lex-ordered
+consumption, so the lot that absorbed the partial fill was always the
+last by ID. When per-share basis differs across the combo this misses
+the optimum — e.g. selling 150 sh from three 100-sh lots (basis $10,
+$20, $30 per share at sell $5), the true MIN_TAX / MAX_LOSS pick is
+lot 3 fully + lot 2 partially (-$3,250) but brute returned lot 2 fully
++ lot 3 partially (-$2,750).
+
+Fix: for combos where ``combo_qty &gt; qty``, enumerate each lot as the
+partial slot — place that lot last so ``_consume``&#39;s FIFO walk takes
+the others fully and the chosen lot partially. O(2^N × N) total, well
+under the ≤12-lot brute threshold. Combos with ``combo_qty == qty`` are
+evaluated once (every lot fully consumed).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`a42843d`](https://github.com/chen-star/net_alpha/commit/a42843db76db6aaa27ef7e8ad5bb4aa83a9ae005))
+
+* fix(engine): pro-rate sim wash-sale disallowance by replacement qty (audit #7)
+
+Sim&#39;s ``_check_wash_sale`` returned the entire loss the moment ANY
+qualifying buy appeared in the ±30d window — a 10-share replacement
+against a 1,000-share sell got flagged as a 100% washout, contradicting
+IRC §1091&#39;s partial-replacement rule:
+
+    disallowed = loss × min(replacement_qty_sum, sell_qty) / sell_qty
+
+Fix: sum eligible replacement buys across the window (same filters as
+before — equity-only, no transfer-in), then pro-rate. Updated two
+existing tests that had baked in the buggy &#34;full disallowance&#34; assertion
+to use replacement quantities matching their intended scenarios.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`71fb077`](https://github.com/chen-star/net_alpha/commit/71fb0776a0ac9ff9f44abc8ea250f7fab8897980))
+
+* fix(portfolio): rename top_movers → largest_unrealized for honesty (audit #6)
+
+The &#34;Top Movers&#34; panel name implies a session / 1-day mark-to-market
+window but ranks by lifetime unrealized P&amp;L since each position was
+opened. Renaming the data model + builder to &#34;largest unrealized&#34;
+removes that ambiguity without changing the ranking behavior.
+
+Primary names: ``build_largest_unrealized`` /
+``LargestUnrealizedView`` / ``.gains`` / ``.losses``. Back-compat
+aliases (``build_top_movers`` / ``TopMoversView`` / ``.winners`` /
+``.losers``) and a tolerant ``__init__`` accepting either kwarg set
+preserve the web route + template surface until those migrate.
+TODO comments mark the cleanup once the web side moves over.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`85beb65`](https://github.com/chen-star/net_alpha/commit/85beb65a924d44f3619e4d9f8e4bd7185fab55cd))
+
+* fix(portfolio): expose equity_market_value on AllocationView (audit #5)
+
+``AllocationView.total_market_value`` is the donut&#39;s grand total —
+equities + free cash + pledged cash — but its name implies equity-only.
+Renderers labeling the value &#39;Market value&#39; overstate by the cash
+balance.
+
+Fix: keep ``total_market_value`` (back-compat with the donut center
+label) and clarify its docstring as &#39;total assets incl. cash&#39;, then add
+a sibling ``equity_market_value`` field that holds the equities-only
+figure. Defaults to 0 so existing test fixtures constructing
+AllocationView directly keep working, and equals ``total_market_value``
+when no cash is supplied so callers can always reach for the new field
+without a None check.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b993c25`](https://github.com/chen-star/net_alpha/commit/b993c252321b8f98dc6b8831f7b7f1c60db4309a))
+
+* fix(portfolio): align offset-budget gross totals with ST/LT source (audit #4)
+
+``_realized_in_year`` (gross losses / gains) walked raw trades and
+counted long-option STCs that ``realized_pnl_split_by_year`` (the ST/LT
+source) excludes — so the OffsetBudget pane surfaced two figures that
+disagreed silently on the same page.
+
+Fix: a new ``Repository.realized_pnl_contributions_by_year`` exposes the
+per-event signed P&amp;L using the same filter as
+``realized_pnl_split_by_year`` (equity sells with wash-sale disallowed
+loss add-back + §1256 closed classifications + §1256 MTM rows, taxable
+accounts only). ``_realized_in_year`` delegates to it and sums positives
+vs negatives, so ``realized_losses_ytd + realized_gains_ytd`` always ties
+out to ``st_pnl + lt_pnl + sec1256_pnl + sec1256_mtm`` on the same page.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`048ab18`](https://github.com/chen-star/net_alpha/commit/048ab18166d2e475250f6a66672cd47ec37debe9))
+
+* fix(engine): apply NIIT in sim lot-strategy after-tax estimate (audit #3)
+
+`_compute_after_tax` in the Sim lot selector ignored NIIT entirely, so
+the Tax Performance tile (`portfolio/after_tax.compute_after_tax`) and
+the Sim Lot Strategy Comparison disagreed on the same input whenever
+``niit_enabled=True``. Mirrors the Tax Performance math exactly: 3.8%
+on the net positive (st_after + lt_after) bucket.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`6c97cfe`](https://github.com/chen-star/net_alpha/commit/6c97cfe174fe9aee63fe9c89b7b96c41aa7da938))
+
+* fix(portfolio): truthful NIIT caveat — no MAGI gate implemented (audit #2)
+
+The NIIT caveat advertised &#34;applied above MAGI threshold&#34; but the math
+applies the 3.8% surtax unconditionally whenever ``niit_enabled=True``.
+Implementing an actual MAGI gate would need a new input field (web
+scope); the in-scope fix is to make the caveat truthful and point the
+user at the existing toggle.
+
+New wording: &#34;NIIT applied at 3.8% on all net positive capital gains
+whenever enabled (currently: on/off). Toggle NIIT off in tax config if
+MAGI is below $200K single / $250K MFJ.&#34; Math is unchanged; existing
+tests still pass.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`9db255c`](https://github.com/chen-star/net_alpha/commit/9db255cedc8ca754b68be708e32078218ad6b193))
+
+* fix(portfolio): stop double-counting BTC cost in short-option unrealized (audit #1)
+
+`_short_option_unrealized_adjustment` was using `row.premium_received` —
+which is net of BTC costs — as the unrealized-side baseline. The BTC cost
+is already booked as realized P&amp;L by `realized_pl_contributions`, so the
+home-page `lifetime_net_pl = lifetime_realized + unrealized` subtracted
+it twice. Concrete trace: STO 2c at $200 + BTC 1c at $50 with $80 est.
+liability on the remaining 1c reported $120 instead of the true $70 —
+overstatement = the entire BTC cost.
+
+Fix: track gross STO premium and qty per chain on `OpenShortOptionRow`,
+then pro-rate the gross STO premium to the still-open contracts inside
+the unrealized estimator. `explain.py` mirrors the same math and is
+updated in lock-step. The new fields default to 0 to keep test fixtures
+that build rows directly working via the back-compat fallback to
+`row.premium_received`.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`efb02f7`](https://github.com/chen-star/net_alpha/commit/efb02f7241c5e30b57ff032775d2acaf9d876fdb))
+
+* fix(engine): make §1223(4) tacking additive across holding periods (audit #9)
+
+Bug: the engine previously computed the replacement lot&#39;s effective
+acquired date as ``min(loss_side_acquired, current_eff)`` — an
+earliest-wins comparison. Two distinct failure modes:
+
+ - Under-tacks when FIFO consumes a *newer* loss leg into an *older*
+   replacement lot — only the days back to the loss-side acquired date
+   get credited, not the loss-leg&#39;s full holding period.
+ - Over-tacks during the rebuy gap when the replacement is bought AFTER
+   the loss sale — the calendar interval between the loss-side acquired
+   date and the replacement&#39;s own acquisition date gets double-counted
+   as &#34;held&#34; even though no lot in this lineage existed during that gap.
+
+Fix: tack additively, matching the literal §1223(4) &#34;there shall be
+included&#34; mechanic. The replacement&#39;s effective acquired date is
+shifted backward by ``loss_sale.date − loss_side_acquired`` days from
+its current effective date, guarded by ``loss_leg_hp_days &gt; 0`` so
+orphan sells (HP = 0d) become no-ops instead of pinning the
+replacement to its own raw date. Chains compound naturally because
+each link reads the prior link&#39;s already-tacked effective date.
+
+Five existing assertions in
+``tests/engine/test_detector_holding_period_tacking.py`` encoded the
+earliest-wins semantic; they are updated to the additive values with
+inline §1223(4) arithmetic comments. One assertion in
+``tests/web/test_pane_lot_ladder.py`` (the TACKED-pill scenario) is
+recomputed against the additive formula — the lot remains solidly LT
+so the pill behavior under test is unchanged. A new test,
+``test_additive_tacking_diverges_from_earliest_wins_in_rebuy_gap``,
+pins down the rebuy-gap divergence directly.
+
+Refs: audit finding #9.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eb6c892`](https://github.com/chen-star/net_alpha/commit/eb6c8922c9ca8496695a176f531a94eeef9685b5))
+
+* fix(audit): pro-rate per_lot_diffs across multi-broker-lot fills (audit #34)
+
+Root cause: when Schwab&#39;s Realized G/L splits one net-alpha sell into multiple
+broker lots (HIFO allocation across different acquisition dates), the
+fallback ``match = bucket[0]`` + ``bucket.remove(match)`` consumed the whole
+sell on the first broker lot. Every subsequent broker lot in the same bucket
+was then orphaned (``net_alpha_basis=None``, &#34;no matching sell on this date&#34;),
+and the first lot&#39;s delta inflated by the full sell&#39;s proceeds/basis minus the
+partial broker lot — both findings were wildly wrong.
+
+Fix: when no exact same-qty match is found, take the partial-fill path:
+pro-rate the oldest unconsumed sell by ``bl.qty / match.quantity`` so each
+LotDiff carries the matched fraction of net-alpha proceeds + basis. Track
+cumulative consumed_qty per sell id; only remove the sell from its bucket
+once cumulative broker qty has covered the sell&#39;s full quantity. Proof:
+tests/audit/test_per_lot_diff.py::test_per_lot_diff_pro_rates_one_sell_across_multiple_broker_lots
+seeds one 100-share sell with three broker lots of 40/35/25 and asserts each
+LotDiff has correctly pro-rated values and the deltas sum to 0 (matching
+totals on both sides).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ed52b9a`](https://github.com/chen-star/net_alpha/commit/ed52b9a43db83da0165d29d895db8077d55e6a27))
+
+* fix(audit): scope reconcile to tax_year to align with broker YTD imports (audit #15)
+
+Root cause: reconcile() summed net_alpha_total over every trade ever recorded
+for the (account, symbol) pair, while broker_total reflected only whatever
+the imported Realized G/L CSV covered. Users typically import the current or
+prior tax year only, so a perfectly clean account looked like DIFF — the
+delta equalled the realized P&amp;L of the years the broker file omitted.
+
+Fix: add an optional `tax_year: int | None = None` parameter to reconcile().
+When provided, both _net_alpha_realized (filters by trade.date.year) and the
+broker lots (filtered by closed.year) are narrowed to that year, so the two
+sides compare apples-to-apples. Default behavior is unchanged — `tax_year=None`
+preserves the lifetime scope and the docstring documents the scope mismatch
+caveat. Web wiring is out of phase scope; this commit exposes the parameter
+and adds a unit test
+(tests/audit/test_reconciliation.py::test_reconcile_tax_year_scope_matches_broker_ytd)
+that seeds two years of trades with one year of broker G/L and asserts
+lifetime → DIFF, tax_year-scoped → MATCH.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`42b591c`](https://github.com/chen-star/net_alpha/commit/42b591ca9e34d4fbf505061a703755ab01ef16f6))
+
+* fix(section_1256): track MTM-marked qty across partial-close + reopen (audit #35)
+
+Root cause: classify_closed_trades read prior_year_mtm_basis_fn(pk, year-1)
+and applied the returned per-contract FMV to the FULL sell qty regardless of
+how many contracts were actually marked at prior year-end. If a position was
+marked at qty=10 EOY, partially closed in Q1, then reopened with fresh
+contracts in Q2, the next sell mixed marked + fresh contracts; the old code
+priced all of them at prior FMV, mis-stating both basis and realized P&amp;L.
+
+Fix: thread open_section_1256_positions(as_of=Dec 31 prior year) into the
+classifier to derive the per-position marked qty. Each sell consumes marked
+qty FIFO at prior_fmv per contract; once marked is exhausted, the remaining
+sell qty falls back to actual lot basis from post-EOY (fresh) lots. The
+classifier also drains pre-EOY lots from the FIFO chain by quantity so a
+subsequent same-year sell can&#39;t double-count their basis. Backwards-compat
+preserved: callers / tests that don&#39;t seed lots for
+open_section_1256_positions to find still get the prior &#34;apply prior_fmv to
+full sell qty&#34; behavior. Proof:
+tests/section_1256/test_classifier_mtm_carryforward.py::
+test_marked_qty_consumed_fifo_then_fresh_opens_use_lot_basis seeds the
+BTO 10 → MTM $7 → STC 4 → BTO 5 fresh → STC 7 scenario and asserts the
+second STC&#39;s realized P&amp;L is $20 (basis 6×$7 + 1×$8 = $50) rather than the
+buggy $21 (7×$7).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`b670e85`](https://github.com/chen-star/net_alpha/commit/b670e856dcf8dbc65a44ff33a0296dfd50fda9aa))
+
+* fix(engine): apportion disallowed loss with Decimal cents to eliminate drift (audit #40)
+
+Root cause: detect_wash_sales computed `loss_per_unit = loss_amount() / quantity`
+in float, then `round(allocable * loss_per_unit, 2)` independently for each
+matched candidate. Three qty-1 buys against a $1.00 / 3-share loss produced
+0.33 + 0.33 + 0.33 = $0.99 — a one-cent residual. Across recompute cycles the
+residual interacted with _rebuild_adjusted_basis_from_violations&#39; $0.005
+tolerance and caused phantom UPDATE churn on lots that should have been
+stable.
+
+Fix: introduce _apportion_disallowed_cents using largest-remainder (Hare-
+quota) rounding in integer cents. Refactor the inner loop into a two-pass
+shape: first pass collects (candidate, confidence, allocable) tuples and
+decrements lot_remaining; second pass apportions the *matched-quantity-pro-
+rated* loss (preserving the existing partial-wash-sale behavior of disallowing
+only the matched fraction) across those tuples and builds violations /
+exempt-matches. Per-match disallowed amounts now sum EXACTLY to the
+matched-portion total in cents.
+
+Tests: tests/engine/test_detector.py::test_multi_buy_partial_disallowed_loss_sums_to_loss_with_no_drift
+covers the three-cent case; ::test_multi_buy_repeated_recompute_has_no_basis_churn
+asserts five back-to-back recomputes leave adjusted_basis stable. All 2571
+non-e2e tests pass; the existing partial-wash-sale test
+(test_partial_wash_sale_fewer_shares_bought) still passes because the
+pro-rating step preserves the 40/100 → 40% behavior.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`0c49ad8`](https://github.com/chen-star/net_alpha/commit/0c49ad8c832fe31bee22baa46ea2066f4acdbeff))
+
+* fix(matcher): long-put loss + buy-stock is not a wash sale (audit #14)
+
+Root cause: the option-loss → stock-buy branch of get_match_confidence returned
+&#34;Probable&#34; for any option loss, regardless of call/put. A long PUT is a
+contract to SELL the underlying — opposite directional exposure to the stock —
+so it is not §1091 substantially identical. Only a long CALL (which mirrors
+the stock&#39;s upside bet) qualifies.
+
+Fix: tighten the guard to require loss_sale.option_details.call_put == &#34;C&#34;.
+A long-put loss followed by buying the underlying within ±30 days now
+correctly returns None. Proof:
+tests/engine/test_matcher.py::test_long_put_loss_buy_stock_no_match. The
+existing test_option_loss_buy_stock_probable (which uses a CALL) still
+passes, demonstrating the call case is unchanged.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e1fba43`](https://github.com/chen-star/net_alpha/commit/e1fba43a14e3d7e8f34cd233c59534357d17656e))
+
+* fix(engine): unknown account types default to TAXABLE everywhere (audit #13)
+
+Root cause: account_types_by_display() (consumed by the wash-sale detector)
+defaulted unknown type strings to TAXABLE via a try/except, while
+_taxable_account_ids() and _taxable_account_displays() (consumed by the
+tax/after-tax helpers) whitelisted only the literal string &#34;taxable&#34; — so an
+unknown type (&#34;weird&#34;, legacy migration artifacts, etc.) was silently treated
+as NON-taxable, suppressing tax on those accounts while still flagging
+wash-sale risk. Either side could change which P&amp;L gets taxed without the
+user knowing.
+
+Fix: define the non-taxable set as the AccountType enum minus TAXABLE; any
+type string not in that set is classified taxable. Also add
+_warn_unmapped_account_types() to recompute_all_violations: one loguru.warning
+per recompute listing every account whose type is unrecognized, so the user
+gets a single nudge to classify them. Tests:
+tests/db/test_repository_account_type_default.py covers
+account_types_by_display, _taxable_account_ids, _taxable_account_displays, and
+the warning emission via a loguru sink.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`ccf007b`](https://github.com/chen-star/net_alpha/commit/ccf007bf7bf1ba7ce0f74d1229d4427b7666bf85))
+
+* fix(splits): skip option lots so contract count is preserved (audit #12)
+
+Root cause: apply_splits looped over every lot row for a symbol and multiplied
+its quantity by the cumulative split ratio. For listed options, the OCC and
+the broker adjust the option&#39;s strike and multiplier when the underlying
+splits — the contract count the user holds is unchanged. Applying the split
+to an option lot wrongly doubled (or halved) the contract count.
+
+Fix: inside the per-lot loop, look up the source Trade and `continue` when
+`trade.option_details is not None`. Equity lots in the same symbol are still
+adjusted. Proof:
+tests/splits/test_apply.py::test_option_lots_are_not_split_adjusted seeds an
+equity buy + an option buy on the same pre-split day and asserts only the
+equity lot doubles after a 2-for-1 split.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`58f5875`](https://github.com/chen-star/net_alpha/commit/58f5875550c018e2793a87c9bd14c87c64589e58))
+
+* fix(section_1256): add SPXW/NDXP/RUTW and case-insensitive lookup (audit #11)
+
+Root cause: the bundled §1256 universe omitted the PM-settled weekly variants
+(SPXW, NDXP, RUTW) of the broad-based indexes, and `is_section_1256` did a
+case-sensitive `in` check. Brokers exporting weeklies or lowercase tickers
+silently fell out of the §1256 path — the engine then treated those trades as
+ordinary equity options (wash-sale-eligible, no 60/40 split).
+
+Fix: add the three weeklies to section_1256_underlyings.yaml, normalize all
+loaded symbols and the lookup key to upper-case. Proof:
+tests/section_1256/test_universe.py::test_is_section_1256_true_for_spxw_ndxp_rutw_weeklies
+and ::test_is_section_1256_case_insensitive both fail on master.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`f6b0d0c`](https://github.com/chen-star/net_alpha/commit/f6b0d0cd610d6ef569c3df7f5d34ee81a496f876))
+
+* fix(pricing): align vol annualizer with calendar-day T in Black-Scholes (audit #10)
+
+Root cause: hist_vol_30d annualized daily stdev with sqrt(252) (trading-day
+convention), but year_end_fmv computes T = days/365 (calendar convention).
+Inside black_scholes, sigma * sqrt(T) mixed the two, biasing MTM FMVs.
+
+Fix: switch the annualizer to sqrt(365) so both legs agree on calendar-day
+spacing (industry default for retail tax tools and matches yfinance&#39;s
+calendar-day series). The proof is
+tests/pricing/test_year_end.py::test_hist_vol_30d_uses_calendar_day_annualizer
+which builds a deterministic alternating series, computes the daily stdev
+analytically, and asserts the annualized output equals daily_stdev * sqrt(365)
+(and is meaningfully far from sqrt(252)). The existing Hull-textbook ATM-call
+test is left intact as the consistency check.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`1c1ee52`](https://github.com/chen-star/net_alpha/commit/1c1ee52aa053fb4f120d93cc3c2e4ed37227826f))
+
+### Style
+
+* style: fix ruff formatting in test_jobs_washsale_watch
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2000180`](https://github.com/chen-star/net_alpha/commit/2000180f3bad178328eeb9243f7f33ff0b381c4b))
+
+
 ## v0.77.0 (2026-05-22)
 
 ### Feature
