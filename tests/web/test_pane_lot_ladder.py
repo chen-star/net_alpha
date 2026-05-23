@@ -95,8 +95,10 @@ def test_lot_ladder_tacked_pill_has_tooltip(client: TestClient, repo, builders) 
       3. Buy 100 sh @ $50 (10 days ago, D3) — replacement within ±30d of D2.
 
     Engine detects the wash sale: disallowed loss ($5,000) rolls into the
-    replacement lot's basis ($10,000), and tacked_acquired_date is set to D1.
-    The lot ladder must then render the TACKED pill + §1223(4) tooltip.
+    replacement lot's basis ($10,000), and tacked_acquired_date is shifted
+    backward from D3 by the loss-leg's holding period per §1223(4) (additive),
+    landing comfortably > 365d ago — solidly LT for the pill. The lot ladder
+    must then render the TACKED pill + §1223(4) tooltip.
     """
     from net_alpha.engine.recompute import recompute_all_violations
     from net_alpha.engine.stitch import stitch_account
@@ -124,15 +126,19 @@ def test_lot_ladder_tacked_pill_has_tooltip(client: TestClient, repo, builders) 
     stitch_account(repo, acct.id)
     recompute_all_violations(repo, {})
 
-    # Sanity: at least one lot for this ticker+account must have
-    # tacked_acquired_date == far_past (the replacement lot).
+    # Sanity: the replacement lot must carry a tacked_acquired_date set by
+    # §1223(4) additive tacking. Loss-leg HP = (sell_date − far_past) =
+    # 730 − 30 = 700d. Replacement effective = rebuy_date − 700d = today − 710d.
+    expected_tacked = rebuy_date - timedelta(days=700)
     lots = repo.get_lots_for_ticker(sym)
     tacked_lots = [lot for lot in lots if lot.account == display and lot.tacked_acquired_date is not None]
     assert len(tacked_lots) == 1, f"expected exactly 1 tacked lot, got {len(tacked_lots)}: {tacked_lots}"
     tacked_lot = tacked_lots[0]
-    assert tacked_lot.tacked_acquired_date == far_past, (
-        f"expected tacked_acquired_date={far_past}, got {tacked_lot.tacked_acquired_date}"
+    assert tacked_lot.tacked_acquired_date == expected_tacked, (
+        f"expected tacked_acquired_date={expected_tacked}, got {tacked_lot.tacked_acquired_date}"
     )
+    # And the effective date must still be > 365d ago so the pill renders as LT.
+    assert (today - tacked_lot.effective_acquired_date()).days > 365
 
     # Hit the pane and confirm the TACKED pill renders with the §1223(4) tooltip.
     resp = client.get(f"/positions/pane?sym={sym}&account_id={acct.id}")

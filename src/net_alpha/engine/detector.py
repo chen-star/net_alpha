@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date as _date
+from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from net_alpha.engine.matcher import get_match_confidence, is_within_wash_sale_window
@@ -295,9 +296,22 @@ def detect_wash_sales(
                 # scope for v1.
                 if not is_permanent and not is_sold_put_trigger and candidate.id in lots:
                     lots[candidate.id].adjusted_basis += disallowed
-                    current_eff = lots[candidate.id].effective_acquired_date()
-                    if loss_side_acquired < current_eff:
-                        lots[candidate.id].tacked_acquired_date = loss_side_acquired
+                    # IRC §1223(4): the loss-leg's holding period "shall be
+                    # included" in the replacement lot's holding period. Apply
+                    # this additively — shift the replacement's effective
+                    # acquired date backward by the loss-leg's HP-in-days — so
+                    # chained wash sales accumulate correctly, and an
+                    # earliest-wins comparison can never under- nor over-tack.
+                    # (Audit #9: previously, the engine took
+                    # ``min(loss_side_acquired, current_eff)``, which both
+                    # under-tacked when FIFO consumed a newer loss leg into an
+                    # older replacement AND over-tacked during the rebuy gap
+                    # when the replacement was bought AFTER the loss sale.)
+                    loss_leg_hp_days = (loss_sale.date - loss_side_acquired).days
+                    if loss_leg_hp_days > 0:
+                        current_eff = lots[candidate.id].effective_acquired_date()
+                        new_tacked = current_eff - timedelta(days=loss_leg_hp_days)
+                        lots[candidate.id].tacked_acquired_date = new_tacked
 
     return DetectionResult(
         violations=violations,
