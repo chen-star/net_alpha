@@ -2,6 +2,74 @@
 
 
 
+## v0.77.2 (2026-05-23)
+
+### Chore
+
+* chore: harden short-option fallback + add scope-hole comments (audit verifier nits)
+
+Three small defensive nits the audit verifier spotted post-fix-pass:
+
+F3a — portfolio/pnl.py short-option unrealized fallback
+  Previously fell back to row.premium_received (net-of-BTC) when the
+  gross STO fields were unset — silently re-introducing the audit #1
+  double-count if a real caller ever forgot to populate them. Now logs
+  a warning and contributes 0 instead. The two explain.py test fixtures
+  that relied on the fallback now construct rows with gross fields set
+  (gross == net when no BTC has occurred). The parallel fallback in
+  portfolio/explain.py keeps its back-compat behaviour with a tightened
+  comment — the explainer panel must not crash.
+
+F3b — overview_layout.js account-only forwarding
+  Comment clarifies why ?account= is threaded into the layout-reorder
+  POST but ?period= isn&#39;t (layouts are account-scoped only today), and
+  what to update if layouts ever gain period scope.
+
+F3c — splits/apply.py float cumulative
+  Comment explains the float choice (real-world chains are short and
+  ratios are integer-friendly, so FP drift stays below share precision)
+  and the Decimal swap path for synthetic edge cases.
+
+Also folds in the post-F1 ruff-format cleanup of two test files.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`36d7037`](https://github.com/chen-star/net_alpha/commit/36d7037914fee21b2f1e1085c755f7e2b6eea5e2))
+
+### Fix
+
+* fix(web): retire text-confirmed reuse in disallowed-loss and parse-warning contexts (audit follow-up: #33)
+
+text-confirmed (red) is reserved for the wash-sale Confirmed confidence
+tier. Three remaining sites reused it for unrelated semantics:
+
+- _detail_table.html: per-group + per-row disallowed-loss dollar amounts
+  swap to text-neg (semantic &#34;negative monetary impact&#34;). Previously the
+  red number sat next to a Probable or Unclear chip, signalling
+  contradictory confidence to the user.
+- _tax_wash_sales_tab.html: summary panel disallowed total swaps to
+  text-neg for the same reason.
+- _imports_detail_row.html: parse-warning bullets swap to text-warn
+  (severity warning, not &#34;confirmed wash sale&#34;).
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7ea6957`](https://github.com/chen-star/net_alpha/commit/7ea6957ed163e1bcc80dbc87048580e09d82b25a))
+
+* fix(audit): thread tax_year through reconcile_all + verify callers (audit follow-up: #15)
+
+Wires the existing reconcile(tax_year=...) param through the batch wrapper
+and downstream callers so a single-year broker G/L file no longer surfaces
+a spurious DIFF equal to prior-year P&amp;L.
+
+- reconcile_all now accepts and forwards tax_year (default None preserves
+  the existing lifetime-scope behaviour for the scheduler-driven verify
+  job that has no notion of a &#34;current tax year&#34;).
+- verify.broker_recon.reconcile_realized_gl threads tax_year through to
+  reconcile_all so a page-scoped caller can narrow both sides.
+- /reconciliation/{symbol} accepts ?period=&lt;lifetime|ytd|YYYY&gt; and an
+  explicit ?tax_year=, mapping period -&gt; calendar year so the per-symbol
+  recon strip can drop into a period-scoped page later.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`eadfe72`](https://github.com/chen-star/net_alpha/commit/eadfe72c0ed87be8b007fc131536de5bc99a3d41))
+
+
 ## v0.77.1 (2026-05-23)
 
 ### Documentation
