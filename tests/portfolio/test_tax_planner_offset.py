@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from net_alpha.models.domain import Trade
+from net_alpha.models.domain import OptionDetails, Trade
 from net_alpha.portfolio.tax_planner import OffsetBudget, PlannedTrade, compute_offset_budget
 
 
@@ -294,3 +294,109 @@ def test_offset_budget_carryforward_inflates_used_against_ordinary(
     assert budget.used_against_ordinary == Decimal("3000")
     # carryforward_projection is the residue: $4K cf + $2K loss - $3K cap = $3K
     assert budget.carryforward_projection == Decimal("3000")
+
+
+def test_offset_budget_losses_plus_gains_match_st_plus_lt(
+    repo,
+    schwab_account,
+    seed_import,
+    seed_lots,
+) -> None:
+    """Audit #4: ``realized_losses_ytd + realized_gains_ytd`` must equal the
+    net P&L surfaced as ST/LT (``realized_pnl_split_by_year``). Pre-fix the
+    two helpers used different filters — long-option STCs counted in
+    ``_realized_in_year`` (the gains/losses source) but NOT in
+    ``realized_pnl_split_by_year`` (the ST/LT source).
+
+    Seed: an equity gain, an equity loss, AND a long-call STC sell.
+    The long-call STC must NOT appear on the gains/losses side, matching
+    the canonical helper that excludes options entirely from ST/LT
+    classification (§1256 is folded in separately, not here).
+    """
+    opt = OptionDetails(strike=400.0, expiry=date(2026, 6, 19), call_put="C")
+    trades = [
+        # Equity buy + sell — gain $30
+        Trade(
+            account=schwab_account.display(),
+            date=date(2026, 1, 5),
+            ticker="AAPL",
+            action="Buy",
+            quantity=Decimal("1"),
+            proceeds=Decimal("0"),
+            cost_basis=Decimal("100"),
+        ),
+        Trade(
+            account=schwab_account.display(),
+            date=date(2026, 3, 1),
+            ticker="AAPL",
+            action="Sell",
+            quantity=Decimal("1"),
+            proceeds=Decimal("130"),
+            cost_basis=Decimal("100"),
+        ),
+        # Equity buy + sell — loss $20
+        Trade(
+            account=schwab_account.display(),
+            date=date(2026, 1, 5),
+            ticker="UUUU",
+            action="Buy",
+            quantity=Decimal("1"),
+            proceeds=Decimal("0"),
+            cost_basis=Decimal("100"),
+        ),
+        Trade(
+            account=schwab_account.display(),
+            date=date(2026, 3, 1),
+            ticker="UUUU",
+            action="Sell",
+            quantity=Decimal("1"),
+            proceeds=Decimal("80"),
+            cost_basis=Decimal("100"),
+        ),
+        # Long-call BTO + STC — would-be loss $50 IF options counted
+        Trade(
+            account=schwab_account.display(),
+            date=date(2026, 2, 1),
+            ticker="SPY",
+            action="Buy",
+            quantity=Decimal("1"),
+            proceeds=Decimal("0"),
+            cost_basis=Decimal("300"),
+            basis_source="option_long_open",
+            option_details=opt,
+        ),
+        Trade(
+            account=schwab_account.display(),
+            date=date(2026, 3, 15),
+            ticker="SPY",
+            action="Sell",
+            quantity=Decimal("1"),
+            proceeds=Decimal("250"),
+            cost_basis=Decimal("300"),
+            basis_source="option_long_close",
+            option_details=opt,
+        ),
+    ]
+    seed_import(repo, schwab_account, trades)
+    seed_lots(repo)
+
+    b = compute_offset_budget(repo=repo, year=2026)
+    # Pre-fix: gains=30, losses=-20-50=-70 (long-call STC counted).
+    # Post-fix: gains=30, losses=-20 (long-call STC excluded — matches the
+    # ST/LT source which the same OffsetBudget exposes elsewhere).
+    assert b.realized_gains_ytd == Decimal("30")
+    assert b.realized_losses_ytd == Decimal("-20")
+
+    # The headline alignment: gross totals reconcile to the same net as the
+    # ST/LT source. (Long-call STC excluded from both sides → net = $10.)
+    st_pnl, lt_pnl = repo.realized_pnl_split_by_year(2026)
+    sec1256_pnl = repo.section_1256_pnl(
+        type("P", (), {"kind": "year", "label": "2026", "year": 2026})(),
+        accounts=None,
+    )
+    sec1256_mtm = repo.section_1256_mtm_pnl(
+        type("P", (), {"kind": "year", "label": "2026", "year": 2026})(),
+        accounts=None,
+    )
+    canonical_net = st_pnl + lt_pnl + sec1256_pnl + sec1256_mtm
+    assert b.realized_losses_ytd + b.realized_gains_ytd == canonical_net

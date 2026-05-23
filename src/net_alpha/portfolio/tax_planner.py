@@ -397,24 +397,17 @@ def compute_harvest_queue(
 def _realized_in_year(repo: Repository, year: int) -> tuple[Decimal, Decimal]:
     """Return (gross_losses_ytd_signed_negative, gross_gains_ytd_positive).
 
-    Excludes tax-advantaged accounts (IRA / Roth / 401(k) / HSA): a loss
-    realized inside one of these is not a taxable event and must not consume
-    §1211(b) headroom or inflate ``used_against_ordinary``.
+    Delegates to ``repo.realized_pnl_contributions_by_year`` so the gross
+    losses / gains pair always sums to the same net as the ST/LT pair from
+    ``repo.realized_pnl_split_by_year`` — the two are surfaced side-by-side
+    on the same OffsetBudget pane and previously disagreed because this
+    helper counted long-option STCs that the ST/LT source excluded
+    (audit #4). Tax-advantaged accounts (IRA / Roth / 401(k) / HSA) are
+    excluded by the underlying helper.
     """
-    types_by_display = repo.account_types_by_display()
     losses = Decimal("0")
     gains = Decimal("0")
-    for t in repo.all_trades():
-        if t.action.lower() not in {"sell", "sell to close"}:
-            continue
-        if t.date.year != year:
-            continue
-        if t.proceeds is None or t.cost_basis is None:
-            continue
-        acct_type = types_by_display.get(t.account)
-        if acct_type is not None and acct_type.is_tax_advantaged:
-            continue
-        pnl = Decimal(str(t.proceeds)) - Decimal(str(t.cost_basis))
+    for pnl in repo.realized_pnl_contributions_by_year(year):
         if pnl < 0:
             losses += pnl
         else:

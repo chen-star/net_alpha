@@ -2655,6 +2655,81 @@ class Repository:
 
         return st, lt
 
+    def realized_pnl_contributions_by_year(self, year: int) -> list[Decimal]:
+        """Return per-event signed realized P&L contributions for ``year``.
+
+        Same filter as ``realized_pnl_split_by_year`` — equity sells with
+        FIFO matching + wash-sale disallowed loss add-back, plus per-row
+        §1256 closed classifications and §1256 MTM rows. Tax-advantaged
+        accounts (IRA / Roth / 401(k) / HSA) are excluded.
+
+        The sum of the returned list equals the sum of the (ST, LT) tuple
+        from ``realized_pnl_split_by_year(year)``. Use this when you need
+        gross gains vs gross losses (sum positives vs negatives) and the
+        ST/LT split itself isn't required — keeps the offset-budget pane
+        in lock-step with the ST/LT tile that sits next to it.
+        """
+        contributions: list[Decimal] = []
+        with Session(self.engine) as session:
+            taxable_accounts = self._taxable_account_displays(session)
+            taxable_account_ids = set(self._taxable_account_ids(session))
+            disallowed_by_trade: dict[int, Decimal] = {}
+            for loss_trade_id, disallowed in session.exec(
+                select(WashSaleViolationRow.loss_trade_id, WashSaleViolationRow.disallowed_loss)
+            ).all():
+                disallowed_by_trade[loss_trade_id] = disallowed_by_trade.get(loss_trade_id, Decimal("0")) + Decimal(
+                    str(disallowed)
+                )
+
+        # Equity sells: walk in chronological order, filter to year, apply
+        # disallowed loss add-back. Per-sell granularity (not per-donor) is
+        # sufficient — gains/losses bucketing is sign-based.
+        all_trades = [t for t in self.all_trades() if t.account in taxable_accounts]
+        sells = sorted(
+            [
+                t
+                for t in all_trades
+                if t.action.lower() == "sell"
+                and t.option_details is None
+                and t.proceeds is not None
+                and t.cost_basis is not None
+                and t.date.year == year
+            ],
+            key=lambda t: t.date,
+        )
+        for sell in sells:
+            pnl = Decimal(str(sell.proceeds)) - Decimal(str(sell.cost_basis))
+            try:
+                sell_row_id = int(sell.id) if sell.id is not None else None
+            except (TypeError, ValueError):
+                sell_row_id = None
+            if sell_row_id is not None and sell_row_id in disallowed_by_trade:
+                pnl += disallowed_by_trade[sell_row_id]
+            contributions.append(pnl)
+
+        # §1256 closed contracts (60/40 character handled separately by
+        # downstream tax calcs; this helper only cares about signed P&L).
+        with Session(self.engine) as session:
+            if taxable_account_ids:
+                cls_stmt = (
+                    select(Section1256ClassificationRow)
+                    .join(TradeRow, TradeRow.id == Section1256ClassificationRow.trade_id)
+                    .where(TradeRow.account_id.in_(taxable_account_ids))
+                    .where(TradeRow.trade_date.startswith(f"{year}-"))
+                )
+                for cls_row in session.exec(cls_stmt).all():
+                    contributions.append(Decimal(str(cls_row.realized_pnl)))
+            if taxable_accounts:
+                mtm_stmt = (
+                    select(Section1256MTMRow)
+                    .where(Section1256MTMRow.tax_year == year)
+                    .where(Section1256MTMRow.account.in_(sorted(taxable_accounts)))
+                )
+                for mtm_row in session.exec(mtm_stmt).all():
+                    contributions.append(Decimal(str(mtm_row.unrealized_pnl)))
+
+        return contributions
+
     # ---- Carryforward overrides ----
 
     def get_carryforward_override(self, year: int) -> LossCarryforwardRow | None:
