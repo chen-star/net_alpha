@@ -54,6 +54,7 @@ def build_allocation(
             top5_pct=Decimal("0"),
             top10_pct=Decimal("0"),
             all_slices=(),
+            equity_market_value=Decimal("0"),
         )
 
     head = valued[:top_n]
@@ -167,4 +168,5 @@ def build_allocation(
         top5_pct=_share(5),
         top10_pct=_share(10),
         all_slices=tuple(all_slices),
+        equity_market_value=total,
     )

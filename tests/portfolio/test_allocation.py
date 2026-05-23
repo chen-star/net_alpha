@@ -116,3 +116,39 @@ def test_allocation_omits_cash_slice_when_none():
     alloc = build_allocation(positions=[pos], top_n=10)  # no cash kwarg
     assert all(not s.is_cash for s in alloc.slices)
     assert alloc.total_market_value == Decimal("100")  # unchanged behavior
+
+
+def test_allocation_view_exposes_equity_market_value_separate_from_grand_total():
+    """Audit #5: ``total_market_value`` is misleadingly named — it includes
+    cash. Renderers labeling it 'Market value' overstate by the cash
+    balance. Expose ``equity_market_value`` (equities-only) as a sibling
+    field so callers can pick the right denominator. Keep
+    ``total_market_value`` semantically as 'total assets incl. cash' for
+    back-compat with the donut center label.
+    """
+    pos = _row("SPY", 750)
+    alloc = build_allocation(positions=[pos], top_n=10, cash=Decimal("250"))
+    # Existing field: grand total (equities + cash).
+    assert alloc.total_market_value == Decimal("1000")
+    # New field: equities only — no cash.
+    assert alloc.equity_market_value == Decimal("750")
+
+
+def test_allocation_view_equity_market_value_equals_total_when_no_cash():
+    """When ``cash`` is not supplied or zero, the two fields are equal —
+    grand total degenerates to equity total. The new field exists in both
+    branches so callers can always reach for it without a None check.
+    """
+    pos = _row("SPY", 100)
+    alloc = build_allocation(positions=[pos], top_n=10)
+    assert alloc.total_market_value == Decimal("100")
+    assert alloc.equity_market_value == Decimal("100")
+
+    alloc_zero_cash = build_allocation(positions=[pos], top_n=10, cash=Decimal("0"))
+    assert alloc_zero_cash.equity_market_value == Decimal("100")
+
+
+def test_allocation_view_equity_market_value_is_zero_on_empty():
+    alloc = build_allocation(positions=[], top_n=10)
+    assert alloc.equity_market_value == Decimal("0")
+    assert alloc.total_market_value == Decimal("0")

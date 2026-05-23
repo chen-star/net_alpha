@@ -227,6 +227,10 @@ class AllocationSlice:
 
 @dataclass(frozen=True)
 class AllocationView:
+    # Grand total of all assets shown on the donut — equities + free cash +
+    # pledged cash. Use this for the donut center label ("total assets") and
+    # any percentage-of-account denominator. NOT equity-only: the name is
+    # historical; ``equity_market_value`` below is the equities-only figure.
     total_market_value: Decimal
     symbol_count: int
     slices: tuple[AllocationSlice, ...]  # length = top_n + (1 if rest else 0)
@@ -238,6 +242,11 @@ class AllocationView:
     # Used by the click-through allocation details modal so the user can see
     # the full ranked breakdown including small positions hidden in 'OTHER'.
     all_slices: tuple[AllocationSlice, ...] = ()
+    # Equity-only market value (excludes cash + pledged cash). Use this when
+    # rendering a "Market value" label — ``total_market_value`` overstates by
+    # cash and was previously the only field, leading to mislabeled tiles
+    # (audit #5). Equals ``total_market_value`` when no cash is supplied.
+    equity_market_value: Decimal = Decimal("0")
 
 
 @dataclass(frozen=True)
