@@ -18,6 +18,10 @@ def test_import_detail_returns_fragment(client, repo, builders):
     assert "MSFT" in body
     # Distinct ticker count surfaced.
     assert "2" in body
+    # Detail-row colspan must match the 8-column thead in _imports_table.html
+    # (audit #18). A mismatched colspan misaligns the expanded row across the
+    # full table width.
+    assert 'colspan="8"' in body
 
 
 def test_import_detail_404_for_unknown_id(client):
