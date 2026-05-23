@@ -490,7 +490,16 @@ def _compute_after_tax(
     st_tax = max(Decimal("0"), st_after) * brackets.federal_marginal_rate
     lt_tax = max(Decimal("0"), lt_after) * brackets.ltcg_rate
     state_tax = max(Decimal("0"), st_after + lt_after) * brackets.state_marginal_rate
-    tax_bill = st_tax + lt_tax + state_tax
+    # Mirror ``portfolio/after_tax.compute_after_tax`` — the Sim Lot Strategy
+    # Comparison and the Tax Performance tile must agree on the same input.
+    # Unconditional 3.8% on net positive gains when ``niit_enabled``; the
+    # MAGI gate is a user toggle (see after_tax.py caveat).
+    niit = (
+        max(Decimal("0"), st_after + lt_after) * Decimal("0.038")
+        if getattr(brackets, "niit_enabled", False)
+        else Decimal("0")
+    )
+    tax_bill = st_tax + lt_tax + state_tax + niit
 
     # Loss residue: up to the §1211(b) cap saves federal_marginal_rate * cap.
     # Cap is $3,000 normally, $1,500 for MFS.

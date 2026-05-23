@@ -367,6 +367,93 @@ def test_after_tax_disallowed_loss_treated_as_zero_benefit():
     assert result.after_tax_pnl == Dc("-5000")
 
 
+def test_after_tax_applies_niit_when_enabled_to_match_tax_performance_tile():
+    """Sim's Lot Strategy Comparison must agree with the Tax Performance
+    tile (`compute_after_tax`). Pre-fix, sim's `_compute_after_tax` ignored
+    NIIT entirely — flagged in audit #3 because the same input gave
+    different tax bills on the two surfaces.
+
+    Setup: pure LT gain $5,000, no carryforward, NIIT on.
+        lt_tax  = 5000 * 0.15 = $750
+        niit    = 5000 * 0.038 = $190
+        bill    = $940
+        after   = 5000 - 940 = $4060
+    """
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.portfolio.tax_planner import TaxBrackets
+
+    lots = [_lot(1, 100, 5000.0, D(2023, 1, 1))]
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Dc("0.35"),
+        state_marginal_rate=Dc("0"),
+        ltcg_rate=Dc("0.15"),
+        qualified_div_rate=Dc("0.15"),
+        niit_enabled=True,
+    )
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return []
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("100"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=brackets,
+        carryforward=None,
+    )
+    assert result.pre_tax_pnl == Dc("5000")
+    # 5000 - 750 (LT tax) - 190 (NIIT) = 4060
+    assert result.after_tax_pnl == Dc("4060")
+
+
+def test_after_tax_niit_disabled_matches_legacy_behavior():
+    """With ``niit_enabled=False`` the after-tax math must be unchanged from
+    pre-fix: no NIIT layer, just federal + state + LTCG + $3K cap.
+    """
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.portfolio.tax_planner import TaxBrackets
+
+    lots = [_lot(1, 100, 5000.0, D(2023, 1, 1))]
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Dc("0.35"),
+        state_marginal_rate=Dc("0"),
+        ltcg_rate=Dc("0.15"),
+        qualified_div_rate=Dc("0.15"),
+        niit_enabled=False,
+    )
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return []
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("100"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=brackets,
+        carryforward=None,
+    )
+    # 5000 - 750 (LT tax only) = 4250
+    assert result.after_tax_pnl == Dc("4250")
+
+
 def test_after_tax_no_brackets_falls_back_to_pretax_with_note():
     from datetime import date as D
     from decimal import Decimal as Dc
