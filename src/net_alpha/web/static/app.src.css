@@ -109,6 +109,16 @@
   --color-violet-tint:    rgba(191,90,242,0.10);
   --color-indigo-edge:    rgba(94,92,230,0.22);
 
+  /* Explicit-alpha tints used by `.border-confirmed-soft`, `.bg-warn-soft-5`,
+     `.bg-warn-soft-10`, and `.bg-info-soft-10`. Tailwind's `border-foo/30`
+     alpha modifier silently no-ops on our CSS-variable colors (they lack an
+     alpha channel), so the templates emit named utilities that resolve to
+     these tokens instead. */
+  --color-confirmed-tint-30: color-mix(in srgb, var(--color-confirmed) 30%, transparent);
+  --color-warn-tint-5:       color-mix(in srgb, var(--color-warn) 5%, transparent);
+  --color-warn-tint-10:      color-mix(in srgb, var(--color-warn) 10%, transparent);
+  --color-info-tint-10:      color-mix(in srgb, var(--color-info) 10%, transparent);
+
   /* Border radius */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -639,6 +649,16 @@
   .bg-warn-soft {
     background: color-mix(in srgb, var(--color-warn) 12%, transparent);
   }
+
+  /* Explicit-alpha utilities for the four template sites where Tailwind's
+     `bg-warn/5`, `border-confirmed/30`, `bg-info/10` syntax silently no-ops
+     (the underlying CSS-variable colors have no alpha channel for Tailwind
+     to crack into). Tokens auto-rethemes via color-mix on the live
+     --color-confirmed / --color-warn / --color-info variables. */
+  .border-confirmed-soft { border-color: var(--color-confirmed-tint-30); }
+  .bg-warn-soft-5  { background: var(--color-warn-tint-5); }
+  .bg-warn-soft-10 { background: var(--color-warn-tint-10); }
+  .bg-info-soft-10 { background: var(--color-info-tint-10); }
 
   /* Table — snug density */
   .net-table { @apply w-full text-[12px] border-collapse; }

@@ -15,7 +15,7 @@
     <tbody>
       {% for lot in lots %}
         {% set delta = (lot.adjusted_basis - lot.cost_basis) %}
-        <tr {% if delta > 0 %}class="bg-warn/5"{% endif %}>
+        <tr {% if delta > 0 %}class="bg-warn-soft-5"{% endif %}>
           <td class="sticky left-0 z-[1] bg-inherit shadow-[2px_0_0_0_var(--hairline)] px-2 py-1 font-mono">{{ lot.account }}</td>
           <td class="px-2 py-1 font-mono text-[12px]">
             {% if lot.option_details %}

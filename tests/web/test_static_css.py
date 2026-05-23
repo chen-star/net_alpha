@@ -7,6 +7,9 @@ Templates referencing these classes:
   `.status-pass/.status-fail/.status-warn/.status-error`
 - `verify/index.html` → `.bg-warn-soft` (stale freshness banner)
 - `welcome.html` → `.hover:border-accent` (welcome-card hover)
+- `_imports_table.html` → `.border-confirmed-soft`
+- `_lots_table.html` → `.bg-warn-soft-5`
+- `_detail_table.html` → `.bg-warn-soft-10`, `.bg-info-soft-10`
 
 Adding a new template class? Add it here too so Tailwind purging or a typo
 won't ship a silently-broken UI.
@@ -43,6 +46,12 @@ def compiled_css() -> str:
         ".bg-warn-soft",
         ".border-accent",
         r".hover\:border-accent:hover",
+        # Task 3.2 — audit #25 (explicit-alpha replacements for Tailwind
+        # `color/N` syntax that no-ops on CSS-variable colors).
+        ".border-confirmed-soft",
+        ".bg-warn-soft-5",
+        ".bg-warn-soft-10",
+        ".bg-info-soft-10",
     ],
 )
 def test_template_class_ships_in_compiled_css(compiled_css: str, selector: str) -> None:

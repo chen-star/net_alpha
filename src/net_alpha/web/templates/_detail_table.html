@@ -71,9 +71,9 @@
                     {% if src == "Schwab" %}
                       <span class="text-label-2 bg-surface-2 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
                     {% elif src == "Cross-account" %}
-                      <span class="text-warn bg-warn/10 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
+                      <span class="text-warn bg-warn-soft-10 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
                     {% else %}
-                      <span class="text-info bg-info/10 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
+                      <span class="text-info bg-info-soft-10 text-xs font-medium px-2 py-0.5 rounded">{{ src }}</span>
                     {% endif %}
                   </td>
                 </tr>
@@ -134,7 +134,7 @@
                 <td class="r num">{{ em.matched_quantity }}</td>
                 <td class="px-3 py-2"><span class="chip-{{ em.confidence|lower }}">{{ em.confidence }}</span></td>
                 <td class="px-3 py-2">
-                  <span class="text-info bg-info/10 text-xs font-medium px-2 py-0.5 rounded" style="text-decoration: none;">
+                  <span class="text-info bg-info-soft-10 text-xs font-medium px-2 py-0.5 rounded" style="text-decoration: none;">
                     {{ em.exempt_reason | replace("_", " ") | title }}
                   </span>
                 </td>

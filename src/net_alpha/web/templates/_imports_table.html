@@ -31,7 +31,7 @@
         x-init="refresh()">
     <div class="flex items-center justify-end mb-2">
       <button type="submit"
-              class="btn-ghost text-confirmed border-confirmed/30 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              class="btn-ghost text-confirmed border-confirmed-soft text-xs disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="count === 0"
               x-text="count === 0 ? 'Delete selected' : 'Delete ' + count + ' selected'">
         Delete selected
@@ -103,7 +103,7 @@
                 {%- if not total_units and not imp.duplicate_trades -%}<span class="text-label-2">no records</span>{%- endif -%}
               </td>
               <td class="px-3 py-2">
-                <button class="btn-ghost text-confirmed border-confirmed/30"
+                <button class="btn-ghost text-confirmed border-confirmed-soft"
                         hx-delete="/imports/{{ imp.id }}?page={{ page or 1 }}"
                         hx-confirm="{% if total_units > 0 %}Remove import #{{ imp.id }} ({{ imp.trade_count }} trades, {{ imp.gl_lot_count }} G/L lots, {{ imp.cash_event_count or 0 }} cash events)? Wash sales will be recomputed.{% else %}Remove import #{{ imp.id }}? This is a positions snapshot — broker_position rows will be dropped from the verify reconciliation.{% endif %}"
                         hx-target="#imports-table"
