@@ -130,6 +130,68 @@ def test_hist_vol_30d_known_series():
     assert Decimal("0.10") < v < Decimal("0.30")
 
 
+def test_hist_vol_30d_uses_calendar_day_annualizer():
+    """Audit #10: hist_vol_30d must use sqrt(365) to match T = days/365.
+
+    Build a deterministic series of daily log-returns alternating +0.01 / -0.01,
+    so the daily stdev is exactly known. Verify the annualized value uses
+    sqrt(365), not sqrt(252).
+    """
+    import math as _m
+
+    closes: dict[date, Decimal] = {}
+    d = date(2025, 11, 15)
+    price = 100.0
+    # 31 daily prices => 30 daily log returns, all within the 30-calendar-day window
+    closes[d] = Decimal(str(round(price, 8)))
+    for i in range(30):
+        # alternating multiplicative factors give log returns of +ln(1.01) / -ln(1.01)
+        price = price * (1.01 if i % 2 == 0 else 1 / 1.01)
+        d = d + timedelta(days=1)
+        closes[d] = Decimal(str(round(price, 8)))
+
+    anchor = max(closes)
+    v = hist_vol_30d(closes, anchor)
+    assert v is not None
+
+    # The known per-day stdev (population-free, sample stdev with ddof=1) of the
+    # alternating series equals sqrt(sum((r-mean)^2)/(n-1)).
+    log_returns = []
+    sorted_d = sorted(closes)
+    for i in range(1, len(sorted_d)):
+        log_returns.append(_m.log(float(closes[sorted_d[i]]) / float(closes[sorted_d[i - 1]])))
+    mean = sum(log_returns) / len(log_returns)
+    variance = sum((r - mean) ** 2 for r in log_returns) / (len(log_returns) - 1)
+    daily_stdev = _m.sqrt(variance)
+    expected_calendar = Decimal(str(round(daily_stdev * _m.sqrt(365), 6)))
+    expected_trading = Decimal(str(round(daily_stdev * _m.sqrt(252), 6)))
+
+    # The calendar-day convention must be picked; reject the trading-day annualizer.
+    assert abs(v - expected_calendar) <= Decimal("0.0001"), (
+        f"Expected calendar-day annualizer (~{expected_calendar}), got {v}"
+    )
+    assert abs(v - expected_trading) > Decimal("0.01"), (
+        "hist_vol_30d still using trading-day sqrt(252); expected sqrt(365)"
+    )
+
+
+def test_black_scholes_atm_call_30d_hull_textbook_value():
+    """Audit #10: with consistent calendar-day convention, a 30-calendar-day ATM
+    call at S=K=100, r=0.05, sigma=0.20 should price near the Hull-textbook
+    closed-form (~$2.51) — the same as the existing
+    test_black_scholes_atm_call_30d. This test re-asserts it to guard the
+    convention boundary between hist_vol_30d and black_scholes."""
+    p = black_scholes(
+        S=Decimal("100"),
+        K=Decimal("100"),
+        T=Decimal("30") / Decimal("365"),
+        r=Decimal("0.05"),
+        sigma=Decimal("0.20"),
+        call_put="C",
+    )
+    assert _nclose(p, Decimal("2.51"), tol=Decimal("0.05"))
+
+
 class _FakeProvider:
     def __init__(self, *, option_close=None, underlying_closes=None):
         self._option_close = option_close

@@ -72,7 +72,10 @@ def hist_vol_30d(closes: dict[date, Decimal], anchor: date) -> Decimal | None:
     mean = sum(log_returns) / len(log_returns)
     variance = sum((r - mean) ** 2 for r in log_returns) / (len(log_returns) - 1)
     daily_stdev = math.sqrt(variance)
-    annualized = daily_stdev * math.sqrt(252)
+    # Audit #10: T = days/365 in black_scholes uses calendar-day convention, so
+    # the vol annualizer must match. Using sqrt(252) (trading-day convention)
+    # would make sigma * sqrt(T) inconsistent.
+    annualized = daily_stdev * math.sqrt(365)
     return Decimal(str(round(annualized, 6)))
 
 
