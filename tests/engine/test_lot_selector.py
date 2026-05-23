@@ -704,6 +704,107 @@ def test_min_tax_picks_combo_minimizing_tax_bill():
     assert [p.lot_id for p in result.picks] == ["1"]
 
 
+def test_min_tax_brute_reaches_optimal_partial_fill_ordering():
+    """Audit #8: ``_select_brute`` only tried one ordering of each combo
+    (lex by lot.id), which makes the "which lot gets the partial fill"
+    decision NON-optimal whenever per-share basis differs between lots in
+    the combo.
+
+    Counter-example: sell 150 sh @ $5 with three same-size lots holding
+    100 sh each:
+        Lot 1: 100 sh @ $10/sh basis ($1,000 total)
+        Lot 2: 100 sh @ $20/sh basis ($2,000 total)
+        Lot 3: 100 sh @ $30/sh basis ($3,000 total)
+
+    Proceeds: 150 × $5 = $750.
+
+    True MIN_TAX optimum: consume lot 3 fully (100 sh × $30 = $3,000
+    basis) + lot 2 partially (50 sh × $20 = $1,000 basis) → realized P&L
+    = $750 − $4,000 = -$3,250.
+
+    Pre-fix the brute used lex ordering (lot 1 → lot 2 → lot 3) so the
+    last lot in each combo took the partial role. For combo
+    {lot2, lot3} that meant 100 sh from lot 2 (the full slot) + 50 sh
+    from lot 3 (the partial slot) → $750 − ($2,000 + $1,500) = -$2,750.
+    The optimal swap (lot 3 full + lot 2 partial) was unreachable.
+    """
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.portfolio.tax_planner import TaxBrackets
+
+    lots = [
+        _lot(1, 100, 1000.0, D(2023, 1, 1)),
+        _lot(2, 100, 2000.0, D(2023, 1, 1)),
+        _lot(3, 100, 3000.0, D(2023, 1, 1)),
+    ]
+    brackets = TaxBrackets(
+        filing_status="single",
+        state="",
+        federal_marginal_rate=Dc("0.35"),
+        state_marginal_rate=Dc("0"),
+        ltcg_rate=Dc("0.15"),
+        qualified_div_rate=Dc("0.15"),
+        niit_enabled=False,
+    )
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return []
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("150"),
+        sell_price=Dc("5"),
+        sell_date=D(2026, 5, 5),
+        strategy="MIN_TAX",
+        repo=_R(),
+        etf_pairs={},
+        brackets=brackets,
+        carryforward=None,
+    )
+    # Optimum: lot 3 fully consumed + lot 2 partially (50 sh) → -$3,250 P&L.
+    assert result.pre_tax_pnl == Dc("-3250")
+    pick_summary = sorted((p.lot_id, p.qty_consumed) for p in result.picks)
+    assert pick_summary == [("2", Dc("50")), ("3", Dc("100"))]
+
+
+def test_max_loss_brute_reaches_optimal_partial_fill_ordering():
+    """Asymmetric MAX_LOSS counterpart to the MIN_TAX test above. With the
+    same three lots and a 150-share sell, MAX_LOSS minimizes pre-tax
+    (most-negative) P&L; the optimal partial-fill placement again puts
+    the partial slot on the *lower-basis* lot of the two consumed,
+    leaving the highest-basis lot fully consumed.
+    """
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    lots = [
+        _lot(1, 100, 1000.0, D(2023, 1, 1)),
+        _lot(2, 100, 2000.0, D(2023, 1, 1)),
+        _lot(3, 100, 3000.0, D(2023, 1, 1)),
+    ]
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return []
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("150"),
+        sell_price=Dc("5"),
+        sell_date=D(2026, 5, 5),
+        strategy="MAX_LOSS",
+        repo=_R(),
+        etf_pairs={},
+        brackets=None,
+        carryforward=None,
+    )
+    assert result.pre_tax_pnl == Dc("-3250")
+    pick_summary = sorted((p.lot_id, p.qty_consumed) for p in result.picks)
+    assert pick_summary == [("2", Dc("50")), ("3", Dc("100"))]
+
+
 def test_min_tax_greedy_fallback_for_many_lots():
     """With >12 lots, MIN_TAX uses greedy fallback and emits an 'approximate' note."""
     from datetime import date as D

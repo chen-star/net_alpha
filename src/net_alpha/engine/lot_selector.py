@@ -234,6 +234,19 @@ def _select_brute(
 
     Iteration starts at 1-lot combos and grows; combined with stable lot_id
     sorting this naturally prefers fewer-lot, deterministic solutions on ties.
+
+    Partial-fill placement (audit #8): when ``combo_qty > qty`` exactly one
+    lot in the combo absorbs the partial fill while the rest are consumed
+    in full. Per-share basis differs across lots, so the choice of which
+    lot plays the partial role changes the realized P&L — pre-fix this
+    helper used a single lex-ordered consumption, leaving combos like
+    ``{lot_2_low_basis, lot_3_high_basis}`` unable to reach the optimum
+    that consumes lot 3 fully and only partially eats lot 2.
+
+    We enumerate each combo member as the partial slot (N orderings per
+    N-lot combo, NOT N! permutations — still O(2^N × N) under the ≤12-lot
+    brute threshold). When ``combo_qty == qty`` the consumption order is
+    irrelevant (every lot fully consumed) and we only evaluate once.
     """
     from itertools import combinations
 
@@ -245,20 +258,33 @@ def _select_brute(
             combo_qty = sum((Decimal(str(lot.quantity)) for lot in combo), Decimal("0"))
             if combo_qty < qty:
                 continue
-            picks = _consume(list(combo), qty, sell_date)
-            cand = _evaluate(
-                strategy=strategy,
-                picks=picks,
-                sell_price=sell_price,
-                sell_date=sell_date,
-                ticker=ticker,
-                repo=repo,
-                etf_pairs=etf_pairs,
-                brackets=brackets,
-                carryforward=carryforward,
-            )
-            if best is None or _is_better(cand, best, strategy):
-                best = cand
+            combo_list = list(combo)
+            if combo_qty == qty:
+                # All lots fully consumed — single ordering is optimal.
+                orderings: list[list[Lot]] = [combo_list]
+            else:
+                # Try each lot as the partial slot: place that lot last so
+                # ``_consume`` (FIFO over the given list) consumes the
+                # others fully first and the chosen lot partially.
+                orderings = []
+                for i in range(len(combo_list)):
+                    others = combo_list[:i] + combo_list[i + 1 :]
+                    orderings.append(others + [combo_list[i]])
+            for ordering in orderings:
+                picks = _consume(ordering, qty, sell_date)
+                cand = _evaluate(
+                    strategy=strategy,
+                    picks=picks,
+                    sell_price=sell_price,
+                    sell_date=sell_date,
+                    ticker=ticker,
+                    repo=repo,
+                    etf_pairs=etf_pairs,
+                    brackets=brackets,
+                    carryforward=carryforward,
+                )
+                if best is None or _is_better(cand, best, strategy):
+                    best = cand
     assert best is not None  # total_avail >= qty guaranteed by caller
     return best
 
