@@ -412,6 +412,15 @@ def _check_wash_sale(
     positions is handled by the full ``engine.detector`` pipeline; the
     pre-trade simulator stays equity-only on this side to avoid over-
     flagging hypothetical sells against unrelated covered-call buys.
+
+    Per IRC §1091's *partial replacement* rule, only the loss attributable
+    to the replacement shares is disallowed:
+
+        disallowed = loss × min(replacement_qty_sum, sell_qty) / sell_qty
+
+    Pre-fix the helper returned the full loss the moment ANY qualifying
+    buy appeared — a 10-share replacement against a 1,000-share sell was
+    treated as a 100% washout (audit #7).
     """
     pnl = pick.qty_consumed * (sell_price - pick.adjusted_basis)
     if pnl >= 0:
@@ -425,6 +434,7 @@ def _check_wash_sale(
     if repo is None:
         return Decimal("0")
 
+    replacement_qty_sum = Decimal("0")
     for sym in related:
         for trade in repo.trades_for_ticker_in_window(sym, sell_date, days=30):
             if not trade.is_buy():
@@ -433,9 +443,17 @@ def _check_wash_sale(
                 continue
             if trade.basis_source.startswith("transfer_"):
                 continue
-            return -pnl  # disallowed loss = magnitude of the loss
+            replacement_qty_sum += Decimal(str(trade.quantity))
 
-    return Decimal("0")
+    if replacement_qty_sum <= 0:
+        return Decimal("0")
+
+    sell_qty = pick.qty_consumed
+    if sell_qty <= 0:
+        return Decimal("0")
+    # min(replacement, sell) caps at full disallowance when replacement ≥ sell.
+    matched = min(replacement_qty_sum, sell_qty)
+    return -pnl * matched / sell_qty
 
 
 def _compute_after_tax(

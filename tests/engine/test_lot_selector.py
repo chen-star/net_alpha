@@ -170,7 +170,12 @@ def test_fifo_tiebreak_by_lot_id_when_same_date():
 
 
 def test_wash_sale_flagged_when_existing_buy_within_30_days():
-    """A loss lot with a recent buy in the ±30d window should be flagged."""
+    """A loss lot with a recent buy in the ±30d window should be flagged.
+
+    Per IRC §1091's partial-replacement rule (audit #7): with sell qty=100
+    and replacement buy qty=10, only 10% of the loss is disallowed —
+    not the full $5,000.
+    """
     from datetime import date as D
 
     from net_alpha.models.domain import Trade
@@ -205,8 +210,9 @@ def test_wash_sale_flagged_when_existing_buy_within_30_days():
         carryforward=None,
     )
     assert result.has_wash_sale_risk is True
-    # Loss = (100 - 150) * 100 = -5000. Wash sale disallows the loss magnitude.
-    assert result.wash_sale_disallowed == Decimal("5000")
+    # Loss = (100 - 150) * 100 = -5000. Replacement qty 10 / sell qty 100 = 10%.
+    # Disallowed = 5000 * 10/100 = 500.
+    assert result.wash_sale_disallowed == Decimal("500")
 
 
 def test_no_wash_sale_when_loss_lot_has_no_replacement_buy():
@@ -315,7 +321,12 @@ def test_after_tax_applies_brackets_and_carryforward():
 
 
 def test_after_tax_disallowed_loss_treated_as_zero_benefit():
-    """A wash-sale-disallowed loss provides $0 current-year tax benefit."""
+    """A wash-sale-disallowed loss provides $0 current-year tax benefit.
+
+    Setup: replacement buy fully covers the sell qty (100 sh sell, 100 sh
+    buy) so 100% of the $5K loss is disallowed under §1091 → $0 current-
+    year benefit.
+    """
     from datetime import date as D
     from decimal import Decimal as Dc
 
@@ -343,9 +354,9 @@ def test_after_tax_disallowed_loss_treated_as_zero_benefit():
                     ticker="SPY",
                     date=D(2026, 4, 25),
                     action="Buy",
-                    quantity=10,
+                    quantity=100,  # full replacement → 100% disallowed
                     proceeds=None,
-                    cost_basis=1100.0,
+                    cost_basis=11000.0,
                 )
             ]
 
@@ -360,11 +371,180 @@ def test_after_tax_disallowed_loss_treated_as_zero_benefit():
         brackets=brackets,
         carryforward=None,
     )
-    # Pre-tax: -5000. Wash sale disallows the full loss → 0 current-year benefit.
+    # Pre-tax: -5000. Full replacement → wash sale disallows the entire loss
+    # → 0 current-year benefit.
     # After-tax: pre_tax - tax_bill (0) - loss_benefit (0) = -5000
     assert result.pre_tax_pnl == Dc("-5000")
     assert result.wash_sale_disallowed == Dc("5000")
     assert result.after_tax_pnl == Dc("-5000")
+
+
+def test_partial_replacement_disallows_proportional_loss_only():
+    """Audit #7 / IRC §1091 partial-replacement rule: when the replacement
+    buy quantity is *less than* the sell quantity, only the proportional
+    loss is disallowed — not the entire loss.
+
+        disallowed = loss × min(replacement_qty, sell_qty) / sell_qty
+
+    Sell 1,000 sh at $100 with $150/sh basis → -$50,000 loss. Replacement
+    buy of 100 sh in the ±30d window → disallowed = 50,000 × 100/1000 =
+    $5,000 (10%). Pre-fix the whole $50K was disallowed.
+    """
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.models.domain import Trade
+
+    # 1000 shares, $150/sh basis ($150K total), sell at $100 → -$50,000 loss.
+    lots = [_lot(1, 1000, 150000.0, D(2024, 6, 1))]
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return [
+                Trade(
+                    id="b1",
+                    account="default",
+                    ticker="SPY",
+                    date=D(2026, 4, 25),
+                    action="Buy",
+                    quantity=100,
+                    proceeds=None,
+                    cost_basis=11000.0,
+                )
+            ]
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("1000"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=None,
+        carryforward=None,
+    )
+    assert result.has_wash_sale_risk is True
+    # -50,000 × min(100, 1000)/1000 = 5,000
+    assert result.wash_sale_disallowed == Dc("5000")
+
+
+def test_full_replacement_disallows_entire_loss():
+    """Replacement buy ≥ sell quantity → 100% of the loss is disallowed."""
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.models.domain import Trade
+
+    # 100 shares, $150/sh basis ($15K total), sell at $100 → -$5,000 loss.
+    lots = [_lot(1, 100, 15000.0, D(2024, 6, 1))]
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return [
+                Trade(
+                    id="b1",
+                    account="default",
+                    ticker="SPY",
+                    date=D(2026, 4, 25),
+                    action="Buy",
+                    quantity=150,  # 150% replacement → clamps at 100% of loss
+                    proceeds=None,
+                    cost_basis=15000.0,
+                )
+            ]
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("100"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=None,
+        carryforward=None,
+    )
+    # min(150, 100)/100 = 1.0 → entire $5K loss disallowed.
+    assert result.wash_sale_disallowed == Dc("5000")
+
+
+def test_zero_replacement_qty_no_disallowance():
+    """Edge case: no qualifying buy → no disallowance (control)."""
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    lots = [_lot(1, 100, 15000.0, D(2024, 6, 1))]
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return []  # zero qualifying buys
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("100"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=None,
+        carryforward=None,
+    )
+    assert result.wash_sale_disallowed == Dc("0")
+    assert result.has_wash_sale_risk is False
+
+
+def test_replacement_qty_summed_across_window():
+    """Multiple qualifying buys in the window are summed before being
+    compared to the sell qty. Sell 1,000 sh, two buys of 200 sh each → 400
+    sh replacement → 40% of loss disallowed.
+    """
+    from datetime import date as D
+    from decimal import Decimal as Dc
+
+    from net_alpha.models.domain import Trade
+
+    lots = [_lot(1, 1000, 150000.0, D(2024, 6, 1))]
+
+    class _R:
+        def trades_for_ticker_in_window(self, *a, **kw):
+            return [
+                Trade(
+                    id="b1",
+                    account="default",
+                    ticker="SPY",
+                    date=D(2026, 4, 25),
+                    action="Buy",
+                    quantity=200,
+                    proceeds=None,
+                    cost_basis=22000.0,
+                ),
+                Trade(
+                    id="b2",
+                    account="default",
+                    ticker="SPY",
+                    date=D(2026, 4, 28),
+                    action="Buy",
+                    quantity=200,
+                    proceeds=None,
+                    cost_basis=22000.0,
+                ),
+            ]
+
+    result = select_lots(
+        lots=lots,
+        qty=Dc("1000"),
+        sell_price=Dc("100"),
+        sell_date=D(2026, 5, 5),
+        strategy="FIFO",
+        repo=_R(),
+        etf_pairs={},
+        brackets=None,
+        carryforward=None,
+    )
+    # -50,000 × min(400, 1000)/1000 = 20,000
+    assert result.wash_sale_disallowed == Dc("20000")
 
 
 def test_after_tax_applies_niit_when_enabled_to_match_tax_performance_tile():
