@@ -31,6 +31,17 @@
           .map(function (el) { return el.dataset.rowKey; });
         const params = new URLSearchParams();
         rows.forEach(function (r) { params.append('row', r); });
+        // Thread the current page's ?account= scope into the POST so layout
+        // writes land on the per-account profile bucket the user is viewing
+        // — not the taxpayer-level default (audit #17).
+        try {
+          const currentParams = new URLSearchParams(window.location.search);
+          currentParams.getAll('account').forEach(function (a) {
+            if (a) params.append('account', a);
+          });
+        } catch (e) {
+          /* ignore — server has a Referer fallback */
+        }
         fetch('/portfolio/layout/reorder', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

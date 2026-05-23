@@ -1360,7 +1360,20 @@ async def portfolio_layout_reorder(
 ) -> Response:
     form_data = await request.form()
     row: list[str] = list(form_data.getlist("row"))
+    # The Overview page can be scoped to one or more accounts via ?account=,
+    # which determines which profile bucket the layout belongs to. Resolve the
+    # scope from (in order of preference): form body, query string, then the
+    # Referer page URL. The Referer fallback covers callers that omit the
+    # explicit form/query value (e.g. old cached JS) so we never silently
+    # mutate the wrong profile (audit #17).
     raw_accounts: list[str] = list(form_data.getlist("account")) + list(request.query_params.getlist("account"))
+    if not parse_accounts(raw_accounts):
+        referer = request.headers.get("referer") or ""
+        if referer:
+            from urllib.parse import parse_qsl, urlparse
+
+            ref_qs = parse_qsl(urlparse(referer).query, keep_blank_values=False)
+            raw_accounts.extend(v for k, v in ref_qs if k == "account")
     accounts = parse_accounts(raw_accounts)
     profile = _resolve_profile(repo, accounts)
     current = repo.get_overview_layout(profile.profile)
