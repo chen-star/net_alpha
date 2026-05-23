@@ -47,7 +47,21 @@ class Period:
 
 
 class AfterTaxBreakdown(BaseModel):
+    # Post-carryforward pre-tax realized P&L — what the downstream tax
+    # bill is computed against. NOT the same as the home page's
+    # ``period_realized`` (which doesn't apply CF). Kept under the
+    # original name for back-compat; consumers wanting parity with the
+    # home page should read ``pre_tax_realized_before_cf`` below.
     pre_tax_realized_pnl: Decimal
+    # True pre-CF realized P&L — matches the home page's ``period_realized``
+    # so the Tax Performance tile and home page tile no longer disagree
+    # silently (audit #39). Equals ``pre_tax_realized_pnl`` when no
+    # carryforward is applied.
+    pre_tax_realized_before_cf: Decimal = Decimal("0")
+    # Amount of carryforward consumed this period (≥ 0). Equals
+    # ``pre_tax_realized_before_cf − pre_tax_realized_pnl``; surfaced so
+    # the UI can show the netting explicitly.
+    carryforward_absorbed: Decimal = Decimal("0")
     estimated_tax_bill: Decimal
     after_tax_realized_pnl: Decimal
     tax_drag_dollar: Decimal
@@ -109,6 +123,12 @@ def compute_after_tax(
     disallowed: Decimal = disallowed_deferred + disallowed_permanent
 
     cf = carryforward or Carryforward(st=Decimal("0"), lt=Decimal("0"), source="none")
+
+    # Capture pre-CF realized P&L before any rebinding — this is what the
+    # home page surfaces as ``period_realized`` and is the answer to "how
+    # much did I realize this period in cash terms" before applying any
+    # carryforward loss netting (audit #39).
+    pre_tax_before_cf = st_pnl + lt_pnl + sec1256_pnl + sec1256_mtm
 
     # Apply carryforward against same-bucket P&L first; surplus crosses
     # categories per §1212(b)(1)(B). Sign convention: cf.st / cf.lt are
@@ -194,6 +214,11 @@ def compute_after_tax(
 
     return AfterTaxBreakdown(
         pre_tax_realized_pnl=pre_tax,
+        pre_tax_realized_before_cf=pre_tax_before_cf,
+        # Difference is non-negative when CF actually absorbed something;
+        # equals 0 (or close to it, modulo §1256 lines unaffected by CF)
+        # when no CF is supplied.
+        carryforward_absorbed=pre_tax_before_cf - pre_tax,
         estimated_tax_bill=tax_bill,
         after_tax_realized_pnl=after_tax,
         tax_drag_dollar=drag_dollar,

@@ -136,6 +136,72 @@ def test_caveats_includes_lifetime_warning_when_lifetime():
     assert any("Lifetime" in c or "current rates" in c for c in r.caveats)
 
 
+def test_pre_tax_realized_exposes_pre_and_post_carryforward(_=None):
+    """Audit #39: ``pre_tax_realized_pnl`` was rebound to the *post-CF*
+    sum (the rebind at ``st_pnl = st_after_cf``), so the Tax Performance
+    tile silently disagreed with the Home page's ``period_realized``
+    (which doesn't apply CF). Expose both:
+
+      ``pre_tax_realized_before_cf`` — true pre-CF realized P&L (matches
+          home-page ``period_realized``)
+      ``pre_tax_realized_pnl`` — post-CF pre-tax realized P&L (what the
+          downstream tax bill is computed against). Kept for back-compat.
+      ``carryforward_absorbed`` — the difference; how much CF the year
+          consumed (≥ 0; magnitude). Lets the UI surface the netting.
+
+    Setup: $5,000 ST gain with $3,000 ST CF → before CF $5K, after CF
+    $2K, absorbed $3K.
+    """
+    repo = _StubRepo(st=Decimal("5000"))
+    cf = Carryforward(st=Decimal("3000"), lt=Decimal("0"), source="user")
+    r = compute_after_tax(repo, _ytd(), _brackets(niit=False), carryforward=cf)
+    assert r.pre_tax_realized_before_cf == Decimal("5000")
+    assert r.pre_tax_realized_pnl == Decimal("2000")
+    assert r.carryforward_absorbed == Decimal("3000")
+
+
+def test_pre_tax_realized_before_cf_when_no_carryforward(_=None):
+    """When no CF is supplied, the two pre-tax fields are equal and
+    ``carryforward_absorbed`` is zero — back-compat for the common case.
+    """
+    repo = _StubRepo(st=Decimal("1000"), lt=Decimal("2000"))
+    r = compute_after_tax(repo, _ytd(), _brackets(niit=False))
+    assert r.pre_tax_realized_before_cf == Decimal("3000")
+    assert r.pre_tax_realized_pnl == Decimal("3000")
+    assert r.carryforward_absorbed == Decimal("0")
+
+
+def test_pre_tax_realized_before_cf_includes_section_1256(_=None):
+    """§1256 realized + MTM contribute to the pre-CF pre-tax figure
+    identically to ST/LT — they aren't reshaped by carryforward in this
+    module (CF applies only to ST/LT) but they ARE part of the pre-tax
+    headline number.
+    """
+    repo = _StubRepo(st=Decimal("1000"), s1256=Decimal("500"), s1256_mtm=Decimal("200"))
+    r = compute_after_tax(repo, _ytd(), _brackets(niit=False))
+    assert r.pre_tax_realized_before_cf == Decimal("1700")
+
+
+def test_pre_tax_realized_cf_absorbed_caps_at_pnl_when_cf_exceeds_gain(_=None):
+    """If CF exceeds the gain, the gain is reduced to zero and the
+    surplus rolls forward; ``carryforward_absorbed`` reports only the
+    amount actually consumed (not the full CF).
+
+    $1,000 ST gain with $3,000 ST CF + $0 LT gain → ST absorbed = $1,000
+    (the gain), surplus $2,000 has nowhere to go this year (no LT gain
+    to cross-net into), so post-CF state is ST=$0, LT=$0.
+    """
+    repo = _StubRepo(st=Decimal("1000"))
+    cf = Carryforward(st=Decimal("3000"), lt=Decimal("0"), source="user")
+    r = compute_after_tax(repo, _ytd(), _brackets(niit=False), carryforward=cf)
+    assert r.pre_tax_realized_before_cf == Decimal("1000")
+    # After CF: 1000 - 3000 = -2000; no LT gain to cross-net → ST stays -2000.
+    # pre_tax_realized_pnl (post-CF) reflects ST=-2000 + LT=0 + §1256=0.
+    assert r.pre_tax_realized_pnl == Decimal("-2000")
+    # carryforward_absorbed = pre - post = 1000 - (-2000) = 3000
+    assert r.carryforward_absorbed == Decimal("3000")
+
+
 def test_niit_caveat_says_unconditional_when_enabled_no_magi_gate():
     """The NIIT math applies the 3.8% surtax to all positive net capital
     gains whenever ``niit_enabled=True`` — it does NOT check MAGI. The
