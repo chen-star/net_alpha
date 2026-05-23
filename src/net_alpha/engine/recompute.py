@@ -3,17 +3,40 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from loguru import logger
 from sqlalchemy import text
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION
 from net_alpha.db.repository import Repository
+from net_alpha.db.tables import AccountRow
 from net_alpha.engine.detector import detect_in_window
 from net_alpha.engine.merge import merge_violations
+from net_alpha.models.accounts import AccountType
 from net_alpha.section_1256.classifier import classify_closed_trades
 from net_alpha.section_1256.mtm import mark_to_market
 from net_alpha.section_1256.universe import load_universe, universe_hash
 from net_alpha.splits.apply import apply_manual_overrides, apply_splits
+
+
+def _warn_unmapped_account_types(repo: Repository) -> None:
+    """Audit #13: emit a single warning per recompute listing every account
+    whose ``type`` column holds an unrecognized string. These rows silently
+    default to TAXABLE downstream, but the user should classify them so the
+    wash-sale engine and the carryforward agree on what to tax.
+    """
+    valid = {t.value for t in AccountType}
+    unmapped: list[str] = []
+    with Session(repo.engine) as s:
+        rows = s.exec(select(AccountRow.broker, AccountRow.label, AccountRow.type)).all()
+        for broker, label, type_str in rows:
+            if not type_str or type_str not in valid:
+                unmapped.append(f"{broker}/{label}")
+    if unmapped:
+        logger.warning(
+            "Unmapped account types defaulted to TAXABLE; please classify: {}",
+            ", ".join(sorted(unmapped)),
+        )
 
 
 @dataclass
@@ -194,6 +217,8 @@ def recompute_all_violations(repo: Repository, etf_pairs: dict[str, list[str]]) 
     Stamps the universe hash and engine version in meta so should_full_recompute()
     returns False until the universe or engine changes again.
     """
+    _warn_unmapped_account_types(repo)
+
     all_trades = repo.all_trades()
     accounts = repo.list_accounts()
     gl_by_account = {a.id: repo.get_gl_lots_for_account(a.id) for a in accounts}

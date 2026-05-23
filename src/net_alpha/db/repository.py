@@ -1085,16 +1085,25 @@ class Repository:
 
         Used by every tax-helper to keep IRA / Roth / 401(k) / HSA P&L out
         of taxable aggregations regardless of any explicit account filter.
-        Rows without an explicit type are treated as taxable (matches the
-        schema default and ``account_types_by_display`` fallback).
+        Rows without an explicit type — or with an unrecognized type string
+        (legacy data, manual edits, future migration steps) — are treated as
+        taxable. This matches ``account_types_by_display``'s fallback so the
+        wash-sale engine and the carryforward/after-tax helpers agree on
+        which accounts are taxable. Audit #13.
         """
         rows = s.exec(select(AccountRow.id, AccountRow.type)).all()
-        return [rid for rid, t in rows if not t or t == "taxable"]
+        non_taxable = {t.value for t in AccountType if t is not AccountType.TAXABLE}
+        return [rid for rid, t in rows if (not t) or (t not in non_taxable)]
 
     def _taxable_account_displays(self, s: Session) -> set[str]:
-        """``"broker/label"`` for every account whose type is 'taxable'."""
+        """``"broker/label"`` for every account whose type is 'taxable'.
+
+        Same default-to-taxable behavior as ``_taxable_account_ids``: unknown
+        or empty type strings classify as taxable. Audit #13.
+        """
         rows = s.exec(select(AccountRow.broker, AccountRow.label, AccountRow.type)).all()
-        return {f"{b}/{lab}" for b, lab, t in rows if not t or t == "taxable"}
+        non_taxable = {t.value for t in AccountType if t is not AccountType.TAXABLE}
+        return {f"{b}/{lab}" for b, lab, t in rows if (not t) or (t not in non_taxable)}
 
     # ----- Realized G/L methods (schema v2) -----
 
