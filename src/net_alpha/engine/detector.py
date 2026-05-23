@@ -2,11 +2,62 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date as _date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from net_alpha.engine.matcher import get_match_confidence, is_within_wash_sale_window
 from net_alpha.models.accounts import AccountType
 from net_alpha.models.domain import DetectionResult, ExemptMatch, Lot, Trade, WashSaleViolation
+
+_CENT = Decimal("0.01")
+
+
+def _apportion_disallowed_cents(
+    total_loss: Decimal, allocations: list[Decimal]
+) -> list[Decimal]:
+    """Apportion ``total_loss`` (in dollars, already quantized to cents) across
+    a list of ``allocations`` (per-match allocable quantities) so that the
+    rounded-to-cents per-match amounts SUM EXACTLY to ``total_loss``.
+
+    Audit #40: the previous implementation computed
+    ``round(allocable * loss_per_unit, 2)`` independently per match, which
+    drifted by up to one cent per match (e.g. three qty-1 buys against a $1.00
+    loss → 0.33 + 0.33 + 0.33 = 0.99). Use largest-remainder rounding (Hare
+    quota): truncate down per match to whole cents, then distribute the
+    residual cents one-at-a-time to the matches with the largest fractional
+    remainders. Stable across recompute cycles.
+    """
+    qty_total = sum(allocations)
+    if qty_total <= 0:
+        return [Decimal("0")] * len(allocations)
+
+    # Exact per-match share in cents (Decimal arithmetic).
+    total_cents = (total_loss * Decimal(100)).to_integral_value(rounding=ROUND_HALF_UP)
+    raw_shares = [a * total_cents / qty_total for a in allocations]
+    floor_cents = [int(s.to_integral_value(rounding="ROUND_FLOOR")) for s in raw_shares]
+    residual = int(total_cents) - sum(floor_cents)
+
+    # Distribute residual cents to the matches with the largest fractional
+    # remainder; ties broken by larger allocation (so the biggest match takes
+    # the cent first), then by original index for stability.
+    fractions = [
+        (
+            s - Decimal(fc),
+            allocations[i],
+            i,
+        )
+        for i, (s, fc) in enumerate(zip(raw_shares, floor_cents))
+    ]
+    ordered = sorted(fractions, key=lambda x: (-x[0], -x[1], x[2]))
+    cents_per_match = list(floor_cents)
+    for k in range(residual):
+        # Cap residual distribution to the available list — should always
+        # match since residual <= len(allocations) by construction.
+        if k >= len(ordered):
+            break
+        _frac, _alloc, idx = ordered[k]
+        cents_per_match[idx] += 1
+
+    return [Decimal(c) / Decimal(100) for c in cents_per_match]
 
 
 def _lot_key(t: Trade) -> tuple:
@@ -130,16 +181,19 @@ def detect_wash_sales(
             loss_side_acquired = loss_sale.date
 
         remaining_qty = loss_sale.quantity
-        loss_per_unit = loss_sale.loss_amount() / loss_sale.quantity
 
         # Find candidates within window, sorted by date (FIFO)
         candidates = _find_candidates(loss_sale, trades, etf_pairs)
 
+        # Audit #40: first pass — collect each match's allocable quantity
+        # WITHOUT computing the disallowed dollars per match. Then apportion
+        # the loss-sale's total loss across matches using largest-remainder
+        # rounding in integer cents so the per-match dollar amounts sum
+        # exactly to the loss. Avoids cumulative per-unit float drift.
+        match_plan: list[tuple[Trade, str, float]] = []  # (candidate, confidence, allocable)
         for candidate, confidence in candidates:
             if remaining_qty <= 0:
                 break
-
-            # Determine allocable quantity
             if candidate.is_buy() and candidate.id in lot_remaining:
                 available = lot_remaining[candidate.id]
                 if available <= 0:
@@ -147,12 +201,33 @@ def detect_wash_sales(
                 allocable = min(remaining_qty, available)
                 lot_remaining[candidate.id] -= allocable
             elif candidate.is_sell() and candidate.is_option() and candidate.option_details.call_put == "P":
-                # Sold put — no lot, use candidate quantity directly
                 allocable = min(remaining_qty, candidate.quantity)
             else:
                 continue
+            match_plan.append((candidate, confidence, allocable))
+            remaining_qty -= allocable
 
-            disallowed = round(allocable * loss_per_unit, 2)
+        # Apportion the *matched portion* of the loss across each match using
+        # largest-remainder rounding. Pro-rate the loss to the matched
+        # quantity first (so a 40-of-100 partial wash sale disallows 40% of
+        # the loss), then split that pro-rated amount across the matched
+        # candidates with no penny drift.
+        total_loss = Decimal(str(loss_sale.loss_amount()))
+        total_qty = Decimal(str(loss_sale.quantity))
+        matched_qty = sum((Decimal(str(a)) for _, _, a in match_plan), Decimal("0"))
+        if matched_qty == 0 or total_qty == 0:
+            matched_loss = Decimal("0")
+        else:
+            matched_loss = (total_loss * matched_qty / total_qty).quantize(
+                _CENT, rounding=ROUND_HALF_UP
+            )
+        allocations_dec = [Decimal(str(a)) for _, _, a in match_plan]
+        disallowed_per_match = _apportion_disallowed_cents(matched_loss, allocations_dec)
+
+        for (candidate, confidence, allocable), disallowed_dec in zip(
+            match_plan, disallowed_per_match
+        ):
+            disallowed = float(disallowed_dec)
 
             if loss_sale.is_section_1256 or candidate.is_section_1256:
                 exempt_matches.append(
@@ -161,7 +236,7 @@ def detect_wash_sales(
                         triggering_buy_id=candidate.id,
                         exempt_reason="section_1256",
                         rule_citation="IRC §1256(c)",
-                        notional_disallowed=Decimal(str(disallowed)),
+                        notional_disallowed=disallowed_dec,
                         confidence=confidence,
                         matched_quantity=allocable,
                         loss_account=loss_sale.account,
@@ -223,8 +298,6 @@ def detect_wash_sales(
                     current_eff = lots[candidate.id].effective_acquired_date()
                     if loss_side_acquired < current_eff:
                         lots[candidate.id].tacked_acquired_date = loss_side_acquired
-
-            remaining_qty -= allocable
 
     return DetectionResult(
         violations=violations,

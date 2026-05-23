@@ -526,3 +526,105 @@ def test_buy_to_open_still_seeds_long_lot():
     result = detect_wash_sales([bto], {})
     assert len(result.lots) == 1
     assert result.lots[0].ticker == "TSLA"
+
+
+def test_multi_buy_partial_disallowed_loss_sums_to_loss_with_no_drift():
+    """Audit #40: with three qty-1 buys against a qty-3 loss sale of $1.00,
+    per-unit float math (1.00/3 = 0.3333… rounded to $0.33 per match) would
+    leave a one-cent residual. Decimal-cent apportionment must yield a sum
+    EXACTLY equal to the loss-sale's total disallowed loss.
+    """
+    sell = LossSaleFactory(
+        date=date(2024, 10, 15),
+        ticker="TSLA",
+        quantity=3.0,
+        proceeds=2.0,
+        cost_basis=3.0,  # $1.00 total loss
+    )
+    buy_a = TradeFactory(
+        id="buy-a", date=date(2024, 10, 20), ticker="TSLA", action="Buy", quantity=1.0, cost_basis=1.0
+    )
+    buy_b = TradeFactory(
+        id="buy-b", date=date(2024, 10, 21), ticker="TSLA", action="Buy", quantity=1.0, cost_basis=1.0
+    )
+    buy_c = TradeFactory(
+        id="buy-c", date=date(2024, 10, 22), ticker="TSLA", action="Buy", quantity=1.0, cost_basis=1.0
+    )
+    result = detect_wash_sales([sell, buy_a, buy_b, buy_c], {})
+    assert len(result.violations) == 3
+    # Sum of disallowed across the three matches must equal the loss-sale's
+    # full $1.00, with no penny drift.
+    total = sum(v.disallowed_loss for v in result.violations)
+    assert round(total, 2) == 1.00, f"disallowed losses sum to {total!r}, expected 1.00"
+    # Each per-match disallowed is quantized to cents (no sub-cent values).
+    for v in result.violations:
+        assert round(v.disallowed_loss * 100) == v.disallowed_loss * 100, (
+            f"disallowed_loss {v.disallowed_loss} is not whole cents"
+        )
+
+
+def test_multi_buy_repeated_recompute_has_no_basis_churn():
+    """Audit #40: with Decimal-cent apportionment, the recompute loop's
+    _rebuild_adjusted_basis_from_violations must not see sub-cent drift between
+    iterations — five back-to-back recomputes must leave adjusted_basis stable.
+    """
+    from pathlib import Path
+
+    from sqlmodel import SQLModel, create_engine
+
+    from net_alpha.db.repository import Repository
+    from net_alpha.engine.recompute import recompute_all_violations
+
+    tmp = Path("/tmp/net_alpha_audit40_churn.db")
+    if tmp.exists():
+        tmp.unlink()
+    engine = create_engine(f"sqlite:///{tmp}")
+    SQLModel.metadata.create_all(engine)
+    repo = Repository(engine)
+
+    from datetime import datetime
+
+    from net_alpha.models.domain import ImportRecord, Trade
+
+    account = repo.get_or_create_account("Schwab", "Taxable")
+    trades = [
+        Trade(
+            account="Schwab/Taxable", date=date(2024, 10, 15), ticker="TSLA",
+            action="Sell", quantity=3.0, proceeds=2.0, cost_basis=3.0,
+        ),
+        Trade(
+            account="Schwab/Taxable", date=date(2024, 10, 20), ticker="TSLA",
+            action="Buy", quantity=1.0, cost_basis=1.0,
+        ),
+        Trade(
+            account="Schwab/Taxable", date=date(2024, 10, 21), ticker="TSLA",
+            action="Buy", quantity=1.0, cost_basis=1.0,
+        ),
+        Trade(
+            account="Schwab/Taxable", date=date(2024, 10, 22), ticker="TSLA",
+            action="Buy", quantity=1.0, cost_basis=1.0,
+        ),
+    ]
+    record = ImportRecord(
+        account_id=account.id,
+        csv_filename="audit40.csv",
+        csv_sha256="sha-audit40",
+        imported_at=datetime.now(),
+        trade_count=len(trades),
+    )
+    repo.add_import(account, record, trades)
+
+    recompute_all_violations(repo, etf_pairs={})
+    snapshot_1 = sorted(
+        (lot.trade_id, round(lot.adjusted_basis, 6)) for lot in repo.all_lots()
+    )
+    for _ in range(5):
+        recompute_all_violations(repo, etf_pairs={})
+    snapshot_2 = sorted(
+        (lot.trade_id, round(lot.adjusted_basis, 6)) for lot in repo.all_lots()
+    )
+    assert snapshot_1 == snapshot_2, (
+        f"adjusted_basis drifted across recomputes: {snapshot_1} -> {snapshot_2}"
+    )
+
+    tmp.unlink()
