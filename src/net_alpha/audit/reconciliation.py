@@ -208,6 +208,14 @@ def per_lot_diffs(
     for t in sorted(sells, key=lambda x: x.date):
         sells_by_date[t.date].append(t)
 
+    # Audit #34: per-sell consumption tracker. ``same_qty`` matches consume
+    # a sell in one shot; the partial-fill path pro-rates the net-alpha sell
+    # across the broker's HIFO split, tracking how much of the sell qty has
+    # already been attributed to earlier broker lots in the same bucket.
+    # Each sell stays in its bucket until cumulative broker qty for it >=
+    # match.quantity (then removed).
+    consumed_qty: dict[str, float] = defaultdict(float)
+
     diffs: list[LotDiff] = []
     for bl in broker_lots:
         if bl.closed is None:
@@ -228,13 +236,36 @@ def per_lot_diffs(
                 )
             )
             continue
-        # FIFO-consume from the bucket: prefer a same-qty match if any, else
-        # the oldest unconsumed sell.
+        # Prefer an exact same-qty match: consumes the sell in one shot.
         same_qty = next((t for t in bucket if abs((t.quantity or 0) - bl.qty) < 1e-6), None)
-        match = same_qty if same_qty is not None else bucket[0]
-        bucket.remove(match)
-        na_basis = match.cost_basis or 0.0
-        na_proceeds = match.proceeds or 0.0
+        if same_qty is not None:
+            match = same_qty
+            bucket.remove(match)
+            na_basis = match.cost_basis or 0.0
+            na_proceeds = match.proceeds or 0.0
+        else:
+            # Partial-fill: pro-rate the oldest unconsumed sell by bl.qty /
+            # match.quantity so each broker LotDiff carries the matched
+            # fraction of net-alpha proceeds + basis. Without this every
+            # broker lot after the first was either orphaned or attributed
+            # the FULL sell's basis/proceeds — both yielded wild deltas.
+            match = bucket[0]
+            full_qty = float(match.quantity or 0)
+            full_basis = float(match.cost_basis or 0.0)
+            full_proceeds = float(match.proceeds or 0.0)
+            if full_qty > 0:
+                fraction = bl.qty / full_qty
+            else:
+                fraction = 0.0
+            na_basis = full_basis * fraction
+            na_proceeds = full_proceeds * fraction
+            consumed_qty[match.id] += bl.qty
+            # Once cumulative consumption ≥ the sell's quantity, retire it
+            # so subsequent broker lots on the same date attribute to the
+            # next unconsumed sell (if any).
+            if consumed_qty[match.id] >= full_qty - 1e-6:
+                bucket.remove(match)
+
         delta = round(
             ((na_proceeds - na_basis) - ((bl.proceeds or 0.0) - bl.cost_basis)),
             4,
