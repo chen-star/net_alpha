@@ -58,7 +58,7 @@ def test_post_upsert_overwrites_existing(client: TestClient, repo: Repository) -
 
 def test_post_reset_deletes_override(client: TestClient, repo: Repository) -> None:
     repo.upsert_carryforward_override(year=2025, st=Decimal("1500"), lt=Decimal("0"))
-    resp = client.post("/settings/carryforward/reset?year=2025")
+    resp = client.post("/settings/carryforward/reset", data={"year": "2025"})
     assert resp.status_code == 200
     assert repo.get_carryforward_override(2025) is None
 

@@ -179,9 +179,14 @@ def settings_carryforward_save(
 @router.post("/settings/carryforward/reset", response_class=HTMLResponse)
 def settings_carryforward_reset(
     request: Request,
-    year: int,
+    year: int = Form(...),
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
-    """Delete the override for `year`, falling back to the derived value."""
+    """Delete the override for `year`, falling back to the derived value.
+
+    ``year`` is read from the form body (audit #20) — the template wraps the
+    Reset button in a tiny form with a hidden ``year`` input so the
+    Form-typed parameter matches.
+    """
     repo.delete_carryforward_override(year)
     return settings_carryforward(request, repo=repo)

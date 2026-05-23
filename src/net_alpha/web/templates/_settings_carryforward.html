@@ -59,11 +59,14 @@
                   hx-swap="outerHTML"
                   class="text-text hover:underline">Edit</button>
           {% if row.source == 'user' %}
-          <button type="button"
-                  hx-post="/settings/carryforward/reset?year={{ row.year }}"
-                  hx-target="#settings-carryforward"
-                  hx-swap="outerHTML"
-                  class="text-label-2 hover:underline ml-2">Reset to derived</button>
+          {# Reset submits ``year`` as a form value so the Form(...)-typed
+             handler receives it (audit #20). #}
+          <form class="inline" hx-post="/settings/carryforward/reset"
+                hx-target="#settings-carryforward" hx-swap="outerHTML">
+            <input type="hidden" name="year" value="{{ row.year }}">
+            <button type="submit"
+                    class="text-label-2 hover:underline ml-2">Reset to derived</button>
+          </form>
           {% endif %}
         </td>
       </tr>
