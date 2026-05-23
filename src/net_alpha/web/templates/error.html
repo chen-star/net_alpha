@@ -2,7 +2,11 @@
 {% block title %}{{ title }} · net-alpha{% endblock %}
 {% block content %}
   <div class="panel text-center py-12">
-    <div class="text-6xl font-mono text-confirmed mb-2 num">{{ status }}</div>
+    {# audit #33 — HTTP status code uses `.text-neg` (generic negative red)
+       instead of `.text-confirmed`, which is the wash-sale Confirmed tier
+       color reserved by CLAUDE.md. The numeric `404` / `500` is not a
+       wash-sale verdict; it shouldn't borrow that token. #}
+    <div class="text-6xl font-mono text-neg mb-2 num">{{ status }}</div>
     <h1 class="text-2xl mb-3">{{ title }}</h1>
     <p class="text-label-2 mb-4">{{ detail }}</p>
     {% if traceback %}
