@@ -182,7 +182,15 @@ def _estimate_short_option_liability(
     if row.sto_qty_total > 0:
         sto_premium_for_remaining = row.sto_premium_total * contracts / row.sto_qty_total
     else:
-        sto_premium_for_remaining = row.premium_received  # back-compat for callers that omit gross fields
+        # Production rows are always populated by
+        # ``compute_open_short_option_positions``. This branch only fires for
+        # hand-built rows that forget to set the gross STO fields. Falling
+        # back to ``premium_received`` (net of BTC) silently re-introduces
+        # the audit #1 double-count if a real caller ever takes this path —
+        # but the math-explainer panel must keep rendering rather than crash,
+        # so we accept the back-compat behaviour and rely on ``pnl.py``'s
+        # parallel skip-with-warning to surface misuse upstream.
+        sto_premium_for_remaining = row.premium_received
     premium_per_share = sto_premium_for_remaining / contracts / multiplier if contracts > 0 else Decimal("0")
     time_value = premium_per_share * (Decimal(days_remaining) / Decimal(days_total))
     est_per_share = max(intrinsic, time_value)

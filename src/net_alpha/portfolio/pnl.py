@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from datetime import date as _date
 from decimal import Decimal
 
+from loguru import logger
+
 from net_alpha.models.domain import Lot, Trade, WashSaleViolation
 from net_alpha.models.realized_gl import RealizedGLLot
 from net_alpha.portfolio.models import KpiSet, WashImpact
@@ -388,9 +390,20 @@ def _short_option_unrealized_adjustment(
         if row.sto_qty_total > 0:
             sto_premium_for_remaining = row.sto_premium_total * contracts / row.sto_qty_total
         else:
-            # Defensive fallback for callers/tests that build rows without
-            # populating the gross STO fields (default = 0).
-            sto_premium_for_remaining = row.premium_received
+            # Audit verifier nit: production rows are always populated by
+            # ``compute_open_short_option_positions``; the only callers that
+            # leave the gross fields at 0 are hand-built unit fixtures. The
+            # previous fallback to ``row.premium_received`` (net of BTC) would
+            # silently re-introduce the audit #1 double-count if a real caller
+            # ever forgot to set the gross fields. Returning 0 here is the
+            # safe degradation — the row contributes nothing to the
+            # unrealized adjustment — and the warning surfaces the misuse.
+            logger.warning(
+                "OpenShortOptionRow {!r} missing sto_premium_total/sto_qty_total; "
+                "skipping unrealized adjustment for this row",
+                (row.account, row.ticker, row.strike, row.expiry, row.call_put),
+            )
+            continue
         premium_per_share = (sto_premium_for_remaining / contracts / multiplier) if contracts > 0 else Decimal("0")
         time_value_per_share = premium_per_share * (Decimal(days_remaining) / Decimal(days_total))
         est_value_per_share = max(intrinsic_per_share, time_value_per_share)

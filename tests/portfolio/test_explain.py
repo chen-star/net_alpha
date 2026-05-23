@@ -104,6 +104,10 @@ def test_build_unrealized_breakdown_short_put_otm():
         qty_short=Decimal("1"),
         premium_received=Decimal("500"),
         opened_at=dt.date(2026, 4, 3),
+        # Gross STO fields are required by the unrealized estimator
+        # (audit verifier nit). When no BTC has occurred, gross == net.
+        sto_premium_total=Decimal("500"),
+        sto_qty_total=Decimal("1"),
     )
     prices = {
         "SPY": Quote(
@@ -272,6 +276,10 @@ def test_build_account_value_breakdown_short_put_sets_has_short_options_and_subt
         qty_short=Decimal("1"),
         premium_received=Decimal("200.00"),
         opened_at=dt.date(2026, 4, 4),
+        # Gross STO fields are required by the unrealized estimator
+        # (audit verifier nit). When no BTC has occurred, gross == net.
+        sto_premium_total=Decimal("200.00"),
+        sto_qty_total=Decimal("1"),
     )
     prices = {
         "SPY": Quote(

@@ -34,6 +34,14 @@
         // Thread the current page's ?account= scope into the POST so layout
         // writes land on the per-account profile bucket the user is viewing
         // — not the taxpayer-level default (audit #17).
+        //
+        // We deliberately forward ``account`` only and NOT ``period``: the
+        // ``overview_layout`` table today is account-scoped only (its
+        // composite key has no period column), so a layout reorder under
+        // ?period=2024 should still apply to the user's persistent layout
+        // for that account. If layouts ever gain period scope, mirror the
+        // ``account`` loop below for ``period`` and add the same key to
+        // the server-side POST handler.
         try {
           const currentParams = new URLSearchParams(window.location.search);
           currentParams.getAll('account').forEach(function (a) {

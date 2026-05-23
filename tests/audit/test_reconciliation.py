@@ -164,21 +164,39 @@ def test_reconcile_tax_year_scope_matches_broker_ytd(repo, schwab_account):
         [
             # 2024 trade — not represented in the 2025 broker file below.
             Trade(
-                account="Schwab/Tax", date=date(2024, 1, 5), ticker="AAPL",
-                action="Buy", quantity=10, cost_basis=1000.0,
+                account="Schwab/Tax",
+                date=date(2024, 1, 5),
+                ticker="AAPL",
+                action="Buy",
+                quantity=10,
+                cost_basis=1000.0,
             ),
             Trade(
-                account="Schwab/Tax", date=date(2024, 6, 1), ticker="AAPL",
-                action="Sell", quantity=10, proceeds=1100.0, cost_basis=1000.0,
+                account="Schwab/Tax",
+                date=date(2024, 6, 1),
+                ticker="AAPL",
+                action="Sell",
+                quantity=10,
+                proceeds=1100.0,
+                cost_basis=1000.0,
             ),
             # 2025 trade — covered by the broker file.
             Trade(
-                account="Schwab/Tax", date=date(2025, 1, 5), ticker="AAPL",
-                action="Buy", quantity=10, cost_basis=1200.0,
+                account="Schwab/Tax",
+                date=date(2025, 1, 5),
+                ticker="AAPL",
+                action="Buy",
+                quantity=10,
+                cost_basis=1200.0,
             ),
             Trade(
-                account="Schwab/Tax", date=date(2025, 4, 1), ticker="AAPL",
-                action="Sell", quantity=10, proceeds=1500.0, cost_basis=1200.0,
+                account="Schwab/Tax",
+                date=date(2025, 4, 1),
+                ticker="AAPL",
+                action="Sell",
+                quantity=10,
+                proceeds=1500.0,
+                cost_basis=1200.0,
             ),
         ],
     )
@@ -187,10 +205,17 @@ def test_reconcile_tax_year_scope_matches_broker_ytd(repo, schwab_account):
         import_id=1,
         lots=[
             RealizedGLLot(
-                account_display="Schwab/Tax", symbol_raw="AAPL", ticker="AAPL",
-                closed_date=date(2025, 4, 1), opened_date=date(2025, 1, 5),
-                quantity=10.0, proceeds=1500.0, cost_basis=1200.0,
-                unadjusted_cost_basis=1200.0, wash_sale=False, disallowed_loss=0.0,
+                account_display="Schwab/Tax",
+                symbol_raw="AAPL",
+                ticker="AAPL",
+                closed_date=date(2025, 4, 1),
+                opened_date=date(2025, 1, 5),
+                quantity=10.0,
+                proceeds=1500.0,
+                cost_basis=1200.0,
+                unadjusted_cost_basis=1200.0,
+                wash_sale=False,
+                disallowed_loss=0.0,
                 term="Short Term",
             ),
         ],
@@ -204,9 +229,7 @@ def test_reconcile_tax_year_scope_matches_broker_ytd(repo, schwab_account):
     assert lifetime.broker_total == 300.0
 
     # Year-scoped — MATCH on the broker's year.
-    scoped = reconcile(
-        symbol="AAPL", account_id=schwab_account.id, repo=repo, tax_year=2025
-    )
+    scoped = reconcile(symbol="AAPL", account_id=schwab_account.id, repo=repo, tax_year=2025)
     assert scoped.status == ReconciliationStatus.MATCH
     assert scoped.net_alpha_total == 300.0
     assert scoped.broker_total == 300.0
@@ -225,21 +248,39 @@ def test_reconcile_all_forwards_tax_year(repo, schwab_account):
         [
             # 2024 trade that the 2025 broker file does NOT cover.
             Trade(
-                account="Schwab/Tax", date=date(2024, 1, 5), ticker="AAPL",
-                action="Buy", quantity=10, cost_basis=1000.0,
+                account="Schwab/Tax",
+                date=date(2024, 1, 5),
+                ticker="AAPL",
+                action="Buy",
+                quantity=10,
+                cost_basis=1000.0,
             ),
             Trade(
-                account="Schwab/Tax", date=date(2024, 6, 1), ticker="AAPL",
-                action="Sell", quantity=10, proceeds=1100.0, cost_basis=1000.0,
+                account="Schwab/Tax",
+                date=date(2024, 6, 1),
+                ticker="AAPL",
+                action="Sell",
+                quantity=10,
+                proceeds=1100.0,
+                cost_basis=1000.0,
             ),
             # 2025 trade — covered by the broker file.
             Trade(
-                account="Schwab/Tax", date=date(2025, 1, 5), ticker="AAPL",
-                action="Buy", quantity=10, cost_basis=1200.0,
+                account="Schwab/Tax",
+                date=date(2025, 1, 5),
+                ticker="AAPL",
+                action="Buy",
+                quantity=10,
+                cost_basis=1200.0,
             ),
             Trade(
-                account="Schwab/Tax", date=date(2025, 4, 1), ticker="AAPL",
-                action="Sell", quantity=10, proceeds=1500.0, cost_basis=1200.0,
+                account="Schwab/Tax",
+                date=date(2025, 4, 1),
+                ticker="AAPL",
+                action="Sell",
+                quantity=10,
+                proceeds=1500.0,
+                cost_basis=1200.0,
             ),
         ],
     )
@@ -248,10 +289,17 @@ def test_reconcile_all_forwards_tax_year(repo, schwab_account):
         import_id=1,
         lots=[
             RealizedGLLot(
-                account_display="Schwab/Tax", symbol_raw="AAPL", ticker="AAPL",
-                closed_date=date(2025, 4, 1), opened_date=date(2025, 1, 5),
-                quantity=10.0, proceeds=1500.0, cost_basis=1200.0,
-                unadjusted_cost_basis=1200.0, wash_sale=False, disallowed_loss=0.0,
+                account_display="Schwab/Tax",
+                symbol_raw="AAPL",
+                ticker="AAPL",
+                closed_date=date(2025, 4, 1),
+                opened_date=date(2025, 1, 5),
+                quantity=10.0,
+                proceeds=1500.0,
+                cost_basis=1200.0,
+                unadjusted_cost_basis=1200.0,
+                wash_sale=False,
+                disallowed_loss=0.0,
                 term="Short Term",
             ),
         ],

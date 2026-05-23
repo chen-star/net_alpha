@@ -41,6 +41,15 @@ def apply_splits(repo: Repository) -> int:
         for lot in lots:
             lot_date = date.fromisoformat(lot["trade_date"])
 
+            # ``cumulative`` is float (not Decimal): split ratios in the wild
+            # are integer-friendly (2:1, 3:1, 1:5 reverse, occasional 7:1)
+            # and real-world chains run ≤ 5 per symbol over its lifetime, so
+            # FP drift in the product stays well below the share-count
+            # precision the broker reports (we currently round nowhere on
+            # this path — exact float products of small integers are exact
+            # up to ~2^53). If a synthetic test chain ever exercises 20+
+            # splits in a row, swap this to ``Decimal("1")`` and quantize
+            # ``target_qty`` accordingly.
             cumulative = 1.0
             applicable_splits: list = []
             for sp in sym_splits:
