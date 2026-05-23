@@ -473,6 +473,7 @@ def portfolio_positions(
     q: str | None = None,
     sort: str | None = None,
     dir: str | None = None,
+    instrument_kind: str | None = None,
     repo: Repository = Depends(get_repository),
     svc: PricingService = Depends(get_pricing_service),
 ) -> HTMLResponse:
@@ -500,6 +501,13 @@ def portfolio_positions(
         gl_lots=repo.list_all_gl_lots(),
         account_id_by_display=account_id_by_display,
     )
+    # `instrument_kind=stocks` (Stocks tab) excludes rows that exist only
+    # because of open option exposure on the underlying (qty=0 with
+    # ``open_option_contracts > 0``) — those belong on the Options tab.
+    # Without this filter the Stocks tab silently mirrors the All tab because
+    # ``group_options`` only affects grouping, not filtering (audit #16).
+    if (instrument_kind or "").lower() == "stocks":
+        all_rows = [r for r in all_rows if r.qty != 0]
     selected_symbols: set[str] = set()
     if symbols:
         selected_symbols = {s.strip().upper() for s in symbols.split(",") if s.strip()}
@@ -531,6 +539,8 @@ def portfolio_positions(
     query_parts.extend(f"account={a}" for a in accounts)
     query_parts.append(f"group_options={group_options}")
     query_parts.append(f"symbols={'%2C'.join(sorted(selected_symbols))}")
+    if instrument_kind:
+        query_parts.append(f"instrument_kind={instrument_kind}")
     symbol_filter_config = {
         "selected": sorted(selected_symbols),
         "all": sorted(universe),
