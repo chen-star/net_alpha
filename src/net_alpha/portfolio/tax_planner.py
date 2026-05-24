@@ -269,6 +269,10 @@ class HarvestOpportunity(BaseModel):
     premium_offset: Decimal | None  # absolute amount of premium received from origin event
     premium_origin_event: PremiumOriginEvent | None
     suggested_replacements: list[str]
+    # Per-lot estimated tax saved (loss × marginal rate). Populated by the
+    # harvest-plan route when tax config is present; kept per-row so multi-lot
+    # symbols don't collapse to a single shared value.
+    estimated_tax_saved: Decimal | None = None
 
 
 # ---------------------------------------------------------------------------

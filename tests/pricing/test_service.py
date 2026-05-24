@@ -77,6 +77,31 @@ def test_stale_cache_served_without_provider_call(tmp_path):
     assert snap.degraded is False  # we didn't try to fetch, so no provider failure
 
 
+def test_warm_cache_read_reports_fresh_not_none_yet(tmp_path):
+    """All quotes served warm from a recent cache (no network fetch, nothing
+    stale or missing) is the FRESHEST state — the freshness chip must read it
+    as fresh, not 'none yet'. Regression: the snapshot left fetched_at=None on
+    a pure cache hit, which compute_price_freshness reported as 'none yet'.
+    """
+    from net_alpha.portfolio.freshness import compute_price_freshness
+
+    cache = PriceCache(_engine(tmp_path))  # default 900s TTL → fresh
+    # Provider raises if touched — proves we served purely from warm cache.
+    provider = _FakeProvider(raises=PriceFetchError("must not be called"))
+    svc = PricingService(provider=provider, cache=cache, enabled=True)
+    cache.put_many([_quote("SPY", "460.5")])
+
+    out = svc.get_prices(["SPY"])
+    assert out["SPY"].price == Decimal("460.5")
+    assert provider.calls == []  # warm serve, no network
+
+    snap = svc.last_snapshot()
+    assert snap.fetched_at is not None, "warm-cache serve must record an as-of timestamp"
+    tier, label = compute_price_freshness(snap)
+    assert tier == "green", f"warm cache should be green/fresh, got {tier!r} / {label!r}"
+    assert label != "none yet"
+
+
 def test_invalidate_and_refresh(tmp_path):
     cache = PriceCache(_engine(tmp_path))
     provider = _FakeProvider(returns={"SPY": _quote("SPY", "460.5")})

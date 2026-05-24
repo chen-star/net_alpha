@@ -67,9 +67,16 @@
     {% elif f.rule_id == "MarketValueRecon" %}
       <p><strong>Aggregate market value disagrees with the broker file.</strong>
         Scope <code>{{ f.scope }}</code>, Δ <code>${{ '{:,.2f}'.format(f.delta or 0) }}</code>.</p>
-      <p>Almost always a price-snapshot timing difference (broker file
-        captured pre-market, our quote is intraday). Re-export the broker
-        CSV at the same time-of-day used in the previous comparison.</p>
+      {% if f.detail and f.detail.stale_reference_days %}
+        <p>Your broker positions file is <strong>{{ f.detail.stale_reference_days }} day{{ 's' if f.detail.stale_reference_days != 1 }} old</strong>,
+          so this gap is expected price drift since that snapshot — not a data
+          problem. Downgraded to a warning. Re-upload a current Positions CSV to
+          compare against today’s prices.</p>
+      {% else %}
+        <p>For a same-day snapshot, this is usually a price-timing difference
+          (broker file captured pre-market, our quote is intraday). Re-export the
+          broker CSV at the same time-of-day used in the previous comparison.</p>
+      {% endif %}
     {% elif f.rule_id == "PositionsQty" %}
       <p><strong>Share quantity disagrees with the broker.</strong>
         Scope <code>{{ f.scope }}</code>, ours <code>{{ '%g'|format(f.ours or 0) }}</code>

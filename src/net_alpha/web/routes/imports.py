@@ -31,7 +31,7 @@ from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.service.jobs.runner import run_job
 from net_alpha.service.jobs.washsale_watch import run_washsale_watch
 from net_alpha.splits.sync import _post_import_autosync_splits
-from net_alpha.web.account_filter import parse_accounts
+from net_alpha.web.account_filter import exclude_positions_sentinel, parse_accounts
 from net_alpha.web.dependencies import get_etf_pairs, get_repository
 from net_alpha.web.fragment_cache import bump_fragment_revision
 
@@ -119,7 +119,7 @@ def imports_page(
     account_filter_active: bool = bool(accounts)
 
     records = repo.list_imports()
-    accounts_available = sorted({imp.account_display for imp in records})
+    accounts_available = exclude_positions_sentinel(sorted({imp.account_display for imp in records}))
 
     # Filter import records by selected accounts (OR semantic).
     if accounts:

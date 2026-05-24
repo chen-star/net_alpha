@@ -82,6 +82,52 @@ def test_sim_run_buy_does_not_render_comparison(sim_setup):
     assert "Max Loss" not in resp.text
 
 
+def test_sim_comparison_ignores_option_lots_of_same_underlying(sim_setup):
+    """Selling SPY stock must not pull SPY option lots into the lot-strategy
+    comparison. An option lot carries per-contract premium basis ($7,777 here),
+    which — if consumed as shares — fabricates a huge spurious loss on HIFO /
+    Max Loss. With equity basis $80/sh and a $100 sell, every strategy is a
+    gain, so no loss figure should appear.
+    """
+    from datetime import date
+
+    from net_alpha.models.domain import Lot, OptionDetails
+
+    client, repo = sim_setup
+    # Append an SPY long-option lot (premium basis $7,777) alongside the equity.
+    existing = repo.get_lots_for_ticker("SPY")
+    existing.append(
+        Lot(
+            trade_id=existing[0].trade_id,
+            account="schwab/personal",
+            date=date(2024, 1, 20),
+            ticker="SPY",
+            quantity=1,
+            cost_basis=7777.0,
+            adjusted_basis=7777.0,
+            option_details=OptionDetails(strike=400.0, expiry=date(2026, 6, 19), call_put="C"),
+        )
+    )
+    repo.replace_lots_in_window(date(2023, 12, 1), date(2024, 3, 1), existing)
+
+    resp = client.post(
+        "/sim",
+        data={
+            "ticker": "SPY",
+            "qty": "50",
+            "price": "100",
+            "action": "sell",
+            "account": "schwab/personal",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.text
+    # The option premium must never surface as a consumed-lot basis.
+    assert "7,777" not in body and "7777" not in body
+    # Equity-only: 50 * ($100 - $80) = +$1,000 gain on every strategy — no minus sign.
+    assert "−$" not in body and "-$" not in body
+
+
 def test_sim_run_insufficient_lots_shows_message(sim_setup):
     client, _ = sim_setup
     resp = client.post(

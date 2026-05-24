@@ -17,6 +17,7 @@ from net_alpha.engine.simulator import simulate_buy, simulate_sell
 from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.tax_planner import PlannedTrade, TaxBrackets, assess_trade
 from net_alpha.pricing.service import PricingService
+from net_alpha.web.account_filter import exclude_positions_sentinel
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 
 router = APIRouter()
@@ -88,6 +89,7 @@ def sim_form(
     pricing: PricingService = Depends(get_pricing_service),
     ticker: str | None = None,
     qty: str | None = None,
+    price: str | None = None,
     harvest: str | None = None,
     account: str | None = None,
     action: str | None = None,
@@ -97,20 +99,27 @@ def sim_form(
     Pre-fills ticker, quantity, account, action, and current-price hint
     when called from a contextual entry point (e.g. Positions row →
     ``?ticker=X&qty=N&account=Y&action=sell``).
+
+    A suggestion chip additionally passes an explicit ``&price=`` and a
+    complete spec; that signals an autorun so the form submits itself on
+    load (the chip promises it "runs against the simulator"). Plain prefills
+    without an explicit price (e.g. positions-row deep links) only prefill.
     """
     sym = (ticker or "").upper().strip()
     qty_str = (qty or "").strip()
+    price_param = (price or "").strip()
     account_pref = (account or "").strip()
     action_pref = (action or "").strip().lower()
     if action_pref not in ("buy", "sell"):
         action_pref = ""
-    price_hint = ""
-    if sym:
+    price_hint = price_param
+    if not price_hint and sym:
         quotes = pricing.get_prices([sym])
         q = quotes.get(sym)
         if q is not None and q.price is not None:
             price_hint = f"{float(q.price):.2f}"
-    account_displays = [a.display() for a in repo.list_accounts()]
+    autorun = bool(sym and qty_str and price_param and action_pref)
+    account_displays = exclude_positions_sentinel([a.display() for a in repo.list_accounts()])
     # Single-account portfolios: preselect the lone account so Sell sims
     # don't hit the "Account is required for Sell" error on first submit.
     # With 2+ accounts we deliberately leave the default empty — silently
@@ -131,6 +140,7 @@ def sim_form(
             "accounts": account_displays,
             "today_iso": _date.today().isoformat(),
             "result": None,
+            "autorun": autorun,
         },
     )
 
@@ -252,7 +262,10 @@ def sim_run(
     lot_comparison: dict | None = None
     lot_comparison_insufficient: str | None = None
     sym = ticker.upper()
-    lots_for_sym = repo.get_lots_for_ticker(sym)
+    # Equity-only: a stock sale must never consume option lots of the same
+    # underlying — their per-contract premium basis would otherwise fabricate
+    # absurd realized P&L on the HIFO / Max Loss strategies.
+    lots_for_sym = [lot for lot in repo.get_lots_for_ticker(sym) if lot.option_details is None]
     cf = get_effective_carryforward(repo, year=on_date.year)
     try:
         results: list[LotPickResult] = []

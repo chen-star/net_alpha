@@ -23,6 +23,7 @@ from net_alpha.portfolio.detail_aggregations import (
 )
 from net_alpha.portfolio.tax_planner import compute_offset_budget
 from net_alpha.portfolio.wash_watch import recent_loss_closes
+from net_alpha.web.account_filter import exclude_positions_sentinel
 from net_alpha.web.dependencies import get_repository
 
 router = APIRouter()
@@ -122,7 +123,7 @@ def _wash_sales_context(
         "all_years": effective_year is None,
         "filter_confidence": confidence or "",
         "tickers": repo.list_distinct_tickers(),
-        "accounts_available": [a.display() for a in repo.list_accounts()],
+        "accounts_available": exclude_positions_sentinel([a.display() for a in repo.list_accounts()]),
         "selected_accounts": accounts,
         "account_filter_active": bool(accounts),
         "years": years,

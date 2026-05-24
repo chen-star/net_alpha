@@ -121,7 +121,9 @@ def test_sort_by_severity_then_days_then_dollars():
             prices=prices,
             session=s,
             today=today,
-            config=InboxConfig(),
+            # Zero the materiality floor so the tiny LO_DOLLAR item survives —
+            # this test isolates sort order, not the noise threshold.
+            config=InboxConfig(lt_min_tax_impact=Decimal("0")),
             st_rate=Decimal("0.37"),
             lt_rate=Decimal("0.20"),
         )

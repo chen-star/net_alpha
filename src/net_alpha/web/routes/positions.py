@@ -26,7 +26,7 @@ from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
 from net_alpha.targets.models import TargetUnit
 from net_alpha.targets.view import PlanView, build_plan_view
-from net_alpha.web.account_filter import parse_accounts
+from net_alpha.web.account_filter import exclude_positions_sentinel, parse_accounts
 from net_alpha.web.dependencies import (
     get_etf_pairs,
     get_pricing_service,
@@ -60,7 +60,7 @@ def positions_page(
         page_size = 25
 
     imports = repo.list_imports()
-    accounts_available = sorted({imp.account_display for imp in imports})
+    accounts_available = exclude_positions_sentinel(sorted({imp.account_display for imp in imports}))
 
     today = dt.date.today()
     current_year = today.year

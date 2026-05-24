@@ -66,6 +66,7 @@ def gather_inbox(
             st_rate=st_rate,
             lt_rate=lt_rate,
             lookahead_days=config.lt_lookahead_days,
+            min_dollar_impact=config.lt_min_tax_impact,
             account=account,
         )
     )

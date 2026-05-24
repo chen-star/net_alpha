@@ -2,13 +2,46 @@ from datetime import date
 from decimal import Decimal
 
 from net_alpha.engine.simulator import simulate_sell
-from net_alpha.models.domain import Account, Lot, Trade
+from net_alpha.models.domain import Account, Lot, OptionDetails, Trade
 
 
 def _lot(account: str, date_, ticker, qty, basis):
     return Lot(
         trade_id="x", account=account, date=date_, ticker=ticker, quantity=qty, cost_basis=basis, adjusted_basis=basis
     )
+
+
+def _option_lot(account: str, date_, ticker, qty, basis, strike):
+    return Lot(
+        trade_id="x",
+        account=account,
+        date=date_,
+        ticker=ticker,
+        quantity=qty,
+        cost_basis=basis,
+        adjusted_basis=basis,
+        option_details=OptionDetails(strike=strike, expiry=date(2026, 6, 5), call_put="P"),
+    )
+
+
+def test_stock_sale_does_not_consume_option_lots_of_same_ticker():
+    # A stock sale must only draw from equity lots. Option lots share the
+    # underlying ticker but carry per-contract premium basis (e.g. $365), so
+    # consuming them as if they were shares fabricates absurd realized P&L.
+    # The option lot is dated between the equity lots so a naive FIFO walk
+    # would consume it after the first equity lot is exhausted.
+    p = Account(id=1, broker="schwab", label="st")
+    lots = [
+        _lot("schwab/st", date(2025, 6, 23), "HIMS", 3, 131.10),  # $43.70/sh equity
+        _option_lot("schwab/st", date(2025, 7, 2), "HIMS", 1, 365.66, strike=100.0),  # option premium
+        _lot("schwab/st", date(2025, 7, 17), "HIMS", 3, 150.0),  # $50/sh equity
+    ]
+    options = simulate_sell("HIMS", Decimal("5"), Decimal("23.75"), accounts=[p], existing_lots=lots, recent_trades=[])
+    opt = options[0]
+    # Equity-only FIFO: 3*(23.75-43.70) + 2*(23.75-50) = -59.85 + -52.50 = -112.35.
+    # The option lot's $365.66 premium must never enter the share consumption.
+    assert opt.realized_pnl == Decimal("-112.35")
+    assert all(c.basis_per_share < Decimal("100") for c in opt.lots_consumed_fifo)
 
 
 def test_returns_one_option_per_holding_account():

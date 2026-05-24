@@ -266,7 +266,11 @@ def reconcile_open_positions(
                 detail=detail,
             )
             findings.append(b_result)
-        # Market value.
+        # Market value. Unlike qty/basis, MV drifts with the market every day,
+        # so a divergence against a prior-day broker snapshot is expected price
+        # movement — not a data-integrity failure. Downgrade FAIL→WARN when the
+        # reference is older than today so a stale positions CSV doesn't paint
+        # the whole data-check red.
         mv_result = _compare(
             rule_id="MarketValueRecon",
             ours=float(our["market_value_total"]),
@@ -275,6 +279,18 @@ def reconcile_open_positions(
             scope=scope,
         )
         if mv_result.severity != Severity.OK:
+            if mv_result.severity == Severity.FAIL and ref_age >= 1:
+                detail = dict(mv_result.detail)
+                detail["stale_reference_days"] = ref_age
+                mv_result = InvariantResult(
+                    rule_id=mv_result.rule_id,
+                    severity=Severity.WARN,
+                    scope=mv_result.scope,
+                    ours=mv_result.ours,
+                    theirs=mv_result.theirs,
+                    delta=mv_result.delta,
+                    detail=detail,
+                )
             findings.append(mv_result)
 
     return findings, ref_age

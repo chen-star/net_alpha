@@ -60,6 +60,9 @@
           {% for imp in imports %}
             {% set has_dates = imp.min_trade_date and imp.max_trade_date %}
             {% set total_units = (imp.trade_count or 0) + (imp.gl_lot_count or 0) + (imp.cash_event_count or 0) %}
+            {# Positions-snapshot imports reuse trade_count for their row count
+               (FK-placeholder import) — label them "positions", never "trades". #}
+            {% set is_positions = imp.csv_filename and imp.csv_filename.startswith("[positions]") %}
             <tr id="import-row-{{ imp.id }}" class="align-top">
               <td class="px-3 py-2">
                 <button class="text-label-3 hover:text-primary text-xs"
@@ -82,30 +85,34 @@
                 <span class="block truncate font-mono text-xs" title="{{ imp.csv_filename }}">{{ imp.csv_filename }}</span>
               </td>
               <td class="px-3 py-2 text-xs text-label-2">
-                {%- if has_dates -%}
-                  {{ imp.min_trade_date }} → {{ imp.max_trade_date }} ·
+                {%- if is_positions -%}
+                  {{ imp.trade_count }} position{{ "s" if imp.trade_count != 1 else "" }}
+                {%- else -%}
+                  {%- if has_dates -%}
+                    {{ imp.min_trade_date }} → {{ imp.max_trade_date }} ·
+                  {%- endif -%}
+                  {%- if imp.trade_count -%}
+                    {{ imp.trade_count }} trade{{ "s" if imp.trade_count != 1 else "" }}
+                  {%- endif -%}
+                  {%- if imp.gl_lot_count -%}
+                    {%- if imp.trade_count %} · {% endif -%}
+                    {{ imp.gl_lot_count }} G/L lot{{ "s" if imp.gl_lot_count != 1 else "" }}
+                  {%- endif -%}
+                  {%- if imp.cash_event_count -%}
+                    {%- if imp.trade_count or imp.gl_lot_count %} · {% endif -%}
+                    {{ imp.cash_event_count }} cash event{{ "s" if imp.cash_event_count != 1 else "" }}
+                  {%- endif -%}
+                  {%- if imp.duplicate_trades -%}
+                    {%- if imp.trade_count or imp.gl_lot_count or imp.cash_event_count %} · {% endif -%}
+                    <span class="text-label-2">skipped {{ imp.duplicate_trades }} duplicate{{ "s" if imp.duplicate_trades != 1 else "" }}</span>
+                  {%- endif -%}
+                  {%- if not total_units and not imp.duplicate_trades -%}<span class="text-label-2">no records</span>{%- endif -%}
                 {%- endif -%}
-                {%- if imp.trade_count -%}
-                  {{ imp.trade_count }} trade{{ "s" if imp.trade_count != 1 else "" }}
-                {%- endif -%}
-                {%- if imp.gl_lot_count -%}
-                  {%- if imp.trade_count %} · {% endif -%}
-                  {{ imp.gl_lot_count }} G/L lot{{ "s" if imp.gl_lot_count != 1 else "" }}
-                {%- endif -%}
-                {%- if imp.cash_event_count -%}
-                  {%- if imp.trade_count or imp.gl_lot_count %} · {% endif -%}
-                  {{ imp.cash_event_count }} cash event{{ "s" if imp.cash_event_count != 1 else "" }}
-                {%- endif -%}
-                {%- if imp.duplicate_trades -%}
-                  {%- if imp.trade_count or imp.gl_lot_count or imp.cash_event_count %} · {% endif -%}
-                  <span class="text-label-2">skipped {{ imp.duplicate_trades }} duplicate{{ "s" if imp.duplicate_trades != 1 else "" }}</span>
-                {%- endif -%}
-                {%- if not total_units and not imp.duplicate_trades -%}<span class="text-label-2">no records</span>{%- endif -%}
               </td>
               <td class="px-3 py-2">
                 <button class="btn-ghost text-confirmed border-confirmed-soft"
                         hx-delete="/imports/{{ imp.id }}?page={{ page or 1 }}"
-                        hx-confirm="{% if total_units > 0 %}Remove import #{{ imp.id }} ({{ imp.trade_count }} trades, {{ imp.gl_lot_count }} G/L lots, {{ imp.cash_event_count or 0 }} cash events)? Wash sales will be recomputed.{% else %}Remove import #{{ imp.id }}? This is a positions snapshot — broker_position rows will be dropped from the verify reconciliation.{% endif %}"
+                        hx-confirm="{% if is_positions %}Remove import #{{ imp.id }}? This is a positions snapshot — broker_position rows will be dropped from the verify reconciliation.{% elif total_units > 0 %}Remove import #{{ imp.id }} ({{ imp.trade_count }} trades, {{ imp.gl_lot_count }} G/L lots, {{ imp.cash_event_count or 0 }} cash events)? Wash sales will be recomputed.{% else %}Remove import #{{ imp.id }}? This is a positions snapshot — broker_position rows will be dropped from the verify reconciliation.{% endif %}"
                         hx-target="#imports-table"
                         hx-swap="innerHTML">
                   Remove

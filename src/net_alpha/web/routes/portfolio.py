@@ -71,7 +71,7 @@ from net_alpha.portfolio.wash_watch import recent_loss_closes
 from net_alpha.prefs.overview_layout import OverviewLayout
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
-from net_alpha.web.account_filter import parse_accounts
+from net_alpha.web.account_filter import exclude_positions_sentinel, parse_accounts
 from net_alpha.web.dependencies import get_pricing_service, get_repository
 from net_alpha.web.fragment_cache import bump_fragment_revision
 
@@ -255,7 +255,7 @@ def portfolio_page(
     accounts: list[str] = parse_accounts(account)
     account_filter_active: bool = bool(accounts)
     imports = repo.list_imports()
-    accounts_available = sorted({imp.account_display for imp in imports})
+    accounts_available = exclude_positions_sentinel(sorted({imp.account_display for imp in imports}))
 
     today = date.today()
     current_year = today.year
@@ -263,6 +263,14 @@ def portfolio_page(
     available_years = sorted(import_years | {current_year}, reverse=True)
 
     selected_period = period or "ytd"
+    # The PricingService is constructed per-request with an empty snapshot, and
+    # the actual quotes load later in lazy body fragments (separate requests).
+    # Warm the snapshot here from the cache (a cheap cache hit when the service
+    # has refreshed recently) so the toolbar freshness chip reflects real state
+    # instead of always reading "none yet" on the page shell.
+    held_symbols = sorted({lot.ticker for lot in repo.all_lots() if lot.option_details is None})
+    if held_symbols:
+        svc.get_prices(held_symbols)
     snap = svc.last_snapshot()
     price_freshness, price_freshness_label = compute_price_freshness(snap)
     return request.app.state.templates.TemplateResponse(

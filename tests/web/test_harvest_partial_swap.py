@@ -78,15 +78,16 @@ def test_checkbox_targets_summary_not_full_region(client: TestClient, builders, 
 
 
 def test_tax_saved_cells_have_stable_ids(client: TestClient, builders, repo, engine):
-    """Tighten the previously-vacuous test: seed an actual harvest row so the
-    assertion fires against a populated table."""
+    """Per-row tax-saved cells use a stable, UNIQUE per-lot index id so the
+    OOB swap can target each lot individually. The old (symbol, account) id
+    scheme collided across lots of the same symbol."""
     _seed_harvest_row(builders, repo, engine)
     res = client.get("/tax/harvest/plan", headers={"HX-Request": "true"})
     body = res.text
-    # Row must exist with the stable per-row id.
+    # Row must exist with the stable per-row index id (first row → index 0).
     assert "<tr data-symbol=" in body, "harvest fixture did not produce a row"
-    assert 'id="tax-saved-AAPL-schwab_lt"' in body, (
-        f"expected stable cell id 'tax-saved-AAPL-schwab_lt' in body; "
+    assert 'id="tax-saved-0"' in body, (
+        f"expected per-lot index cell id 'tax-saved-0' in body; "
         f"got first 200 chars after data-symbol: "
         f"{body[body.index('data-symbol') : body.index('data-symbol') + 200]}"
     )

@@ -21,6 +21,23 @@ def test_settings_carryforward_section_renders_for_empty_db(client: TestClient) 
     assert "no prior-year history" in body.lower()
 
 
+def test_carryforward_direct_navigation_has_page_title(client: TestClient) -> None:
+    """Direct browser navigation (no HX-Request) must render inside the base
+    layout with a proper <title> — not a bare, title-less fragment."""
+    resp = client.get("/settings/carryforward")
+    assert resp.status_code == 200
+    assert "<title>Loss carryforwards · net-alpha</title>" in resp.text
+
+
+def test_carryforward_htmx_load_stays_bare_fragment(client: TestClient) -> None:
+    """The drawer lazy-loads this via HTMX — that path must remain a bare
+    fragment (no <html>/<title>) so it swaps cleanly into the mount."""
+    resp = client.get("/settings/carryforward", headers={"HX-Request": "true"})
+    assert resp.status_code == 200
+    assert "<title>" not in resp.text
+    assert 'id="settings-carryforward"' in resp.text
+
+
 def test_settings_carryforward_section_shows_override_row(client: TestClient, repo: Repository) -> None:
     repo.upsert_carryforward_override(year=2025, st=Decimal("1234"), lt=Decimal("0"))
     resp = client.get("/settings/carryforward")

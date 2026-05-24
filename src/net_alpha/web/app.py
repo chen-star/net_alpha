@@ -275,9 +275,13 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
         if request is not None:
             account = request.query_params.get("account")
 
+        from net_alpha.web.account_filter import POSITIONS_SENTINEL_DISPLAY
+
         _engine = get_engine(effective_db_path(settings, app.state.demo_mode))
         _repo = _Repository(_engine)
-        accounts = _repo.list_accounts()
+        # The positions-snapshot sentinel is a referential placeholder, not a
+        # real trading account — exclude it from the per-account profile switcher.
+        accounts = [a for a in _repo.list_accounts() if f"{a.broker}/{a.label}" != POSITIONS_SENTINEL_DISPLAY]
         prefs = _repo.list_user_preferences()
         filter_id: int | None = None
         if account:
@@ -303,10 +307,12 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
 
     def _first_visit_modal_data() -> dict[str, object]:
         from net_alpha.db.repository import Repository as _Repository
+        from net_alpha.web.account_filter import POSITIONS_SENTINEL_DISPLAY
 
         _engine = get_engine(effective_db_path(settings, app.state.demo_mode))
         _repo = _Repository(_engine)
-        accounts = _repo.list_accounts()
+        # Exclude the positions-snapshot sentinel — it's not a trading account.
+        accounts = [a for a in _repo.list_accounts() if f"{a.broker}/{a.label}" != POSITIONS_SENTINEL_DISPLAY]
         prefs = _repo.list_user_preferences()
         return {
             "show_modal": bool(accounts) and not prefs,

@@ -2472,6 +2472,31 @@ class Repository:
         # trade_date is YYYY-MM-DD string; first 4 chars are year.
         return int(row[:4])
 
+    def _nonsection1256_option_gl_by_year(
+        self, session: Session, year: int, taxable_account_ids: set[int]
+    ) -> list[tuple[str, Decimal]]:
+        """Non-§1256 option realized P&L from the broker Realized G/L CSV for
+        ``year`` (taxable accounts only), as ``(term, pnl)`` pairs.
+
+        Regular equity options (covered calls, CSPs, long options) are ordinary
+        capital gain/loss and belong in the same ST/LT buckets as equities.
+        §1256 broad-based-index options are excluded here — they're handled via
+        the 60/40 split + year-end MTM. Cost basis is the broker's wash-adjusted
+        column, so no separate disallowed-loss add-back is applied (mirrors
+        ``realized_pnl_split``; avoids double-counting wash adjustments).
+        """
+        if not taxable_account_ids:
+            return []
+        universe = load_universe()
+        stmt = select(RealizedGLLotRow).where(
+            RealizedGLLotRow.account_id.in_(taxable_account_ids),
+            RealizedGLLotRow.option_strike.is_not(None),
+            RealizedGLLotRow.closed_date.startswith(f"{year}-"),
+        )
+        if universe:
+            stmt = stmt.where(~RealizedGLLotRow.ticker.in_(universe))
+        return [(r.term, Decimal(str(r.proceeds)) - Decimal(str(r.cost_basis))) for r in session.exec(stmt).all()]
+
     def realized_pnl_split_by_year(self, year: int) -> tuple[Decimal, Decimal]:
         """Return (st_pnl, lt_pnl) signed for the given calendar year.
 
@@ -2653,6 +2678,17 @@ class Repository:
                     lt += Decimal(str(mtm_row.long_term_portion))
                     st += Decimal(str(mtm_row.short_term_portion))
 
+            # Non-§1256 (regular equity) option realized P&L — ordinary capital
+            # gain/loss, by broker term. Sourced from the broker GL so closed
+            # short puts / covered calls / long options reach the projection,
+            # harvest offset budget, calendar, and carryforward (previously
+            # equities-only, which silently dropped option income).
+            for term, opt_pnl in self._nonsection1256_option_gl_by_year(session, year, taxable_account_ids):
+                if term == "Long Term":
+                    lt += opt_pnl
+                else:
+                    st += opt_pnl
+
         return st, lt
 
     def realized_pnl_contributions_by_year(self, year: int) -> list[Decimal]:
@@ -2727,6 +2763,12 @@ class Repository:
                 )
                 for mtm_row in session.exec(mtm_stmt).all():
                     contributions.append(Decimal(str(mtm_row.unrealized_pnl)))
+
+            # Non-§1256 option P&L — same rows the ST/LT split folds in, so the
+            # gross gains/losses pane stays reconciled with the ST/LT tile
+            # (audit #4 invariant: sum(contributions) == st + lt).
+            for _term, opt_pnl in self._nonsection1256_option_gl_by_year(session, year, taxable_account_ids):
+                contributions.append(opt_pnl)
 
         return contributions
 

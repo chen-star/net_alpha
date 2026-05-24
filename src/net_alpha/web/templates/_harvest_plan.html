@@ -2,8 +2,10 @@
 
    Inputs:
      plan: HarvestPlan
-     rows: list[HarvestOpportunity]                 (full pool)
-     tax_saved_by_key: dict[(symbol, account_label), Decimal]
+     rows: list[HarvestOpportunity]                 (full pool; each carries its
+                                                     own .estimated_tax_saved)
+     rows_page: list[HarvestOpportunity]            (current page slice)
+     start_idx: int                                 (absolute index of rows_page[0])
      selected_keys: set[(symbol, account_label)]    (rows currently checked)
      mode: "auto" | "manual" | "custom"             (current budget mode)
      custom_budget: str                             (last custom value or "")
@@ -64,11 +66,9 @@
             <span class="chip-pos">clear</span>
           {% endif %}
         </td>
-        {% set _acct_slug = row.account_label|dom_id_slug %}
-        <td id="tax-saved-{{ row.symbol }}-{{ _acct_slug }}" class="r num">
-          {% if has_tax_config %}
-          {% set _ts = tax_saved_by_key[(row.symbol, row.account_label)] %}
-            <span class="text-pos">${{ "{:,.2f}".format(_ts|float) }}</span>
+        <td id="tax-saved-{{ start_idx + loop.index0 }}" class="r num">
+          {% if has_tax_config and row.estimated_tax_saved is not none %}
+            <span class="text-pos">${{ "{:,.2f}".format(row.estimated_tax_saved|float) }}</span>
           {% else %}
             <span class="text-label-3">—</span>
           {% endif %}

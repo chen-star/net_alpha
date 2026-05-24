@@ -34,7 +34,11 @@ def simulate_sell(
     options: list[SimulationOption] = []
     for account in accounts:
         held = sorted(
-            [lot for lot in existing_lots if lot.account == account.display() and lot.ticker == ticker],
+            [
+                lot
+                for lot in existing_lots
+                if lot.account == account.display() and lot.ticker == ticker and lot.option_details is None
+            ],
             key=lambda lot: lot.date,
         )
         available = sum(lot.quantity for lot in held)

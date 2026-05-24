@@ -29,7 +29,8 @@ def compute_price_freshness(snapshot) -> tuple[str | None, str]:
     if getattr(snapshot, "degraded", False):
         return "red", "✕ stale"
 
-    # fetched_at is set when at least one symbol was fetched fresh this request.
+    # fetched_at is the as-of of the freshest served quote — whether fetched
+    # from the network this request or served fresh from the warm cache.
     fetched_at = getattr(snapshot, "fetched_at", None)
 
     # stale_symbols = symbols served from cache past the TTL (>15 min in cache).

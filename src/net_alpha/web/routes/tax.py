@@ -23,12 +23,11 @@ from net_alpha.portfolio.tax_planner import (
 )
 from net_alpha.prefs.profile import resolve_effective_profile
 from net_alpha.pricing.service import PricingService
-from net_alpha.web.account_filter import parse_accounts
+from net_alpha.web.account_filter import exclude_positions_sentinel, parse_accounts
 from net_alpha.web.dependencies import (
     get_pricing_service,
     get_repository,
 )
-from net_alpha.web.format import dom_id_slug
 
 router = APIRouter()
 
@@ -99,7 +98,7 @@ def get_tax(
         inner_view = "table"
         tab_view = "wash-sales"
 
-    accounts_available = sorted({imp.account_display for imp in repo.list_imports()})
+    accounts_available = exclude_positions_sentinel(sorted({imp.account_display for imp in repo.list_imports()}))
 
     # Period selector resolution. Accepts:
     #   - "ytd" (default; current year)
@@ -343,7 +342,12 @@ def harvest_plan(
         )
         budget_str = ""
 
-    tax_saved_by_key = {(r.symbol, r.account_label): _tax_saved_for(r, brackets) for r in rows}
+    if brackets is not None:
+        # Per-lot tax saved — attach to each row so multi-lot symbols don't
+        # collapse to a single shared value (a dict keyed by (symbol, account)
+        # previously kept only the last lot's number and stamped it on all rows).
+        for r in rows:
+            r.estimated_tax_saved = _tax_saved_for(r, brackets)
 
     selected_keys = {(c.symbol, c.account_label) for c in plan.selected}
 
@@ -372,13 +376,11 @@ def harvest_plan(
     if hx_target == "harvest-summary":
         oob_cells_parts: list[str] = []
         if has_tax_config:
-            for row in rows:
-                key = (row.symbol, row.account_label)
-                ts = tax_saved_by_key.get(key)
+            for idx, row in enumerate(rows):
+                ts = row.estimated_tax_saved
                 if ts is None:
                     continue
-                acct_slug = dom_id_slug(row.account_label)
-                cell_id = f"tax-saved-{row.symbol}-{acct_slug}"
+                cell_id = f"tax-saved-{idx}"
                 oob_cells_parts.append(
                     f'<td id="{cell_id}" hx-swap-oob="true" class="r num"><span class="text-pos">${ts:.2f}</span></td>'
                 )
@@ -403,8 +405,8 @@ def harvest_plan(
             "plan": plan,
             "rows": rows,
             "rows_page": rows_page,
+            "start_idx": start_idx,
             "selected_keys": selected_keys,
-            "tax_saved_by_key": tax_saved_by_key,
             "mode": mode,
             "custom_budget": budget_str,
             "exclude_locked": exclude_locked,

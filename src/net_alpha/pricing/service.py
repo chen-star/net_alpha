@@ -93,6 +93,13 @@ class PricingService:
                 snap.degraded = True
 
         snap.missing_symbols = [s for s in symbols if s not in served]
+        # Warm-cache reads (no network fetch this request) still represent
+        # real, served quotes — record the freshest as-of so the freshness
+        # chip reads them as fresh rather than "none yet". Stale serves are
+        # surfaced separately via stale_symbols and keep their own tier.
+        if snap.fetched_at is None and served:
+            fresh_as_of = [q.as_of for s, q in served.items() if s not in snap.stale_symbols]
+            snap.fetched_at = max(fresh_as_of, default=None)
         self._snapshot = snap
         return served
 

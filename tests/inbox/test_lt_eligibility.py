@@ -64,6 +64,32 @@ def test_lot_at_loss_skipped():
     assert items == []
 
 
+def test_immaterial_lt_item_below_default_threshold_suppressed():
+    """A lot whose extra-ST-tax cost is trivial ($3.40 here) is noise — it must
+    be suppressed by the default materiality threshold so the inbox isn't
+    flooded with $1–$5 reminders."""
+    today = date(2026, 5, 1)
+    acquired = today - timedelta(days=350)  # within lookahead
+    # 10 sh, basis $1000, price $102 → $20 gain → $20 * 0.17 = $3.40 tax.
+    repo = make_repo(lots=[make_lot(acquired=acquired, ticker="AAPL", quantity=10, cost_basis=1000)])
+    prices = make_prices_stub({"AAPL": Decimal("102")})
+    items = compute_lt_eligibility(repo=repo, prices=prices, today=today, st_rate=ST_RATE, lt_rate=LT_RATE)
+    assert items == []
+
+
+def test_min_dollar_impact_threshold_is_configurable():
+    """Lowering the threshold to 0 surfaces even tiny-dollar lots."""
+    today = date(2026, 5, 1)
+    acquired = today - timedelta(days=350)
+    repo = make_repo(lots=[make_lot(acquired=acquired, ticker="AAPL", quantity=10, cost_basis=1000)])
+    prices = make_prices_stub({"AAPL": Decimal("102")})
+    items = compute_lt_eligibility(
+        repo=repo, prices=prices, today=today, st_rate=ST_RATE, lt_rate=LT_RATE, min_dollar_impact=Decimal("0")
+    )
+    assert len(items) == 1
+    assert items[0].dollar_impact == Decimal("3.40")
+
+
 def test_missing_price_emits_item_without_dollar_impact():
     today = date(2026, 5, 1)
     acquired = today - timedelta(days=350)
@@ -147,6 +173,7 @@ def test_account_filter_excludes_other_accounts():
         today=today,
         st_rate=ST_RATE,
         lt_rate=LT_RATE,
+        min_dollar_impact=Decimal("0"),  # isolate account-filter behavior from the materiality floor
         account="Schwab/A",
     )
     assert {i.dismiss_key for i in items} == {"lt_eligible:1"}

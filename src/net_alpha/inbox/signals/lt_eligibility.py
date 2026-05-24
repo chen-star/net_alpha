@@ -21,6 +21,10 @@ from net_alpha.portfolio.positions import open_lots_view
 LT_HOLDING_DAYS = 366  # IRS: holding period must be MORE than one year
 DEFAULT_LOOKAHEAD_DAYS = 60
 WATCH_THRESHOLD_DAYS = 14
+# Below this much extra short-term tax, an LT-eligibility reminder is noise
+# (a $1–$5 nudge isn't actionable). Lots with no quote bypass the floor since
+# their impact can't be assessed.
+DEFAULT_MIN_DOLLAR_IMPACT = Decimal("25")
 
 
 class _RepoLike(Protocol):
@@ -41,6 +45,7 @@ def compute_lt_eligibility(
     st_rate: Decimal,
     lt_rate: Decimal,
     lookahead_days: int = DEFAULT_LOOKAHEAD_DAYS,
+    min_dollar_impact: Decimal = DEFAULT_MIN_DOLLAR_IMPACT,
     account: str | None = None,
 ) -> list[InboxItem]:
     # FIFO-net lots against trades so positions that have been entirely sold
@@ -77,6 +82,10 @@ def compute_lt_eligibility(
             if unrealized <= 0:
                 continue
             cost_of_st = unrealized * rate_delta
+            # Drop immaterial reminders — a few dollars of deferred ST tax
+            # isn't worth an inbox slot.
+            if cost_of_st < min_dollar_impact:
+                continue
 
         qty_int = int(lot.quantity) if float(lot.quantity).is_integer() else lot.quantity
         if cost_of_st is not None:

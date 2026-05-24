@@ -120,9 +120,13 @@ def settings_carryforward(
             }
         )
 
+    # The drawer lazy-loads this via HTMX and swaps the bare fragment into a
+    # mount. Direct browser navigation (no HX-Request) gets the full base
+    # layout so the page has a proper <title> and nav chrome.
+    template = "_settings_carryforward.html" if request.headers.get("HX-Request") else "settings_carryforward_page.html"
     return request.app.state.templates.TemplateResponse(
         request,
-        "_settings_carryforward.html",
+        template,
         {"rows": rows, "has_history": has_history},
     )
 

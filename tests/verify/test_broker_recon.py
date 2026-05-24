@@ -161,6 +161,59 @@ def test_open_positions_recon_skips_uncovered_accounts():
     assert not any(f.rule_id == "PositionsMissingBroker" for f in findings), [(f.rule_id, f.scope) for f in findings]
 
 
+def test_market_value_recon_downgraded_to_warn_when_reference_is_stale():
+    """A market-value mismatch against a prior-day broker snapshot is expected
+    price drift, not a data-integrity failure. MarketValueRecon must downgrade
+    to WARN when the reference is older than today; Qty/Basis (price-independent)
+    keep their severity.
+    """
+    repo = MagicMock()
+    stale = (date(2026, 5, 11) - timedelta(days=7)).isoformat()
+    repo.latest_broker_positions.return_value = (
+        [_bp("AAPL", "schwab/st", 100.0, 15000.0, 14000.0, stale)],
+        stale,
+    )
+    repo.aggregate_open_positions.return_value = [
+        {
+            "symbol": "AAPL",
+            "account_label": "schwab/st",
+            "qty": 100.0,
+            "adjusted_basis_total": 15000.0,  # basis matches — no BasisRecon finding
+            "market_value_total": 17550.0,  # ~25% above the 7-day-old broker MV
+        },
+    ]
+    findings, ref_age = reconcile_open_positions(repo=repo, tol_cfg=load_tolerances(), today=date(2026, 5, 11))
+    assert ref_age == 7
+    mv = [f for f in findings if f.rule_id == "MarketValueRecon"]
+    assert mv, "expected a MarketValueRecon finding for the drifted MV"
+    assert mv[0].severity == Severity.WARN, f"stale-ref MV must be WARN, got {mv[0].severity}"
+    assert mv[0].detail.get("stale_reference_days") == 7
+
+
+def test_market_value_recon_stays_fail_when_reference_is_same_day():
+    """Same-day reference: a market-value mismatch beyond tolerance is a real
+    discrepancy (not explained by multi-day price drift) and stays FAIL."""
+    repo = MagicMock()
+    today = date(2026, 5, 11).isoformat()
+    repo.latest_broker_positions.return_value = (
+        [_bp("AAPL", "schwab/st", 100.0, 15000.0, 14000.0, today)],
+        today,
+    )
+    repo.aggregate_open_positions.return_value = [
+        {
+            "symbol": "AAPL",
+            "account_label": "schwab/st",
+            "qty": 100.0,
+            "adjusted_basis_total": 15000.0,
+            "market_value_total": 17550.0,
+        },
+    ]
+    findings, ref_age = reconcile_open_positions(repo=repo, tol_cfg=load_tolerances(), today=date(2026, 5, 11))
+    assert ref_age == 0
+    mv = [f for f in findings if f.rule_id == "MarketValueRecon"]
+    assert mv and mv[0].severity == Severity.FAIL
+
+
 def test_open_positions_recon_returns_stale_when_old_reference():
     repo = MagicMock()
     old = (date(2026, 5, 11) - timedelta(days=31)).isoformat()
