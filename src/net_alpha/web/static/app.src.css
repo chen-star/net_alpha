@@ -944,7 +944,7 @@
     inset: 0;
     background: var(--ambiance-wash);
     pointer-events: none;
-    z-index: 0;
+    z-index: -1;
   }
 
   @media (prefers-reduced-motion: reduce) {
