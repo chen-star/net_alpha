@@ -2,6 +2,66 @@
 
 
 
+## v0.78.0 (2026-05-24)
+
+### Chore
+
+* chore: apply ruff format drift to unblock CI
+
+`ruff format --check .` has been failing on master since v0.77.3 against
+15 source/test files. Behavior is unchanged — `ruff check` already
+passed; only `ruff format` reflows long lines. Also re-syncs uv.lock to
+match pyproject.toml v0.77.4 (the semantic-release commits bumped the
+version but never updated uv.lock).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`d160800`](https://github.com/chen-star/net_alpha/commit/d16080059e98ca4720c98e3817dae7141dbce21f))
+
+### Feature
+
+* feat(web): unify options table, invert DTE bar, add column sort
+
+The Options panel on /positions had three issues the user surfaced:
+
+1. **&#34;Show: All&#34; didn&#39;t actually show all options.** It only added
+   expired-pending-broker-close contracts; historical closed lots were
+   invisible. The /holdings/options route now also pulls realized G/L
+   lots filtered to `is_option`, scoped by the page-level Period
+   (YTD/year/lifetime), and emits a unified row list with kind tags
+   (open / expired / closed).
+
+2. **Open contracts KPI drifted between Show:Open (11) and Show:All
+   (12).** &#34;All&#34; was lumping expired-pending into the truly_open
+   bucket, so the KPI cards (Open contracts / Net premium / Avg DTE /
+   secured / long cost) flipped on every toggle. They&#39;re now always
+   derived from truly_open (live, non-expired) regardless of mode —
+   the toggle only adds rows to the table, never reinterprets what
+   &#34;open&#34; means.
+
+3. **Two separate tables for Show:All.** Replaced with one continuous
+   grid: open rows (DTE bar) → expired rows (DTE bar + small LONG/
+   SHORT subline so the side info isn&#39;t lost behind the EXPIRED pill)
+   → closed rows (opened→closed dates + realized P&amp;L + ST/LT badge).
+   Same 6-column layout so visual alignment holds across kinds.
+
+**DTE bar direction inverted.** Previously a long bar meant lots of
+time left; now a long bar means close to expiry, with the uncolored
+remainder representing days still left. The gradient flips to
+safe-green (left, plenty of time) → amber → urgent-red (right edge,
+about to expire), so a near-full bar naturally reveals the red right
+edge. Matches the user&#39;s mental model: option A expiring sooner
+visually claims a longer bar than option B.
+
+**Column sort added.** A &#34;Sort:&#34; segmented control next to &#34;Show:&#34;
+offers Default / Ticker / Expiry. Clicking the active sort flips
+asc↔desc with an ↑/↓ glyph. Uses the stable-sort idiom (sort
+secondary key first, then primary with reverse) so a ticker_desc
+result keeps within-ticker rows in expiry-ascending order rather
+than flipping both directions together. The sort param threads
+through Show toggle and pagination URLs.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b89bf05`](https://github.com/chen-star/net_alpha/commit/b89bf05c145436979d2e8c7cd8158431599806d5))
+
+
 ## v0.77.4 (2026-05-24)
 
 ### Fix
