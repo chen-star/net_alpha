@@ -2,6 +2,27 @@
 
 
 
+## v0.77.4 (2026-05-24)
+
+### Fix
+
+* fix(web): restore Options-tab Show toggle + gradient DTE bars
+
+The Options tab silently dropped the Open/All toggle, so users could no
+longer surface expired-but-not-yet-broker-closed contracts they&#39;d
+previously been able to inspect. Added `show=open|all` to /holdings/options
+(default keeps today&#39;s behavior of hiding expired contracts) and a
+segmented control in the panel header. Pagination preserves the toggle.
+
+Replaced the single bucket-colored DTE fill with a left→right gradient
+(neg → warn → pos) sized to the full 365d track and clipped by fill width
+in both open and short option panels, so a longer bar naturally reveals
+more green. The DTE pill on the right still carries the bucket-keyed text
+color for at-a-glance urgency.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`e48d9eb`](https://github.com/chen-star/net_alpha/commit/e48d9eb945fbced9aa454b78760af4a85f493dcc))
+
+
 ## v0.77.3 (2026-05-24)
 
 ### Fix
