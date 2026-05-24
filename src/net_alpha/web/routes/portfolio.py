@@ -619,14 +619,21 @@ def holdings_options(
     account: list[str] = Query(default_factory=list),
     page: int = 1,
     page_size: int = 25,
+    show: str = "open",  # "open" | "all"
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     """All open option positions (long + short) panel — rendered on /holdings.
 
     Pure read of trades + lots + GL closures, scoped by account. Sorted by
     expiry so the next contract to roll/manage is always at the top.
+
+    ``show='open'`` (default) hides expired-but-not-yet-broker-closed contracts
+    so the panel matches truly actionable exposure. ``show='all'`` surfaces
+    those too — useful for reconciling against the broker before it sweeps
+    them server-side.
     """
     accounts: list[str] = parse_accounts(account)
+    show = "all" if show == "all" else "open"
     today = date.today()
     trades = repo.all_trades()
     lots = repo.all_lots()
@@ -637,14 +644,16 @@ def holdings_options(
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=repo.get_option_gl_closures(),
     )
-    # Filter expired contracts (expiry < today): their collateral has already
-    # been released — see pledged_cash_at() in portfolio/cash_flow.py — and
-    # the broker has typically already closed them server-side. Leaving them
-    # in the open list mixes non-actionable rows with truly open contracts
-    # and overstates open exposure. The expired tally still surfaces via
-    # ``expired_count`` for the panel header.
-    open_options = [o for o in open_options_all if o.expiry >= today]
-    expired_count = len(open_options_all) - len(open_options)
+    # Default "open" mode filters expired contracts (expiry < today): their
+    # collateral has already been released — see pledged_cash_at() in
+    # portfolio/cash_flow.py — and the broker has typically already closed
+    # them server-side. The expired tally still surfaces via ``expired_count``
+    # for the panel header. "All" mode keeps them so the user can reconcile.
+    if show == "all":
+        open_options = list(open_options_all)
+    else:
+        open_options = [o for o in open_options_all if o.expiry >= today]
+    expired_count = sum(1 for o in open_options_all if o.expiry < today)
     cash_secured_total = sum((o.cash_secured for o in open_options), start=Decimal("0"))
     premium_received_total = sum((o.cash_basis for o in open_options if o.side == "short"), start=Decimal("0"))
     long_cost_total = sum((o.cash_basis for o in open_options if o.side == "long"), start=Decimal("0"))
@@ -705,6 +714,7 @@ def holdings_options(
             "selected_accounts": accounts,
             "account_filter_active": bool(accounts),
             "pagination": pagination,
+            "show": show,
         },
     )
 

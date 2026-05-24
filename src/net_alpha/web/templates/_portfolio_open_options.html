@@ -3,12 +3,15 @@
     cash_secured_total: Decimal
     premium_received_total: Decimal
     long_cost_total: Decimal
-    today: date #}
+    today: date
+    show: "open" | "all"  — All includes expired-but-not-yet-broker-closed contracts. #}
+{% set _show = show|default('open') %}
 {% set _expanded = open_options|length > 0 or (option_counts is defined and (option_counts.long > 0 or option_counts.short > 0)) %}
 {# Use option_counts from the route (computed pre-slice) for accurate totals when paginated.
    Fall back to counting from open_options (the page slice) when option_counts is absent. #}
 {% set _long_count = option_counts.long|default(open_options | selectattr('side', 'equalto', 'long') | list | length) %}
 {% set _short_count = option_counts.short|default(open_options | selectattr('side', 'equalto', 'short') | list | length) %}
+{% set _acct_qs_root %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
 
 <details{% if _expanded %} open{% endif %}>
   <summary class="panel-head cursor-pointer">
@@ -25,8 +28,26 @@
     </span>
   </summary>
 
+  <div class="flex items-center gap-2 flex-wrap text-sm mt-2 mb-3">
+    <span class="label-uc">Show:</span>
+    <div class="seg">
+      <button type="button"
+              hx-get="/holdings/options?show=open{{ _acct_qs_root }}"
+              hx-target="#holdings-options" hx-swap="innerHTML"
+              class="{% if _show == 'open' %}seg-active{% endif %}"
+              title="Live (non-expired) option contracts only.">Open</button>
+      <button type="button"
+              hx-get="/holdings/options?show=all{{ _acct_qs_root }}"
+              hx-target="#holdings-options" hx-swap="innerHTML"
+              class="{% if _show == 'all' %}seg-active{% endif %}"
+              title="Open contracts plus expired-but-not-yet-broker-closed contracts.">All</button>
+    </div>
+  </div>
+
 {% if not open_options %}
-  <div class="text-label-2 text-[13px] py-3">No open option positions.</div>
+  <div class="text-label-2 text-[13px] py-3">
+    {% if _show == 'all' %}No option positions in scope.{% else %}No open option positions.{% endif %}
+  </div>
 {% else %}
   {% if options_summary is defined and options_summary %}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
@@ -46,13 +67,16 @@
   {% endif %}
   <div class="flex flex-col">
     {# Bar = days-to-expiry on a fixed 0–365d scale. Same expiry → same bar.
-       Color matches the DTE-urgency bucket (red ≤7d, orange ≤21d, green >21d). #}
+       The fill is a single left→right gradient (urgent red → neutral amber →
+       safe green) anchored to the full 365d track and clipped to the visible
+       portion, so a longer bar naturally reveals more green. The DTE pill on
+       the right still gets a bucket-keyed text color for at-a-glance urgency. #}
     {% set MAX_DTE = 365 %}
     {% for s in open_options %}
       {% set dte = (s.expiry - today).days %}
-      {% if dte <= 7 %}{% set dte_class = 'text-warn' %}{% set bar_color = 'var(--color-neg)' %}
-      {% elif dte <= 21 %}{% set dte_class = 'text-label-1' %}{% set bar_color = 'var(--color-warn)' %}
-      {% else %}{% set dte_class = 'text-label-2' %}{% set bar_color = 'var(--color-pos)' %}{% endif %}
+      {% if dte <= 7 %}{% set dte_class = 'text-warn' %}
+      {% elif dte <= 21 %}{% set dte_class = 'text-label-1' %}
+      {% else %}{% set dte_class = 'text-label-2' %}{% endif %}
       {% set _capped = dte if dte > 0 else 0 %}
       {% if _capped > MAX_DTE %}{% set _capped = MAX_DTE %}{% endif %}
       {% set fill_pct = (_capped / MAX_DTE * 100)|round(0, 'common') %}
@@ -78,11 +102,17 @@
           <span class="text-[11px] text-label-2 num min-w-[88px]">
             {% if s.opened_at %}opened {{ (today - s.opened_at).days }}d ago{% else %}— {% endif %}
           </span>
-          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: var(--color-hairline);"
+          <div class="flex-1 h-[5px] rounded-full overflow-hidden relative" style="background: var(--color-hairline);"
                title="{{ dte }}d to expiry · bar length proportional to DTE on a fixed 0–365d scale">
-            <div style="width: {{ fill_pct }}%; height: 100%;
-                        background: {{ bar_color }};
-                        border-radius: 999px;"></div>
+            {# Gradient is sized to the full 365d track via background-size so
+               the fill, clipped to fill_pct, always shows the correct slice
+               of red→amber→green. fill_pct guarded against 0 to avoid div/0. #}
+            {% set _bg_size = (10000 / fill_pct)|round(0, 'common') if fill_pct > 0 else 100 %}
+            <div style="width: {{ fill_pct }}%; height: 100%; border-radius: 999px;
+                        background-image: linear-gradient(to right, var(--color-neg) 0%, var(--color-warn) 50%, var(--color-pos) 100%);
+                        background-size: {{ _bg_size }}% 100%;
+                        background-position: left center;
+                        background-repeat: no-repeat;"></div>
           </div>
         </div>
         <div class="text-right num text-[12px]">
@@ -103,9 +133,8 @@
     {% endfor %}
   </div>
 
-  {% set _qs %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
   {% set page_base_url = '/holdings/options' %}
-  {% set page_extra_qs = _qs %}
+  {% set page_extra_qs %}&show={{ _show }}{{ _acct_qs_root }}{% endset %}
   {% set page_target = '#holdings-options' %}
   {% set page_swap = 'innerHTML' %}
   {% include "_pagination_footer.html" %}

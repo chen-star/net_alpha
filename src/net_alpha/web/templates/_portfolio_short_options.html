@@ -24,13 +24,16 @@
 {% else %}
   <div class="flex flex-col">
     {# Bar = days-to-expiry on a fixed 0–365d scale. Same expiry → same bar.
-       Color matches the DTE-urgency bucket (red ≤7d, orange ≤21d, green >21d). #}
+       Fill is a single left→right gradient (urgent red → neutral amber →
+       safe green) anchored to the full 365d track and clipped to the visible
+       portion, so a longer bar reveals more green. The DTE pill on the right
+       still gets a bucket-keyed text color for at-a-glance urgency. #}
     {% set MAX_DTE = 365 %}
     {% for s in open_shorts %}
       {% set dte = (s.expiry - today).days %}
-      {% if dte <= 7 %}{% set dte_class = 'text-warn' %}{% set bar_color = 'var(--color-neg)' %}
-      {% elif dte <= 21 %}{% set dte_class = 'text-label-1' %}{% set bar_color = 'var(--color-warn)' %}
-      {% else %}{% set dte_class = 'text-label-2' %}{% set bar_color = 'var(--color-pos)' %}{% endif %}
+      {% if dte <= 7 %}{% set dte_class = 'text-warn' %}
+      {% elif dte <= 21 %}{% set dte_class = 'text-label-1' %}
+      {% else %}{% set dte_class = 'text-label-2' %}{% endif %}
       {% set _capped = dte if dte > 0 else 0 %}
       {% if _capped > MAX_DTE %}{% set _capped = MAX_DTE %}{% endif %}
       {% set fill_pct = (_capped / MAX_DTE * 100)|round(0, 'common') %}
@@ -50,11 +53,14 @@
           <span class="text-[11px] text-label-2 num min-w-[88px]">
             {% if s.opened_at %}opened {{ (today - s.opened_at).days }}d ago{% else %}— {% endif %}
           </span>
-          <div class="flex-1 h-[5px] rounded-full overflow-hidden" style="background: var(--color-hairline);"
+          <div class="flex-1 h-[5px] rounded-full overflow-hidden relative" style="background: var(--color-hairline);"
                title="{{ dte }}d to expiry · bar length proportional to DTE on a fixed 0–365d scale">
-            <div style="width: {{ fill_pct }}%; height: 100%;
-                        background: {{ bar_color }};
-                        border-radius: 999px;"></div>
+            {% set _bg_size = (10000 / fill_pct)|round(0, 'common') if fill_pct > 0 else 100 %}
+            <div style="width: {{ fill_pct }}%; height: 100%; border-radius: 999px;
+                        background-image: linear-gradient(to right, var(--color-neg) 0%, var(--color-warn) 50%, var(--color-pos) 100%);
+                        background-size: {{ _bg_size }}% 100%;
+                        background-position: left center;
+                        background-repeat: no-repeat;"></div>
           </div>
         </div>
         <div class="text-right num text-[12px]">
