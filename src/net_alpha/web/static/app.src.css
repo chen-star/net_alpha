@@ -491,7 +491,7 @@
 
   /* Top-bar pill (read-only summary) */
   .pill {
-    @apply px-[10px] py-[3px] bg-surface rounded-full text-[11px] font-medium;
+    @apply px-[10px] py-[3px] bg-surface rounded-full text-[11px] font-medium whitespace-nowrap;
     color: var(--color-label-1);
     border: 0.5px solid var(--color-hairline);
   }
