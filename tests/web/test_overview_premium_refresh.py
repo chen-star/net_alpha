@@ -85,3 +85,22 @@ def test_base_registers_countup(tmp_path):
     assert resp.status_code == 200
     assert "/static/countup.js" in resp.text
     assert "na-ambiance" in resp.text  # body ambiance class wired in Step 4
+
+
+def test_kpis_fragment_has_countup_spans(tmp_path):
+    # Seed one import so the "with data" KPI path renders numbers.
+    from net_alpha.db.connection import get_engine
+    from sqlalchemy import text
+    settings = Settings(data_dir=tmp_path)
+    # create_app initialises the schema; build client first so the DB exists.
+    client = TestClient(create_app(settings))
+    engine = get_engine(settings.db_path)
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO accounts(broker, label) VALUES ('Schwab', 'Tax')"))
+        conn.execute(text(
+            "INSERT INTO imports(account_id, csv_filename, csv_sha256, imported_at, trade_count) "
+            "VALUES (1, 'x.csv', 'h', '2026-04-26T00:00:00', 0)"
+        ))
+    resp = client.get("/portfolio/kpis?period=ytd")
+    assert resp.status_code == 200
+    assert "js-countup-num" in resp.text

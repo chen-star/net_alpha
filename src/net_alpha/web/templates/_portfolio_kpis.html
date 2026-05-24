@@ -42,7 +42,7 @@
 
   {# ── Command-center header: hero on the left (4 cols × 2 rows on lg+),
        four small KPIs auto-flow into the 2×2 area to the right. ───────── #}
-  <div class="kpi kpi-hero col-span-12 lg:col-span-4 lg:row-span-2 flex flex-col justify-center"
+  <div class="kpi kpi-hero panel-feature col-span-12 lg:col-span-4 lg:row-span-2 flex flex-col justify-center"
        data-kpi-slot="hero"
        data-testid="kpi-total-account-value"
        title="Sum of cash + open position market value across all in-scope accounts. Updates as quotes refresh.">
@@ -60,7 +60,7 @@
     <div class="num num-hero mt-2"
          {% if snapshot is defined and snapshot.fetched_at %}title="Snapshot {{ snapshot.fetched_at.strftime('%b %-d %H:%M') }} quotes. Click the (?) icon for math."{% else %}title="Click the (?) icon for math."{% endif %}>
       {% if total_account_value is defined and total_account_value is not none %}
-        ${{ "{:,.2f}".format(total_account_value|float) }}
+        $<span class="js-countup-num" data-to="{{ "%.2f"|format(total_account_value|float) }}" data-decimals="2">{{ "{:,.2f}".format(total_account_value|float) }}</span>
       {% else %}
         <span class="text-label-3">—</span>
       {% endif %}
@@ -189,7 +189,7 @@
     </div>
     <div class="num num-promoted mt-2 {% if cash_kpis is defined and cash_kpis and cash_kpis.growth < 0 %}text-neg{% elif cash_kpis is defined and cash_kpis %}text-pos{% endif %}">
       {% if cash_kpis is defined and cash_kpis %}
-        {% if cash_kpis.growth < 0 %}−{% else %}+{% endif %}${{ "{:,.2f}".format(cash_kpis.growth|float|abs) }}
+        {% if cash_kpis.growth < 0 %}−{% else %}+{% endif %}$<span class="js-countup-num" data-to="{{ "%.2f"|format(cash_kpis.growth|float|abs) }}" data-decimals="2">{{ "{:,.2f}".format(cash_kpis.growth|float|abs) }}</span>
       {% else %}
         <span class="text-label-3">—</span>
       {% endif %}
