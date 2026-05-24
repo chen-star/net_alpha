@@ -62,3 +62,26 @@ def test_swap_crossfade_rules_present():
     src = APP_SRC_CSS.read_text()
     assert ".htmx-swapping" in src
     assert ".htmx-settling" in src
+
+
+from fastapi.testclient import TestClient
+from net_alpha.config import Settings
+from net_alpha.web.app import create_app
+
+
+def _client(tmp_path):
+    return TestClient(create_app(Settings(data_dir=tmp_path)))
+
+
+def test_countup_js_served(tmp_path):
+    resp = _client(tmp_path).get("/static/countup.js")
+    assert resp.status_code == 200
+    assert "js-countup-num" in resp.text
+    assert "prefers-reduced-motion" in resp.text
+
+
+def test_base_registers_countup(tmp_path):
+    resp = _client(tmp_path).get("/")
+    assert resp.status_code == 200
+    assert "/static/countup.js" in resp.text
+    assert "na-ambiance" in resp.text  # body ambiance class wired in Step 4

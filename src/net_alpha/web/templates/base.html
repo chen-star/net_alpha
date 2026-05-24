@@ -73,8 +73,9 @@
   <script src="/static/vendor/sortablejs/Sortable.min.js?v={{ asset_v }}" defer></script>
   <script src="/static/overview_layout.js?v={{ asset_v }}" defer></script>
   <script src="/static/plan_reorder.js?v={{ asset_v }}" defer></script>
+  <script src="/static/countup.js?v={{ asset_v }}" defer></script>
 </head>
-<body class="min-h-screen flex flex-col bg-bg text-text"
+<body class="min-h-screen flex flex-col bg-bg text-text na-ambiance"
       x-data
       {% if open_settings_tab %}data-open-settings-tab="{{ open_settings_tab }}"{% endif %}>
   {# Skip-to-content for keyboard / screen-reader users — visible only on
