@@ -10,7 +10,11 @@
 <form method="get" action="{{ toolbar_action }}"
       hx-get="{{ toolbar_hx_get }}"
       hx-target="{{ toolbar_hx_target }}"
-      hx-swap="innerHTML"
+      {# swap/settle windows let the .htmx-swapping → .htmx-settling opacity
+         cross-fade actually render (htmx defaults are swap:0/settle:20ms,
+         which collapse the fade). Overview-only: this block is gated on
+         toolbar_hx_target, which only portfolio.py sets. #}
+      hx-swap="innerHTML swap:160ms settle:240ms"
       hx-trigger="change from:select, change from:input[type=checkbox]"
       hx-indicator="#portfolio-toolbar-spinner"
       class="kpi-card flex gap-3 flex-wrap items-end text-sm"

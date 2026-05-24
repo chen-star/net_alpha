@@ -22,7 +22,10 @@
   }
 
   function fmt(value, decimals) {
-    return value.toLocaleString(undefined, {
+    // Pin to en-US so the animated digits match the server-rendered text
+    // (Python "{:,.2f}"); `undefined` uses the browser locale and could
+    // diverge on a non-US browser (e.g. "1.234,56").
+    return value.toLocaleString("en-US", {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     });

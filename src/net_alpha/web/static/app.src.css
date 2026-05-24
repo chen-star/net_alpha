@@ -343,6 +343,9 @@
   --color-skeleton-shimmer: rgba(60,60,67,0.10);
   --shadow-drawer: 0 0 0 1px var(--color-hairline), -24px 0 48px rgba(0,0,0,0.10);
   --shadow-pane:   0 0 0 0.5px var(--color-hairline), 0 12px 32px rgba(0,0,0,0.08);
+  /* Light variant intentionally uses a bright white inset top-edge (0.9 alpha)
+     instead of dark/@theme's var(--color-hairline-strong) inset — a dark
+     hairline reads as a shadow on a white surface, not a raised highlight. */
   --shadow-feature: 0 1px 0 0 rgba(255,255,255,0.9) inset, 0 8px 24px rgba(0,0,0,0.08);
   --gradient-edge-top: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, transparent 10px);
   --ambiance-wash: radial-gradient(90% 50% at 50% 0%, rgba(0,122,255,0.04) 0%, transparent 60%);
@@ -471,6 +474,12 @@
   .kpi:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-pane);
+  }
+  /* The hero carries both .kpi and .panel-feature; without this, .kpi:hover's
+     --shadow-pane overrides and flattens the tier-1 elevation on hover. Keep
+     the feature shadow on hover — the lift still comes from the transform. */
+  .kpi.panel-feature:hover {
+    box-shadow: var(--shadow-feature);
   }
   .kpi-hero::before {
     transition: opacity var(--duration-med) var(--ease-out-soft);
