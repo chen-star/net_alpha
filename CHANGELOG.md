@@ -2,6 +2,53 @@
 
 
 
+## v0.78.1 (2026-05-24)
+
+### Fix
+
+* fix(web,tax): correct sim/harvest/projection bugs surfaced in UI audit
+
+Nine fixes from a full web-UI audit, each TDD-covered:
+
+- sim: exclude option lots from stock-sale lot selection (engine
+  simulate_sell + /sim comparison) — was consuming option premium as
+  share basis, fabricating a −$3,832 HIFO on a $237 trade
+- tax: per-lot harvest &#34;Tax saved&#34; (was a (symbol,account)-keyed dict
+  that stamped the last lot&#39;s value on every lot + duplicate DOM ids)
+- tax: include non-§1256 option realized P&amp;L (from broker GL, by term)
+  in realized_pnl_split_by_year + _contributions_by_year, so the
+  year-end projection and harvest offset budget no longer drop option
+  income and reconcile with the Performance tile
+- pricing: warm-cache serves now record an as-of so the freshness chip
+  reads &#34;fresh&#34;/&#34;cached&#34; instead of a false &#34;none yet&#34;; Overview warms
+  the snapshot from cache before rendering the toolbar
+- verify: downgrade MarketValueRecon FAIL→WARN against a stale broker
+  positions reference (price drift, not a data error) + fix copy
+- sim: suggestion chips with an explicit price auto-run the simulator
+- inbox: suppress LT-eligibility reminders below a $25 tax-impact floor
+- imports: label positions-CSV imports &#34;N positions&#34; not &#34;trades&#34;;
+  exclude the positions/(multi) sentinel from account pickers
+- settings: /settings/carryforward direct nav renders with a page title
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`7747ec7`](https://github.com/chen-star/net_alpha/commit/7747ec791af7fb9382ab231d0918d0c6d4be4c64))
+
+### Test
+
+* test(e2e): disable remote prices in seeded fixture to fix networkidle flake
+
+The portfolio page kept yfinance requests in-flight past Playwright&#39;s
+15s `networkidle` deadline because the seeded data_dir had no config.yaml
+and `prices.enable_remote` defaulted to True. In CI yfinance returns
+`possibly delisted; no price data found` for every symbol, so the page
+never reached networkidle and `test_equity_curve_click_e2e` timed out.
+
+Write `prices: enable_remote: false` into the seeded data_dir so
+`PricingService.{get_prices,get_historical_close,warm_historical_range}`
+short-circuit and the page loads deterministically.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f83ecd7`](https://github.com/chen-star/net_alpha/commit/f83ecd71f30334445ec8b7284cedc53d3aa89bf0))
+
+
 ## v0.78.0 (2026-05-24)
 
 ### Chore
