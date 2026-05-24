@@ -2,6 +2,29 @@
 
 
 
+## v0.77.3 (2026-05-24)
+
+### Fix
+
+* fix(web): keep OPT pill on one line + tighten positions Target column
+
+Symbol-cell OPT badge was wrapping internally to two lines on tight
+column widths (e.g. OSCR / TSLA at 1280px) because .pill had no
+whitespace-nowrap. Target column also reserved 160px and the share
+label always rendered with .00 (e.g. &#34;100.00 sh / 115.00 sh&#34;),
+crowding the rest of the row.
+
+- .pill: add whitespace-nowrap (pills should never wrap by convention).
+- _portfolio_table.html: Target th min-width 160→110px; drop &#34;.00&#34; for
+  whole-share quantities in both current and target labels; add
+  whitespace-nowrap on the cell&#39;s flex so label+bar+pct stay on one row.
+
+Verified visually: OSCR/TSLA show &#34;1 OPT&#34;/&#34;2 OPT&#34; on a single line;
+HIMS/CIFR target cells render as &#34;115 sh / 100 sh 115%&#34;.
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`7bb1e77`](https://github.com/chen-star/net_alpha/commit/7bb1e77db4b0241161c0030fd0771798e7263f2b))
+
+
 ## v0.77.2 (2026-05-23)
 
 ### Chore
