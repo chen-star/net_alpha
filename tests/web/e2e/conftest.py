@@ -52,6 +52,13 @@ def seeded_data_dir(tmp_path_factory) -> Path:
     from net_alpha.models.preferences import AccountPreference
     from net_alpha.web.demo import build_demo_db
 
+    # Disable remote price fetches so page loads don't depend on yfinance.
+    # The portfolio page otherwise blocks "networkidle" past Playwright's
+    # 15s timeout in CI sandboxes where Yahoo returns errors for every
+    # symbol (`possibly delisted; no price data found`).
+    settings.config_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+    settings.config_yaml_path.write_text("prices:\n  enable_remote: false\n")
+
     build_demo_db(settings.db_path)
 
     # Suppress the first-visit profile picker by writing a preference for
