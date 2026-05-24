@@ -13,7 +13,7 @@
   "allocation": "_portfolio_row_allocation.html",
   "top_movers": "_portfolio_row_top_movers.html",
 } %}
-<div id="overview-rows" data-edit-mode="off">
+<div id="overview-rows" class="js-reveal" data-edit-mode="off">
   {% set _visible_count = layout.rows | reject('in', layout.hidden) | list | length %}
   {% if _visible_count == 0 %}
     <div class="row-hidden-placeholder mb-4">
@@ -29,6 +29,7 @@
     {% set _hidden = key in layout.hidden %}
     <div class="overview-row{% if _hidden %} overview-row-hidden{% endif %}"
          data-row-key="{{ key }}"
+         style="--reveal-i: {{ loop.index0 }}"
          x-data='{ hidden: {{ _hidden|tojson }} }'>
       <button class="row-grip" data-handle aria-label="Drag to reorder" type="button">
         <img src="/static/icons/grip-vertical.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono" alt="">
