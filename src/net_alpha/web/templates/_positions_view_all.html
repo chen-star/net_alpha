@@ -19,6 +19,6 @@
        hx-trigger="load" hx-swap="innerHTML"></div>
 
   <div id="holdings-options" class="panel mt-4"
-       hx-get="/holdings/options?{{ _acct_qs[1:] }}"
+       hx-get="/holdings/options?period={{ selected_period }}{{ _acct_qs }}"
        hx-trigger="load" hx-swap="innerHTML"></div>
 {% endif %}

@@ -55,6 +55,7 @@ from net_alpha.portfolio.month_end_equity import (
 )
 from net_alpha.portfolio.pnl import compute_kpis, compute_wash_impact
 from net_alpha.portfolio.positions import (
+    compute_closed_lots,
     compute_open_option_positions,
     compute_open_positions,
     compute_open_short_option_positions,
@@ -620,6 +621,8 @@ def holdings_options(
     page: int = 1,
     page_size: int = 25,
     show: str = "open",  # "open" | "all"
+    period: str = "ytd",  # only consulted when show=all (scopes closed options)
+    sort: str = "default",  # "default" | "ticker[_desc]" | "expiry[_desc]"
     repo: Repository = Depends(get_repository),
 ) -> HTMLResponse:
     """All open option positions (long + short) panel — rendered on /holdings.
@@ -629,8 +632,8 @@ def holdings_options(
 
     ``show='open'`` (default) hides expired-but-not-yet-broker-closed contracts
     so the panel matches truly actionable exposure. ``show='all'`` surfaces
-    those too — useful for reconciling against the broker before it sweeps
-    them server-side.
+    those too AND appends historical closed option lots (from Realized G/L)
+    scoped to ``period`` — useful for full-history review and reconciliation.
     """
     accounts: list[str] = parse_accounts(account)
     show = "all" if show == "all" else "open"
@@ -644,25 +647,48 @@ def holdings_options(
         gl_closures=repo.get_equity_gl_closures(),
         gl_option_closures=repo.get_option_gl_closures(),
     )
-    # Default "open" mode filters expired contracts (expiry < today): their
-    # collateral has already been released — see pledged_cash_at() in
-    # portfolio/cash_flow.py — and the broker has typically already closed
-    # them server-side. The expired tally still surfaces via ``expired_count``
-    # for the panel header. "All" mode keeps them so the user can reconcile.
+    # Truly-open = live, non-expired. Drives all KPI totals so the "Open
+    # contracts" / premium / avg-DTE numbers never shift when the user toggles
+    # Show:All — that toggle only adds rows to the table, never reinterprets
+    # what "open" means. Expired-pending-broker-close contracts get their own
+    # row kind in show=all so they're surfaced but not double-counted as open.
+    truly_open = [o for o in open_options_all if o.expiry >= today]
+    expired_pending = [o for o in open_options_all if o.expiry < today]
+    expired_count = len(expired_pending)
+
+    # Closed options: realized lots filtered to is_option, scoped by the page
+    # Period. Mirrors the convention used by selected_view == "closed" in the
+    # /positions route: ytd → current year; numeric year → that year only;
+    # "lifetime" → no period filter.
+    closed_options: list = []
+    closed_options_period_label = ""
     if show == "all":
-        open_options = list(open_options_all)
-    else:
-        open_options = [o for o in open_options_all if o.expiry >= today]
-    expired_count = sum(1 for o in open_options_all if o.expiry < today)
-    cash_secured_total = sum((o.cash_secured for o in open_options), start=Decimal("0"))
-    premium_received_total = sum((o.cash_basis for o in open_options if o.side == "short"), start=Decimal("0"))
-    long_cost_total = sum((o.cash_basis for o in open_options if o.side == "long"), start=Decimal("0"))
-    # 3-card mini-summary for the panel header (H7). Net premium signs short
-    # premium received as a credit and long cost paid as a debit. Avg DTE is
-    # qty-weighted across all open contracts (clamped to 0 when nothing open).
-    total_qty = sum((o.qty for o in open_options), start=Decimal("0"))
+        period_filter: tuple[int, int] | None = None
+        current_year = today.year
+        if period == "ytd":
+            period_filter = (current_year, current_year + 1)
+            closed_options_period_label = f"YTD {current_year}"
+        elif period.isdigit():
+            y = int(period)
+            period_filter = (y, y + 1)
+            closed_options_period_label = str(y)
+        else:
+            closed_options_period_label = "lifetime"
+        closed_all = compute_closed_lots(
+            repo.list_all_gl_lots(),
+            period=period_filter,
+            accounts=accounts or None,
+        )
+        closed_options = [r for r in closed_all if r.is_option]
+
+    # KPI rollups are always derived from truly_open so the cards do not flip
+    # when the table grows under show=all.
+    cash_secured_total = sum((o.cash_secured for o in truly_open), start=Decimal("0"))
+    premium_received_total = sum((o.cash_basis for o in truly_open if o.side == "short"), start=Decimal("0"))
+    long_cost_total = sum((o.cash_basis for o in truly_open if o.side == "long"), start=Decimal("0"))
+    total_qty = sum((o.qty for o in truly_open), start=Decimal("0"))
     if total_qty > 0:
-        avg_dte = sum(((o.expiry - today).days * o.qty for o in open_options), start=Decimal("0")) / total_qty
+        avg_dte = sum(((o.expiry - today).days * o.qty for o in truly_open), start=Decimal("0")) / total_qty
     else:
         avg_dte = Decimal("0")
     options_summary = {
@@ -670,12 +696,10 @@ def holdings_options(
         "net_premium": premium_received_total - long_cost_total,
         "avg_dte": avg_dte,
     }
-    # Compute per-side/per-type counts from the full (pre-slice) list so the
-    # summary header reflects totals even when pagination is active.
-    long_count = sum(1 for o in open_options if o.side == "long")
-    short_count = sum(1 for o in open_options if o.side == "short")
-    put_count = sum(1 for o in open_options if o.call_put == "P")
-    call_count = sum(1 for o in open_options if o.call_put == "C")
+    long_count = sum(1 for o in truly_open if o.side == "long")
+    short_count = sum(1 for o in truly_open if o.side == "short")
+    put_count = sum(1 for o in truly_open if o.call_put == "P")
+    call_count = sum(1 for o in truly_open if o.call_put == "C")
     option_counts = {
         "long": long_count,
         "short": short_count,
@@ -683,14 +707,84 @@ def holdings_options(
         "calls": call_count,
     }
 
+    # Build the unified row list. Each entry is a (kind, row) pair so the
+    # template can branch on kind to render the right cells inside one grid.
+    # Sort order keeps actionable rows on top: open by DTE asc → expired
+    # (most recently expired first) → closed (most recently closed first).
+    unified_rows: list[dict] = []
+    for o in truly_open:
+        unified_rows.append({"kind": "open", "row": o})
+    if show == "all":
+        for o in expired_pending:
+            unified_rows.append({"kind": "expired", "row": o})
+        for r in closed_options:
+            unified_rows.append({"kind": "closed", "row": r})
+
+    def _default_key(entry: dict) -> tuple:
+        kind = entry["kind"]
+        row = entry["row"]
+        if kind == "open":
+            return (0, (row.expiry - today).days)
+        if kind == "expired":
+            # Less-recently expired (more negative DTE) sorts last.
+            return (1, -(row.expiry - today).days)
+        # closed → most-recently-closed first
+        return (2, -row.closed_date.toordinal())
+
+    def _ticker_key(entry: dict) -> str:
+        return (entry["row"].ticker or "").upper()
+
+    def _expiry_key(entry: dict) -> date:
+        row = entry["row"]
+        if entry["kind"] in ("open", "expired"):
+            return row.expiry
+        raw = row.option_expiry or ""
+        try:
+            return date.fromisoformat(raw)
+        except ValueError:
+            return date.max
+
+    # User-selected sort overrides the smart default. Allowed values are
+    # constrained server-side; anything unrecognized falls back to default.
+    sort = (
+        sort
+        if sort
+        in {
+            "default",
+            "ticker",
+            "ticker_desc",
+            "expiry",
+            "expiry_desc",
+        }
+        else "default"
+    )
+    # Stable multi-key sort: sort by secondary key first, then by primary —
+    # only the primary direction flips on _desc so within a ticker group the
+    # rows stay in expiry-ascending order (and vice versa), instead of having
+    # both directions flip together (which a single sort+reverse would do).
+    if sort == "ticker":
+        unified_rows.sort(key=_expiry_key)
+        unified_rows.sort(key=_ticker_key)
+    elif sort == "ticker_desc":
+        unified_rows.sort(key=_expiry_key)
+        unified_rows.sort(key=_ticker_key, reverse=True)
+    elif sort == "expiry":
+        unified_rows.sort(key=_ticker_key)
+        unified_rows.sort(key=_expiry_key)
+    elif sort == "expiry_desc":
+        unified_rows.sort(key=_ticker_key)
+        unified_rows.sort(key=_expiry_key, reverse=True)
+    else:
+        unified_rows.sort(key=_default_key)
+
     page_size_norm = page_size if page_size in (10, 25, 50, 100) else 25
     page_norm = max(1, page)
-    total_rows = len(open_options)
+    total_rows = len(unified_rows)
     total_pages = max(1, (total_rows + page_size_norm - 1) // page_size_norm)
     page_norm = min(page_norm, total_pages)
     start_idx = (page_norm - 1) * page_size_norm
     end_idx = start_idx + page_size_norm
-    open_options_page = open_options[start_idx:end_idx]
+    unified_rows_page = unified_rows[start_idx:end_idx]
     pagination = {
         "page": page_norm,
         "page_size": page_size_norm,
@@ -699,11 +793,13 @@ def holdings_options(
         "page_size_options": (10, 25, 50, 100),
     }
 
+    closed_realized_total = sum((r.realized_pl for r in closed_options), start=Decimal("0"))
+
     return request.app.state.templates.TemplateResponse(
         request,
         "_portfolio_open_options.html",
         {
-            "open_options": open_options_page,
+            "option_rows": unified_rows_page,
             "cash_secured_total": cash_secured_total,
             "premium_received_total": premium_received_total,
             "long_cost_total": long_cost_total,
@@ -715,6 +811,11 @@ def holdings_options(
             "account_filter_active": bool(accounts),
             "pagination": pagination,
             "show": show,
+            "period": period,
+            "sort": sort,
+            "closed_options_count": len(closed_options),
+            "closed_options_period_label": closed_options_period_label,
+            "closed_realized_total": closed_realized_total,
         },
     )
 

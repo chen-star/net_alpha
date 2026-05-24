@@ -1,50 +1,92 @@
 {# Inputs:
-    open_options: list[OpenOptionRow]   — both long and short, sorted by expiry
-    cash_secured_total: Decimal
-    premium_received_total: Decimal
-    long_cost_total: Decimal
+    option_rows: list[dict]  — each {"kind": "open"|"expired"|"closed", "row": <OpenOptionRow|ClosedLotRow>}
+                                 paginated; sorted open→expired→closed at the route.
+    cash_secured_total / premium_received_total / long_cost_total: Decimal — always derived from truly-open.
+    options_summary / option_counts: derived from truly-open so KPIs don't shift on toggle.
+    expired_count: int — full pre-slice count of expired-pending-broker-close rows.
     today: date
-    show: "open" | "all"  — All includes expired-but-not-yet-broker-closed contracts. #}
+    show: "open" | "all" — All adds expired-pending and closed rows to the same table.
+    closed_options_count / closed_options_period_label / closed_realized_total. #}
 {% set _show = show|default('open') %}
-{% set _expanded = open_options|length > 0 or (option_counts is defined and (option_counts.long > 0 or option_counts.short > 0)) %}
-{# Use option_counts from the route (computed pre-slice) for accurate totals when paginated.
-   Fall back to counting from open_options (the page slice) when option_counts is absent. #}
-{% set _long_count = option_counts.long|default(open_options | selectattr('side', 'equalto', 'long') | list | length) %}
-{% set _short_count = option_counts.short|default(open_options | selectattr('side', 'equalto', 'short') | list | length) %}
+{% set _period = period|default('ytd') %}
+{% set _sort = sort|default('default') %}
+{# Direction toggles: clicking the active sort flips asc↔desc; clicking a
+   different sort starts in asc. ↑/↓ glyphs label the active column. #}
+{% set _sort_ticker_next = 'ticker_desc' if _sort == 'ticker' else 'ticker' %}
+{% set _sort_expiry_next = 'expiry_desc' if _sort == 'expiry' else 'expiry' %}
+{% set _ticker_active = _sort in ('ticker', 'ticker_desc') %}
+{% set _expiry_active = _sort in ('expiry', 'expiry_desc') %}
+{% set _ticker_arrow = '↓' if _sort == 'ticker_desc' else ('↑' if _sort == 'ticker' else '') %}
+{% set _expiry_arrow = '↓' if _sort == 'expiry_desc' else ('↑' if _sort == 'expiry' else '') %}
+{% set _rows = option_rows|default([]) %}
+{% set _closed_count = closed_options_count|default(0) %}
+{% set _expanded = _rows|length > 0 or (option_counts is defined and (option_counts.long > 0 or option_counts.short > 0)) %}
+{% set _long_count = option_counts.long|default(0) %}
+{% set _short_count = option_counts.short|default(0) %}
 {% set _acct_qs_root %}{% for _a in selected_accounts | default([]) %}&account={{ _a|urlencode }}{% endfor %}{% endset %}
 
 <details{% if _expanded %} open{% endif %}>
   <summary class="panel-head cursor-pointer">
-    <h4>Open options</h4>
+    <h4>{% if _show == 'all' %}Options{% else %}Open options{% endif %}</h4>
     <span class="meta"
-          title="Live (non-expired) short option contracts only. Matches the Cash card's 'pledged' total and the Allocation donut's 'Cash · pledged' wedge.">
+          title="Counts and totals always reflect live (non-expired) open contracts. Show:All adds expired-pending and historical closed rows below them in the same table.">
       {% if _long_count %}{{ _long_count }} long{% endif %}
       {% if _long_count and _short_count %} · {% endif %}
       {% if _short_count %}{{ _short_count }} short{% endif %}
       {% if cash_secured_total %} · ${{ "{:,.0f}".format(cash_secured_total) }} secured{% endif %}
       {% if premium_received_total %} · short premium <span class="text-pos">+${{ "{:,.2f}".format(premium_received_total) }}</span>{% endif %}
       {% if long_cost_total %} · long cost <span class="text-label-1">${{ "{:,.2f}".format(long_cost_total) }}</span>{% endif %}
-      {% if expired_count is defined and expired_count > 0 %} · <span class="text-label-2" title="Expired contracts no longer hold collateral or carry market exposure; broker typically closes them server-side at expiry.">{{ expired_count }} expired (awaiting broker close)</span>{% endif %}
+      {% if _show == 'all' and expired_count is defined and expired_count > 0 %} · <span class="text-label-2" title="Expired contracts no longer hold collateral or carry market exposure; broker typically closes them server-side at expiry.">{{ expired_count }} expired (awaiting broker close)</span>{% endif %}
+      {% if _show == 'all' and _closed_count %} · <span class="text-label-2">{{ _closed_count }} closed ({{ closed_options_period_label }})
+        {% if closed_realized_total is defined and closed_realized_total %}
+          · realized
+          <span class="{% if closed_realized_total >= 0 %}text-pos{% else %}text-neg{% endif %}">
+            {% if closed_realized_total >= 0 %}+{% endif %}${{ "{:,.2f}".format(closed_realized_total) }}
+          </span>
+        {% endif %}
+      </span>{% endif %}
     </span>
   </summary>
 
-  <div class="flex items-center gap-2 flex-wrap text-sm mt-2 mb-3">
-    <span class="label-uc">Show:</span>
-    <div class="seg">
-      <button type="button"
-              hx-get="/holdings/options?show=open{{ _acct_qs_root }}"
-              hx-target="#holdings-options" hx-swap="innerHTML"
-              class="{% if _show == 'open' %}seg-active{% endif %}"
-              title="Live (non-expired) option contracts only.">Open</button>
-      <button type="button"
-              hx-get="/holdings/options?show=all{{ _acct_qs_root }}"
-              hx-target="#holdings-options" hx-swap="innerHTML"
-              class="{% if _show == 'all' %}seg-active{% endif %}"
-              title="Open contracts plus expired-but-not-yet-broker-closed contracts.">All</button>
+  <div class="flex items-center gap-3 flex-wrap text-sm mt-2 mb-3">
+    <div class="flex items-center gap-2">
+      <span class="label-uc">Show:</span>
+      <div class="seg">
+        <button type="button"
+                hx-get="/holdings/options?show=open&period={{ _period }}&sort={{ _sort }}{{ _acct_qs_root }}"
+                hx-target="#holdings-options" hx-swap="innerHTML"
+                class="{% if _show == 'open' %}seg-active{% endif %}"
+                title="Live (non-expired) option contracts only.">Open</button>
+        <button type="button"
+                hx-get="/holdings/options?show=all&period={{ _period }}&sort={{ _sort }}{{ _acct_qs_root }}"
+                hx-target="#holdings-options" hx-swap="innerHTML"
+                class="{% if _show == 'all' %}seg-active{% endif %}"
+                title="Live open contracts plus expired-pending-broker-close and historical closed option lots scoped to the page Period — all rendered in one table.">All</button>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="label-uc">Sort:</span>
+      <div class="seg">
+        <button type="button"
+                hx-get="/holdings/options?show={{ _show }}&period={{ _period }}&sort=default{{ _acct_qs_root }}"
+                hx-target="#holdings-options" hx-swap="innerHTML"
+                class="{% if _sort == 'default' %}seg-active{% endif %}"
+                title="Open first (by DTE), then expired, then closed (most recent first).">Default</button>
+        <button type="button"
+                hx-get="/holdings/options?show={{ _show }}&period={{ _period }}&sort={{ _sort_ticker_next }}{{ _acct_qs_root }}"
+                hx-target="#holdings-options" hx-swap="innerHTML"
+                class="{% if _ticker_active %}seg-active{% endif %}"
+                title="Sort all rows alphabetically by ticker. Click again to reverse.">Ticker {{ _ticker_arrow }}</button>
+        <button type="button"
+                hx-get="/holdings/options?show={{ _show }}&period={{ _period }}&sort={{ _sort_expiry_next }}{{ _acct_qs_root }}"
+                hx-target="#holdings-options" hx-swap="innerHTML"
+                class="{% if _expiry_active %}seg-active{% endif %}"
+                title="Sort all rows by contract expiry date. Click again to reverse.">Expiry {{ _expiry_arrow }}</button>
+      </div>
     </div>
   </div>
 
-{% if not open_options %}
+{% if not _rows %}
   <div class="text-label-2 text-[13px] py-3">
     {% if _show == 'all' %}No option positions in scope.{% else %}No open option positions.{% endif %}
   </div>
@@ -66,75 +108,142 @@
     </div>
   {% endif %}
   <div class="flex flex-col">
-    {# Bar = days-to-expiry on a fixed 0–365d scale. Same expiry → same bar.
-       The fill is a single left→right gradient (urgent red → neutral amber →
-       safe green) anchored to the full 365d track and clipped to the visible
-       portion, so a longer bar naturally reveals more green. The DTE pill on
-       the right still gets a bucket-keyed text color for at-a-glance urgency. #}
+    {# Single grid for OPEN / EXPIRED / CLOSED rows. Same 6-column layout so
+       columns line up across kinds:
+         status pill | ticker | contract | lifecycle (bar OR dates) | value | trailing badge
+       OPEN bar visualizes proximity to expiry on a fixed 0–365d scale: the
+       COLORED fill represents elapsed time (longer = closer to expiry); the
+       uncolored remainder is days left. Gradient runs safe-green (left, plenty
+       of time) → amber → urgent-red (right edge, about to expire), sized to
+       the full 365d track and clipped to fill width. #}
     {% set MAX_DTE = 365 %}
-    {% for s in open_options %}
-      {% set dte = (s.expiry - today).days %}
-      {% if dte <= 7 %}{% set dte_class = 'text-warn' %}
-      {% elif dte <= 21 %}{% set dte_class = 'text-label-1' %}
-      {% else %}{% set dte_class = 'text-label-2' %}{% endif %}
-      {% set _capped = dte if dte > 0 else 0 %}
-      {% if _capped > MAX_DTE %}{% set _capped = MAX_DTE %}{% endif %}
-      {% set fill_pct = (_capped / MAX_DTE * 100)|round(0, 'common') %}
-      {% set is_long = s.side == 'long' %}
-      <div class="grid items-center gap-[14px] py-[9px] text-[13px]"
-           data-symbol="{{ s.ticker|upper }}"
-           style="grid-template-columns: 60px 90px 110px 1fr 110px 100px; border-bottom: 0.5px solid var(--color-hairline);">
-        <div class="text-[10px] uppercase font-semibold tracking-tightish"
-             style="color: {% if is_long %}var(--color-accent){% else %}var(--color-warn){% endif %};">
-          {{ 'LONG' if is_long else 'SHORT' }}
-        </div>
-        <div class="flex items-center gap-2 font-semibold tracking-tightish">
-          <span style="width:6px; height:6px; border-radius:50%;
-                       background:{% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-violet){% endif %};
-                       box-shadow: 0 0 6px {% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-violet){% endif %};"></span>
-          <a href="/ticker/{{ s.ticker }}" class="no-underline text-text">{{ s.ticker }}</a>
-        </div>
-        <div class="text-[12px] font-mono text-label-1">
-          {% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %} ${{ "%g"|format(s.strike) }}
-          <div class="text-[10px] text-label-2">{{ s.expiry.strftime('%m/%d/%y') }}</div>
-        </div>
-        <div class="flex items-center gap-[10px]">
-          <span class="text-[11px] text-label-2 num min-w-[88px]">
-            {% if s.opened_at %}opened {{ (today - s.opened_at).days }}d ago{% else %}— {% endif %}
-          </span>
-          <div class="flex-1 h-[5px] rounded-full overflow-hidden relative" style="background: var(--color-hairline);"
-               title="{{ dte }}d to expiry · bar length proportional to DTE on a fixed 0–365d scale">
-            {# Gradient is sized to the full 365d track via background-size so
-               the fill, clipped to fill_pct, always shows the correct slice
-               of red→amber→green. fill_pct guarded against 0 to avoid div/0. #}
-            {% set _bg_size = (10000 / fill_pct)|round(0, 'common') if fill_pct > 0 else 100 %}
-            <div style="width: {{ fill_pct }}%; height: 100%; border-radius: 999px;
-                        background-image: linear-gradient(to right, var(--color-neg) 0%, var(--color-warn) 50%, var(--color-pos) 100%);
-                        background-size: {{ _bg_size }}% 100%;
-                        background-position: left center;
-                        background-repeat: no-repeat;"></div>
+    {% for entry in _rows %}
+      {% set kind = entry.kind %}
+      {% if kind == 'open' or kind == 'expired' %}
+        {% set s = entry.row %}
+        {% set dte = (s.expiry - today).days %}
+        {% if kind == 'expired' %}{% set dte_class = 'text-label-2' %}
+        {% elif dte <= 7 %}{% set dte_class = 'text-warn' %}
+        {% elif dte <= 21 %}{% set dte_class = 'text-label-1' %}
+        {% else %}{% set dte_class = 'text-label-2' %}{% endif %}
+        {% set _capped = dte if dte > 0 else 0 %}
+        {% if _capped > MAX_DTE %}{% set _capped = MAX_DTE %}{% endif %}
+        {% set fill_pct = ((MAX_DTE - _capped) / MAX_DTE * 100)|round(0, 'common') %}
+        {% set is_long = s.side == 'long' %}
+        <div class="grid items-center gap-[14px] py-[9px] text-[13px]"
+             data-symbol="{{ s.ticker|upper }}"
+             style="grid-template-columns: 72px 90px 110px 1fr 110px 100px; border-bottom: 0.5px solid var(--color-hairline);">
+          {% if kind == 'expired' %}
+            <div class="text-[10px] uppercase font-semibold tracking-tightish leading-tight"
+                 style="color: var(--color-warn);"
+                 title="Expired but broker has not yet recorded the closing leg.">
+              EXPIRED
+              <div class="text-[9px] mt-[1px]"
+                   style="color: {% if is_long %}var(--color-accent){% else %}var(--color-warn){% endif %}; opacity: 0.85;">
+                {{ 'LONG' if is_long else 'SHORT' }}
+              </div>
+            </div>
+          {% else %}
+            <div class="text-[10px] uppercase font-semibold tracking-tightish"
+                 style="color: {% if is_long %}var(--color-accent){% else %}var(--color-warn){% endif %};">
+              {{ 'LONG' if is_long else 'SHORT' }}
+            </div>
+          {% endif %}
+          <div class="flex items-center gap-2 font-semibold tracking-tightish">
+            <span style="width:6px; height:6px; border-radius:50%;
+                         background:{% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-violet){% endif %};
+                         box-shadow: 0 0 6px {% if s.call_put == 'P' %}var(--color-warn){% else %}var(--color-violet){% endif %};"></span>
+            <a href="/ticker/{{ s.ticker }}" class="no-underline text-text">{{ s.ticker }}</a>
+          </div>
+          <div class="text-[12px] font-mono text-label-1">
+            {% if s.call_put == 'C' %}CALL{% else %}PUT{% endif %} ${{ "%g"|format(s.strike) }}
+            <div class="text-[10px] text-label-2">{{ s.expiry.strftime('%m/%d/%y') }}</div>
+          </div>
+          <div class="flex items-center gap-[10px]">
+            <span class="text-[11px] text-label-2 num min-w-[88px]">
+              {% if s.opened_at %}opened {{ (today - s.opened_at).days }}d ago{% else %}— {% endif %}
+            </span>
+            <div class="flex-1 h-[5px] rounded-full overflow-hidden relative" style="background: var(--color-hairline);"
+                 title="{{ dte }}d to expiry · uncolored portion is days remaining (fixed 0–365d scale)">
+              {% set _bg_size = (10000 / fill_pct)|round(0, 'common') if fill_pct > 0 else 100 %}
+              <div style="width: {{ fill_pct }}%; height: 100%; border-radius: 999px;
+                          background-image: linear-gradient(to right, var(--color-pos) 0%, var(--color-warn) 50%, var(--color-neg) 100%);
+                          background-size: {{ _bg_size }}% 100%;
+                          background-position: left center;
+                          background-repeat: no-repeat;"></div>
+            </div>
+          </div>
+          <div class="text-right num text-[12px]">
+            <div class="{% if is_long %}text-label-1 font-medium{% else %}text-pos font-medium{% endif %}">
+              {% if is_long %}-${{ "{:,.2f}".format(s.cash_basis) }}{% else %}+${{ "{:,.2f}".format(s.cash_basis) }}{% endif %}
+            </div>
+            <div class="text-[10px] text-label-2">
+              {% if is_long %}cost paid{% elif s.call_put == 'P' %}${{ "{:,.0f}".format(s.cash_secured) }} secured{% else %}premium{% endif %}
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="badge badge-muted num text-[12px] font-semibold {{ dte_class }}"
+                  title="Days to expiry">
+              {{ dte }}d
+            </span>
           </div>
         </div>
-        <div class="text-right num text-[12px]">
-          <div class="{% if is_long %}text-label-1 font-medium{% else %}text-pos font-medium{% endif %}">
-            {% if is_long %}-${{ "{:,.2f}".format(s.cash_basis) }}{% else %}+${{ "{:,.2f}".format(s.cash_basis) }}{% endif %}
+      {% else %}
+        {# kind == "closed" — historical realized lot. Reuse the same grid
+           columns so OPEN and CLOSED rows line up; the 4th column carries
+           opened→closed dates instead of a DTE bar, and the trailing badge
+           switches to ST/LT term. #}
+        {% set r = entry.row %}
+        {% set _is_call = r.option_call_put == 'C' %}
+        {% set _pl = r.realized_pl %}
+        {% set _term_short = 'LT' if r.term == 'Long Term' else 'ST' %}
+        <div class="grid items-center gap-[14px] py-[9px] text-[13px]"
+             data-symbol="{{ r.ticker|upper }}"
+             style="grid-template-columns: 72px 90px 110px 1fr 110px 100px; border-bottom: 0.5px solid var(--color-hairline);">
+          <div class="text-[10px] uppercase font-semibold tracking-tightish text-label-2"
+               title="Closed historical option lot (Realized G/L)">CLOSED</div>
+          <div class="flex items-center gap-2 font-semibold tracking-tightish">
+            <span style="width:6px; height:6px; border-radius:50%;
+                         background:{% if _is_call %}var(--color-violet){% else %}var(--color-warn){% endif %};"></span>
+            <a href="/ticker/{{ r.ticker }}" class="no-underline text-text">{{ r.ticker }}</a>
           </div>
-          <div class="text-[10px] text-label-2">
-            {% if is_long %}cost paid{% elif s.call_put == 'P' %}${{ "{:,.0f}".format(s.cash_secured) }} secured{% else %}premium{% endif %}
+          {# Reformat option_expiry (ISO YYYY-MM-DD straight from Schwab GL)
+             into M/D/YY to match the open/expired rows above. #}
+          {% set _exp_fmt = r.option_expiry %}
+          {% if r.option_expiry and r.option_expiry|length >= 10 %}
+            {% set _y2 = r.option_expiry[2:4] %}
+            {% set _m = r.option_expiry[5:7]|int %}
+            {% set _d = r.option_expiry[8:10]|int %}
+            {% set _exp_fmt = "%d/%d/%s"|format(_m, _d, _y2) %}
+          {% endif %}
+          <div class="text-[12px] font-mono text-label-1">
+            {% if _is_call %}CALL{% else %}PUT{% endif %} ${{ "%g"|format(r.option_strike) }}
+            <div class="text-[10px] text-label-2">{{ _exp_fmt }}</div>
+          </div>
+          <div class="text-[11px] text-label-2">
+            opened {{ r.opened_date.strftime('%m/%d/%y') }} → closed {{ r.closed_date.strftime('%m/%d/%y') }}
+            <span class="ml-2">· qty {{ "%g"|format(r.qty) }}</span>
+            {% if r.wash_sale %}<span class="ml-2 badge badge-muted text-warn" title="Wash-sale rule applied to this closed lot">wash</span>{% endif %}
+          </div>
+          <div class="text-right num text-[12px]">
+            <div class="font-medium {% if _pl >= 0 %}text-pos{% else %}text-neg{% endif %}">
+              {% if _pl >= 0 %}+{% endif %}${{ "{:,.2f}".format(_pl) }}
+            </div>
+            <div class="text-[10px] text-label-2">realized · cost ${{ "{:,.0f}".format(r.cost_basis) }}</div>
+          </div>
+          <div class="text-right">
+            <span class="badge badge-muted num text-[12px] font-semibold text-label-2"
+                  title="{{ r.term }} (Schwab classification)">
+              {{ _term_short }}
+            </span>
           </div>
         </div>
-        <div class="text-right">
-          <span class="badge badge-muted num text-[12px] font-semibold {{ dte_class }}"
-                title="Days to expiry">
-            {{ dte }}d
-          </span>
-        </div>
-      </div>
+      {% endif %}
     {% endfor %}
   </div>
 
   {% set page_base_url = '/holdings/options' %}
-  {% set page_extra_qs %}&show={{ _show }}{{ _acct_qs_root }}{% endset %}
+  {% set page_extra_qs %}&show={{ _show }}&period={{ _period }}&sort={{ _sort }}{{ _acct_qs_root }}{% endset %}
   {% set page_target = '#holdings-options' %}
   {% set page_swap = 'innerHTML' %}
   {% include "_pagination_footer.html" %}
