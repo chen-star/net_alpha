@@ -465,7 +465,7 @@
     position: relative;  /* keep content above the ::before halo */
   }
   .kpi {
-    transition: transform var(--duration-med) var(--ease-out-soft),
+    transition: transform var(--duration-med) var(--ease-spring),
                 box-shadow var(--duration-med) var(--ease-out-soft);
   }
   .kpi:hover {
@@ -1096,6 +1096,29 @@ td.rail-col { position: relative; padding: 0 0 0 8px; }
 .htmx-request.spinner-inline {
   display: inline-block;
 }
+
+/* ---------------------------------------------------------------
+ * Premium refresh — entrance reveal (staggered fade-up).
+ * Gated on no-preference so reduced-motion users see no animation and
+ * therefore never the transient opacity:0 `from` frame. --reveal-i is set
+ * inline per row (0,1,2,…) so each row's start is staggered by 50ms.
+ * --------------------------------------------------------------- */
+@keyframes na-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .js-reveal > * {
+    animation: na-reveal var(--duration-med) var(--ease-out-soft) both;
+    animation-delay: calc(var(--reveal-i, 0) * 50ms);
+  }
+}
+
+/* HTMX fragment swap cross-fade (premium refresh). Replaces the instant
+   content replacement with a short opacity fade. Pairs with an `hx-swap`
+   settle window on the swapped targets. */
+.htmx-swapping { opacity: 0; transition: opacity var(--duration-fast) var(--ease-out-soft); }
+.htmx-settling { opacity: 1; transition: opacity var(--duration-fast) var(--ease-out-soft); }
 
 /* ---------------------------------------------------------------
  * Search input focus ring (A4)

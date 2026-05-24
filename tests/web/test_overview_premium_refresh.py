@@ -45,3 +45,20 @@ def test_body_ambiance_class_defined():
     src = APP_SRC_CSS.read_text()
     assert ".na-ambiance" in src
     assert "var(--ambiance-wash)" in src
+
+
+def test_reveal_animation_gated_on_no_preference():
+    """Entrance reveal must live inside prefers-reduced-motion: no-preference
+    so reduced-motion users never hit a transient opacity:0 state."""
+    src = APP_SRC_CSS.read_text()
+    assert "@keyframes na-reveal" in src
+    assert ".js-reveal" in src
+    npref_idx = src.index("(prefers-reduced-motion: no-preference)")
+    # The .js-reveal animation assignment must appear after the no-preference guard.
+    assert src.index(".js-reveal >", npref_idx) > npref_idx
+
+
+def test_swap_crossfade_rules_present():
+    src = APP_SRC_CSS.read_text()
+    assert ".htmx-swapping" in src
+    assert ".htmx-settling" in src
