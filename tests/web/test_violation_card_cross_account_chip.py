@@ -49,10 +49,7 @@ def test_cross_account_chip_uses_chip_source_not_chip_probable(client, repo):
     # The most recent `<span` tag opening before ">Cross-account<" is the
     # one whose classes we care about.
     open_tag = snippet.rsplit("<span", 1)[-1]
-    assert "chip-source" in open_tag, (
-        f"Cross-account span must use chip-source, got: <span{open_tag}"
-    )
+    assert "chip-source" in open_tag, f"Cross-account span must use chip-source, got: <span{open_tag}"
     assert "chip-probable" not in open_tag, (
-        "Cross-account span must not borrow the confidence palette "
-        f"(chip-probable): <span{open_tag}"
+        f"Cross-account span must not borrow the confidence palette (chip-probable): <span{open_tag}"
     )

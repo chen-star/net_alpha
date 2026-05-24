@@ -541,15 +541,9 @@ def test_multi_buy_partial_disallowed_loss_sums_to_loss_with_no_drift():
         proceeds=2.0,
         cost_basis=3.0,  # $1.00 total loss
     )
-    buy_a = TradeFactory(
-        id="buy-a", date=date(2024, 10, 20), ticker="TSLA", action="Buy", quantity=1.0, cost_basis=1.0
-    )
-    buy_b = TradeFactory(
-        id="buy-b", date=date(2024, 10, 21), ticker="TSLA", action="Buy", quantity=1.0, cost_basis=1.0
-    )
-    buy_c = TradeFactory(
-        id="buy-c", date=date(2024, 10, 22), ticker="TSLA", action="Buy", quantity=1.0, cost_basis=1.0
-    )
+    buy_a = TradeFactory(id="buy-a", date=date(2024, 10, 20), ticker="TSLA", action="Buy", quantity=1.0, cost_basis=1.0)
+    buy_b = TradeFactory(id="buy-b", date=date(2024, 10, 21), ticker="TSLA", action="Buy", quantity=1.0, cost_basis=1.0)
+    buy_c = TradeFactory(id="buy-c", date=date(2024, 10, 22), ticker="TSLA", action="Buy", quantity=1.0, cost_basis=1.0)
     result = detect_wash_sales([sell, buy_a, buy_b, buy_c], {})
     assert len(result.violations) == 3
     # Sum of disallowed across the three matches must equal the loss-sale's
@@ -589,20 +583,37 @@ def test_multi_buy_repeated_recompute_has_no_basis_churn():
     account = repo.get_or_create_account("Schwab", "Taxable")
     trades = [
         Trade(
-            account="Schwab/Taxable", date=date(2024, 10, 15), ticker="TSLA",
-            action="Sell", quantity=3.0, proceeds=2.0, cost_basis=3.0,
+            account="Schwab/Taxable",
+            date=date(2024, 10, 15),
+            ticker="TSLA",
+            action="Sell",
+            quantity=3.0,
+            proceeds=2.0,
+            cost_basis=3.0,
         ),
         Trade(
-            account="Schwab/Taxable", date=date(2024, 10, 20), ticker="TSLA",
-            action="Buy", quantity=1.0, cost_basis=1.0,
+            account="Schwab/Taxable",
+            date=date(2024, 10, 20),
+            ticker="TSLA",
+            action="Buy",
+            quantity=1.0,
+            cost_basis=1.0,
         ),
         Trade(
-            account="Schwab/Taxable", date=date(2024, 10, 21), ticker="TSLA",
-            action="Buy", quantity=1.0, cost_basis=1.0,
+            account="Schwab/Taxable",
+            date=date(2024, 10, 21),
+            ticker="TSLA",
+            action="Buy",
+            quantity=1.0,
+            cost_basis=1.0,
         ),
         Trade(
-            account="Schwab/Taxable", date=date(2024, 10, 22), ticker="TSLA",
-            action="Buy", quantity=1.0, cost_basis=1.0,
+            account="Schwab/Taxable",
+            date=date(2024, 10, 22),
+            ticker="TSLA",
+            action="Buy",
+            quantity=1.0,
+            cost_basis=1.0,
         ),
     ]
     record = ImportRecord(
@@ -615,16 +626,10 @@ def test_multi_buy_repeated_recompute_has_no_basis_churn():
     repo.add_import(account, record, trades)
 
     recompute_all_violations(repo, etf_pairs={})
-    snapshot_1 = sorted(
-        (lot.trade_id, round(lot.adjusted_basis, 6)) for lot in repo.all_lots()
-    )
+    snapshot_1 = sorted((lot.trade_id, round(lot.adjusted_basis, 6)) for lot in repo.all_lots())
     for _ in range(5):
         recompute_all_violations(repo, etf_pairs={})
-    snapshot_2 = sorted(
-        (lot.trade_id, round(lot.adjusted_basis, 6)) for lot in repo.all_lots()
-    )
-    assert snapshot_1 == snapshot_2, (
-        f"adjusted_basis drifted across recomputes: {snapshot_1} -> {snapshot_2}"
-    )
+    snapshot_2 = sorted((lot.trade_id, round(lot.adjusted_basis, 6)) for lot in repo.all_lots())
+    assert snapshot_1 == snapshot_2, f"adjusted_basis drifted across recomputes: {snapshot_1} -> {snapshot_2}"
 
     tmp.unlink()

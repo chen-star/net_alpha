@@ -49,10 +49,7 @@ def _validate_equity_ticker(ticker: str) -> None:
     if not _EQUITY_TICKER_RE.match(ticker):
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Manual entry for option contracts is not supported. "
-                "Import an option trade via CSV instead."
-            ),
+            detail=("Manual entry for option contracts is not supported. Import an option trade via CSV instead."),
         )
 
 

@@ -41,9 +41,7 @@ def _force_account_type(repo: Repository, *, broker: str, label: str, type_value
     into the underlying row (simulates legacy migration / manual-edit data)."""
     with Session(repo.engine) as s:
         s.exec(
-            text("UPDATE accounts SET type=:t WHERE broker=:b AND label=:l").bindparams(
-                t=type_value, b=broker, l=label
-            )
+            text("UPDATE accounts SET type=:t WHERE broker=:b AND label=:l").bindparams(t=type_value, b=broker, l=label)
         )
         s.commit()
 

@@ -59,9 +59,7 @@ def test_tax_tab_links_preserve_period_and_account(client, repo):
             make_buy("schwab/personal", "SPY", date(2024, 1, 15), qty=10, cost=4000),
         ],
     )
-    r = client.get(
-        "/tax?view=performance&period=2024&account=schwab/personal"
-    )
+    r = client.get("/tax?view=performance&period=2024&account=schwab/personal")
     assert r.status_code == 200
     body = r.text
 
@@ -84,9 +82,7 @@ def test_wash_sales_lag_sort_url_preserves_account_and_period(client, repo):
     singular) and the `selected_period`. Also asserts the link targets
     /tax directly (not /wash-sales, which 301s)."""
     _seed_wash_violations(repo)
-    r = client.get(
-        f"/tax?view=wash-sales&period={_YR}&account=schwab/personal"
-    )
+    r = client.get(f"/tax?view=wash-sales&period={_YR}&account=schwab/personal")
     assert r.status_code == 200
     body = r.text
 
@@ -108,19 +104,13 @@ def test_wash_sales_filter_reset_preserves_account_and_period(client, repo):
     """The ⌫ reset chip anchor (`data-testid="filter-reset"`) preserves
     `selected_accounts` and `selected_period`."""
     _seed_wash_violations(repo)
-    r = client.get(
-        f"/tax?view=wash-sales&period={_YR}&account=schwab/personal"
-    )
+    r = client.get(f"/tax?view=wash-sales&period={_YR}&account=schwab/personal")
     assert r.status_code == 200
     body = r.text
 
     # Filter-chip reset anchor — must include account + period in its href.
     assert 'data-testid="filter-reset"' in body
-    reset_lines = [
-        line
-        for line in body.splitlines()
-        if 'data-testid="filter-reset"' in line
-    ]
+    reset_lines = [line for line in body.splitlines() if 'data-testid="filter-reset"' in line]
     assert reset_lines, "filter-reset anchor not found"
     reset_href = reset_lines[0]
     assert "account=schwab/personal" in reset_href
@@ -143,17 +133,13 @@ def test_at_loss_harvestable_toggle_preserves_period_and_account(client, repo):
             make_buy("schwab/personal", "TSLA", date(2024, 1, 5), qty=10, cost=2500),
         ],
     )
-    r = client.get(
-        "/positions?view=at-loss&period=2024&account=schwab/personal"
-    )
+    r = client.get("/positions?view=at-loss&period=2024&account=schwab/personal")
     assert r.status_code == 200
     body = r.text
 
     # Hidden inputs for period + account must be present inside the form.
     assert '<input type="hidden" name="period" value="2024">' in body
-    assert (
-        '<input type="hidden" name="account" value="schwab/personal">' in body
-    )
+    assert '<input type="hidden" name="account" value="schwab/personal">' in body
     # Form action defaults to /positions (audit #29 second bullet). The route
     # always sets harvest_form_action="/positions?view=at-loss", so we assert
     # the rendered hx-get carries the positions path — not the /tax fallback.

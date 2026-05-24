@@ -68,8 +68,9 @@ def reconcile(
     broker_lots = provider.get_lot_detail(account_id, symbol)
     if tax_year is not None:
         broker_lots = [
-            lot for lot in broker_lots if getattr(lot, "closed", None) is not None
-            and getattr(lot.closed, "year", None) == tax_year
+            lot
+            for lot in broker_lots
+            if getattr(lot, "closed", None) is not None and getattr(lot.closed, "year", None) == tax_year
         ]
     broker_total = sum((lot.proceeds or 0.0) - lot.cost_basis for lot in broker_lots)
     delta = round(net_alpha_total - broker_total, 4)

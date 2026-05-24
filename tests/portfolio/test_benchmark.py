@@ -148,9 +148,7 @@ def test_contribution_with_no_close_within_window_is_skipped():
     Matches pre-fix behavior for the truly-unrecoverable case.
     """
     cash_points = [
-        CashBalancePoint(
-            on=date(2026, 1, 1), cash_balance=Decimal("1000"), cumulative_contributions=Decimal("1000")
-        ),
+        CashBalancePoint(on=date(2026, 1, 1), cash_balance=Decimal("1000"), cumulative_contributions=Decimal("1000")),
     ]
     # No quote anywhere — get_close returns None everywhere.
     series = build_benchmark_series(

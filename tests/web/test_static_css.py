@@ -19,14 +19,7 @@ from pathlib import Path
 
 import pytest
 
-CSS_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "net_alpha"
-    / "web"
-    / "static"
-    / "app.css"
-)
+CSS_PATH = Path(__file__).resolve().parents[2] / "src" / "net_alpha" / "web" / "static" / "app.css"
 
 
 @pytest.fixture(scope="module")

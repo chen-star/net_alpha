@@ -131,32 +131,74 @@ def test_marked_qty_consumed_fifo_then_fresh_opens_use_lot_basis():
     """
     o = _opt(4000.0, date(2026, 6, 19), "C")
     buy_y1 = Trade(
-        id="BUY_Y1", account="x", date=date(2024, 3, 1), ticker=SPX,
-        action="Buy", quantity=10, proceeds=None, cost_basis=50,
-        option_details=o, is_section_1256=True,
+        id="BUY_Y1",
+        account="x",
+        date=date(2024, 3, 1),
+        ticker=SPX,
+        action="Buy",
+        quantity=10,
+        proceeds=None,
+        cost_basis=50,
+        option_details=o,
+        is_section_1256=True,
     )
     stc_y2_first = Trade(
-        id="STC_Y2_1", account="x", date=date(2025, 1, 15), ticker=SPX,
-        action="Sell", quantity=4, proceeds=28, cost_basis=None,
-        option_details=o, is_section_1256=True,
+        id="STC_Y2_1",
+        account="x",
+        date=date(2025, 1, 15),
+        ticker=SPX,
+        action="Sell",
+        quantity=4,
+        proceeds=28,
+        cost_basis=None,
+        option_details=o,
+        is_section_1256=True,
     )
     bto_y2_fresh = Trade(
-        id="BUY_Y2_FRESH", account="x", date=date(2025, 3, 1), ticker=SPX,
-        action="Buy", quantity=5, proceeds=None, cost_basis=40,
-        option_details=o, is_section_1256=True,
+        id="BUY_Y2_FRESH",
+        account="x",
+        date=date(2025, 3, 1),
+        ticker=SPX,
+        action="Buy",
+        quantity=5,
+        proceeds=None,
+        cost_basis=40,
+        option_details=o,
+        is_section_1256=True,
     )
     stc_y2_second = Trade(
-        id="STC_Y2_2", account="x", date=date(2025, 6, 1), ticker=SPX,
-        action="Sell", quantity=7, proceeds=70, cost_basis=None,
-        option_details=o, is_section_1256=True,
+        id="STC_Y2_2",
+        account="x",
+        date=date(2025, 6, 1),
+        ticker=SPX,
+        action="Sell",
+        quantity=7,
+        proceeds=70,
+        cost_basis=None,
+        option_details=o,
+        is_section_1256=True,
     )
     lot_y1 = Lot(
-        id="L_Y1", trade_id="BUY_Y1", account="x", date=date(2024, 3, 1),
-        ticker=SPX, quantity=10, cost_basis=50, adjusted_basis=50, option_details=o,
+        id="L_Y1",
+        trade_id="BUY_Y1",
+        account="x",
+        date=date(2024, 3, 1),
+        ticker=SPX,
+        quantity=10,
+        cost_basis=50,
+        adjusted_basis=50,
+        option_details=o,
     )
     lot_y2_fresh = Lot(
-        id="L_Y2", trade_id="BUY_Y2_FRESH", account="x", date=date(2025, 3, 1),
-        ticker=SPX, quantity=5, cost_basis=40, adjusted_basis=40, option_details=o,
+        id="L_Y2",
+        trade_id="BUY_Y2_FRESH",
+        account="x",
+        date=date(2025, 3, 1),
+        ticker=SPX,
+        quantity=5,
+        cost_basis=40,
+        adjusted_basis=40,
+        option_details=o,
     )
 
     pkey = position_key(account="x", ticker=SPX, option_details=o)
@@ -177,8 +219,7 @@ def test_marked_qty_consumed_fifo_then_fresh_opens_use_lot_basis():
 
     # First STC consumes 4 of the 10 marked at $7 each.
     assert by_id["STC_Y2_1"].realized_pnl == Decimal("0"), (
-        f"STC_Y2_1 realized expected 0 (proceeds 28 - basis 4×$7=$28), "
-        f"got {by_id['STC_Y2_1'].realized_pnl}"
+        f"STC_Y2_1 realized expected 0 (proceeds 28 - basis 4×$7=$28), got {by_id['STC_Y2_1'].realized_pnl}"
     )
 
     # Second STC consumes 6 remaining marked × $7 + 1 fresh × $8 = $50.

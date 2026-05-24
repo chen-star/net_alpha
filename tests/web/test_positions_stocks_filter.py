@@ -42,8 +42,7 @@ def test_stocks_view_excludes_options_only_row(client: TestClient, builders, rep
 
     # All view: both tickers show up in the underlying positions table.
     res_all = client.get(
-        "/portfolio/positions?period=lifetime&group_options=none&show=open"
-        "&page=1&page_size=25",
+        "/portfolio/positions?period=lifetime&group_options=none&show=open&page=1&page_size=25",
         headers={"HX-Request": "true"},
     )
     assert res_all.status_code == 200
@@ -52,8 +51,7 @@ def test_stocks_view_excludes_options_only_row(client: TestClient, builders, rep
 
     # Stocks view: TSLA (options-only) must be filtered out.
     res_stocks = client.get(
-        "/portfolio/positions?period=lifetime&group_options=none&show=open"
-        "&page=1&page_size=25&instrument_kind=stocks",
+        "/portfolio/positions?period=lifetime&group_options=none&show=open&page=1&page_size=25&instrument_kind=stocks",
         headers={"HX-Request": "true"},
     )
     assert res_stocks.status_code == 200

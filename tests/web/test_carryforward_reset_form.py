@@ -44,6 +44,5 @@ def test_reset_template_submits_year_in_form_body(client: TestClient, repo: Repo
     has_hidden_input = '<input type="hidden" name="year"' in body
     has_hx_vals_year = "hx-vals" in body and '"year"' in body
     assert has_hidden_input or has_hx_vals_year, (
-        "Reset button must submit year via form body or hx-vals; only had "
-        "query-string."
+        "Reset button must submit year via form body or hx-vals; only had query-string."
     )

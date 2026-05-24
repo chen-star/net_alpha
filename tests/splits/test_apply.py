@@ -274,9 +274,7 @@ def test_option_lots_are_not_split_adjusted(repo, builders):
         quantity=2.0,  # 2 contracts
         proceeds=None,
         cost_basis=400.0,
-        option_details=OptionDetails(
-            strike=200.0, expiry=date(2021, 1, 15), call_put="C"
-        ),
+        option_details=OptionDetails(strike=200.0, expiry=date(2021, 1, 15), call_put="C"),
     )
     record = ImportRecord(
         account_id=account.id,
@@ -309,9 +307,7 @@ def test_option_lots_are_not_split_adjusted(repo, builders):
             option_qty = float(row["quantity"])
 
     assert equity_qty == 20.0, f"equity lot should be split-adjusted; got {equity_qty}"
-    assert option_qty == 2.0, (
-        f"option lot must NOT be split-adjusted (OCC handles strike/multiplier); got {option_qty}"
-    )
+    assert option_qty == 2.0, f"option lot must NOT be split-adjusted (OCC handles strike/multiplier); got {option_qty}"
 
 
 def test_split_survives_repeated_recompute(repo, builders):

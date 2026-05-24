@@ -81,9 +81,7 @@ def classify_closed_trades(
         for year in years_needed:
             as_of = _lbd(year)
             try:
-                positions = open_section_1256_positions(
-                    trades, lots, universe, as_of=as_of
-                )
+                positions = open_section_1256_positions(trades, lots, universe, as_of=as_of)
             except Exception:
                 positions = []
             for pos in positions:

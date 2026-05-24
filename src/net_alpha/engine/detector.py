@@ -12,9 +12,7 @@ from net_alpha.models.domain import DetectionResult, ExemptMatch, Lot, Trade, Wa
 _CENT = Decimal("0.01")
 
 
-def _apportion_disallowed_cents(
-    total_loss: Decimal, allocations: list[Decimal]
-) -> list[Decimal]:
+def _apportion_disallowed_cents(total_loss: Decimal, allocations: list[Decimal]) -> list[Decimal]:
     """Apportion ``total_loss`` (in dollars, already quantized to cents) across
     a list of ``allocations`` (per-match allocable quantities) so that the
     rounded-to-cents per-match amounts SUM EXACTLY to ``total_loss``.
@@ -219,15 +217,11 @@ def detect_wash_sales(
         if matched_qty == 0 or total_qty == 0:
             matched_loss = Decimal("0")
         else:
-            matched_loss = (total_loss * matched_qty / total_qty).quantize(
-                _CENT, rounding=ROUND_HALF_UP
-            )
+            matched_loss = (total_loss * matched_qty / total_qty).quantize(_CENT, rounding=ROUND_HALF_UP)
         allocations_dec = [Decimal(str(a)) for _, _, a in match_plan]
         disallowed_per_match = _apportion_disallowed_cents(matched_loss, allocations_dec)
 
-        for (candidate, confidence, allocable), disallowed_dec in zip(
-            match_plan, disallowed_per_match
-        ):
+        for (candidate, confidence, allocable), disallowed_dec in zip(match_plan, disallowed_per_match):
             disallowed = float(disallowed_dec)
 
             if loss_sale.is_section_1256 or candidate.is_section_1256:
