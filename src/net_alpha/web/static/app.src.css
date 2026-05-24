@@ -381,6 +381,26 @@
     @apply bg-surface rounded-lg p-4;
     border: 0.5px solid var(--color-hairline);
   }
+  /* Tier-1 "feature" surface (premium refresh). Elevates the page's two most
+     important surfaces — the KPI hero and the equity curve — above the flat
+     tier-2 panels with an ambient shadow, a faint top-edge highlight, and a
+     larger radius. Additive: stacks on top of .panel / .kpi. */
+  .panel-feature {
+    position: relative;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-feature);
+  }
+  .panel-feature::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--gradient-edge-top);
+    pointer-events: none;
+  }
+  /* Keep real content above the top-edge highlight. */
+  .panel-feature > * { position: relative; z-index: 1; }
+
   .panel-head {
     @apply flex items-baseline justify-between mb-3;
   }
@@ -434,10 +454,9 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(120% 80% at 50% 0%,
-                var(--color-brand-glow) 0%,
-                var(--color-signature-2-glow) 35%,
-                transparent 65%);
+    background:
+      radial-gradient(80% 70% at 12% 0%, var(--color-brand-glow) 0%, transparent 55%),
+      radial-gradient(80% 70% at 88% 0%, var(--color-signature-2-glow) 0%, transparent 55%);
     opacity: 0.55;
     pointer-events: none;
     border-radius: inherit;
@@ -914,6 +933,18 @@
     background: var(--color-surface-2);
     border: 0.5px solid var(--color-hairline);
     border-radius: 3px;
+  }
+
+  /* Canvas ambiance (premium refresh). One fixed, very-low-opacity wash behind
+     all content so the flat graphite bg isn't dead-flat. pointer-events:none
+     and a negative z so it never intercepts clicks or sits above content. */
+  body.na-ambiance::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: var(--ambiance-wash);
+    pointer-events: none;
+    z-index: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {
