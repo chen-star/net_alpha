@@ -10,10 +10,15 @@ cd "$(dirname "$0")"
 ENV_FILE="./secrets.env"
 COMPOSE="docker compose --env-file ${ENV_FILE} -f docker-compose.yml"
 
-# shellcheck disable=SC1090
-source "${ENV_FILE}"
-PREV_TAG="${IMAGE_TAG}"
-NEW_TAG="${NEW_TAG:-${IMAGE_TAG}}"
+# Read only the two vars we need, without `source`ing the file: a value may
+# contain spaces (e.g. a backup passphrase), which `source` under `set -e`
+# would try to execute and abort on. compose itself reads the rest via
+# --env-file. `cut -d= -f2-` keeps any '=' in the value; `head -n1` is
+# duplicate-key-safe.
+read_var() { grep -E "^$1=" "${ENV_FILE}" | head -n1 | cut -d= -f2-; }
+IMAGE_REPO="$(read_var IMAGE_REPO)"
+PREV_TAG="$(read_var IMAGE_TAG)"
+NEW_TAG="${NEW_TAG:-${PREV_TAG}}"
 
 echo "Updating ${IMAGE_REPO}: ${PREV_TAG} -> ${NEW_TAG}"
 sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${NEW_TAG}/" "${ENV_FILE}"
