@@ -31,14 +31,15 @@
     </aside>
   {% endif %}
 
+  <div class="js-reveal">
   {% if not latest %}
-    <p class="empty-state mt-6 text-label-2 text-[13px]">
+    <p class="empty-state mt-6 text-label-2 text-[13px]" style="--reveal-i: 0">
       No verification runs yet. Click <em>Run verification now</em> above &mdash;
       or upload a Schwab All-Positions CSV on the
       <a href="/imports" class="underline">Imports page</a> to enable broker reconciliation.
     </p>
   {% else %}
-    <section class="latest-run mt-6">
+    <section class="latest-run mt-6 panel panel-feature" style="--reveal-i: 0">
       <h2 class="text-base font-semibold mb-2">Latest run</h2>
       <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-[13px]">
         <dt class="text-label-2">When</dt><dd>{{ latest.run_at }}</dd>
@@ -48,9 +49,9 @@
         <dt class="text-label-2">Duration</dt><dd>{{ latest.duration_ms }} ms</dd>
         <dt class="text-label-2">Findings</dt>
         <dd>
-          {{ latest.checks_failed }} failed &middot;
-          {{ latest.checks_warned }} warned &middot;
-          {{ latest.checks_total }} total
+          <span class="js-countup-num" data-to="{{ latest.checks_failed }}" data-decimals="0">{{ latest.checks_failed }}</span> failed &middot;
+          <span class="js-countup-num" data-to="{{ latest.checks_warned }}" data-decimals="0">{{ latest.checks_warned }}</span> warned &middot;
+          <span class="js-countup-num" data-to="{{ latest.checks_total }}" data-decimals="0">{{ latest.checks_total }}</span> total
         </dd>
         {% if latest.reference_age_days is not none %}
           <dt class="text-label-2">Positions reference age</dt>
@@ -63,7 +64,7 @@
     </section>
   {% endif %}
 
-  <section class="history mt-8">
+  <section class="history mt-8 panel" style="--reveal-i: 1">
     <h2 class="text-base font-semibold mb-2">Run history (last 90 days)</h2>
     {% if history %}
       <table class="w-full text-[13px] border-collapse">
@@ -90,5 +91,6 @@
       <p class="text-label-2 text-[13px]">No run history yet.</p>
     {% endif %}
   </section>
+  </div>
 </section>
 {% endblock %}
