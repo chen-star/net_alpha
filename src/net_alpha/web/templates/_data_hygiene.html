@@ -17,7 +17,7 @@
          style="border-bottom:0.5px solid var(--color-hairline);">
       <img src="/static/icons/triangle-alert.svg?v={{ asset_v }}" class="w-4 h-4 icon-mono mt-0.5 flex-shrink-0" alt="">
       <div class="text-[12px] text-label-2">
-        <strong class="text-text">{{ missing_basis_rows|length }} item{% if missing_basis_rows|length != 1 %}s{% endif %} need attention</strong>
+        <strong class="text-text"><span class="js-countup-num" data-to="{{ missing_basis_rows|length }}" data-decimals="0">{{ missing_basis_rows|length }}</span> item{% if missing_basis_rows|length != 1 %}s{% endif %} need attention</strong>
         &mdash;
         until basis is set, realized P/L can&rsquo;t be computed for these lots.
         Set a cost basis for each row below.
@@ -37,7 +37,7 @@
     <div class="px-4 py-3" style="border-bottom:0.5px solid var(--color-hairline);">
       <h2 class="text-lg">Data quality</h2>
       <p class="text-xs text-label-2 mt-1">
-        {{ other_issues|length }} item{{ "s" if other_issues|length != 1 else "" }} need attention from your imports.
+        <span class="js-countup-num" data-to="{{ other_issues|length }}" data-decimals="0">{{ other_issues|length }}</span> item{{ "s" if other_issues|length != 1 else "" }} need attention from your imports.
       </p>
     </div>
     <div class="px-4 py-3 space-y-2">
