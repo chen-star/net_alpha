@@ -7,7 +7,7 @@ import traceback
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 
 def _is_hx_request(request: Request) -> bool:
@@ -50,6 +50,26 @@ def quit_server() -> HTMLResponse:
 async def _force_500() -> None:
     """Test-only route used to verify the 500 handler renders error.html."""
     raise RuntimeError("forced for tests")
+
+
+@router.get("/healthz", include_in_schema=False)
+async def healthz(request: Request) -> JSONResponse:
+    """Liveness+readiness probe for container HEALTHCHECK / deploy gating.
+
+    Returns 200 only if the canonical DB opens and answers SELECT 1, so a
+    fundamentally broken release fails the healthcheck and gets rolled back.
+    """
+    from sqlalchemy import text
+
+    from net_alpha.db.connection import get_engine
+
+    try:
+        engine = get_engine(request.app.state.settings.db_path)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception:
+        return JSONResponse({"status": "unhealthy"}, status_code=503)
+    return JSONResponse({"status": "ok"})
 
 
 @router.api_route(

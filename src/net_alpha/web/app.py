@@ -400,10 +400,6 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
 
     app.state.templates = templates
 
-    @app.get("/healthz")
-    def healthz() -> dict[str, str]:
-        return {"status": "ok"}
-
     app.include_router(audit_routes.router)
     app.include_router(preferences_routes.router)
     app.include_router(redirects.router)
