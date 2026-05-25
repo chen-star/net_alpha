@@ -2,6 +2,63 @@
 
 
 
+## v0.79.0 (2026-05-25)
+
+### Feature
+
+* feat(web): premium refresh — elevate Positions cockpit pane, panel-level reveal
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`2da0ee7`](https://github.com/chen-star/net_alpha/commit/2da0ee791295785e7356d76932e7933d447efaf3))
+
+* feat(web): premium refresh — elevate Sim form, reveal + count-up result cards ([`7083277`](https://github.com/chen-star/net_alpha/commit/70832777633a6536f668af495afb378d76195178))
+
+* feat(web): premium refresh — elevate + count-up + reveal Tax projection ([`768c465`](https://github.com/chen-star/net_alpha/commit/768c465ed074e9488f034a6c8c14def998fe0a80))
+
+* feat(web): premium refresh — elevate + count-up + reveal Tax performance panel ([`c56444d`](https://github.com/chen-star/net_alpha/commit/c56444d0ebe5d1bb9e24a9a7b33627dbd6bed11f))
+
+* feat(web): elevate equity panel and stagger Overview row entrance reveal
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`8ee3ace`](https://github.com/chen-star/net_alpha/commit/8ee3acedb29bcaa81df366ae006afabbb7dc4c97))
+
+* feat(web): count-up the hero + total-return KPIs and elevate the hero card
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`71a0548`](https://github.com/chen-star/net_alpha/commit/71a0548dff7ddf7cbaaa047390fd259b107292b0))
+
+* feat(web): add count-up helper and wire canvas ambiance into base layout
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`c3d60b2`](https://github.com/chen-star/net_alpha/commit/c3d60b29df9c68af30e49a929565b28b669beed0))
+
+* feat(web): add entrance-reveal, hover-spring, and HTMX swap cross-fade motion ([`4137e06`](https://github.com/chen-star/net_alpha/commit/4137e06824af795fffaac7f0336ea34d0b942aac))
+
+* feat(web): add elevation tier, hero mesh-gradient, and canvas ambiance ([`ff912b7`](https://github.com/chen-star/net_alpha/commit/ff912b7a5f814d11bb75d3851389dfdff34ac206))
+
+* feat(web): add premium-refresh design tokens (shadow-feature, edge, ambiance, spring) ([`6bfa8fd`](https://github.com/chen-star/net_alpha/commit/6bfa8fd07cab6d86bd071cc6e140716c58ff5a79))
+
+### Fix
+
+* fix(web): address review findings on premium Overview refresh
+
+- Wire HTMX swap/settle timing on the (Overview-only) toolbar so the
+  .htmx-swapping → .htmx-settling cross-fade actually renders on period/
+  account changes (htmx defaults collapse it). Verified: body fades to ~0
+  and back on swap.
+- Keep the hero&#39;s --shadow-feature elevation on hover; .kpi:hover&#39;s
+  --shadow-pane was overriding and flattening the tier-1 surface.
+- Pin count-up formatting to en-US so animated digits match the
+  server-rendered value on non-US browser locales.
+- Document the deliberate light-theme --shadow-feature inset override.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5d2650f`](https://github.com/chen-star/net_alpha/commit/5d2650f2cd9fe72546420b54a8b36aa9cd4e6fd9))
+
+* fix(web): place canvas ambiance wash behind content (z-index -1)
+
+The ambiance ::before was painting above non-positioned panel content
+(harmless live, but blanked content in full-page capture/print). -1 matches
+the rule&#39;s own stated intent and sits the wash firmly behind content.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`efeace4`](https://github.com/chen-star/net_alpha/commit/efeace4ea262dc15135af0e3b7510cdc09735368))
+
+
 ## v0.78.1 (2026-05-24)
 
 ### Fix
