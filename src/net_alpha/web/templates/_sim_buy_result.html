@@ -8,9 +8,9 @@
   <div class="panel text-label-2 text-sm">No accounts available.</div>
 {% else %}
   <h2 class="text-xl mb-3">Per-account options for buying <span class="font-mono text-primary">{{ ticker }}</span></h2>
-  <div class="grid grid-cols-2 gap-4">
+  <div class="grid grid-cols-2 gap-4 js-reveal">
     {% for opt in options %}
-      <div class="panel">
+      <div class="panel" style="--reveal-i: {{ loop.index0 }}">
         <div class="flex justify-between items-baseline mb-2">
           <div class="font-mono text-primary">{{ opt.account.display() }}</div>
           {% if opt.clean %}
@@ -21,7 +21,7 @@
         </div>
 
         <div class="label-uc">Proposed basis</div>
-        <div class="text-base font-mono mb-1 num">${{ "{:,.2f}".format(opt.proposed_basis|float) }}</div>
+        <div class="text-base font-mono mb-1 num">$<span class="js-countup-num" data-to="{{ '%.2f'|format(opt.proposed_basis|float) }}" data-decimals="2">{{ "{:,.2f}".format(opt.proposed_basis|float) }}</span></div>
 
         {% if opt.total_disallowed > 0 %}
           <div class="label-uc">Disallowed loss rolled in</div>

@@ -9,9 +9,9 @@
   {% include "_sim_lot_comparison.html" with context %}
 {% else %}
   <h2 class="text-xl mb-3">Per-account options for <span class="font-mono text-primary">{{ ticker }}</span></h2>
-  <div class="grid grid-cols-2 gap-4">
+  <div class="grid grid-cols-2 gap-4 js-reveal">
     {% for opt in options %}
-      <div class="panel">
+      <div class="panel" style="--reveal-i: {{ loop.index0 }}">
         <div class="flex justify-between items-baseline mb-2">
           <div class="font-mono text-primary">{{ opt.account.display() }}</div>
           {% if opt.would_trigger_wash_sale %}
@@ -21,7 +21,7 @@
           {% endif %}
         </div>
         <div class="label-uc">Realized P&L</div>
-        <div class="text-lg font-mono mb-2 num">${{ "{:,.2f}".format(opt.realized_pnl|float) }}</div>
+        <div class="text-lg font-mono mb-2 num {% if opt.realized_pnl < 0 %}text-neg{% elif opt.realized_pnl > 0 %}text-pos{% endif %}">{% if opt.realized_pnl < 0 %}−{% elif opt.realized_pnl > 0 %}+{% endif %}$<span class="js-countup-num" data-to="{{ '%.2f'|format(opt.realized_pnl|float|abs) }}" data-decimals="2">{{ "{:,.2f}".format(opt.realized_pnl|float|abs) }}</span></div>
         {% if opt.insufficient_shares %}
           <div class="text-xs text-warn mb-2">Insufficient shares: only {{ opt.available_shares }} held.</div>
         {% endif %}
