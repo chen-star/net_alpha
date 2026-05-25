@@ -64,8 +64,36 @@
     scan(document);
   }
 
-  // Re-fire after an HTMX swap (e.g. the /portfolio/kpis fragment).
+  // The Overview dashboard lazy-loads #portfolio-body once on page load (its
+  // hx-trigger="load") and then RE-swaps that same target on every toolbar
+  // (period/account) change. Replaying the 0→value count-up and the staggered
+  // reveal on a mere filter change is visually noisy, so we only animate the
+  // INITIAL entrance. The moment the user touches the Overview toolbar we latch
+  // `body.na-overview-filtered`, which (a) makes CSS suppress the row reveal
+  // re-entrance and (b) makes the htmx:afterSwap handler below skip the
+  // count-up scan so the spans just show their final server-rendered text.
+  //
+  // We key off the user's `change` event rather than counting swaps for two
+  // reasons: a single body load fires htmx:afterSwap twice (main swap + an
+  // out-of-band #portfolio-subline swap), and the new #overview-rows is not
+  // reliably present in #portfolio-body at afterSwap time (htmx settle / the
+  // fragment cache materialize it slightly later) — so neither a swap counter
+  // nor a DOM strip at afterSwap is dependable. A body class set BEFORE the
+  // swap is, because CSS is re-evaluated whenever the rows are finally styled.
+  document.body.addEventListener("change", function (evt) {
+    var t = evt.target;
+    if (t && t.closest && t.closest('form[hx-target="#portfolio-body"]')) {
+      document.body.classList.add("na-overview-filtered");
+    }
+  }, true);
+
   document.body.addEventListener("htmx:afterSwap", function (evt) {
-    if (evt.detail && evt.detail.target) scan(evt.detail.target);
+    var target = evt.detail && evt.detail.target;
+    if (!target) return;
+    if (target.id === "portfolio-body" &&
+        document.body.classList.contains("na-overview-filtered")) {
+      return;
+    }
+    scan(target);
   });
 })();

@@ -196,6 +196,32 @@
     return c;
   }
 
+  // Tear down ApexCharts instances before HTMX removes their DOM. On an
+  // innerHTML swap (e.g. the Overview period/account toolbar re-rendering
+  // #portfolio-body) htmx replaces the old chart nodes wholesale. mountChart's
+  // own destroy only fires when the SAME element is reused, so a swapped-away
+  // chart's instance is orphaned: its window-resize listener and pending
+  // timers keep firing on the now-detached, zero-size node and emit
+  // `transform: translate(NaN, …)` SVG errors (the new chart still renders
+  // correctly, but the console fills with noise and dead instances leak).
+  // Destroying them first removes those listeners and timers.
+  function destroyChartsIn(root) {
+    if (!root || typeof root.querySelectorAll !== "function") return;
+    var all = Array.prototype.slice.call(root.querySelectorAll("*"));
+    all.push(root);
+    for (var i = 0; i < all.length; i++) {
+      var n = all[i];
+      if (n && n._apexChart && typeof n._apexChart.destroy === "function") {
+        try { n._apexChart.destroy(); } catch (e) { console.warn("chart destroy failed:", e); }
+        n._apexChart = null;
+      }
+    }
+  }
+
+  document.body.addEventListener("htmx:beforeSwap", function (evt) {
+    if (evt.detail && evt.detail.target) destroyChartsIn(evt.detail.target);
+  });
+
   window.addEventListener("theme:change", refresh);
 
   // Expose. `defaults` keeps property semantics for back-compat with

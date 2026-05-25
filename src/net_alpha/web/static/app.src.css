@@ -1118,16 +1118,34 @@ td.rail-col { position: relative; padding: 0 0 0 8px; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .js-reveal > * {
-    animation: na-reveal var(--duration-med) var(--ease-out-soft) both;
+    /* `backwards` (not `both`): apply the opacity:0/translateY `from` frame
+       during the stagger delay, but do NOT persist the final frame after the
+       animation ends. `both` left a lingering `transform: translateY(0)` —
+       an identity transform that still establishes a containing block +
+       stacking context for any position:fixed descendant. The end state
+       already equals the element's natural state, so reverting to it on
+       finish is visually identical with no leftover transform. */
+    animation: na-reveal var(--duration-med) var(--ease-out-soft) backwards;
     animation-delay: calc(var(--reveal-i, 0) * 50ms);
+  }
+  /* Once the user filters the Overview, #portfolio-body (hence #overview-rows)
+     is re-swapped on every period/account change. The initial entrance already
+     played, so suppress the rows' reveal re-entrance — countup.js latches
+     body.na-overview-filtered on the first toolbar change. The id keeps this
+     scoped to the dashboard rows and outranks the .js-reveal rule above, and
+     being declarative it applies whenever htmx finally styles the new rows. */
+  body.na-overview-filtered #overview-rows.js-reveal > * {
+    animation: none;
   }
 }
 
-/* HTMX fragment swap cross-fade (premium refresh). Replaces the instant
-   content replacement with a short opacity fade. Pairs with an `hx-swap`
-   settle window on the swapped targets. */
-.htmx-swapping { opacity: 0; transition: opacity var(--duration-fast) var(--ease-out-soft); }
-.htmx-settling { opacity: 1; transition: opacity var(--duration-fast) var(--ease-out-soft); }
+/* HTMX fragment swap cross-fade (premium refresh). Scoped to #portfolio-body —
+   the only swap target that sets a swap/settle window long enough to render
+   the fade (see _portfolio_toolbar.html). Leaving these rules unscoped applied
+   a stray opacity transition to every HTMX swap app-wide (lazy panels, tab
+   switches, form posts), which was never the intent. */
+#portfolio-body.htmx-swapping { opacity: 0; transition: opacity var(--duration-fast) var(--ease-out-soft); }
+#portfolio-body.htmx-settling { opacity: 1; transition: opacity var(--duration-fast) var(--ease-out-soft); }
 
 /* ---------------------------------------------------------------
  * Search input focus ring (A4)
