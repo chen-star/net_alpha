@@ -34,6 +34,11 @@
   function animateEl(el) {
     var to = parseFloat(el.dataset.to);
     if (isNaN(to)) return;
+    // The sign ("+"/"−") lives on the OUTER element by contract, so we only
+    // ever animate the magnitude. Guarding with Math.abs keeps a stray
+    // negative data-to from animating downward or rendering a duplicate "−"
+    // via toLocaleString.
+    to = Math.abs(to);
     var decimals = parseInt(el.dataset.decimals || "0", 10);
     if (reduced()) {
       el.textContent = fmt(to, decimals);

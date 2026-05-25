@@ -20,7 +20,9 @@
     </div>
   {% else %}
     <div class="text-[11px] text-label-2 mt-1">
-      {% if cash_kpis %}{{ "{:,.0f}".format((cash_kpis.cash_share_pct|float) * 100) }}% of account{% endif %}
+      {# Negative cash (margin) makes "% of account" nonsensical (e.g. −218%);
+         label it as a margin balance instead. #}
+      {% if cash_kpis %}{% if _cash < 0 %}margin balance{% else %}{{ "{:,.0f}".format((cash_kpis.cash_share_pct|float) * 100) }}% of account{% endif %}{% endif %}
     </div>
   {% endif %}
   {# Net Contributed subtitle row — folded in from the old standalone tile. #}
@@ -76,8 +78,13 @@
       {% set _holdings = (kpis.open_position_value|float) if kpis and kpis.open_position_value is not none else 0 %}
       {% set _cash = cash_kpis.cash_balance|float %}
       {% set _tav = total_account_value|float %}
-      {% set _holdings_pct = (_holdings / _tav * 100) if _tav > 0 else 0 %}
-      {% set _cash_pct = 100 - _holdings_pct if _tav > 0 else 0 %}
+      {# Margin / leverage: a negative cash balance means holdings exceed the
+         total account value, so a naive part-of-whole percent goes nonsensical
+         (e.g. 317% holdings / −217% cash). Clamp the bar + labels to [0,100]
+         and surface the borrowed cash explicitly as "margin" instead. #}
+      {% set _is_margin = _cash < 0 %}
+      {% set _holdings_pct = ([[(_holdings / _tav * 100), 0]|max, 100]|min) if _tav > 0 else 0 %}
+      {% set _cash_pct = (100 - _holdings_pct) if _tav > 0 else 0 %}
       <div class="mt-4">
         <div class="flex items-center justify-between text-[10px] uppercase tracking-wide text-label-3 mb-1.5">
           <span>Composition</span>
@@ -100,8 +107,8 @@
             <span class="text-label-3">{{ _holdings_pct|round(0,'floor')|int }}%</span>
           </span>
           <span class="inline-flex items-center gap-1.5">
-            <span class="text-label-3">{{ _cash_pct|round(0,'ceil')|int }}%</span>
-            <span class="num text-label-1 font-medium">${{ "{:,.0f}".format(_cash) }}</span>
+            <span class="text-label-3">{% if _is_margin %}margin{% else %}{{ _cash_pct|round(0,'ceil')|int }}%{% endif %}</span>
+            <span class="num {% if _is_margin %}text-neg{% else %}text-label-1{% endif %} font-medium">{% if _is_margin %}−{% endif %}${{ "{:,.0f}".format(_cash|abs) }}</span>
             <span class="text-label-2">Cash</span>
             <span class="inline-block w-2 h-2 rounded-[2px]" style="background:var(--color-cash-strong);"></span>
           </span>

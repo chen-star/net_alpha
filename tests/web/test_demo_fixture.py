@@ -69,6 +69,58 @@ def test_build_demo_db_detects_wash_sales(demo_db: Path) -> None:
     assert len(violations) >= 2
 
 
+def test_demo_ira_account_typed_tax_advantaged(demo_db: Path) -> None:
+    """The demo 'ira' account must be typed as a real IRA so the flagship
+    Rev. Rul. 2008-5 IRA-trap path is actually exercised in the tour."""
+    repo = Repository(get_engine(demo_db))
+    assert repo.get_account_type(broker="schwab", label="ira") == "trad_ira"
+
+
+def test_demo_nvda_cross_account_is_permanent_ira_trap(demo_db: Path) -> None:
+    """NVDA loss in taxable replaced by a buy in the IRA is a permanent
+    (non-deferred) wash sale: §1091(a) disallows the loss but §1091(d) basis
+    rollover and §1223(4) tacking must NOT apply (no IRA basis ledger)."""
+    repo = Repository(get_engine(demo_db))
+    nvda = [v for v in repo.all_violations() if v.ticker == "NVDA"]
+    assert len(nvda) == 1, "expected exactly one NVDA wash-sale violation in the demo"
+    viol = nvda[0]
+    assert viol.buy_account == "schwab/ira"
+    assert viol.kind == "permanent_ira"
+
+    # The IRA replacement lot keeps its original basis (no §1091(d) rollover)
+    # and no tacked holding period (no §1223(4)).
+    ira_lots = [lot for lot in repo.get_lots_for_ticker("NVDA") if lot.account == "schwab/ira"]
+    assert ira_lots, "expected an open NVDA lot in the IRA"
+    for lot in ira_lots:
+        assert lot.adjusted_basis == lot.cost_basis
+        assert lot.tacked_acquired_date is None
+
+
+def test_ensure_demo_db_rebuilds_on_stale_schema(tmp_path: Path) -> None:
+    """A demo.db left over from an older release must be rebuilt, not reused.
+    Otherwise the SQLModel models select columns the stale schema lacks (e.g.
+    accounts.broker_label) and `net-alpha ui --demo` 500s on the dashboard."""
+    from sqlmodel import Session
+
+    from net_alpha.db.migrations import CURRENT_SCHEMA_VERSION, get_schema_version, set_schema_version
+    from net_alpha.web.demo import ensure_demo_db
+
+    target = tmp_path / "demo.db"
+    build_demo_db(target)
+
+    # Simulate a fixture written by an older schema version.
+    eng = get_engine(target)
+    with Session(eng) as s:
+        set_schema_version(s, CURRENT_SCHEMA_VERSION - 1)
+        s.commit()
+    eng.dispose()
+
+    ensure_demo_db(target)
+
+    with Session(get_engine(target)) as s:
+        assert get_schema_version(s) == CURRENT_SCHEMA_VERSION
+
+
 def test_build_demo_db_idempotent(tmp_path: Path) -> None:
     target = tmp_path / "demo.db"
     build_demo_db(target)

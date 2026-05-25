@@ -52,11 +52,12 @@ def run(
     url = f"http://127.0.0.1:{chosen_port}"
 
     if demo:
-        from net_alpha.web.demo import build_demo_db
+        from net_alpha.web.demo import ensure_demo_db
 
-        demo_path = settings.data_dir / "demo.db"
-        if not demo_path.exists():
-            build_demo_db(demo_path)
+        # ensure_demo_db (not a bare exists() check) so a demo.db left over
+        # from an older release is rebuilt instead of silently 500-ing on a
+        # column the current models expect.
+        ensure_demo_db(settings.data_dir / "demo.db")
 
     target_path = "/?tour=1" if demo else "/"
 

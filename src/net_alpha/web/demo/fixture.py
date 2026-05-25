@@ -110,6 +110,14 @@ def build_demo_db(target: Path) -> None:
     affected_dates.extend(_import_demo_account(repo, "taxable", DEMO_TAXABLE))
     affected_dates.extend(_import_demo_account(repo, "ira", DEMO_IRA))
 
+    # Type the demo "ira" account as a real IRA *before* the global recompute
+    # below, so the cross-account NVDA loss (taxable sale → IRA rebuy) is
+    # classified as a Rev. Rul. 2008-5 permanent wash sale — §1091(a) disallows
+    # the loss but §1091(d) basis rollover and §1223(4) tacking are suppressed.
+    # Without this the flagship IRA-trap feature is never exercised in the tour
+    # and the IRA replacement lot wrongly shows a rolled-up basis.
+    repo.set_account_type(broker="schwab", label="ira", type_="trad_ira")
+
     for account in repo.list_accounts():
         stitch_account(repo, account.id)
 

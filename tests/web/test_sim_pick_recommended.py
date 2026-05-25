@@ -91,3 +91,37 @@ def test_all_zero_pnl_falls_to_input_order():
         _result("LIFO", pre_tax=0, after_tax=0),
     ]
     assert _pick_recommended(results) == 0
+
+
+def test_loss_tie_prefers_signal_recommended_strategy():
+    """When several strategies tie on the most-negative after-tax P&L, the
+    table must break the tie toward the strategy the traffic-light signal
+    recommends (HIFO on a loss harvest) so the headline 'Lot method
+    recommended: HIFO' and the comparison table's 'Recommended' row agree.
+
+    Regression: input-order tiebreak alone picked LIFO (earlier index) while
+    the headline said HIFO — two surfaces, contradictory recommendations.
+    """
+    results = [
+        _result("FIFO", pre_tax=-1996, after_tax=-1996),  # smaller loss
+        _result("LIFO", pre_tax=-2046, after_tax=-2046),  # tied best, earlier idx
+        _result("HIFO", pre_tax=-2046, after_tax=-2046),  # tied best
+        _result("MIN_TAX", pre_tax=-2046, after_tax=-2046),
+        _result("MAX_LOSS", pre_tax=-2046, after_tax=-2046),
+    ]
+    # No preference → input-order tiebreak still picks LIFO (unchanged contract).
+    assert _pick_recommended(results) == 1
+    # With the signal's HIFO preference, the table agrees with the headline.
+    assert _pick_recommended(results, prefer="HIFO") == 2
+
+
+def test_prefer_ignored_when_not_among_optimal():
+    """A preference cannot override genuine economics: if the preferred
+    strategy is not among the tied-best, the truly optimal strategy still
+    wins (the headline hint is superseded by detailed analysis)."""
+    results = [
+        _result("FIFO", pre_tax=-100, after_tax=-100),
+        _result("HIFO", pre_tax=-50, after_tax=-50),  # preferred, but smaller loss
+        _result("MAX_LOSS", pre_tax=-3000, after_tax=-3000),  # biggest loss
+    ]
+    assert _pick_recommended(results, prefer="HIFO") == 2  # MAX_LOSS, not HIFO

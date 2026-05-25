@@ -15,10 +15,13 @@
   <h4>Cash deployment</h4>
   <span class="meta">{{ period_label }}</span>
   {% if kpis %}
+    {% set _cash_total = (kpis.end_free_cash + kpis.end_pledged)|float %}
     <span class="num text-[12px] ml-2">
-      ${{ "{:,.0f}".format((kpis.end_free_cash + kpis.end_pledged)|float) }} cash
+      ${{ "{:,.0f}".format(_cash_total) }} cash
       {% if kpis.end_cash_share_pct is not none %}
-        · {{ "{:.1f}".format(kpis.end_cash_share_pct|float * 100) }}%
+        {# A negative cash balance (margin) makes "share of account" nonsensical
+           (e.g. −217.8%); label it as margin instead. #}
+        · {% if _cash_total < 0 %}margin{% else %}{{ "{:.1f}".format(kpis.end_cash_share_pct|float * 100) }}%{% endif %}
       {% endif %}
       {% if kpis.end_pledged > 0 %}
         · <span class="text-label-2">${{ "{:,.0f}".format(kpis.end_pledged|float) }} pledged</span>

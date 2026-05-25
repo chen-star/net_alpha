@@ -14,6 +14,7 @@ from net_alpha.engine.lot_selector import (
     select_lots,
 )
 from net_alpha.engine.simulator import simulate_buy, simulate_sell
+from net_alpha.models.accounts import AccountType
 from net_alpha.portfolio.carryforward import get_effective_carryforward
 from net_alpha.portfolio.tax_planner import PlannedTrade, TaxBrackets, assess_trade
 from net_alpha.pricing.service import PricingService
@@ -255,6 +256,19 @@ def sim_run(
         today=on_date,
     )
 
+    # Losses realized inside a tax-advantaged account (IRA / Roth / 401(k) /
+    # HSA) are not deductible and gains aren't taxed, so the after-tax
+    # lot-strategy comparison and the "Lot method recommended" headline are
+    # meaningless there — worse, they imply a phantom tax benefit. Suppress
+    # the tax math and explain why when the target account is tax-advantaged.
+    is_tax_advantaged = (
+        repo.account_types_by_display().get(account or "", AccountType.TAXABLE).is_tax_advantaged
+        if account
+        else False
+    )
+    if is_tax_advantaged:
+        signal = signal.model_copy(update={"lot_method_recommended": None})
+
     # 5-strategy lot comparison: surface the engine.lot_selector results
     # alongside the per-account simulator output so the user can see how
     # FIFO/LIFO/HIFO/Min Tax/Max Loss differ in pre-tax / after-tax P&L
@@ -267,28 +281,29 @@ def sim_run(
     # absurd realized P&L on the HIFO / Max Loss strategies.
     lots_for_sym = [lot for lot in repo.get_lots_for_ticker(sym) if lot.option_details is None]
     cf = get_effective_carryforward(repo, year=on_date.year)
-    try:
-        results: list[LotPickResult] = []
-        for strategy in ("FIFO", "LIFO", "HIFO", "MIN_TAX", "MAX_LOSS"):
-            results.append(
-                select_lots(
-                    lots=lots_for_sym,
-                    qty=Decimal(str(qty)),
-                    sell_price=Decimal(str(price)),
-                    sell_date=on_date,
-                    strategy=strategy,
-                    repo=repo,
-                    etf_pairs=request.app.state.etf_pairs,
-                    brackets=brackets_for_signal,
-                    carryforward=cf,
+    if not is_tax_advantaged:
+        try:
+            results: list[LotPickResult] = []
+            for strategy in ("FIFO", "LIFO", "HIFO", "MIN_TAX", "MAX_LOSS"):
+                results.append(
+                    select_lots(
+                        lots=lots_for_sym,
+                        qty=Decimal(str(qty)),
+                        sell_price=Decimal(str(price)),
+                        sell_date=on_date,
+                        strategy=strategy,
+                        repo=repo,
+                        etf_pairs=request.app.state.etf_pairs,
+                        brackets=brackets_for_signal,
+                        carryforward=cf,
+                    )
                 )
-            )
-        lot_comparison = {
-            "results": results,
-            "recommended_idx": _pick_recommended(results),
-        }
-    except InsufficientLotsError as e:
-        lot_comparison_insufficient = str(e)
+            lot_comparison = {
+                "results": results,
+                "recommended_idx": _pick_recommended(results, prefer=signal.lot_method_recommended),
+            }
+        except InsufficientLotsError as e:
+            lot_comparison_insufficient = str(e)
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -299,11 +314,12 @@ def sim_run(
             "signal": signal,
             "lot_comparison": lot_comparison,
             "lot_comparison_insufficient": lot_comparison_insufficient,
+            "lot_comparison_tax_advantaged": is_tax_advantaged,
         },
     )
 
 
-def _pick_recommended(results: list[LotPickResult]) -> int:
+def _pick_recommended(results: list[LotPickResult], prefer: str | None = None) -> int:
     """Pick the recommended lot strategy.
 
     Wash-sale-tainted picks are always deprioritized regardless of P&L sign
@@ -320,16 +336,21 @@ def _pick_recommended(results: list[LotPickResult]) -> int:
       table. Picking highest-after-tax on a loss sale would recommend the
       SMALLEST loss — directly contrary to the harvest intent.
 
-    Tiebreak: input order (earliest strategy wins on exact ties).
+    Tiebreak: among strategies tied on the P&L objective, prefer the one the
+    traffic-light signal recommends (``prefer``) so the headline hint and the
+    comparison table never contradict each other on ties; then input order
+    for stability. ``prefer`` only breaks ties — it can never promote a
+    strategy that is economically worse than the tied-best.
     """
     is_loss_harvest = all(r.pre_tax_pnl <= 0 for r in results)
 
     def key(idx_r: tuple[int, LotPickResult]) -> tuple:
         idx, r = idx_r
         # Sort: wash-sale risk LAST (False < True), then the P&L objective
-        # (sign-aware), then input order for stability.
+        # (sign-aware), then the signal's preferred method, then input order.
         pnl_objective = r.after_tax_pnl if is_loss_harvest else -r.after_tax_pnl
-        return (r.has_wash_sale_risk, pnl_objective, idx)
+        prefer_rank = 0 if (prefer and r.strategy == prefer) else 1
+        return (r.has_wash_sale_risk, pnl_objective, prefer_rank, idx)
 
     return min(enumerate(results), key=key)[0]
 

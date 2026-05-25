@@ -8,7 +8,7 @@
   <div class="panel text-label-2 text-sm">No accounts available.</div>
 {% else %}
   <h2 class="text-xl mb-3">Per-account options for buying <span class="font-mono text-primary">{{ ticker }}</span></h2>
-  <div class="grid grid-cols-2 gap-4 js-reveal">
+  <div class="grid grid-cols-2 gap-4">
     {% for opt in options %}
       <div class="panel" style="--reveal-i: {{ loop.index0 }}">
         <div class="flex justify-between items-baseline mb-2">

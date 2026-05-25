@@ -27,6 +27,9 @@ def test_projection_card_feature_and_countup():
     assert 'style="--reveal-i: 0"' in src  # card is reveal child 0 of the tab section
 
 
-def test_projection_tab_reveal_container():
+def test_projection_tab_has_no_reveal_container():
+    """The projection tab is returned as an HTMX swap on every 'Save config'
+    (hx-target=#projection-tab-content). It must NOT carry an entrance reveal,
+    or the staggered fade-up replays on each save."""
     src = (TPL / "_projection_tab.html").read_text()
-    assert "space-y-3 js-reveal" in src
+    assert "js-reveal" not in src

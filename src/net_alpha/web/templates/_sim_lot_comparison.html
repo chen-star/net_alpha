@@ -1,7 +1,16 @@
 {# 5-strategy lot-picker comparison rendered under the per-account sim cards.
    `lot_comparison` is None on insufficient lots; `lot_comparison_insufficient`
    carries the engine error message so we can show a graceful fallback. #}
-{% if lot_comparison_insufficient %}
+{% if lot_comparison_tax_advantaged %}
+  <div class="panel mt-4">
+    <div class="label-uc">Lot strategy &amp; tax</div>
+    <div class="text-[12px] text-label-2 mt-1 leading-[1.55]">
+      This is a tax-advantaged account — lot selection has no tax impact.
+      Losses realized here aren&#39;t deductible and gains aren&#39;t taxed, so
+      there&#39;s no after-tax difference between FIFO / HIFO / Min&nbsp;Tax / Max&nbsp;Loss.
+    </div>
+  </div>
+{% elif lot_comparison_insufficient %}
   <div class="panel mt-4">
     <div class="label-uc text-warn">Lot strategy comparison</div>
     <div class="text-[12px] text-label-2 mt-1">
