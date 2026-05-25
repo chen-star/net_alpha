@@ -38,7 +38,9 @@ def test_detail_renders_totals_bar(client, repo):
     resp = client.get("/wash-sales")
     assert resp.status_code == 200
     assert "2</span> violations" in resp.text or "2 violations" in resp.text
-    assert "$500.00" in resp.text
+    # Disallowed total counts up: "$" stays outside the .js-countup-num span,
+    # so match either the plain value or the count-up target.
+    assert "$500.00" in resp.text or 'data-to="500.00"' in resp.text
     assert "1 confirmed" in resp.text
     assert "1 probable" in resp.text
 
@@ -131,4 +133,5 @@ def test_detail_filter_then_summary_reflects_filter(client, repo):
     resp = client.get("/wash-sales?ticker=TSLA")
     assert resp.status_code == 200
     assert "1</span> violations" in resp.text or "1 violations" in resp.text  # Filtered to one
-    assert "$200.00" in resp.text  # Summed to one row's amount
+    # Summed to one row's amount; "$" stays outside the count-up span.
+    assert "$200.00" in resp.text or 'data-to="200.00"' in resp.text

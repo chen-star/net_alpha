@@ -177,7 +177,7 @@
       </div>
       {% if summary and summary.violation_count > 0 %}
         <div class="panel panel-feature mb-4 text-sm flex gap-4 items-baseline">
-          <div><span class="font-medium"><span class="js-countup-num" data-to="{{ summary.violation_count }}" data-decimals="0">{{ summary.violation_count }}</span></span> violations</div>
+          <div><span class="font-medium js-countup-num" data-to="{{ summary.violation_count }}" data-decimals="0">{{ summary.violation_count }}</span> violations</div>
           <div><span class="font-medium text-neg num">$<span class="js-countup-num" data-to="{{ "%.2f"|format(summary.disallowed_total|float) }}" data-decimals="2">{{ "{:,.2f}".format(summary.disallowed_total|float) }}</span></span> disallowed</div>
           <div><span class="chip-confirmed">{{ summary.confirmed_count }} confirmed</span></div>
           <div><span class="chip-probable">{{ summary.probable_count }} probable</span></div>
