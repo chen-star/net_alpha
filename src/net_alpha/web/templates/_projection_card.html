@@ -1,5 +1,5 @@
 {# Year-end tax projection card. Shows placeholder if tax config absent. #}
-<div class="kpi">
+<div class="kpi panel-feature" style="--reveal-i: 0">
   {% if has_tax_config and projection %}
     <div class="flex items-baseline justify-between">
       <div class="label-uc">Year-end tax projection</div>
@@ -11,7 +11,7 @@
        component lands on .5. Round each to int first, then sum, then format. #}
     {% set _fed_d = (projection.federal_tax|float)|round(0, 'common')|int %}
     {% set _state_d = (projection.state_tax|float)|round(0, 'common')|int %}
-    <div class="num num-promoted mt-2">${{ "{:,d}".format(_fed_d + _state_d) }}</div>
+    <div class="num num-promoted mt-2">$<span class="js-countup-num" data-to="{{ _fed_d + _state_d }}" data-decimals="0">{{ "{:,d}".format(_fed_d + _state_d) }}</span></div>
     <div class="text-[11px] text-label-2 mt-1">
       Federal <span class="num text-label-1">${{ "{:,d}".format(_fed_d) }}</span>
       <span class="text-label-3 mx-1">·</span>

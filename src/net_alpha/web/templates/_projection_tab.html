@@ -1,10 +1,10 @@
 {# Full /tax tab variant: projection card + inline config form. #}
 <div id="projection-tab-content">
-  <section class="space-y-3">
+  <section class="space-y-3 js-reveal">
     {% include "_projection_card.html" with context %}
 
     {% if has_tax_config and projection %}
-    <div class="kpi">
+    <div class="kpi" style="--reveal-i: 1">
       <div class="label-uc mb-2">Breakdown</div>
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-[10px] text-[12px]">
         <div>
@@ -35,7 +35,7 @@
     </div>
     {% endif %}
 
-    <div class="kpi">
+    <div class="kpi" style="--reveal-i: 2">
       <div class="label-uc mb-2">{{ "Update" if has_tax_config else "Enable" }} tax projection</div>
       <div class="text-[13px] text-label-2 mb-3 leading-[1.55]">
         Enter your filing status and tax rates to project this year's federal + state tax bill on realized gains, dividends, and interest.
