@@ -15,13 +15,17 @@ from net_alpha.backup.retention import RetentionPolicy
 
 
 def run_backup_job() -> dict:
+    import os
+
+    passphrase = os.environ.get("NETALPHA_BACKUP_PASSPHRASE") or None
     try:
-        path = backup.create_bundle(reason="daily")
+        path = backup.create_bundle(reason="daily", encrypt_passphrase=passphrase)
         pruned = backup.prune(policy=RetentionPolicy())
         return {
             "status": "ok",
             "bundle_path": str(path),
             "pruned_count": len(pruned),
+            "encrypted": passphrase is not None,
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
