@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="settings-backup">
-  <h1>Backups</h1>
-  <p class="hint">
+<section class="settings-backup js-reveal">
+  <h1 style="--reveal-i: 0">Backups</h1>
+  <p class="hint" style="--reveal-i: 1">
     Snapshots of <code>~/.net_alpha/</code> (DB + config). Daily snapshots run automatically when
     the always-on service is installed; pre-mutation snapshots run before every CSV import.
   </p>
 
-  <div class="toolbar">
+  <div class="toolbar" style="--reveal-i: 2">
     <button hx-post="/settings/backup/create"
             hx-target="#backup-list"
             hx-swap="outerHTML">
@@ -15,12 +15,14 @@
     </button>
   </div>
 
-  {% include "_backup_list.html" %}
+  <div class="panel panel-feature" style="--reveal-i: 3">
+    {% include "_backup_list.html" %}
+  </div>
 
   {# Promote the CLI-only restore note from 11px hint to a full info row so
      users don't expect a per-row Restore button. #}
   <div class="mt-4 p-3 rounded"
-       style="border:0.5px solid var(--color-info); background: var(--color-info-tint); color: var(--color-text);">
+       style="--reveal-i: 4; border:0.5px solid var(--color-info); background: var(--color-info-tint); color: var(--color-text);">
     <div class="font-semibold text-[13px] mb-1">Restoring is CLI-only</div>
     <p class="text-[12px] text-label-1 m-0">
       net-alpha doesn't include a restore button — restoring an old DB while
