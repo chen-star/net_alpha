@@ -114,3 +114,50 @@ def test_dns_rebinding_blocked_when_host_changed_but_origin_loopback(
         follow_redirects=False,
     )
     assert resp.status_code == 403
+
+
+def _app_for_host(tmp_path, public_host: str | None):
+    """Build a fresh app + client whose requests carry Host=public_host."""
+    import os
+
+    from net_alpha.config import Settings
+    from net_alpha.db.connection import get_engine, init_db
+    from net_alpha.web.app import create_app
+
+    if public_host is None:
+        os.environ.pop("NETALPHA_PUBLIC_HOST", None)
+    else:
+        os.environ["NETALPHA_PUBLIC_HOST"] = public_host
+    os.environ["NETALPHA_SKIP_SCHEDULER"] = "1"
+    settings = Settings(data_dir=tmp_path)
+    init_db(get_engine(settings.db_path))
+    app = create_app(settings)
+    base = f"https://{public_host}" if public_host else "https://example.test"
+    return TestClient(app, base_url=base, raise_server_exceptions=False)
+
+
+def test_public_host_mutation_allowed_when_configured(tmp_path):
+    """With NETALPHA_PUBLIC_HOST set, a same-host mutation from that domain passes."""
+    client = _app_for_host(tmp_path, "net-alpha.example.com")
+    try:
+        resp = client.post(
+            "/tour/dismiss",
+            headers={"origin": "https://net-alpha.example.com"},
+            follow_redirects=False,
+        )
+        assert resp.status_code != 403
+    finally:
+        import os
+
+        os.environ.pop("NETALPHA_PUBLIC_HOST", None)
+
+
+def test_public_host_rejected_when_not_configured(tmp_path):
+    """Without the env var, that same domain is still an untrusted host → 403."""
+    client = _app_for_host(tmp_path, None)
+    resp = client.post(
+        "/tour/dismiss",
+        headers={"origin": "https://example.test"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 403

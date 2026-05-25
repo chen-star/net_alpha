@@ -129,18 +129,23 @@ def create_app(settings: Settings | None = None, demo_mode: bool = False) -> Fas
     # CLI tools (curl, httpie) typically send neither Origin nor Referer; that
     # path remains allowed when the Host is loopback so user scripts keep
     # working.
-    _LOOPBACK_HOSTS = frozenset(
-        {
-            "127.0.0.1",
-            "localhost",
-            "::1",
-            # Starlette's TestClient defaults to Host: testserver. Keeping it
-            # in the allowlist costs nothing in production (no public DNS
-            # name "testserver" exists, and the user would have to add a
-            # /etc/hosts entry to self-attack) and avoids a test-only hook.
-            "testserver",
-        }
-    )
+    _trusted_hosts = {
+        "127.0.0.1",
+        "localhost",
+        "::1",
+        # Starlette's TestClient defaults to Host: testserver. Keeping it
+        # in the allowlist costs nothing in production (no public DNS
+        # name "testserver" exists) and avoids a test-only hook.
+        "testserver",
+    }
+    # Remote deployment: behind Cloudflare the Host header is the deployment
+    # domain, not loopback. NETALPHA_PUBLIC_HOST widens the trusted-origin set
+    # by exactly one name. Unset = loopback-only behavior (no regression for
+    # local `net-alpha ui`).
+    _public_host = os.environ.get("NETALPHA_PUBLIC_HOST", "").strip().lower()
+    if _public_host:
+        _trusted_hosts.add(_public_host)
+    _LOOPBACK_HOSTS = frozenset(_trusted_hosts)
 
     @app.middleware("http")
     async def _same_origin_guard(request, call_next):
