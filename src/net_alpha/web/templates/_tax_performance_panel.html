@@ -19,43 +19,43 @@
     </p>
   </div>
 {% else %}
-  <div class="space-y-4">
+  <div class="space-y-4 js-reveal">
 
     {# KPI row — 4 cards. First tile gets .kpi-hero so the blue brand-glow
        halo anchors the eye on the page's headline pre-tax number, matching
        the Portfolio overview's hero KPI pattern. #}
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-      <div class="kpi kpi-hero p-3"
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3" style="--reveal-i: 0">
+      <div class="kpi kpi-hero panel-feature p-3"
            title="Form 8949 tax-reportable realized income for the selected period. Sourced from your broker's Realized G/L CSV. EXCLUDES §1256 contracts (broad-based index options) — those net 60/40 LT/ST separately. EXCLUDES tax-advantaged accounts (IRA, Roth, 401k, HSA). May differ from the Portfolio Realized P/L tile, which is economic (all accounts, includes options).">
         <div class="label-uc">Pre-tax realized</div>
         <div class="num num-hero mt-1 {% if breakdown.pre_tax_realized_pnl < 0 %}text-neg{% elif breakdown.pre_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
-          {% if breakdown.pre_tax_realized_pnl < 0 %}−{% elif breakdown.pre_tax_realized_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.pre_tax_realized_pnl|float|abs) }}
+          {% if breakdown.pre_tax_realized_pnl < 0 %}−{% elif breakdown.pre_tax_realized_pnl > 0 %}+{% endif %}$<span class="js-countup-num" data-to="{{ '%.2f'|format(breakdown.pre_tax_realized_pnl|float|abs) }}" data-decimals="2">{{ '{:,.2f}'.format(breakdown.pre_tax_realized_pnl|float|abs) }}</span>
         </div>
         <div class="text-[10px] text-label-3 mt-0.5">Form 8949 · taxable accounts · excl. §1256</div>
       </div>
       <div class="kpi p-3">
         <div class="label-uc">Tax bill (est.)</div>
         <div class="num num-promoted mt-1">
-          ${{ '{:,.2f}'.format(breakdown.estimated_tax_bill|float) }}
+          $<span class="js-countup-num" data-to="{{ '%.2f'|format(breakdown.estimated_tax_bill|float) }}" data-decimals="2">{{ '{:,.2f}'.format(breakdown.estimated_tax_bill|float) }}</span>
         </div>
       </div>
       <div class="kpi p-3">
         <div class="label-uc">After-tax realized</div>
         <div class="num num-promoted mt-1 {% if breakdown.after_tax_realized_pnl < 0 %}text-neg{% elif breakdown.after_tax_realized_pnl > 0 %}text-pos{% else %}text-label-1{% endif %}">
-          {% if breakdown.after_tax_realized_pnl < 0 %}−{% elif breakdown.after_tax_realized_pnl > 0 %}+{% endif %}${{ '{:,.2f}'.format(breakdown.after_tax_realized_pnl|float|abs) }}
+          {% if breakdown.after_tax_realized_pnl < 0 %}−{% elif breakdown.after_tax_realized_pnl > 0 %}+{% endif %}$<span class="js-countup-num" data-to="{{ '%.2f'|format(breakdown.after_tax_realized_pnl|float|abs) }}" data-decimals="2">{{ '{:,.2f}'.format(breakdown.after_tax_realized_pnl|float|abs) }}</span>
         </div>
       </div>
       <div class="kpi p-3">
         <div class="label-uc">Tax drag</div>
         <div class="num num-promoted mt-1">
-          ${{ '{:,.2f}'.format(breakdown.tax_drag_dollar|float) }}
+          $<span class="js-countup-num" data-to="{{ '%.2f'|format(breakdown.tax_drag_dollar|float) }}" data-decimals="2">{{ '{:,.2f}'.format(breakdown.tax_drag_dollar|float) }}</span>
           <span class="text-[14px] text-label-2 ml-1">({{ '{:.1%}'.format(breakdown.tax_drag_pct|float) }})</span>
         </div>
       </div>
     </div>
 
     {# ST / LT / §1256 mix bar #}
-    <div class="kpi p-3">
+    <div class="kpi p-3" style="--reveal-i: 1">
       <div class="text-[13px] font-medium mb-2">ST / LT / §1256 mix</div>
       {% set st_abs = breakdown.short_term_pnl|float|abs %}
       {% set lt_abs = breakdown.long_term_pnl|float|abs %}
@@ -120,7 +120,7 @@
     </div>
 
     {# Wash-sale cost row #}
-    <div class="kpi p-3">
+    <div class="kpi p-3" style="--reveal-i: 2">
       <div class="text-[13px] font-medium mb-1">Wash-sale impact</div>
       <div class="text-[13px] mt-1">
         Disallowed losses:
@@ -152,21 +152,21 @@
     </div>
 
     {# Effective tax rate #}
-    <div class="kpi p-3">
+    <div class="kpi p-3" style="--reveal-i: 3">
       <div class="label-uc">Effective tax rate</div>
       <div class="num num-promoted mt-1">{{ '{:.1%}'.format(breakdown.effective_tax_rate|float) }}</div>
       <div class="text-[11px] text-label-3 mt-1">tax bill ÷ max(0, pre-tax realized)</div>
     </div>
 
     {# Caveats #}
-    <details class="text-[11px] text-label-3">
+    <details class="text-[11px] text-label-3" style="--reveal-i: 4">
       <summary class="cursor-pointer text-[12px] text-label-2 hover:text-text">ⓘ About these numbers</summary>
       <ul class="list-disc list-inside mt-2 space-y-1 pl-2">
         {% for c in breakdown.caveats %}<li>{{ c }}</li>{% endfor %}
       </ul>
     </details>
 
-    <div class="text-[11px] text-label-3 mt-2 italic">
+    <div class="text-[11px] text-label-3 mt-2 italic" style="--reveal-i: 5">
       ⚠ This is informational only. Consult a tax professional before filing.
     </div>
 
