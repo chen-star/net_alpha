@@ -20,19 +20,19 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
-    <div class="kpi" data-kpi-slot="open-lots">
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-6 js-reveal">
+    <div class="kpi" data-kpi-slot="open-lots" style="--reveal-i: 0">
       <div class="label-uc">Open lots</div>
       <div class="num num-promoted mt-2">
-        {{ kpi_open_lots }}{% if open_shorts %}<span class="text-label-2 text-[14px] font-normal"> + {{ open_shorts|length }} short opt</span>{% endif %}
+        <span class="js-countup-num" data-to="{{ kpi_open_lots }}" data-decimals="0">{{ kpi_open_lots }}</span>{% if open_shorts %}<span class="text-label-2 text-[14px] font-normal"> + {{ open_shorts|length }} short opt</span>{% endif %}
       </div>
       <div class="text-xs text-label-2 mt-1">Basis: {{ fmt_currency(kpi_open_basis) }}</div>
     </div>
 
-    <div class="kpi" data-kpi-slot="realized">
+    <div class="kpi panel-feature" data-kpi-slot="realized" style="--reveal-i: 1">
       <div class="label-uc">Realized P&amp;L</div>
       <div class="num num-promoted mt-2 {% if kpi_realized_ytd > 0 %}text-pos{% elif kpi_realized_ytd < 0 %}text-neg{% else %}text-label-2{% endif %}">
-        {{ fmt_currency(kpi_realized_ytd) }}{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
+        {% if kpi_realized_ytd < 0 %}−{% endif %}$<span class="js-countup-num" data-to="{{ "%.2f"|format(kpi_realized_ytd|float|abs) }}" data-decimals="2">{{ "{:,.2f}".format(kpi_realized_ytd|float|abs) }}</span>{% if realized_ref %}{{ provenance_link(realized_ref) }}{% endif %}
       </div>
       <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
       {% if account_ids %}
@@ -45,27 +45,27 @@
       {% endif %}
       <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
         <div class="num text-sm font-semibold {% if kpi_realized_lifetime > 0 %}text-pos{% elif kpi_realized_lifetime < 0 %}text-neg{% else %}text-label-2{% endif %}">
-          {{ fmt_currency(kpi_realized_lifetime) }}{% if realized_lifetime_ref %}{{ provenance_link(realized_lifetime_ref) }}{% endif %}
+          {% if kpi_realized_lifetime < 0 %}−{% endif %}$<span class="js-countup-num" data-to="{{ "%.2f"|format(kpi_realized_lifetime|float|abs) }}" data-decimals="2">{{ "{:,.2f}".format(kpi_realized_lifetime|float|abs) }}</span>{% if realized_lifetime_ref %}{{ provenance_link(realized_lifetime_ref) }}{% endif %}
         </div>
         <div class="text-xs text-label-2">Lifetime</div>
       </div>
     </div>
 
-    <div class="kpi" data-kpi-slot="disallowed">
+    <div class="kpi" data-kpi-slot="disallowed" style="--reveal-i: 2">
       <div class="label-uc">Disallowed</div>
       <div class="num num-promoted mt-2 {% if kpi_disallowed_ytd > 0 %}text-neg{% else %}text-label-3{% endif %}">
-        {{ fmt_currency(kpi_disallowed_ytd) }}
+        {% if kpi_disallowed_ytd < 0 %}−{% endif %}$<span class="js-countup-num" data-to="{{ "%.2f"|format(kpi_disallowed_ytd|float|abs) }}" data-decimals="2">{{ "{:,.2f}".format(kpi_disallowed_ytd|float|abs) }}</span>
       </div>
       <div class="text-xs text-label-2 mt-1">YTD {{ kpi_today.year }}</div>
       <div class="mt-2 pt-2" style="border-top:0.5px solid var(--color-hairline);">
         <div class="num text-sm font-semibold {% if kpi_disallowed_lifetime > 0 %}text-neg{% else %}text-label-3{% endif %}">
-          {{ fmt_currency(kpi_disallowed_lifetime) }}
+          {% if kpi_disallowed_lifetime < 0 %}−{% endif %}$<span class="js-countup-num" data-to="{{ "%.2f"|format(kpi_disallowed_lifetime|float|abs) }}" data-decimals="2">{{ "{:,.2f}".format(kpi_disallowed_lifetime|float|abs) }}</span>
         </div>
         <div class="text-xs text-label-2">Lifetime</div>
       </div>
     </div>
 
-    <details data-testid="ticker-kpi-more" class="col-span-2 md:col-span-3 xl:col-span-2 xl:contents" open>
+    <details data-testid="ticker-kpi-more" class="col-span-2 md:col-span-3 xl:col-span-2 xl:contents" open style="--reveal-i: 3">
       <summary class="xl:hidden cursor-pointer text-[12px] text-label-2 px-2 py-1">More metrics</summary>
       <div class="kpi" data-kpi-slot="accounts">
         <div class="label-uc">Accounts</div>
@@ -88,26 +88,31 @@
   </div>
 
   {% include "_ticker_tabs.html" %}
-  <div id="ticker-tab-content"
-       role="tabpanel"
-       aria-labelledby="ticker-tab-{{ selected_view|default('timeline') }}">
-    {% if selected_view == 'lots' %}
-      {% include "_ticker_view_lots.html" %}
-    {% elif selected_view == 'recon' %}
-      {% include "_ticker_view_reconciliation.html" %}
-    {% else %}
-      {% include "_ticker_view_timeline.html" %}
+  <div class="js-reveal">
+    <div id="ticker-tab-content"
+         role="tabpanel"
+         aria-labelledby="ticker-tab-{{ selected_view|default('timeline') }}"
+         style="--reveal-i: 0">
+      {% if selected_view == 'lots' %}
+        {% include "_ticker_view_lots.html" %}
+      {% elif selected_view == 'recon' %}
+        {% include "_ticker_view_reconciliation.html" %}
+      {% else %}
+        {% include "_ticker_view_timeline.html" %}
+      {% endif %}
+    </div>
+
+    {% if violations %}
+      <div style="--reveal-i: 1">
+        <h2 class="text-xl mt-6 mb-2">Violations involving {{ symbol }}</h2>
+        {% for violation in violations %}
+          <div class="panel mb-2">
+            {% include "_violation_card.html" %}
+          </div>
+        {% endfor %}
+      </div>
     {% endif %}
   </div>
-
-  {% if violations %}
-    <h2 class="text-xl mt-6 mb-2">Violations involving {{ symbol }}</h2>
-    {% for violation in violations %}
-      <div class="panel mb-2">
-        {% include "_violation_card.html" %}
-      </div>
-    {% endfor %}
-  {% endif %}
 
   {% include "_schwab_lot_detail.html" %}
 
