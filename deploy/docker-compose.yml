@@ -1,0 +1,31 @@
+# Remote box compose: app + cloudflared. No ports are published — the app is
+# reachable only on the internal network by cloudflared, which dials OUT to
+# Cloudflare. Zero raw inbound ports on the host.
+services:
+  app:
+    image: ${IMAGE_REPO}:${IMAGE_TAG}
+    restart: unless-stopped
+    env_file: ./secrets.env
+    environment:
+      HOME: /data
+    volumes:
+      - netalpha-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:18765/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    # NOTE: deliberately NO `ports:` mapping.
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    env_file: ./secrets.env
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  netalpha-data:
