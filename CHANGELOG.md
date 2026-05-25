@@ -2,6 +2,70 @@
 
 
 
+## v0.80.0 (2026-05-25)
+
+### Feature
+
+* feat(web): premium refresh — elevate + reveal Welcome and Backup pages
+
+Completes the rollout. Welcome&#39;s two CTA cards become panel-feature
+surfaces and the hero staggers in on load; Backup&#39;s list becomes an
+elevated card (wrapper persists across the create-swap) with the page
+blocks staggering in. No count-up (no numbers on either page).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`95c9542`](https://github.com/chen-star/net_alpha/commit/95c9542d658aa1e65956233010447a6c14e1de8a))
+
+* feat(web): premium refresh — elevate Imports table, count-up data-hygiene totals
+
+The Settings→Imports tab gets the elevation + count-up treatment:
+the imports table becomes a tier-1 (panel-feature) card and the two
+data-hygiene &#34;N items need attention&#34; headline counts count up when
+the tab&#39;s content lazy-loads. No staggered reveal — the drawer&#39;s
+slide-in is the entrance. Presentation-only.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f781611`](https://github.com/chen-star/net_alpha/commit/f7816117678b2ad79c982e4213ad66bdd2d45c37))
+
+* feat(web): premium refresh — elevate + count-up + reveal Verify page
+
+Latest-run block becomes a tier-1 (panel-feature) card with its
+failed/warned/total finding counts counting up; History becomes a
+secondary panel card; both stagger in on load. Presentation-only.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`a0b1818`](https://github.com/chen-star/net_alpha/commit/a0b181814713561d3f0a9928abbf584b483b0760))
+
+* feat(web): premium refresh — elevate + count-up Harvest, reveal + count-up Wash-sales tab
+
+Harvest summary becomes a tier-1 (panel-feature) payoff tile whose
+selected/loss-harvested/tax-saved numbers count up — re-firing on each
+pick/mode HTMX swap for live feedback (no entrance reveal, since the
+tile re-swaps). The Wash-sales tab elevates its violations-summary
+strip, counts up the violation count + disallowed total, and staggers
+its Watch + violations panels in on load. Presentation-only.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`233f94a`](https://github.com/chen-star/net_alpha/commit/233f94a6a05dc9b5b1083bed08393d6a208b4200))
+
+* feat(web): premium refresh — elevate + count-up + reveal Ticker page
+
+Realized P&amp;L card becomes the page&#39;s single tier-1 (panel-feature)
+surface; Realized/Disallowed YTD+Lifetime and the open-lots count
+animate via count-up; KPI tiles and the tab-content/violations block
+stagger in via panel-level reveal. Presentation-only, no layout change.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`f91d192`](https://github.com/chen-star/net_alpha/commit/f91d192af9e160b8f4162bbfe97f31472b4ca5d9))
+
+### Fix
+
+* fix(web): keep wash-sales detail tests green under premium count-up
+
+The violations-summary count-up wrapped the violation count and
+disallowed total in .js-countup-num spans, which split the literal
+substrings two pre-existing detail tests matched. Flatten the
+violation-count span (merge the class, no nesting) so &#34;N&lt;/span&gt;
+violations&#34; still matches, and make the disallowed-total assertions
+markup-tolerant (the &#34;$&#34; stays outside the count-up span by contract;
+the displayed value is unchanged). ([`fddcaf5`](https://github.com/chen-star/net_alpha/commit/fddcaf5b5f13bab6a7c6731000a3b7029d0596c9))
+
+
 ## v0.79.1 (2026-05-25)
 
 ### Fix
