@@ -1680,7 +1680,7 @@ wheels = [
 
 [[package]]
 name = "wash-alpha"
-version = "0.77.4"
+version = "0.80.0"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },

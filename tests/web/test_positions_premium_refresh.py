@@ -9,7 +9,7 @@ def test_positions_pane_uses_feature_shadow():
     src = CSS.read_text()
     # The .positions-pane rule should elevate via --shadow-feature.
     idx = src.index(".positions-pane {")
-    block = src[idx:idx + 200]
+    block = src[idx : idx + 200]
     assert "var(--shadow-feature)" in block
 
 

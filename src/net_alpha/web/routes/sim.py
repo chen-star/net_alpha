@@ -262,9 +262,7 @@ def sim_run(
     # meaningless there — worse, they imply a phantom tax benefit. Suppress
     # the tax math and explain why when the target account is tax-advantaged.
     is_tax_advantaged = (
-        repo.account_types_by_display().get(account or "", AccountType.TAXABLE).is_tax_advantaged
-        if account
-        else False
+        repo.account_types_by_display().get(account or "", AccountType.TAXABLE).is_tax_advantaged if account else False
     )
     if is_tax_advantaged:
         signal = signal.model_copy(update={"lot_method_recommended": None})
