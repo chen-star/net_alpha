@@ -2,6 +2,70 @@
 
 
 
+## v0.81.0 (2026-05-25)
+
+### Build
+
+* build: health-gated deploy script with automatic rollback ([`2ce2f39`](https://github.com/chen-star/net_alpha/commit/2ce2f398715b47889f96614d219e0b1f9cde8c39))
+
+* build: docker compose for remote box (app + cloudflared, no published ports) ([`afc2d69`](https://github.com/chen-star/net_alpha/commit/afc2d69a5041d51e188741132898afb2d16e38fe))
+
+* build: arm64 Dockerfile for remote deployment
+
+uvicorn factory on 0.0.0.0:18765 (in-container only; never published),
+in-process APScheduler via lifespan, DB-pinging HEALTHCHECK, data on
+/data via HOME. ([`2f01ca9`](https://github.com/chen-star/net_alpha/commit/2f01ca9a5aa9c1f46a725c626307694ac2d93a60))
+
+### Chore
+
+* chore: sync uv.lock root version to pyproject (0.80.2)
+
+Required so the Phase 2 Dockerfile&#39;s `uv sync --frozen` matches pyproject.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`5d3ab15`](https://github.com/chen-star/net_alpha/commit/5d3ab1527d2c6b83610907304a4b48664d258e8a))
+
+### Ci
+
+* ci: build arm64 image and push to GHCR on release tags ([`a5ad8c8`](https://github.com/chen-star/net_alpha/commit/a5ad8c8ffd2f46c552a46681f9adf964461ef4a8))
+
+### Feature
+
+* feat(backup): encrypt scheduled bundles via NETALPHA_BACKUP_PASSPHRASE
+
+run_backup_job now threads an env-configured passphrase into
+create_bundle, producing AES-256-GCM .enc bundles on the box. Unset
+env keeps plaintext daily bundles (local default unchanged). ([`4e41e95`](https://github.com/chen-star/net_alpha/commit/4e41e9539f3541b6678bdc4c38ab2e85df94bf8b))
+
+* feat(web): add GET /healthz readiness probe
+
+DB-pinging health route for container HEALTHCHECK and deploy-time
+health-gated rollback. Registered before the catch-all 404 handler. ([`afe72ae`](https://github.com/chen-star/net_alpha/commit/afe72ae057bb1d3e8780aaf4e90c03fa42ed420b))
+
+* feat(web): trust NETALPHA_PUBLIC_HOST for cross-origin guard
+
+Behind Cloudflare the Host header is the deployment domain. Widen the
+same-origin guard&#39;s trusted-host set by one env-configured name; unset
+env preserves loopback-only behavior. ([`fe6e225`](https://github.com/chen-star/net_alpha/commit/fe6e2251f714840c989567996408e8625ba4d033))
+
+### Fix
+
+* fix(deploy): bind-mount backups to host + gitignore secrets/backups
+
+The named volume kept backups off the host filesystem, so the Mac&#39;s
+rsync-over-SSH pull had nothing to read. Bind-mount /data/.net_alpha/backups
+to ./backups so bundles are rsync-reachable. Also gitignore deploy/secrets.env
+and deploy/backups/ so secrets and data are never committed.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`b2d339e`](https://github.com/chen-star/net_alpha/commit/b2d339e9016d2014a549c082b811303e9039c123))
+
+* fix(deploy): read secrets without sourcing (space-safe passphrases)
+
+`source secrets.env` under set -e would try to execute a passphrase
+containing spaces. Extract only IMAGE_TAG/IMAGE_REPO via grep instead.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`aff9496`](https://github.com/chen-star/net_alpha/commit/aff9496ce82994328903c91e40726146d9a3ca7c))
+
+
 ## v0.80.2 (2026-05-25)
 
 ### Fix
