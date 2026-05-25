@@ -10,6 +10,10 @@ services:
       HOME: /data
     volumes:
       - netalpha-data:/data
+      # Backups bind-mounted to a host path so the Mac can rsync them over
+      # `cloudflared access ssh`. This nested mount shadows the same subpath of
+      # the named volume above. Keep ./backups in .gitignore — bundles are data.
+      - ./backups:/data/.net_alpha/backups
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:18765/healthz"]
       interval: 30s

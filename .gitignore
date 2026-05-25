@@ -20,6 +20,10 @@ coverage.xml
 # Local data / private fixtures
 private/
 
+# Deployment secrets & backup bundles (never commit; only the .example is tracked)
+deploy/secrets.env
+deploy/backups/
+
 # Internal design docs / planning artifacts (kept local, not published)
 docs/
 
