@@ -152,31 +152,39 @@
 </div>
 
 {# Wash-sale watch — recent loss closes you shouldn't buy back yet. Lives at
-   the top of both views so it's always visible while reviewing wash sales. #}
-  <p class="text-[12px] text-label-2 mb-2 leading-[1.55]">
-    <span class="text-label-1 font-medium">Watch</span> — open positions where you closed a loss recently and a re-buy here would still trigger a wash sale.
-    <span class="text-label-1 font-medium">Violations</span> — realized wash sales below.
-  </p>
-<div class="panel mb-4">
-  {% include "_portfolio_wash_watch.html" %}
-</div>
-
-{% if view == 'calendar' %}
-  {% include "_calendar_ribbon.html" %}
-  <div id="focus-strip" class="mt-6"></div>
-{% else %}
-  {# W1: violations panel is explicitly labeled backward-looking. #}
-  <div class="flex items-baseline gap-3 mb-2">
-    <h4 class="m-0 text-[14px] font-semibold">Violations · backward-looking detected</h4>
-  </div>
-  {% if summary and summary.violation_count > 0 %}
-    <div class="panel mb-4 text-sm flex gap-4 items-baseline">
-      <div><span class="font-medium">{{ summary.violation_count }}</span> violations</div>
-      <div><span class="font-medium text-neg num">${{ "{:,.2f}".format(summary.disallowed_total|float) }}</span> disallowed</div>
-      <div><span class="chip-confirmed">{{ summary.confirmed_count }} confirmed</span></div>
-      <div><span class="chip-probable">{{ summary.probable_count }} probable</span></div>
-      <div><span class="chip-unclear">{{ summary.unclear_count }} unclear</span></div>
+   the top of both views so it's always visible while reviewing wash sales.
+   Watch + violations are wrapped in a panel-level reveal (staggered entrance).
+   Safe here because this tab is full-page-navigated, never HTMX-swapped. #}
+<div class="js-reveal">
+  <div style="--reveal-i: 0">
+    <p class="text-[12px] text-label-2 mb-2 leading-[1.55]">
+      <span class="text-label-1 font-medium">Watch</span> — open positions where you closed a loss recently and a re-buy here would still trigger a wash sale.
+      <span class="text-label-1 font-medium">Violations</span> — realized wash sales below.
+    </p>
+    <div class="panel mb-4">
+      {% include "_portfolio_wash_watch.html" %}
     </div>
-  {% endif %}
-  {% include "_detail_table.html" %}
-{% endif %}
+  </div>
+
+  <div style="--reveal-i: 1">
+    {% if view == 'calendar' %}
+      {% include "_calendar_ribbon.html" %}
+      <div id="focus-strip" class="mt-6"></div>
+    {% else %}
+      {# W1: violations panel is explicitly labeled backward-looking. #}
+      <div class="flex items-baseline gap-3 mb-2">
+        <h4 class="m-0 text-[14px] font-semibold">Violations · backward-looking detected</h4>
+      </div>
+      {% if summary and summary.violation_count > 0 %}
+        <div class="panel panel-feature mb-4 text-sm flex gap-4 items-baseline">
+          <div><span class="font-medium"><span class="js-countup-num" data-to="{{ summary.violation_count }}" data-decimals="0">{{ summary.violation_count }}</span></span> violations</div>
+          <div><span class="font-medium text-neg num">$<span class="js-countup-num" data-to="{{ "%.2f"|format(summary.disallowed_total|float) }}" data-decimals="2">{{ "{:,.2f}".format(summary.disallowed_total|float) }}</span></span> disallowed</div>
+          <div><span class="chip-confirmed">{{ summary.confirmed_count }} confirmed</span></div>
+          <div><span class="chip-probable">{{ summary.probable_count }} probable</span></div>
+          <div><span class="chip-unclear">{{ summary.unclear_count }} unclear</span></div>
+        </div>
+      {% endif %}
+      {% include "_detail_table.html" %}
+    {% endif %}
+  </div>
+</div>

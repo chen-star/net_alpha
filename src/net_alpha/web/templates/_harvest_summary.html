@@ -1,6 +1,6 @@
 {# Harvest plan summary tile — splits out of _harvest_plan.html so it can
    be HTMX-swapped on checkbox toggle without remounting the table (A2.3). #}
-<div id="harvest-summary" class="panel p-3">
+<div id="harvest-summary" class="panel panel-feature p-3">
   <div class="label-uc mb-2">Harvest plan</div>
   <form hx-get="/tax/harvest/plan" hx-trigger="change delay:200ms"
         hx-target="#harvest-summary" hx-swap="outerHTML"
@@ -38,12 +38,12 @@
   </form>
 
   <div class="mt-3 text-[13px] text-label-1 leading-[1.55]">
-    Selected: <span class="num font-semibold">{{ plan.selected|length }}</span>
+    Selected: <span class="num font-semibold"><span class="js-countup-num" data-to="{{ plan.selected|length }}" data-decimals="0">{{ plan.selected|length }}</span></span>
     of {{ rows|length }} candidates
-    &middot; <span class="num text-neg">−${{ "{:,.2f}".format(plan.total_loss_harvested|float|abs) }}</span>
+    &middot; <span class="num text-neg">−$<span class="js-countup-num" data-to="{{ "%.2f"|format(plan.total_loss_harvested|float|abs) }}" data-decimals="2">{{ "{:,.2f}".format(plan.total_loss_harvested|float|abs) }}</span></span>
     loss harvested
     {% if has_tax_config %}
-      &middot; tax saved (est.): <span class="num text-pos">${{ "{:,.2f}".format(plan.estimated_tax_saved|float) }}</span>
+      &middot; tax saved (est.): <span class="num text-pos">$<span class="js-countup-num" data-to="{{ "%.2f"|format(plan.estimated_tax_saved|float) }}" data-decimals="2">{{ "{:,.2f}".format(plan.estimated_tax_saved|float) }}</span></span>
     {% else %}
       &middot; <a href="/tax?view=projection" class="text-label-2 underline">configure tax rates</a> to see tax-saved estimates
     {% endif %}
