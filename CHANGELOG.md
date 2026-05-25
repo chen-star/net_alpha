@@ -2,6 +2,27 @@
 
 
 
+## v0.79.1 (2026-05-25)
+
+### Fix
+
+* fix(web): resolve premium-refresh review findings
+
+- reveal: animation-fill-mode both→backwards so .js-reveal children
+  don&#39;t retain a lingering identity transform (which established a
+  containing block + stacking context for fixed descendants)
+- overview entrance: latch body.na-overview-filtered on the first
+  toolbar change so the count-up + staggered reveal play only on the
+  initial dashboard load, not on every period/account filter re-swap
+- charts: destroy ApexCharts instances on htmx:beforeSwap so a
+  swapped-away chart&#39;s resize listener + timers stop firing on the
+  detached node (was emitting transform: translate(NaN) on re-render)
+- cross-fade: scope .htmx-swapping/.htmx-settling to #portfolio-body
+  instead of applying the opacity fade to every HTMX swap app-wide
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`8a583c3`](https://github.com/chen-star/net_alpha/commit/8a583c3658e26736ea680714ef25e5b3146631f9))
+
+
 ## v0.79.0 (2026-05-25)
 
 ### Feature
