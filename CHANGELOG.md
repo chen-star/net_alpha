@@ -2,6 +2,35 @@
 
 
 
+## v0.80.1 (2026-05-25)
+
+### Fix
+
+* fix(web): correct IRA tax handling, margin-cash %, and reveal-on-swap
+
+Audit-driven bug fixes across the web UI and demo:
+
+- Sim: suppress after-tax lot-strategy comparison and the lot-method
+  headline for tax-advantaged accounts — IRA/Roth/401k/HSA losses aren&#39;t
+  deductible, so the prior output implied a phantom tax benefit.
+- Demo: type the demo &#34;ira&#34; account as trad_ira before recompute so the
+  Rev. Rul. 2008-5 IRA-trap actually fires (permanent_ira, no §1091(d)
+  rollover, no §1223(4) tacking) instead of a normal deferred wash sale.
+- Sim: break lot-strategy recommendation ties toward the traffic-light
+  signal&#39;s method so the headline and comparison table never disagree.
+- Overview: clamp composition bar + cash &#34;% of account&#34; + cash-deployment
+  share to [0,100] and label negative (margin) cash as &#34;margin&#34; instead of
+  rendering nonsensical 317% / -217% / -218%.
+- Motion: drop js-reveal from HTMX swap fragments (sim buy/sell results,
+  projection tab) so the entrance animation no longer replays on each swap.
+- countup.js: animate Math.abs(to) so a stray negative data-to can&#39;t run
+  downward or double the sign.
+- ui --demo: rebuild a stale demo.db via ensure_demo_db schema-version
+  check instead of a bare exists() check that silently 500s.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`60517dc`](https://github.com/chen-star/net_alpha/commit/60517dcf3c5091cdc08e850cef8697da8bbfc38a))
+
+
 ## v0.80.0 (2026-05-25)
 
 ### Feature
