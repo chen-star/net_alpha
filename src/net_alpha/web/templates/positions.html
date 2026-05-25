@@ -28,39 +28,47 @@
   {# Symbol search — client-side filter applied to all rows with `data-symbol`
      (set by tab fragments). Partial match by underlying; for options that
      means typing the ticker shows every contract on it. #}
-  <div class="mb-3 relative inline-block w-full md:w-72" x-data="{ q: '' }">
-    <input type="text"
-           data-symbol-search
-           data-testid="positions-symbol-search"
-           placeholder="Search by symbol (e.g. SPY)…"
-           x-model="q"
-           @input="window.__applyPositionsSymbolFilter && window.__applyPositionsSymbolFilter(q)"
-           aria-label="Search positions by symbol"
-           class="input-search bg-surface text-text rounded-md px-3 py-1.5 pr-7 font-mono text-[13px] w-full"
-           style="border:0.5px solid var(--color-hairline);"/>
-    <button type="button"
-            x-show="q.length > 0"
-            x-cloak
-            @click="q = ''; window.__applyPositionsSymbolFilter && window.__applyPositionsSymbolFilter('')"
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-label-3 hover:text-text text-[14px] leading-none cursor-pointer"
-            aria-label="Clear search">×</button>
+  <div class="js-reveal">
+    <div style="--reveal-i: 0">
+      <div class="mb-3 relative inline-block w-full md:w-72" x-data="{ q: '' }">
+        <input type="text"
+               data-symbol-search
+               data-testid="positions-symbol-search"
+               placeholder="Search by symbol (e.g. SPY)…"
+               x-model="q"
+               @input="window.__applyPositionsSymbolFilter && window.__applyPositionsSymbolFilter(q)"
+               aria-label="Search positions by symbol"
+               class="input-search bg-surface text-text rounded-md px-3 py-1.5 pr-7 font-mono text-[13px] w-full"
+               style="border:0.5px solid var(--color-hairline);"/>
+        <button type="button"
+                x-show="q.length > 0"
+                x-cloak
+                @click="q = ''; window.__applyPositionsSymbolFilter && window.__applyPositionsSymbolFilter('')"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-label-3 hover:text-text text-[14px] leading-none cursor-pointer"
+                aria-label="Clear search">×</button>
+      </div>
+    </div>
+
+    <div style="--reveal-i: 1">
+      {% include "_positions_tabs.html" %}
+    </div>
+
+    <div style="--reveal-i: 2">
+      {% if selected_view == 'all' %}
+        {% include "_positions_view_all.html" %}
+      {% elif selected_view == 'stocks' %}
+        {% include "_positions_view_stocks.html" %}
+      {% elif selected_view == 'options' %}
+        {% include "_positions_view_options.html" %}
+      {% elif selected_view == 'at-loss' %}
+        {% include "_positions_view_at_loss.html" %}
+      {% elif selected_view == 'closed' %}
+        {% include "_positions_view_closed.html" %}
+      {% elif selected_view == 'plan' %}
+        {% include "_positions_view_plan.html" %}
+      {% endif %}
+    </div>
   </div>
-
-  {% include "_positions_tabs.html" %}
-
-  {% if selected_view == 'all' %}
-    {% include "_positions_view_all.html" %}
-  {% elif selected_view == 'stocks' %}
-    {% include "_positions_view_stocks.html" %}
-  {% elif selected_view == 'options' %}
-    {% include "_positions_view_options.html" %}
-  {% elif selected_view == 'at-loss' %}
-    {% include "_positions_view_at_loss.html" %}
-  {% elif selected_view == 'closed' %}
-    {% include "_positions_view_closed.html" %}
-  {% elif selected_view == 'plan' %}
-    {% include "_positions_view_plan.html" %}
-  {% endif %}
 
   {# Side pane (§3.5). Non-modal — table stays interactive while pane is
      open. Alpine state tracks the currently-open row. HTMX fetches the

@@ -492,7 +492,7 @@
      panel to a shadowed surface with a signature-blue left edge so it
      reads as the page's active focus surface, not a sibling column. */
   .positions-pane {
-    box-shadow: var(--shadow-pane);
+    box-shadow: var(--shadow-feature);
     border-left: 1px solid var(--color-signature);
   }
 
