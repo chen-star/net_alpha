@@ -2,6 +2,15 @@
 
 
 
+## v0.80.2 (2026-05-25)
+
+### Fix
+
+* fix(ci): resolve ruff lint errors blocking CI
+
+Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt; ([`072007c`](https://github.com/chen-star/net_alpha/commit/072007c4078d2b6765c87a5bd247250a24dfbf3a))
+
+
 ## v0.80.1 (2026-05-25)
 
 ### Fix
