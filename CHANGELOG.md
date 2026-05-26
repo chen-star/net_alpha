@@ -2,6 +2,43 @@
 
 
 
+## v0.81.1 (2026-05-26)
+
+### Fix
+
+* fix(tests): make web suite offline-deterministic to fix CI
+
+CI was red on six web tests from two distinct fixture defects:
+
+1. Five HTTP 500s (test_tour_banner, test_portfolio_multi_account):
+   the `client` fixture used the real Yahoo provider with remote pricing
+   enabled, so the Portfolio page fetched a live quote and wrote it to
+   price_cache. `client_with_data` had already created the app (binding the
+   long-lived price_cache engine) and *then* called build_demo_db, which
+   unlink()s and recreates the SQLite file — orphaning that engine. The
+   cache write then failed with &#34;attempt to write a readonly database&#34;.
+
+2. One e2e timeout (test_equity_curve_click): a disabled pricing service
+   returns None for historical closes, so the Account-value series was
+   entirely null and its chart markers had no data behind them — the
+   click → htmx → explain-panel flow never fired.
+
+Fix (test-only, no production changes):
+- Add OfflineFakeProvider (subclasses YahooPriceProvider so class-level
+  fetch_splits patches still apply; overrides only the network read methods)
+  returning deterministic flat prices with zero network I/O.
+- `client`/`client_with_data` keep pricing enabled but swap in the fake, so
+  seeded price_cache rows are served and the suite never hits Yahoo.
+- `client_with_data` now seeds the DB *before* create_app, so the app&#39;s
+  engine binds to the live file (fixes the readonly write).
+- e2e fixture enables pricing + injects the fake (was disabled), so the
+  equity curve renders clickable markers deterministically offline.
+
+Full suite: 2726 passed, 2 skipped, 0 failed (was 6 failed).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) &lt;noreply@anthropic.com&gt; ([`2f7f700`](https://github.com/chen-star/net_alpha/commit/2f7f70064b91e71541a47e81bd906c9a1ef77342))
+
+
 ## v0.81.0 (2026-05-25)
 
 ### Build
