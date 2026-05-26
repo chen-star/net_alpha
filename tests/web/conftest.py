@@ -12,6 +12,7 @@ from net_alpha.db.connection import get_engine, init_db
 from net_alpha.db.repository import Repository
 from net_alpha.models.domain import Account, ImportRecord, OptionDetails, Trade
 from net_alpha.web.app import create_app
+from tests.web._pricing_fakes import OfflineFakeProvider
 
 # Skip scheduler startup in all web tests — it requires a running asyncio
 # event loop (AsyncIOScheduler) and service infrastructure not available in
@@ -51,8 +52,15 @@ def repo_real(settings):
 
 @pytest.fixture
 def client(settings: Settings, engine) -> TestClient:
-    """TestClient with the app pointed at the temp DB."""
+    """TestClient with the app pointed at the temp DB.
+
+    Pricing stays *enabled* (so seeded ``price_cache`` rows are served and the
+    equity curve can mark to market), but the real Yahoo provider is swapped
+    for :class:`OfflineFakeProvider` so the suite never touches the network —
+    consistent with the ``--run-network`` gate in ``tests/conftest.py``.
+    """
     app = create_app(settings)
+    app.state.price_provider = OfflineFakeProvider()
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -63,15 +71,22 @@ def tmp_data_dir(settings: Settings) -> Path:
 
 
 @pytest.fixture
-def client_with_data(client: TestClient, settings: Settings) -> TestClient:
-    """TestClient with the real DB pre-seeded by the demo fixture builder.
+def client_with_data(settings: Settings) -> TestClient:
+    """TestClient on a DB pre-seeded by the demo fixture builder.
 
     Used in tests that need 'imports already exist' state in the real DB.
+
+    The DB is seeded *before* the app is created: ``build_demo_db`` unlinks and
+    recreates the SQLite file, so an app (and its long-lived ``price_cache``
+    engine) created beforehand would be left bound to the deleted inode —
+    cache writes would then fail with 'attempt to write a readonly database'.
     """
     from net_alpha.web.demo import build_demo_db
 
     build_demo_db(settings.db_path)
-    return client
+    app = create_app(settings)
+    app.state.price_provider = OfflineFakeProvider()
+    return TestClient(app, raise_server_exceptions=False)
 
 
 # --- Trade builders ---------------------------------------------------------

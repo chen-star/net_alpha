@@ -23,6 +23,7 @@ import uvicorn
 
 from net_alpha.config import Settings
 from net_alpha.web.app import create_app
+from tests.web._pricing_fakes import OfflineFakeProvider
 
 # Same env guard as tests/web/conftest.py: skip the AsyncIO scheduler that
 # isn't compatible with sync test environments.
@@ -52,12 +53,13 @@ def seeded_data_dir(tmp_path_factory) -> Path:
     from net_alpha.models.preferences import AccountPreference
     from net_alpha.web.demo import build_demo_db
 
-    # Disable remote price fetches so page loads don't depend on yfinance.
-    # The portfolio page otherwise blocks "networkidle" past Playwright's
-    # 15s timeout in CI sandboxes where Yahoo returns errors for every
-    # symbol (`possibly delisted; no price data found`).
+    # Enable pricing so the equity curve can mark lots to market (the
+    # Account-value series — and its clickable chart markers — are null when
+    # pricing is disabled). The live server injects ``_OfflineFakeProvider``,
+    # so this never touches the network: page loads stay fast (no "networkidle"
+    # stall on yfinance) and closes are deterministic.
     settings.config_yaml_path.parent.mkdir(parents=True, exist_ok=True)
-    settings.config_yaml_path.write_text("prices:\n  enable_remote: false\n")
+    settings.config_yaml_path.write_text("prices:\n  enable_remote: true\n")
 
     build_demo_db(settings.db_path)
 
@@ -85,6 +87,9 @@ def live_server_seeded(seeded_data_dir: Path) -> Iterator[str]:
     port = _free_port()
     settings = Settings(data_dir=seeded_data_dir)
     app = create_app(settings)
+    # Replace the real Yahoo provider with the offline fake so enabled pricing
+    # never reaches the network (see OfflineFakeProvider).
+    app.state.price_provider = OfflineFakeProvider()
     config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)
